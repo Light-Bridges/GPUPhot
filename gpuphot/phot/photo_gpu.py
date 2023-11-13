@@ -8,10 +8,7 @@ import cupy as cp
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from astropy import units as u
-from astropy.coordinates import SkyCoord
 # from astropy.stats import sigma_clip as sclip
-from astropy.wcs import WCS
 from astroquery.astrometry_net import AstrometryNet
 from cupyx.scipy.ndimage import gaussian_filter, label, convolve, maximum_filter
 from cupyx.scipy.ndimage import mean as nd_mean, sum as nd_sum
@@ -24,7 +21,7 @@ from gpuphot.astrometry.utils import cat_input_from_header, get_ccw, \
 from gpuphot.phot.catalog import catalog_results, catalog_match
 from gpuphot.stats.utils import free_gpu_mem
 # import ttt.equipment.models as db
-from .utils import deg_to_hms, radec_to_altaz, radec_to_gal, radec_to_ecl, date_to_jd, plate_scale_px
+from .utils import plate_scale_px
 
 # os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 # os.environ["CUDA_VISIBLE_DEVICES"]="1"
@@ -126,7 +123,7 @@ def sigma_clip(img, sclip):
         img0[img0 >= imed + sclip * rms] = cp.nan
         img0[img0 <= imed - sclip * rms] = cp.nan
     del (img0)
-    return (imed, rms)
+    return (imed, rms)  # FIXME imed and rms are not used
 
 
 def gen_ap_filter(lk):
@@ -535,9 +532,9 @@ def process_image(model_mo, im, head, det=2, astrom=True, cat=[]):
     return dfm, 0, 0
 
 
-def astrometrice(dfm, head, im_shape):
+def astrometrice(dfm, im_shape, api_key):
     ast = AstrometryNet()
-    ast.api_key = 'hrpooiuuxcaxplcu'
+    ast.api_key = api_key
     image_width = im_shape[0]
     image_height = im_shape[1]
     h_wcs = ast.solve_from_source_list(dfm['xcentroid'][0:100], dfm['ycentroid'][0:100],
@@ -545,75 +542,75 @@ def astrometrice(dfm, head, im_shape):
                                        solve_timeout=120)
     # print(h_wcs)
     return h_wcs
-    for v in h_wcs:
-        head[v] = h_wcs[v]
-
-    astro_exists = get_if_header_already_post_processed(head, "ASTROMETRY")
-    if not astro_exists:
-        head['COMINIT'] = 'e'
-        head.insert('COMINIT', ('COMMENT', '***************************'))
-        head.insert('COMINIT', ('COMMENT', '       ASTROMETRY          '))
-        head.insert('COMINIT', ('COMMENT', '***************************'))
-
-        px = head['NAXIS1'] / 2
-        py = head['NAXIS2'] / 2
-        w = WCS(h_wcs)
-        ra, dec = w.wcs_pix2world(px, py, 1)
-        ra = ra.tolist()
-        dec = dec.tolist()
-
-        head['RA'] = ra
-        head['DEC'] = dec
-
-        c1 = SkyCoord(ra * u.deg, dec * u.deg, frame='icrs')
-        c2 = SkyCoord(head['POINTRA'] * 360 / 24 * u.deg, head['POINTDEC'] * u.deg, frame='icrs')
-        sep = (c2.separation(c1)).arcsecond
-        print('Error de apuntado: ', sep, ' arcsec')
-
-    if not astro_exists:
-        ra_hms, dec_dms = deg_to_hms(ra, dec)
-
-        try:
-            elev = head['SITEELEV']
-        except:
-            elev = head['SITEALT']
-
-        az, alt, airmass, zd = radec_to_altaz(ra, dec, head['SITELAT'], head['SITELONG'], elev, head['DATE-OBS'])
-        longal, latgal = radec_to_gal(ra, dec)
-        lonecl, latecl = radec_to_ecl(ra, dec)
-
-        head.insert('COMINIT', ('RA', ra, db.Header.objects.get(name='RA').description))
-        head.insert('COMINIT', ('DEC', dec, db.Header.objects.get(name='DEC').description))
-        head.insert('COMINIT', ('RAhms', ra_hms, db.Header.objects.get(name='RAhms').description))
-        head.insert('COMINIT', ('DECdms', dec_dms, db.Header.objects.get(name='DECdms').description))
-        head.insert('COMINIT', ('AZ', az, db.Header.objects.get(name='AZ').description))
-        head.insert('COMINIT', ('ALT', alt, db.Header.objects.get(name='ALT').description))
-        head.insert('COMINIT', ('ZD', zd, db.Header.objects.get(name='ZD').description))
-        head.insert('COMINIT', ('AIRMASS', airmass, db.Header.objects.get(name='AIRMASS').description))
-        head.insert('COMINIT', ('LONGAL', longal, db.Header.objects.get(name='LONGAL').description))
-        head.insert('COMINIT', ('LATGAL', latgal, db.Header.objects.get(name='LATGAL').description))
-        head.insert('COMINIT', ('LONECL', lonecl, db.Header.objects.get(name='LONECL').description))
-        head.insert('COMINIT', ('LATECL', latecl, db.Header.objects.get(name='LATECL').description))
-
-        del head['COMINIT']
-
-    # Parche hasta que instroduzca en los raw
-    if 'JD' not in head:
-        try:
-            jd, mjd = date_to_jd(head['DATE-OBS'])
-            head.insert('PCDATE', ('JD-OBS', jd, db.Header.objects.get(name='JD-OBS').description))
-            head.insert('PCDATE', ('MJD-OBS', mjd, db.Header.objects.get(name='MJD-OBS').description))
-        except:
-            pass
-
-    if 'SCALEORI' not in head:
-        try:
-            head.insert('PARITY', ('SCALEORI', np.round(plate_scale_px(head['PXSIZE'], head['FOCALEN']), 3),
-                                   db.Header.objects.get(name='SCALEORI').description))
-        except:
-            pass
-
-    return wcs_header
+    # for v in h_wcs:
+    #     head[v] = h_wcs[v]
+    #
+    # astro_exists = get_if_header_already_post_processed(head, "ASTROMETRY")
+    # if not astro_exists:
+    #     head['COMINIT'] = 'e'
+    #     head.insert('COMINIT', ('COMMENT', '***************************'))
+    #     head.insert('COMINIT', ('COMMENT', '       ASTROMETRY          '))
+    #     head.insert('COMINIT', ('COMMENT', '***************************'))
+    #
+    #     px = head['NAXIS1'] / 2
+    #     py = head['NAXIS2'] / 2
+    #     w = WCS(h_wcs)
+    #     ra, dec = w.wcs_pix2world(px, py, 1)
+    #     ra = ra.tolist()
+    #     dec = dec.tolist()
+    #
+    #     head['RA'] = ra
+    #     head['DEC'] = dec
+    #
+    #     c1 = SkyCoord(ra * u.deg, dec * u.deg, frame='icrs')
+    #     c2 = SkyCoord(head['POINTRA'] * 360 / 24 * u.deg, head['POINTDEC'] * u.deg, frame='icrs')
+    #     sep = (c2.separation(c1)).arcsecond
+    #     print('Error de apuntado: ', sep, ' arcsec')
+    #
+    # if not astro_exists:
+    #     ra_hms, dec_dms = deg_to_hms(ra, dec)
+    #
+    #     try:
+    #         elev = head['SITEELEV']
+    #     except:
+    #         elev = head['SITEALT']
+    #
+    #     az, alt, airmass, zd = radec_to_altaz(ra, dec, head['SITELAT'], head['SITELONG'], elev, head['DATE-OBS'])
+    #     longal, latgal = radec_to_gal(ra, dec)
+    #     lonecl, latecl = radec_to_ecl(ra, dec)
+    #
+    #     head.insert('COMINIT', ('RA', ra, db.Header.objects.get(name='RA').description))
+    #     head.insert('COMINIT', ('DEC', dec, db.Header.objects.get(name='DEC').description))
+    #     head.insert('COMINIT', ('RAhms', ra_hms, db.Header.objects.get(name='RAhms').description))
+    #     head.insert('COMINIT', ('DECdms', dec_dms, db.Header.objects.get(name='DECdms').description))
+    #     head.insert('COMINIT', ('AZ', az, db.Header.objects.get(name='AZ').description))
+    #     head.insert('COMINIT', ('ALT', alt, db.Header.objects.get(name='ALT').description))
+    #     head.insert('COMINIT', ('ZD', zd, db.Header.objects.get(name='ZD').description))
+    #     head.insert('COMINIT', ('AIRMASS', airmass, db.Header.objects.get(name='AIRMASS').description))
+    #     head.insert('COMINIT', ('LONGAL', longal, db.Header.objects.get(name='LONGAL').description))
+    #     head.insert('COMINIT', ('LATGAL', latgal, db.Header.objects.get(name='LATGAL').description))
+    #     head.insert('COMINIT', ('LONECL', lonecl, db.Header.objects.get(name='LONECL').description))
+    #     head.insert('COMINIT', ('LATECL', latecl, db.Header.objects.get(name='LATECL').description))
+    #
+    #     del head['COMINIT']
+    #
+    # # Parche hasta que instroduzca en los raw
+    # if 'JD' not in head:
+    #     try:
+    #         jd, mjd = date_to_jd(head['DATE-OBS'])
+    #         head.insert('PCDATE', ('JD-OBS', jd, db.Header.objects.get(name='JD-OBS').description))
+    #         head.insert('PCDATE', ('MJD-OBS', mjd, db.Header.objects.get(name='MJD-OBS').description))
+    #     except:
+    #         pass
+    #
+    # if 'SCALEORI' not in head:
+    #     try:
+    #         head.insert('PARITY', ('SCALEORI', np.round(plate_scale_px(head['PXSIZE'], head['FOCALEN']), 3),
+    #                                db.Header.objects.get(name='SCALEORI').description))
+    #     except:
+    #         pass
+    #
+    # return wcs_header
 
 
 def logodds_callback3(logodds):
@@ -697,7 +694,7 @@ def astrometrice2(dfm, header, im_shape, cache='/data/astrometry_cache'):
                 # logodds_callback = logodds_callback3,
                 # sip_order=5,
             ),
-        )
+        )  # FIXME stars undefined
         nmatches = len(solution.matches)
         print(nmatches)
     except:

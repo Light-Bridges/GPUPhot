@@ -56,7 +56,7 @@ cv
 				err_reg
 				get_calibration
 				process_image
-				astrometrice
+				astrometrice    api_key='hrpooiuuxcaxplcu'
 				logodds_callback3
 				logodds_callback_100
 				handler

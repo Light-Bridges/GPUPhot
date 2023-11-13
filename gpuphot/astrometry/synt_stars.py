@@ -1,19 +1,28 @@
 import os
 
 import numpy as np
-import pandas as pd
 from astropy.convolution import discretize_model
-from astropy.io import fits
 from astropy.modeling.models import Moffat2D
 from astropy.table import QTable
 
+
+def _generate_noise_rng():
+    # Set up the random number generator, allowing a seed to be set from the environment
+    seed = os.getenv('GUIDE_RANDOM_SEED', None)
+
+    if seed is not None:
+        seed = int(seed)
+
+    # This is the generator to use for any image component which changes in each image, e.g. read noise
+    # or Poisson error
+    return np.random.default_rng(seed)
 
 # Noise functions
 # Noise functions
 def read_noise(image, amount, gain=1):
     shape = image.shape
 
-    noise = noise_rng.normal(scale=amount / gain, size=shape)
+    noise = _generate_noise_rng().normal(scale=amount / gain, size=shape)
 
     return noise
 
@@ -21,7 +30,7 @@ def read_noise(image, amount, gain=1):
 def dark_current(image, current, exposure_time, gain=1.0, hot_pixels=True):
     # dark current for every pixel
     base_current = current * exposure_time / gain
-    dark_im = noise_rng.poisson(base_current, size=image.shape)
+    dark_im = _generate_noise_rng().poisson(base_current, size=image.shape)
 
     if hot_pixels:
         y_max, x_max = dark_im.shape
@@ -39,7 +48,7 @@ def dark_current(image, current, exposure_time, gain=1.0, hot_pixels=True):
 
 
 def sky_background(image, sky_counts, gain=1):
-    sky_im = noise_rng.poisson(sky_counts * gain, size=image.shape) / gain
+    sky_im = _generate_noise_rng().poisson(sky_counts * gain, size=image.shape) / gain
 
     return sky_im
 
@@ -144,61 +153,61 @@ def create_synt_image(image, gain, rd_noise, texp, dark_cur, sky_level, fwhm, ns
 
     return image, alpha, beta, sources
 
-
-# Set up the random number generator, allowing a seed to be set from the environment
-seed = os.getenv('GUIDE_RANDOM_SEED', None)
-
-if seed is not None:
-    seed = int(seed)
-
-# This is the generator to use for any image component which changes in each image, e.g. read noise
-# or Poisson error
-noise_rng = np.random.default_rng(seed)
-
-N = 10000
-df = pd.DataFrame()
-for i in range(N):
-
-    try:
-        # Create image
-        synthetic_image = np.zeros([512, 512])
-
-        # Parameters
-        gain = 0.77
-        rd_noise = np.random.randn() + 2.5
-        texp = 20
-        dark_cur = 0.01
-        sky_level = np.random.randn() * 100 + 400
-        fwhm = np.random.rand() * 7 + 3
-
-        # if fwhm < 2 or fwhm > 15: continue
-
-        nstars = int(np.random.randint(200) + 3)
-        # nstars = int(np.random.randint(20) )
-        max_counts = np.random.rand() * 2000 + 500
-
-        if nstars == 0:
-            fwhm = 0
-
-        synthetic_image, alpha, beta, _ = create_synt_image(synthetic_image, gain, rd_noise, texp, dark_cur, sky_level,
-                                                            fwhm, nstars, max_counts)
-
-        name = '%i.fits' % (i + 1)
-
-        df = df.append({'name': name, 'gain': gain, 'rd_noise': rd_noise, 'sky_level': sky_level,
-                        'moffat_alpha': alpha, 'moffat_beta': beta, 'fwhm': fwhm, 'nstars': nstars,
-                        'max_counts': max_counts}, ignore_index=True)
-
-        cols = ['name', 'gain', 'rd_noise', 'sky_level', 'moffat_alpha', 'moffat_beta', 'fwhm', 'nstars', 'max_counts']
-        df = df[cols]
-
-        HDU = fits.PrimaryHDU(data=synthetic_image.astype(np.float32))
-        HDU.writeto('/data/train/' + name, overwrite=True)
-
-        if (i % 100) == 0:
-            print(i)
-
-        df.to_csv('/data/df.csv')
-
-    except:
-        continue
+#
+# # Set up the random number generator, allowing a seed to be set from the environment
+# seed = os.getenv('GUIDE_RANDOM_SEED', None)
+#
+# if seed is not None:
+#     seed = int(seed)
+#
+# # This is the generator to use for any image component which changes in each image, e.g. read noise
+# # or Poisson error
+# noise_rng = np.random.default_rng(seed)
+#
+# N = 10000
+# df = pd.DataFrame()
+# for i in range(N):
+#
+#     try:
+#         # Create image
+#         synthetic_image = np.zeros([512, 512])
+#
+#         # Parameters
+#         gain = 0.77
+#         rd_noise = np.random.randn() + 2.5
+#         texp = 20
+#         dark_cur = 0.01
+#         sky_level = np.random.randn() * 100 + 400
+#         fwhm = np.random.rand() * 7 + 3
+#
+#         # if fwhm < 2 or fwhm > 15: continue
+#
+#         nstars = int(np.random.randint(200) + 3)
+#         # nstars = int(np.random.randint(20) )
+#         max_counts = np.random.rand() * 2000 + 500
+#
+#         if nstars == 0:
+#             fwhm = 0
+#
+#         synthetic_image, alpha, beta, _ = create_synt_image(synthetic_image, gain, rd_noise, texp, dark_cur, sky_level,
+#                                                             fwhm, nstars, max_counts)
+#
+#         name = '%i.fits' % (i + 1)
+#
+#         df = df.append({'name': name, 'gain': gain, 'rd_noise': rd_noise, 'sky_level': sky_level,
+#                         'moffat_alpha': alpha, 'moffat_beta': beta, 'fwhm': fwhm, 'nstars': nstars,
+#                         'max_counts': max_counts}, ignore_index=True)
+#
+#         cols = ['name', 'gain', 'rd_noise', 'sky_level', 'moffat_alpha', 'moffat_beta', 'fwhm', 'nstars', 'max_counts']
+#         df = df[cols]
+#
+#         HDU = fits.PrimaryHDU(data=synthetic_image.astype(np.float32))
+#         HDU.writeto('/data/train/' + name, overwrite=True)
+#
+#         if (i % 100) == 0:
+#             print(i)
+#
+#         df.to_csv('/data/df.csv')
+#
+#     except:
+#         continue
