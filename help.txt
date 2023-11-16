@@ -1,0 +1,5 @@
+Generate library:
+python -m build --wheel
+
+pip install build
+pip install dist/GPUPhot-0.0-py3-none-any.whl
