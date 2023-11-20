@@ -1,3 +1,6 @@
+https://www.freecodecamp.org/news/how-to-create-and-upload-your-first-python-package-to-pypi/
+https://gist.github.com/cruftlord/495a78ce33b6e4910585
+
 Generate library:
 python -m build --wheel
 

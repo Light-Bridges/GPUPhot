@@ -17,6 +17,7 @@ def _generate_noise_rng():
     # or Poisson error
     return np.random.default_rng(seed)
 
+
 # Noise functions
 # Noise functions
 def read_noise(image, amount, gain=1):
