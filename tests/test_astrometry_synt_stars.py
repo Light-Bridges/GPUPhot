@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 
-class Test(TestCase):
+class TestAstrometrySyntStars(TestCase):
     def test_make_random_models_table(self):
         self.fail()
 

@@ -4,6 +4,7 @@ import logging
 import cupy as cp
 import numpy as np
 from astroalign import find_transform
+
 # from mcs.utils.meteo import get_meteo
 # from ttt.models import Header
 from astropy.io import fits
@@ -13,7 +14,9 @@ from skimage.transform._warps_cy import _warp_fast
 # from ttt.models import ObservingBlock, ObservingBlockLine
 # from django.utils import timezone
 from gpuphot.stats.reduction import center
-from gpuphot.stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
+from gpuphot.stats.subpixel import (
+    phase_cross_correlation as phase_cross_correlation_gpu,
+)
 
 logger = logging.getLogger("cv")
 
@@ -27,8 +30,7 @@ def dyn_avgstd(valuenew, nold, avgold, stdold):
     else:
         avgnew = avgold + (valuenew - avgold) / nnew
         stdnew = np.sqrt(
-            nold / nnew * stdold ** 2 +
-            (valuenew - avgnew) * (valuenew - avgold) / nnew
+            nold / nnew * stdold**2 + (valuenew - avgnew) * (valuenew - avgold) / nnew
         )
     return nnew, avgnew, stdnew
 
@@ -53,8 +55,7 @@ def reduction_atlas(cubes_path, size=2048, internal_shift=False):
     heads = []
     # idx = []
     for c, cube in enumerate(cubes_path):
-
-        logger.info('Reading cube %s' % cube)
+        logger.info("Reading cube %s" % cube)
         with fits.open(cube) as ima:
             data = ima[1].data.astype(np.float32)
             ima_header = ima[1].header
@@ -62,12 +63,14 @@ def reduction_atlas(cubes_path, size=2048, internal_shift=False):
         if c == 0:
             im0cp = cp.asarray(data[0, :])
             nnew, avgnew = dyn_avg(im0cp, cp.zeros_like(im0cp), cp.zeros_like(im0cp))
-            logger.info('Shifting and combining')
+            logger.info("Shifting and combining")
             for j in range(1, data.shape[0]):
                 im = cp.asarray(data[j, :])
                 if internal_shift:
-                    shifted, _, _ = phase_cross_correlation_gpu(center(im0cp, size), center(im, size))
-                    im = shift(im, shift=(shifted[0], shifted[1]), mode='constant')
+                    shifted, _, _ = phase_cross_correlation_gpu(
+                        center(im0cp, size), center(im, size)
+                    )
+                    im = shift(im, shift=(shifted[0], shifted[1]), mode="constant")
 
                 nnew, avgnew = dyn_avg(im, nnew, avgnew)
                 del im
@@ -81,47 +84,66 @@ def reduction_atlas(cubes_path, size=2048, internal_shift=False):
         else:
             im1cp = cp.asarray(data[0, :])
             nnew1, avgnew1 = dyn_avg(im1cp, cp.zeros_like(im1cp), cp.zeros_like(im1cp))
-            logger.info('Shifting and combining')
+            logger.info("Shifting and combining")
             for j in range(1, data.shape[0]):
                 im = cp.asarray(data[j, :])
                 if internal_shift:
-                    shifted, _, _ = phase_cross_correlation_gpu(center(im1cp, size), center(im, size))
-                    im = shift(im, shift=(shifted[0], shifted[1]), mode='constant')
+                    shifted, _, _ = phase_cross_correlation_gpu(
+                        center(im1cp, size), center(im, size)
+                    )
+                    im = shift(im, shift=(shifted[0], shifted[1]), mode="constant")
                 nnew1, avgnew1 = dyn_avg(im, nnew1, avgnew1)
                 del im
             del im1cp, data
             gc.collect()
 
-            logger.info('Aligning')
+            logger.info("Aligning")
             avgnew1_cpu = avgnew1.get().astype(np.float32)
-            transf, _ = find_transform(source=avgnew1_cpu, target=avgnew.get().astype(np.float32),
-                                       min_area=100)  # FIXMEavgnew is not defined
+            transf, _ = find_transform(
+                source=avgnew1_cpu, target=avgnew.get().astype(np.float32), min_area=100
+            )  # FIXMEavgnew is not defined
             matrix = np.linalg.inv(transf.params).astype(np.float32)
             alig = _warp_fast(avgnew1_cpu, matrix, output_shape=avgnew.shape, order=3)
-            nnew1 = _warp_fast(nnew1.get().astype(np.float32), matrix, output_shape=avgnew.shape, order=3)
+            nnew1 = _warp_fast(
+                nnew1.get().astype(np.float32),
+                matrix,
+                output_shape=avgnew.shape,
+                order=3,
+            )
             nnew1 = cp.asarray(nnew1, dtype=cp.int16)
 
             im = cp.asarray(alig)
             fc = f0 / cp.nansum(center(im, size)).get()  # FIXME f0 is not defined
             im *= fc
-            nnew, avgnew = sum_dyn_avg(nnew, avgnew, nnew1, im)  # FIXME nnew is not defined
+            nnew, avgnew = sum_dyn_avg(
+                nnew, avgnew, nnew1, im
+            )  # FIXME nnew is not defined
 
-            ima_header['ROT'] = np.round(transf.rotation * 180 / np.pi,
-                                         4)  # , Header.objects.get(name='ROT').description)
-            ima_header['SHX'] = np.round(transf.translation[1], 2)  # , Header.objects.get(name='SHX').description)
-            ima_header['SHY'] = np.round(transf.translation[0], 2)  # , Header.objects.get(name='SHY').description)
-            ima_header['ZOO'] = np.round(transf.scale, 4)  # , Header.objects.get(name='ZOO').description)
-            ima_header['FC'] = np.round(fc, 4)  # , Header.objects.get(name='FC').description)
+            ima_header["ROT"] = np.round(
+                transf.rotation * 180 / np.pi, 4
+            )  # , Header.objects.get(name='ROT').description)
+            ima_header["SHX"] = np.round(
+                transf.translation[1], 2
+            )  # , Header.objects.get(name='SHX').description)
+            ima_header["SHY"] = np.round(
+                transf.translation[0], 2
+            )  # , Header.objects.get(name='SHY').description)
+            ima_header["ZOO"] = np.round(
+                transf.scale, 4
+            )  # , Header.objects.get(name='ZOO').description)
+            ima_header["FC"] = np.round(
+                fc, 4
+            )  # , Header.objects.get(name='FC').description)
 
             heads.append(ima_header)
 
             del avgnew1, alig
             gc.collect()
 
-    logger.info('Reduction finished')
+    logger.info("Reduction finished")
 
     avgnew[avgnew < 0] = 0  # FIXME avgnew is not defined
-    avgnew[avgnew > 2 ** 16] = 2 ** 16 - 1
+    avgnew[avgnew > 2**16] = 2**16 - 1
 
     return avgnew, nnew, heads  # FIXME nnew is not defined
 
@@ -240,16 +262,44 @@ def reduction_atlas(cubes_path, size=2048, internal_shift=False):
 
 def create_inst_file(head):
     inst = fits.Header()
-    for j in ['TELESCOP', 'SITENAME', 'SITECODE', 'SITELAT', 'SITELONG', 'SITEELEV',
-              'DIAMETER', 'FOCAL', 'FOCALEN', 'MOUNT', 'TRACK', 'RA-MNT', 'DEC-MNT',
-              'POINTRA', 'POINTDEC', 'HUMIDITY', 'PRESSURE', 'AMBTEMP', 'CLOUD',
-              'ILLUMINA', 'WINDDIR', 'WINDVEL', 'DUSTPLA', 'DEWPOINT', 'DUSTPM1',
-              'DUSTPM10', 'DUSTPM25', 'PWV', 'MIRRTEMP', 'MIRRHUM']:
+    for j in [
+        "TELESCOP",
+        "SITENAME",
+        "SITECODE",
+        "SITELAT",
+        "SITELONG",
+        "SITEALT",
+        "DIAMETER",
+        "FOCAL",
+        "FOCALEN",
+        "MOUNT",
+        "TRACK",
+        "RA-MNT",
+        "DEC-MNT",
+        "POINTRA",
+        "POINTDEC",
+        "HUMIDITY",
+        "PRESSURE",
+        "AMBTEMP",
+        "CLOUD",
+        "ILLUMINA",
+        "WINDDIR",
+        "WINDVEL",
+        "DUSTPLA",
+        "DEWPOINT",
+        "DUSTPM1",
+        "DUSTPM10",
+        "DUSTPM25",
+        "PWV",
+        "MIRRTEMP",
+        "MIRRHUM",
+    ]:
         try:
             inst[j] = (head[j], head.comments[j])
         except:
             pass
     return inst
+
 
 # def send_atlas_files(im, n, head):
 #     line_id = head['OBLINEID']
