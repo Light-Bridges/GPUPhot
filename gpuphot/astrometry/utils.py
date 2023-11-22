@@ -65,8 +65,9 @@ def get_target_ra_dec(target_name: str, moving_target: bool, header, ra_dec_dict
         return header["POINTRA"], header["POINTDEC"]
 
 
-def get_target_pix(ra, dec, header):
-    df = pd.DataFrame({"RA": [ra / 24 * 360], "DEC": [dec]})
+def get_target_pix(ra_h, dec_deg, header):
+    # ra in hous, dec in deg
+    df = pd.DataFrame({"RA": [ra_h / 24 * 360], "DEC": [dec_deg]})
     x, y = wcs_to_px(df, header)
     return x[0], y[0]
 

@@ -1,394 +1,453 @@
 from unittest import TestCase
 
+import astropy.io.fits
 import numpy as np
+from astropy import units as u
+from astropy.coordinates import SkyCoord
 
 from gpuphot.astrometry.utils import (
     get_target_ephemeris,
     px_to_wcs,
     wcs_to_px,
     get_target_ra_dec,
+    get_target_pix,
+    get_ccw,
+    get_if_header_already_post_processed,
+    cat_input_from_header,
 )
 
 
 class TestAstrometryUtils(TestCase):
-    _header1 = {
-        "SIMPLE": True,
-        "BITPIX": -32,
-        "NAXIS": 2,
-        "NAXIS1": 2048,
-        "NAXIS2": 2048,
-        "TELESCOP": "TTT1",
-        "SITELAT": 28.29871121,
-        "SITELONG": -16.50956893,
-        "SITEALT": 2359.12,
-        "DIAMETER": 800.0,
-        "FOCAL": 6.85,
-        "FOCALEN": 5480.0,
-        "TRACK": 1,
-        "SHMODE": "Mechanical shutter",
-        "DRMODE": None,
-        "COMODE": None,
-        "RDMODE": "Multi track",
-        "RDNOISE": 7.0,
-        "INTEMP": -55.883,
-        "SATLEVEL": 65536,
-        "GAIN": 1.0,
-        "DC": 0.02,
-        "SCALEORI": 0.508,
-        "PARITY": "pos",
-        "XBINNING": 1,
-        "YBINNING": 1,
-        "EFFECTSX": 0,
-        "EFFECTNX": 2048,
-        "EFFECTSY": 0,
-        "EFFECTNY": 2048,
-        "STATSX": 0,
-        "STATNX": 2048,
-        "STATSY": 0,
-        "STATNY": 2048,
-        "INSTRUME": "iKon936-TTT1",
-        "INMODEL": "iKon936",
-        "INSERIAL": 27305,
-        "INSDK": "2.104",
-        "OFFSET": None,
-        "PXSIZE": 13.5,
-        "ORISIZEX": 2048,
-        "ORISIZEY": 2048,
-        "ALISIZEX": 2048,
-        "ALISIZEY": 2048,
-        "FINSIZEX": 2048,
-        "FINSIZEY": 2048,
-        "CAMERA": "iKon936-1",
-        "INFIRMW": "20.12",
-        "HSSPEED": 1.0,
-        "VSSPEED": 38.549999,
-        "PREAMPGA": 4.0,
-        "DATE-OBS": "2023-02-08T20:53:25.452554",
-        "JD-OBS": 2459984.370433479,
-        "MJD-OBS": 59983.87043347863,
-        "PCDATE": "2023-02-08T20:53:25.452554",
-        "COOLERST": "DRV_TEMP_NOT_REACHED",
-        "EXPTIME": 20.022,
-        "WINDOWSX": 0,
-        "WINDOWNX": 2048,
-        "WINDOWSY": 0,
-        "WINDOWNY": 2048,
-        "OBJECT": "Kellyoconnor",
-        "FILTER": "SDSSi",
-        "POINTRA": 3.652383384165774,
-        "POINTDEC": 11.85168222874598,
-        "UT1": "2023-02-08T20:53:25.452554",
-        "PCDAT1": "2023-02-08T20:53:25.452554",
-        "EXPT1": 20.022,
-        "TEMP1": -55.883,
-        "FOCUS": 12190,
-        "UTOBS": "2023-02-08T20:53:25.452554",
-        "INTEGT": 20.0,
-        "TOTIMA": 1,
-        "OBLINEID": 81158,
-        "HUMIDITY": 4.2,
-        "MIRRHUM": 15.612,
-        "PRESSURE": 766.0,
-        "AMBTEMP": 3.41,
-        "MIRRTEMP": 0.96,
-        "CLOUD": 0.0,
-        "ILLUMINA": 1.6,
-        "WINDDIR": 106.0,
-        "WINDVEL": 2.33,
-        "DUSTPLA": 0.003,
-        "DUSTPM1": 0.04,
-        "DUSTPM10": 0.04,
-        "DUSTPM25": 0.04,
-        "PWV": 2.04,
-        "TESSMAG": 20.84,
-        "SKYIRTEM": -49.75,
-        "BIASCORR": "bias+dark",
-        "BIASMEAN": 268.871,
-        "BIASSTD": 6.412,
-        "BIASN": 21,
-        "BIASTEMP": -53.287,
-        "BIASDATE": "2023-03-01T07:39:43.292806",
-        "DARKMEAN": 0.662,
-        "DARKSTD": 0.287,
-        "DARKN": 21,
-        "DARKTEMP": -53.287,
-        "DARKDATE": "2023-03-01T07:44:13.077313",
-        "FLATMEAN": 14836.159,
-        "FLATSTD": 539.274,
-        "FLATN": 11,
-        "FLATTEMP": -55.883,
-        "FLATDATE": "2023-02-09T08:48:35.819472",
-        "DATE": "2023-04-15T03:26:03",
-        "RA": 54.78902141028366,
-        "DEC": 11.85320287613557,
-        "RAHMS": "03:39:9.365138",
-        "DECDMS": "11:51:11.530354",
-        "AZ": 233.523691,
-        "ALT": 64.850553,
-        "ZD": 25.149447,
-        "AIRMASS": 1.104725,
-        "LONGAL": 174.721683,
-        "LATGAL": -33.665416,
-        "LONECL": 55.312877,
-        "LATECL": -7.447191,
-        "WCSAXES": 2,
-        "EQUINOX": 2000.0,
-        "LONPOLE": 180.0,
-        "LATPOLE": 0.0,
-        "CRVAL1": 54.650272494715,
-        "CRVAL2": 11.85584513410472,
-        "CRPIX1": 212.0882167819279,
-        "CRPIX2": 1545.511680545574,
-        "CUNIT1": "deg",
-        "CUNIT2": "deg",
-        "CD1_1": 0.000116910747794951,
-        "CD1_2": -7.836721585484e-05,
-        "CD2_1": -7.8326675648825e-05,
-        "CD2_2": -0.00011694055432154,
-        "CTYPE1": "RA---TAN-SIP",
-        "CTYPE2": "DEC--TAN-SIP",
-        "A_ORDER": 3,
-        "A_0_0": 0.0,
-        "A_0_1": 0.0,
-        "A_0_2": 7.85130602880151e-07,
-        "A_0_3": 4.87714430139195e-10,
-        "A_1_0": 0.0,
-        "A_1_1": -5.2398680309053e-07,
-        "A_1_2": 1.06085839651212e-10,
-        "A_2_0": -7.7585895073241e-07,
-        "A_2_1": 3.74421642914737e-10,
-        "A_3_0": 6.63685497970571e-10,
-        "B_ORDER": 3,
-        "B_0_0": 0.0,
-        "B_0_1": 0.0,
-        "B_0_2": 2.33951184393364e-07,
-        "B_0_3": 2.58285053217136e-10,
-        "B_1_0": 0.0,
-        "B_1_1": 2.09009183645733e-07,
-        "B_1_2": 1.53541176428838e-10,
-        "B_2_0": 5.12947344849658e-07,
-        "B_2_1": 2.46888610282133e-11,
-        "B_3_0": -2.1443451661585e-10,
-        "AP_ORDER": 3,
-        "AP_0_0": 1.5219546870604e-05,
-        "AP_0_1": -2.6448675612831e-08,
-        "AP_0_2": -7.8428516167927e-07,
-        "AP_0_3": -4.870677038752e-10,
-        "AP_1_0": 5.00186329487163e-07,
-        "AP_1_1": 5.24466855304315e-07,
-        "AP_1_2": -1.0535107700489e-10,
-        "AP_2_0": 7.73085658503646e-07,
-        "AP_2_1": -3.7411460141753e-10,
-        "AP_3_0": -6.6162747930699e-10,
-        "BP_ORDER": 3,
-        "BP_0_0": -4.8112570978542e-05,
-        "BP_0_1": -1.2852388760091e-08,
-        "BP_0_2": -2.3355636615901e-07,
-        "BP_0_3": -2.57929193847e-10,
-        "BP_1_0": -2.3905053194158e-07,
-        "BP_1_1": -2.0901938882307e-07,
-        "BP_1_2": -1.5314954797012e-10,
-        "BP_2_0": -5.1235862137302e-07,
-        "BP_2_1": -2.4328225981164e-11,
-        "BP_3_0": 2.14212738169679e-10,
-        "FOVX": 0.2889955555555556,
-        "FOVY": 0.2889955555555556,
-        "ZP": 0.0,
-        "EZP": 0.0,
-        "FWHM": 2.96001935005188,
-        "EFWHM": 0.3019448220729828,
-        "M_LIM": 0.0,
-        "M_SKY": -5.202066868645168,
-        "SKY": 160.2217864990234,
-        "ESKY": 16.04984092712402,
-        "SCALE": 0.508,
-        "CCW": -146.1756287619255,
-        "AP_SNR": 49,
-        "AP_FLUX": 49,
-    }
-    _header2 = {
-        "SIMPLE": True,
-        "BITPIX": -32,
-        "NAXIS": 2,
-        "NAXIS1": 14200,
-        "NAXIS2": 10650,
-        "TELESCOP": "TTT2",
-        "SITELAT": 28.29871203,
-        "SITELONG": -16.50948217,
-        "SITEALT": 2359.11,
-        "DIAMETER": 800.0,
-        "FOCAL": 6.85,
-        "FOCALEN": 5480.0,
-        "TRACK": 1,
-        "SHMODE": "Rolling shutter",
-        "DRMODE": "HDR",
-        "COMODE": "Mono 16",
-        "RDMODE": "Full Frame Read Mode #4",
-        "RDNOISE": 2.8,
-        "INTEMP": -15.0,
-        "SATLEVEL": 65536,
-        "GAIN": 1.024,
-        "DC": 0.007,
-        "SCALEORI": 0.142,
-        "PARITY": "pos",
-        "XBINNING": 1,
-        "YBINNING": 1,
-        "OVERSCSX": 51,
-        "OVERSCNX": 14253,
-        "OVERSCSY": 10659,
-        "OVERSCNY": 88,
-        "EFFECTSX": 51,
-        "EFFECTNX": 14253,
-        "EFFECTSY": 0,
-        "EFFECTNY": 10650,
-        "STATSX": 6640,
-        "STATNX": 1024,
-        "STATSY": 4862,
-        "STATNY": 1024,
-        "INSTRUME": "QHY411-TTT2",
-        "INMODEL": "QHY411MERIS",
-        "INSERIAL": "2566a14f9ee62fe1a",
-        "INSDK": "22-7-25.16",
-        "OFFSET": 10.0,
-        "PXSIZE": 3.76,
-        "ORISIZEX": 14304,
-        "ORISIZEY": 10748,
-        "ALISIZEX": 14304,
-        "ALISIZEY": 10748,
-        "FINSIZEX": 14304,
-        "FINSIZEY": 10748,
-        "CAMERA": "QHY411-2",
-        "INFIRMW": "2017_5_6",
-        "DATE-OBS": "2023-02-19T20:56:11.676285",
-        "GPSDAT": "2023-02-19T20:56:11.676285",
-        "GPSLAT": 28.298815,
-        "GPSLON": -16.50944833333334,
-        "SEQNUM": 41,
-        "JD-OBS": 2459995.372357364,
-        "MJD-OBS": 59994.87235736441,
-        "PCDATE": "2023-02-19T20:56:11.683098",
-        "EXPTIME": 5.326963,
-        "GAMODE": 0.0,
-        "WINDOWSX": 0,
-        "WINDOWNX": 14304,
-        "WINDOWSY": 0,
-        "WINDOWNY": 10748,
-        "OBJECT": "1993VB",
-        "FILTER": "Lum",
-        "POINTRA": 4.423111699254016,
-        "POINTDEC": 26.56427818078933,
-        "UT1": "2023-02-19T20:56:11.676285",
-        "GPSDAT1": "2023-02-19T20:56:11.676285",
-        "PCDAT1": "2023-02-19T20:56:11.683098",
-        "EXPT1": 5.326963,
-        "TEMP1": -15.0,
-        "SEQNUM1": 41,
-        "FOCUS": 13898,
-        "UTOBS": "2023-02-19T20:56:11.676285",
-        "INTEGT": 5.3,
-        "TOTIMA": 1,
-        "OBLINEID": 111545,
-        "HUMIDITY": 55.44,
-        "BIASCORR": "bias",
-        "BIASMEAN": 171.718,
-        "BIASSTD": 3.32,
-        "BIASOVER": 171.734,
-        "BIASN": 21,
-        "BIASTEMP": -12.3,
-        "BIASDATE": "2023-02-19T18:36:44.834639",
-        "FLATMEAN": 14175.844,
-        "FLATSTD": 129.843,
-        "FLATN": 11,
-        "FLATTEMP": -13.0,
-        "FLATDATE": "2023-02-19T07:18:19.075587",
-        "DATE": "2023-04-15T01:38:21",
-        "RA": 66.42826273907058,
-        "DEC": 26.62161140115776,
-        "RAHMS": "04:25:42.783057",
-        "DECDMS": "26:37:17.801044",
-        "AZ": 269.626985,
-        "ALT": 71.937176,
-        "ZD": 18.062824,
-        "AIRMASS": 1.051838,
-        "LONGAL": 171.230494,
-        "LATGAL": -15.555384,
-        "LONECL": 68.973102,
-        "LATECL": 4.886683,
-        "WCSAXES": 2,
-        "EQUINOX": 2000.0,
-        "LONPOLE": 180.0,
-        "LATPOLE": 0.0,
-        "CRVAL1": 66.5731118308627,
-        "CRVAL2": 26.70513733216426,
-        "CRPIX1": 9764.406291715912,
-        "CRPIX2": 8199.798698904298,
-        "CUNIT1": "deg",
-        "CUNIT2": "deg",
-        "CD1_1": 6.84340927896256e-06,
-        "CD1_2": 3.87017232734834e-05,
-        "CD2_1": 3.86905151533621e-05,
-        "CD2_2": -6.8299073795454e-06,
-        "CTYPE1": "RA---TAN-SIP",
-        "CTYPE2": "DEC--TAN-SIP",
-        "A_ORDER": 3,
-        "A_0_0": 0.0,
-        "A_0_1": 0.0,
-        "A_0_2": 4.73780990402977e-08,
-        "A_0_3": 4.22005169691596e-12,
-        "A_1_0": 0.0,
-        "A_1_1": -5.7176900597633e-08,
-        "A_1_2": -3.5659289348658e-12,
-        "A_2_0": -1.3129239874033e-07,
-        "A_2_1": -1.0242455126531e-11,
-        "A_3_0": -1.7383258240407e-11,
-        "B_ORDER": 3,
-        "B_0_0": 0.0,
-        "B_0_1": 0.0,
-        "B_0_2": 6.69007879531292e-09,
-        "B_0_3": -2.573733153067e-14,
-        "B_1_0": 0.0,
-        "B_1_1": -4.036529341206e-08,
-        "B_1_2": -9.3644790143299e-12,
-        "B_2_0": -7.032292721734e-08,
-        "B_2_1": -3.333143641493e-12,
-        "B_3_0": -1.0658621983011e-11,
-        "AP_ORDER": 3,
-        "AP_0_0": -0.00161476092667527,
-        "AP_0_1": -1.7220915038522e-07,
-        "AP_0_2": -4.7363792125673e-08,
-        "AP_0_3": -4.2195087651648e-12,
-        "AP_1_0": 9.56583422983116e-08,
-        "AP_1_1": 5.74198698131822e-08,
-        "AP_1_2": 3.58426306939799e-12,
-        "AP_2_0": 1.31683014580356e-07,
-        "AP_2_1": 1.02894027357783e-11,
-        "AP_3_0": 1.74308119033378e-11,
-        "BP_ORDER": 3,
-        "BP_0_0": -0.00128863202567437,
-        "BP_0_1": -1.172848357772e-07,
-        "BP_0_2": -6.6351435582233e-09,
-        "BP_0_3": 3.21998549459442e-14,
-        "BP_1_0": 4.04272314790572e-08,
-        "BP_1_1": 4.05799078044546e-08,
-        "BP_1_2": 9.38479325507474e-12,
-        "BP_2_0": 7.05901127290546e-08,
-        "BP_2_1": 3.37127115036146e-12,
-        "BP_3_0": 1.06902353633817e-11,
-        "FOVX": 0.4200833333333333,
-        "FOVY": 0.5601111111111111,
-        "ZP": 23.15573159902409,
-        "EZP": 0.06360210866361185,
-        "FWHM": 5.001328468322754,
-        "EFWHM": 0.56470787525177,
-        "M_LIM": 18.720908109705,
-        "M_SKY": 24.4681875057086,
-        "SKY": 3.135298728942871,
-        "ESKY": 4.061130523681641,
-        "SCALE": 0.142,
-        "CCW": 100.0193684428295,
-        "AP_SNR": 49,
-        "AP_FLUX": 49,
-    }
+    # TTT2_QHY411-2_2023-02-19-20-56-11-676285_1993VB.fits
+    _header2_str = """
+    SIMPLE  =                    T / conforms to FITS standard                      
+BITPIX  =                  -32 / array data type                                
+NAXIS   =                    2 / number of array dimensions                     
+NAXIS1  =                14200                                                  
+NAXIS2  =                10650                                                  
+COMMENT ***************************                                             
+COMMENT          TELESCOPE                                                      
+COMMENT ***************************                                             
+TELESCOP= 'TTT2    '           / Telescope name                                 
+SITELAT =          28.29871203 / Telescope latitude, in degrees                 
+SITELONG=         -16.50948217 / Telescope longitude, in degrees                
+SITEALT =              2359.11 / Telescope altitude, in meters                  
+DIAMETER=                800.0 / Telescope diameter, in mm                      
+FOCAL   =                 6.85 / Telescope focal ratio                          
+FOCALEN =               5480.0 / Telescope focal length, in mm                  
+TRACK   =                    1 / Sidereal tracking, 0=no, 1=yes                 
+COMMENT ***************************                                             
+COMMENT          INSTRUMENT                                                     
+COMMENT ***************************                                             
+SHMODE  = 'Rolling shutter'    / Electronic shutter mode                        
+DRMODE  = 'HDR     '           / Dynamic range mode                             
+COMODE  = 'Mono 16 '           / Color mode                                     
+RDMODE  = 'Full Frame Read Mode #4' / Readout mode                              
+RDNOISE =                  2.8 / Readout noise, in e-                           
+INTEMP  =                -15.0 / Temperature of the camera                      
+SATLEVEL=                65536 / Saturation level, in ADU                       
+GAIN    =                1.024 / Gain, in e/cnt(ADU)                            
+DC      =                0.007 / Dark current                                   
+SCALEORI=                0.142 / [arcsec/px] Nominal plate scale                
+PARITY  = 'pos     '           / Image parity                                   
+XBINNING=                    1 / Binning in x axis                              
+YBINNING=                    1 / Binning in y axis                              
+OVERSCSX=                   51 / Overscan region origin in X axis               
+OVERSCNX=                14253 / Overscan region lines in X axis                
+OVERSCSY=                10659 / Overscan region origin in Y axis               
+OVERSCNY=                   88 / Overscan region lines in Y axis                
+EFFECTSX=                   51 / Effective region origin in X axis              
+EFFECTNX=                14253 / Effective region lines in X axis               
+EFFECTSY=                    0 / Effective region origin in Y axis              
+EFFECTNY=                10650 / Effective region lines in Y axis               
+STATSX  =                 6640 / Stats region origin in X axis                  
+STATNX  =                 1024 / Stats region lines in X axis                   
+STATSY  =                 4862 / Stats region origin in Y axis                  
+STATNY  =                 1024 / Stats region lines in Y axis                   
+INSTRUME= 'QHY411-TTT2'        / Instrument                                     
+INMODEL = 'QHY411MERIS'        / Instrument model                               
+INSERIAL= '2566a14f9ee62fe1a'  / Instrument serial number                       
+INSDK   = '22-7-25.16'         / Instrument SDK version                         
+OFFSET  =                 10.0 / Pedestal level, in ADU                         
+PXSIZE  =                 3.76 / Pixel size, in micron                          
+ORISIZEX=                14304 / Number of pixels in axis X                     
+ORISIZEY=                10748 / Number of pixels in axis Y                     
+ALISIZEX=                14304 / Image xsize for aligning, centered             
+ALISIZEY=                10748 / Image ysize for aligning, centered             
+FINSIZEX=                14304 / Image xsize for final saved image, centered    
+FINSIZEY=                10748 / Image ysize for final saved image, centered    
+COMMENT ***************************                                             
+COMMENT       EXPOSITION DATA                                                   
+COMMENT ***************************                                             
+CAMERA  = 'QHY411-2'           / Camera tag name                                
+INFIRMW = '2017_5_6'           / Instrument firmware version                    
+DATE-OBS= '2023-02-19T20:56:11.676285' / Date of capture observation            
+GPSDAT  = '2023-02-19T20:56:11.676285' / Date of capture observation from the GP
+GPSLAT  =            28.298815 / Latitude measured by the GPS                   
+GPSLON  =   -16.50944833333334 / Longitude measured by the GPS                  
+SEQNUM  =                   41 / Number of the frame in the sequence            
+JD-OBS  =    2459995.372357364 / Julian date                                    
+MJD-OBS =    59994.87235736441 / Modified julian date                           
+PCDATE  = '2023-02-19T20:56:11.683098' / Date of capture observation from the PC
+EXPTIME =             5.326963 / Exposition time                                
+GAMODE  =                  0.0 / Gain mode                                      
+WINDOWSX=                    0 / Window region origin in X axis                 
+WINDOWNX=                14304 / Window region lines in X axis                  
+WINDOWSY=                    0 / Window region origin in Y axis                 
+WINDOWNY=                10748 / Window region lines in Y axis                  
+OBJECT  = '1993VB  '           / Object                                         
+FILTER  = 'Lum     '           / Filter used                                    
+POINTRA =    4.423111699254016 / Right ascension (J2000) sent to telescope      
+POINTDEC=    26.56427818078933 / Declination (J2000) sent to telescope          
+UT1     = '2023-02-19T20:56:11.676285' / Datetime of sub-frame 1                
+GPSDAT1 = '2023-02-19T20:56:11.676285' / GPS Datetime of sub-frame 1            
+PCDAT1  = '2023-02-19T20:56:11.683098' / PC Datetime of sub-frame 1             
+EXPT1   =             5.326963 / Exposure time of sub-frame 1                   
+TEMP1   =                -15.0 / Camera temperature (C) of sub-frame 1          
+SEQNUM1 =                   41 / Frame number of sub-frame 1                    
+FOCUS   =                13898 / Focuser position in micrometers                
+UTOBS   = '2023-02-19T20:56:11.676285' / Mean datetime of observation           
+INTEGT  =                  5.3 / Sum of all exposition times                    
+TOTIMA  =                    1 / Number of captures for this image              
+OBLINEID=               111545 / Observation Line ID from the database          
+COMMENT ***************************                                             
+COMMENT         WEATHER DATA                                                    
+COMMENT ***************************                                             
+HUMIDITY=                55.44 / Relative humidity (%)                          
+COMMENT ***************************                                             
+COMMENT         PRE-REDUCTION                                                   
+COMMENT ***************************                                             
+BIASCORR= 'bias    '           / Bias correction method                         
+BIASMEAN=              171.718 / MasterBias mean, in ADU                        
+BIASSTD =                 3.32 / MasterBias standard deviation, in ADU          
+BIASOVER=              171.734 / Median level in MasterBias overscan, in ADU    
+BIASN   =                   21 / Number of stacked frames in MasterBias         
+BIASTEMP=                -12.3 / Instrument temperature of MasterBias, in Celsiu
+BIASDATE= '2023-02-19T18:36:44.834639' / Date of capture of MasterBias          
+FLATMEAN=            14175.844 / Mean of the MasterFlat frame, in ADU           
+FLATSTD =              129.843 / Standard deviation in flat stacking, in ADU    
+FLATN   =                   11 / Number of staked frames in MasterFlat          
+FLATTEMP=                -13.0 / Instrument temperature of MasterFlat, in Celsiu
+FLATDATE= '2023-02-19T07:18:19.075587' / Date of capture of MasterFlat          
+DATE    = '2023-04-15T01:38:21' / Date of file creation                         
+COMMENT ***************************                                             
+COMMENT        ASTROMETRY                                                       
+COMMENT ***************************                                             
+RA      =    66.42826273907058 / [deg] Central right ascension                  
+DEC     =    26.62161140115776 / [deg] Central declination                      
+RAHMS   = '04:25:42.783057'    / [hh:mm:ss] Central Right ascension             
+DECDMS  = '26:37:17.801044'    / [dd:mm:ss] Central declination                 
+AZ      =           269.626985 / [deg] Azimut                                   
+ALT     =    71.93717599999999 / [deg] Altitude                                 
+ZD      =            18.062824 / [deg] Zenital distance, in degrees             
+AIRMASS =             1.051838 / Airmass                                        
+LONGAL  =           171.230494 / [deg] Galactic longitude                       
+LATGAL  =           -15.555384 / [deg] Galactic latitude                        
+LONECL  =            68.973102 / [deg] Baricentric mean ecliptic longitude      
+LATECL  =             4.886683 / [deg] Baricentric mean ecliptic latitude       
+WCSAXES =                    2 / Number of coordinate axes                      
+EQUINOX =               2000.0 / Equatorial coordinates definition (yr)         
+LONPOLE =                180.0 / Native longitude of celestial pole (deg)       
+LATPOLE =                  0.0 / Native latitude of celestial pole (deg)        
+CRVAL1  =     66.5731118308627 / RA of reference point                          
+CRVAL2  =    26.70513733216426 / DEC of reference point                         
+CRPIX1  =    9764.406291715912 / X reference pixel                              
+CRPIX2  =    8199.798698904298 / Y reference pixel                              
+CUNIT1  = 'deg     '           / X pixel scale units                            
+CUNIT2  = 'deg     '           / Y pixel scale units                            
+CD1_1   = 6.84340927896256E-06 / Transformation matrix                          
+CD1_2   = 3.87017232734834E-05 / Transformation matrix                          
+CD2_1   = 3.86905151533621E-05 / Transformation matrix                          
+CD2_2   = -6.8299073795454E-06 / Transformation matrix                          
+CTYPE1  = 'RA---TAN-SIP'       / TAN (gnomonic) projection + SIP distortions    
+CTYPE2  = 'DEC--TAN-SIP'       / TAN (gnomonic) projection + SIP distortions    
+A_ORDER =                    3 / Polynomial order, axis 1                       
+A_0_0   =                  0.0 / Polynomial coefficient, axis 1                 
+A_0_1   =                  0.0 / Polynomial coefficient, axis 1                 
+A_0_2   = 4.73780990402977E-08 / Polynomial coefficient, axis 1                 
+A_0_3   = 4.22005169691596E-12 / Polynomial coefficient, axis 1                 
+A_1_0   =                  0.0 / Polynomial coefficient, axis 1                 
+A_1_1   = -5.7176900597633E-08 / Polynomial coefficient, axis 1                 
+A_1_2   = -3.5659289348658E-12 / Polynomial coefficient, axis 1                 
+A_2_0   = -1.3129239874033E-07 / Polynomial coefficient, axis 1                 
+A_2_1   = -1.0242455126531E-11 / Polynomial coefficient, axis 1                 
+A_3_0   = -1.7383258240407E-11 / Polynomial coefficient, axis 1                 
+B_ORDER =                    3 / Polynomial order, axis 2                       
+B_0_0   =                  0.0 / Polynomial coefficient, axis 2                 
+B_0_1   =                  0.0 / Polynomial coefficient, axis 2                 
+B_0_2   = 6.69007879531292E-09 / Polynomial coefficient, axis 2                 
+B_0_3   = -2.5737331530670E-14 / Polynomial coefficient, axis 2                 
+B_1_0   =                  0.0 / Polynomial coefficient, axis 2                 
+B_1_1   = -4.0365293412060E-08 / Polynomial coefficient, axis 2                 
+B_1_2   = -9.3644790143299E-12 / Polynomial coefficient, axis 2                 
+B_2_0   = -7.0322927217340E-08 / Polynomial coefficient, axis 2                 
+B_2_1   = -3.3331436414930E-12 / Polynomial coefficient, axis 2                 
+B_3_0   = -1.0658621983011E-11 / Polynomial coefficient, axis 2                 
+AP_ORDER=                    3 / Inv polynomial order, axis 1                   
+AP_0_0  = -0.00161476092667527 / Inv polynomial coefficient, axis 1             
+AP_0_1  = -1.7220915038522E-07 / Inv polynomial coefficient, axis 1             
+AP_0_2  = -4.7363792125673E-08 / Inv polynomial coefficient, axis 1             
+AP_0_3  = -4.2195087651648E-12 / Inv polynomial coefficient, axis 1             
+AP_1_0  = 9.56583422983116E-08 / Inv polynomial coefficient, axis 1             
+AP_1_1  = 5.74198698131822E-08 / Inv polynomial coefficient, axis 1             
+AP_1_2  = 3.58426306939799E-12 / Inv polynomial coefficient, axis 1             
+AP_2_0  = 1.31683014580356E-07 / Inv polynomial coefficient, axis 1             
+AP_2_1  = 1.02894027357783E-11 / Inv polynomial coefficient, axis 1             
+AP_3_0  = 1.74308119033378E-11 / Inv polynomial coefficient, axis 1             
+BP_ORDER=                    3 / Inv polynomial order, axis 2                   
+BP_0_0  = -0.00128863202567437 / Inv polynomial coefficient, axis 2             
+BP_0_1  = -1.1728483577720E-07 / Inv polynomial coefficient, axis 2             
+BP_0_2  = -6.6351435582233E-09 / Inv polynomial coefficient, axis 2             
+BP_0_3  = 3.21998549459442E-14 / Inv polynomial coefficient, axis 2             
+BP_1_0  = 4.04272314790572E-08 / Inv polynomial coefficient, axis 2             
+BP_1_1  = 4.05799078044546E-08 / Inv polynomial coefficient, axis 2             
+BP_1_2  = 9.38479325507474E-12 / Inv polynomial coefficient, axis 2             
+BP_2_0  = 7.05901127290546E-08 / Inv polynomial coefficient, axis 2             
+BP_2_1  = 3.37127115036146E-12 / Inv polynomial coefficient, axis 2             
+BP_3_0  = 1.06902353633817E-11 / Inv polynomial coefficient, axis 2             
+RA      =    66.42826273907058                                                  
+DEC     =    26.62161140115776                                                  
+COMMENT ***************************                                             
+COMMENT        PHOTOMETRY                                                       
+COMMENT ***************************                                             
+FOVX    =   0.4200833333333333 / Image horizontal axis Fiel of View(deg)        
+FOVY    =   0.5601111111111111 / Image vertical axis Fiel of View(deg)          
+ZP      =    23.15573159902409 / Zero point                                     
+EZP     =  0.06360210866361185 / Zero point's error                             
+FWHM    =    5.001328468322754 / Full width                                     
+EFWHM   =     0.56470787525177 / Full width's error                             
+M_LIM   =      18.720908109705 / Limit magnitude (3 sigmas)                     
+M_SKY   =     24.4681875057086 / Sky's magnitud                                 
+SKY     =    3.135298728942871 / Sky flux                                       
+ESKY    =    4.061130523681641 / Sky's flux error                               
+SCALE   =                0.142 / Image scale in arcsec                          
+CCW     =    100.0193684428295 / Field rotation                                 
+AP_SNR  =                   49 / Opening radius maximising snr                  
+AP_FLUX =                   49 / Opening radius maximising flux                 
+END
+"""
+    _header2 = astropy.io.fits.Header.fromstring(_header2_str, sep="\n")
+    _header1_str = """
+    SIMPLE  =                    T / conforms to FITS standard                      
+BITPIX  =                  -32 / array data type                                
+NAXIS   =                    2 / number of array dimensions                     
+NAXIS1  =                 2048                                                  
+NAXIS2  =                 2048                                                  
+COMMENT ***************************                                             
+COMMENT          TELESCOPE                                                      
+COMMENT ***************************                                             
+TELESCOP= 'TTT1    '           / Telescope name                                 
+SITELAT =          28.29871121 / Telescope latitude, in degrees                 
+SITELONG=         -16.50956893 / Telescope longitude, in degrees                
+SITEALT =              2359.12 / Telescope altitude, in meters                  
+DIAMETER=                800.0 / Telescope diameter, in mm                      
+FOCAL   =                 6.85 / Telescope focal ratio                          
+FOCALEN =               5480.0 / Telescope focal length, in mm                  
+TRACK   =                    1 / Sidereal tracking, 0=no, 1=yes                 
+COMMENT ***************************                                             
+COMMENT          INSTRUMENT                                                     
+COMMENT ***************************                                             
+SHMODE  = 'Mechanical shutter' / Electronic shutter mode                        
+DRMODE  =  / Dynamic range mode                                                 
+COMODE  =  / Color mode                                                         
+RDMODE  = 'Multi track'        / Readout mode                                   
+RDNOISE =                  7.0 / Readout noise, in e-                           
+INTEMP  =              -55.883 / Temperature of the camera                      
+SATLEVEL=                65536 / Saturation level, in ADU                       
+GAIN    =                  1.0 / Gain, in e/cnt(ADU)                            
+DC      =                 0.02 / Dark current                                   
+SCALEORI=                0.508 / [arcsec/px] Nominal plate scale                
+PARITY  = 'pos     '           / Image parity                                   
+XBINNING=                    1 / Binning in x axis                              
+YBINNING=                    1 / Binning in y axis                              
+EFFECTSX=                    0 / Effective region origin in X axis              
+EFFECTNX=                 2048 / Effective region lines in X axis               
+EFFECTSY=                    0 / Effective region origin in Y axis              
+EFFECTNY=                 2048 / Effective region lines in Y axis               
+STATSX  =                    0 / Stats region origin in X axis                  
+STATNX  =                 2048 / Stats region lines in X axis                   
+STATSY  =                    0 / Stats region origin in Y axis                  
+STATNY  =                 2048 / Stats region lines in Y axis                   
+INSTRUME= 'iKon936-TTT1'       / Instrument                                     
+INMODEL = 'iKon936 '           / Instrument model                               
+INSERIAL=                27305 / Instrument serial number                       
+INSDK   = '2.104   '           / Instrument SDK version                         
+OFFSET  =  / Pedestal level, in ADU                                             
+PXSIZE  =                 13.5 / Pixel size, in micron                          
+ORISIZEX=                 2048 / Number of pixels in axis X                     
+ORISIZEY=                 2048 / Number of pixels in axis Y                     
+ALISIZEX=                 2048 / Image xsize for aligning, centered             
+ALISIZEY=                 2048 / Image ysize for aligning, centered             
+FINSIZEX=                 2048 / Image xsize for final saved image, centered    
+FINSIZEY=                 2048 / Image ysize for final saved image, centered    
+COMMENT ***************************                                             
+COMMENT       EXPOSITION DATA                                                   
+COMMENT ***************************                                             
+CAMERA  = 'iKon936-1'          / Camera tag name                                
+INFIRMW = '20.12   '           / Instrument firmware version                    
+HSSPEED =                  1.0 / Horizontal shift speed in MHz (readout rate)   
+VSSPEED =            38.549999 / Vertical shift speed in microseconds per pixel 
+PREAMPGA=                  4.0 / Pre Amp gain factor                            
+DATE-OBS= '2023-02-08T20:52:40.538105' / Date of capture observation            
+JD-OBS  =    2459984.369913635 / Julian date                                    
+MJD-OBS =    59983.86991363548 / Modified julian date                           
+PCDATE  = '2023-02-08T20:52:40.538105' / Date of capture observation from the PC
+COOLERST= 'DRV_TEMP_NOT_REACHED' / Status of the cooler                         
+EXPTIME =               13.736 / Exposition time                                
+WINDOWSX=                    0 / Window region origin in X axis                 
+WINDOWNX=                 2048 / Window region lines in X axis                  
+WINDOWSY=                    0 / Window region origin in Y axis                 
+WINDOWNY=                 2048 / Window region lines in Y axis                  
+OBJECT  = 'Kellyoconnor'       / Object                                         
+FILTER  = 'SDSSg   '           / Filter used                                    
+POINTRA =    3.652383384165774 / Right ascension (J2000) sent to telescope      
+POINTDEC=    11.85168222874598 / Declination (J2000) sent to telescope          
+UT1     = '2023-02-08T20:52:40.538105' / Datetime of sub-frame 1                
+PCDAT1  = '2023-02-08T20:52:40.538105' / PC Datetime of sub-frame 1             
+EXPT1   =               13.736 / Exposure time of sub-frame 1                   
+TEMP1   =              -55.883 / Camera temperature (C) of sub-frame 1          
+FOCUS   =                12190 / Focuser position in micrometers                
+UTOBS   = '2023-02-08T20:52:40.538105' / Mean datetime of observation           
+INTEGT  =                 13.7 / Sum of all exposition times                    
+TOTIMA  =                    1 / Number of captures for this image              
+OBLINEID=                81156 / Observation Line ID from the database          
+COMMENT ***************************                                             
+COMMENT         WEATHER DATA                                                    
+COMMENT ***************************                                             
+HUMIDITY=                 4.15 / Relative humidity (%)                          
+MIRRHUM =               15.601 / Telescope mirror humidity, in Celsius          
+PRESSURE=                766.0 / Local pressure, in mbar                        
+AMBTEMP =                 3.41 / Ambient temperature, in Celsius                
+MIRRTEMP=                 0.96 / Telescope mirror temperature, in Celsius       
+CLOUD   =                  0.0 / Cloud presence, 0 = Clear, 1 = Cloudy          
+ILLUMINA=                  1.6 / Solar illuminance, in lux                      
+WINDDIR =              216.415 / Wind direction (in deg)                        
+WINDVEL =                2.447 / Wind speed, in m/s                             
+DUSTPLA =                0.003 / Dust, in Polystyrol-Latex-Aerosols (PLA)/m3    
+DUSTPM1 =                 0.04 / Particle matter <1 micron, in 1e-6g/m3         
+DUSTPM10=                 0.04 / Particle matter <10 microns, in 1e-6g/m3       
+DUSTPM25=                 0.04 / Particle matter <2.5 microns, in 1e-6g/m3      
+PWV     =                 1.51 / Precipitable water vapour, in mm               
+TESSMAG =                20.84 / TESS-W cenital sky brightness, in mag/arcsec2  
+SKYIRTEM=               -49.75 / IR cenital sky temperature, in Celsius         
+COMMENT ***************************                                             
+COMMENT         PRE-REDUCTION                                                   
+COMMENT ***************************                                             
+BIASCORR= 'bias+dark'          / Bias correction method                         
+BIASMEAN=              268.871 / MasterBias mean, in ADU                        
+BIASSTD =                6.412 / MasterBias standard deviation, in ADU          
+BIASN   =                   21 / Number of stacked frames in MasterBias         
+BIASTEMP=              -53.287 / Instrument temperature of MasterBias, in Celsiu
+BIASDATE= '2023-03-01T07:39:43.292806' / Date of capture of MasterBias          
+DARKMEAN=                0.662 / Mean of the MasterDark frame, in ADU/s         
+DARKSTD =                0.287 / MasterDark standard deviation, in ADU/sec      
+DARKN   =                   21 / Number of staked frames in MasterDark          
+DARKTEMP=              -53.287 / Instrument temperature of MasterDark, in Celsiu
+DARKDATE= '2023-03-01T07:44:13.077313' / Date of capture of MasterDark          
+FLATMEAN=            15940.665 / Mean of the MasterFlat frame, in ADU           
+FLATSTD =              552.083 / Standard deviation in flat stacking, in ADU    
+FLATN   =                   11 / Number of staked frames in MasterFlat          
+FLATTEMP=              -56.532 / Instrument temperature of MasterFlat, in Celsiu
+FLATDATE= '2023-02-02T19:13:25.192610' / Date of capture of MasterFlat          
+DATE    = '2023-04-15T03:26:34' / Date of file creation                         
+COMMENT ***************************                                             
+COMMENT        ASTROMETRY                                                       
+COMMENT ***************************                                             
+RA      =    54.78885815432049 / [deg] Central right ascension                  
+DEC     =    11.85325565554055 / [deg] Central declination                      
+RAHMS   = '03:39:9.325957'     / [hh:mm:ss] Central Right ascension             
+DECDMS  = '11:51:11.720360'    / [dd:mm:ss] Central declination                 
+AZ      =           233.224488 / [deg] Azimut                                   
+ALT     =            64.983079 / [deg] Altitude                                 
+ZD      =            25.016921 / [deg] Zenital distance, in degrees             
+AIRMASS =              1.10353 / Airmass                                        
+LONGAL  =           174.721503 / [deg] Galactic longitude                       
+LATGAL  =           -33.665493 / [deg] Galactic latitude                        
+LONECL  =            55.312732 / [deg] Baricentric mean ecliptic longitude      
+LATECL  =            -7.447103 / [deg] Baricentric mean ecliptic latitude       
+WCSAXES =                    2 / Number of coordinate axes                      
+EQUINOX =               2000.0 / Equatorial coordinates definition (yr)         
+LONPOLE =                180.0 / Native longitude of celestial pole (deg)       
+LATPOLE =                  0.0 / Native latitude of celestial pole (deg)        
+CRVAL1  =    54.89839141198505 / RA of reference point                          
+CRVAL2  =    11.82245370857722 / DEC of reference point                         
+CRPIX1  =    1777.618690422958 / X reference pixel                              
+CRPIX2  =    781.3124627786053 / Y reference pixel                              
+CUNIT1  = 'deg     '           / X pixel scale units                            
+CUNIT2  = 'deg     '           / Y pixel scale units                            
+CD1_1   = 0.000116964650936684 / Transformation matrix                          
+CD1_2   = -7.8500358575673E-05 / Transformation matrix                          
+CD2_1   = -7.8551079513038E-05 / Transformation matrix                          
+CD2_2   = -0.00011691809547351 / Transformation matrix                          
+CTYPE1  = 'RA---TAN-SIP'       / TAN (gnomonic) projection + SIP distortions    
+CTYPE2  = 'DEC--TAN-SIP'       / TAN (gnomonic) projection + SIP distortions    
+A_ORDER =                    3 / Polynomial order, axis 1                       
+A_0_0   =                  0.0 / Polynomial coefficient, axis 1                 
+A_0_1   =                  0.0 / Polynomial coefficient, axis 1                 
+A_0_2   = -5.3744942932387E-07 / Polynomial coefficient, axis 1                 
+A_0_3   = -2.5802215056889E-10 / Polynomial coefficient, axis 1                 
+A_1_0   =                  0.0 / Polynomial coefficient, axis 1                 
+A_1_1   = 1.73787726649304E-06 / Polynomial coefficient, axis 1                 
+A_1_2   = -3.4733304094105E-10 / Polynomial coefficient, axis 1                 
+A_2_0   = 6.86166720388377E-07 / Polynomial coefficient, axis 1                 
+A_2_1   = 1.13276746176446E-09 / Polynomial coefficient, axis 1                 
+A_3_0   = 1.31927020229763E-10 / Polynomial coefficient, axis 1                 
+B_ORDER =                    3 / Polynomial order, axis 2                       
+B_0_0   =                  0.0 / Polynomial coefficient, axis 2                 
+B_0_1   =                  0.0 / Polynomial coefficient, axis 2                 
+B_0_2   = -5.0382145553174E-08 / Polynomial coefficient, axis 2                 
+B_0_3   = -2.0787529074745E-10 / Polynomial coefficient, axis 2                 
+B_1_0   =                  0.0 / Polynomial coefficient, axis 2                 
+B_1_1   = 6.35335248126149E-08 / Polynomial coefficient, axis 2                 
+B_1_2   = -1.3019742707861E-10 / Polynomial coefficient, axis 2                 
+B_2_0   = -2.7512502647287E-07 / Polynomial coefficient, axis 2                 
+B_2_1   = -3.5845416487618E-11 / Polynomial coefficient, axis 2                 
+B_3_0   = -1.5459837760668E-10 / Polynomial coefficient, axis 2                 
+AP_ORDER=                    3 / Inv polynomial order, axis 1                   
+AP_0_0  = 1.83767365063758E-05 / Inv polynomial coefficient, axis 1             
+AP_0_1  = -7.7012534406790E-07 / Inv polynomial coefficient, axis 1             
+AP_0_2  = 5.37179517105436E-07 / Inv polynomial coefficient, axis 1             
+AP_0_3  = 2.58688170888574E-10 / Inv polynomial coefficient, axis 1             
+AP_1_0  = 1.04309490716990E-06 / Inv polynomial coefficient, axis 1             
+AP_1_1  = -1.7430364824405E-06 / Inv polynomial coefficient, axis 1             
+AP_1_2  = 3.46894225396888E-10 / Inv polynomial coefficient, axis 1             
+AP_2_0  = -6.8416717034359E-07 / Inv polynomial coefficient, axis 1             
+AP_2_1  = -1.1367083921002E-09 / Inv polynomial coefficient, axis 1             
+AP_3_0  = -1.3066890117205E-10 / Inv polynomial coefficient, axis 1             
+BP_ORDER=                    3 / Inv polynomial order, axis 2                   
+BP_0_0  = -1.8162994641013E-05 / Inv polynomial coefficient, axis 2             
+BP_0_1  = -1.3659800485951E-07 / Inv polynomial coefficient, axis 2             
+BP_0_2  = 5.04294536598353E-08 / Inv polynomial coefficient, axis 2             
+BP_0_3  = 2.08190125014730E-10 / Inv polynomial coefficient, axis 2             
+BP_1_0  = 2.32341117048019E-07 / Inv polynomial coefficient, axis 2             
+BP_1_1  = -6.3443477767157E-08 / Inv polynomial coefficient, axis 2             
+BP_1_2  = 1.30422066111061E-10 / Inv polynomial coefficient, axis 2             
+BP_2_0  = 2.75974486529842E-07 / Inv polynomial coefficient, axis 2             
+BP_2_1  = 3.60335982649415E-11 / Inv polynomial coefficient, axis 2             
+BP_3_0  = 1.55121683602205E-10 / Inv polynomial coefficient, axis 2             
+RA      =    54.78885815432049                                                  
+DEC     =    11.85325565554055                                                  
+COMMENT ***************************                                             
+COMMENT        PHOTOMETRY                                                       
+COMMENT ***************************                                             
+FOVX    =   0.2889955555555556 / Image horizontal axis Fiel of View(deg)        
+FOVY    =   0.2889955555555556 / Image vertical axis Fiel of View(deg)          
+ZP      =                  0.0 / Zero point                                     
+EZP     =                  0.0 / Zero point's error                             
+FWHM    =    3.942845582962036 / Full width                                     
+EFWHM   =   0.4234123826026917 / Full width's error                             
+M_LIM   =                  0.0 / Limit magnitude (3 sigmas)                     
+M_SKY   =   0.5923062153966254 / Sky's magnitud                                 
+SKY     =    10.81001853942871 / Sky flux                                       
+ESKY    =    9.739238739013672 / Sky's flux error                               
+SCALE   =                0.508 / Image scale in arcsec                          
+CCW     =   -146.1187789098986 / Field rotation                                 
+AP_SNR  =                   49 / Opening radius maximising snr                  
+AP_FLUX =                   49 / Opening radius maximising flux                 
+END                                                                             
+    """
+
+    _header1 = astropy.io.fits.Header.fromstring(_header1_str, sep="\n")
 
     def _split_target_name(self, s):
         result = ""
@@ -467,7 +526,7 @@ class TestAstrometryUtils(TestCase):
         y = 150
         wcs_coords = px_to_wcs(x, y, self._header1)
 
-        expected_coords = [np.array(54.74875915682997), np.array(12.027625065441386)]
+        expected_coords = [np.array(54.74860556759758), np.array(12.027688383745517)]
 
         self.assertListEqual(
             [float(wcs_coords[0]), float(wcs_coords[1])], expected_coords
@@ -488,7 +547,7 @@ class TestAstrometryUtils(TestCase):
         cat = {"RA": 54.74875915682997, "DEC": 12.027625065441386}
         wcs_coords = wcs_to_px(cat, self._header1)
 
-        expected_pix = [np.array(100), np.array(150)]
+        expected_pix = [np.array(101), np.array(149)]
 
         self.assertListEqual([int(wcs_coords[0]), int(wcs_coords[1])], expected_pix)
 
@@ -563,8 +622,9 @@ class TestAstrometryUtils(TestCase):
         result = get_target_ra_dec(
             target_name, moving_target, self._header1, ra_dec_dict
         )
+        expected_result = []
 
-        self.fail()
+        self.assertEquals(result, expected_result)
 
     def test_get_target_ra_dec_moving_precalculated_ra_dec_h2(self):
         target_name = self._split_target_name(self._header2["OBJECT"])
@@ -578,17 +638,79 @@ class TestAstrometryUtils(TestCase):
         result = get_target_ra_dec(
             target_name, moving_target, self._header2, ra_dec_dict
         )
+        expected_result = []
 
-        self.fail()
+        self.assertEquals(result, expected_result)
 
-    def test_get_target_pix(self):
-        self.fail()
+    def test_get_target_pix_h1(self):
+        ra = 3.6523833841657742
+        dec = 11.851682228745984
+        wcs_coords = get_target_pix(ra, dec, self._header1)
 
-    def test_get_ccw(self):
-        self.fail()
+        expected_pix = [np.array(1011), np.array(1044)]
 
-    def test_get_if_header_already_post_processed(self):
-        self.fail()
+        self.assertListEqual([int(wcs_coords[0]), int(wcs_coords[1])], expected_pix)
 
-    def test_cat_input_from_header(self):
-        self.fail()
+    def test_get_target_pix_h2(self):
+        ra = 4.423111699254016
+        dec = 26.56427818078933
+
+        wcs_coords = get_target_pix(ra, dec, self._header2)
+
+        expected_pix = [np.array(5342), np.array(3747)]
+
+        self.assertListEqual([int(wcs_coords[0]), int(wcs_coords[1])], expected_pix)
+
+    def test_get_ccw_h1(self):
+        result = get_ccw(self._header1)
+        expected_result = -146.11877890989848
+        self.assertEquals(result, expected_result)
+
+    def test_get_ccw_h2(self):
+        result = get_ccw(self._header2)
+        expected_result = 100.01936844282955
+        self.assertEquals(result, expected_result)
+
+    def test_get_if_header_already_post_processed_h1_pho(self):
+        result = get_if_header_already_post_processed(self._header1, "PHOTOMETRY")
+        self.assertTrue(result)
+
+    def test_get_if_header_already_post_processed_h1_ast(self):
+        result = get_if_header_already_post_processed(self._header1, "ASTROMETRY")
+        self.assertTrue(result)
+
+    def test_get_if_header_already_post_processed_h2_pho(self):
+        result = get_if_header_already_post_processed(self._header2, "PHOTOMETRY")
+        self.assertTrue(result)
+
+    def test_get_if_header_already_post_processed_h2_ast(self):
+        result = get_if_header_already_post_processed(self._header2, "ASTROMETRY")
+        self.assertTrue(result)
+
+    def test_cat_input_from_header_1(self):
+        result = cat_input_from_header(self._header1)
+        expected_result = (
+            SkyCoord(54.78885815 * u.deg, 11.85325566 * u.deg, frame="icrs"),
+            0.8174028682644279,
+            "SDSSg",
+            0.508,
+        )
+
+        self.assertTrue(result[0].separation(expected_result[0]).arcsecond < 0.0001)
+        self.assertEqual(result[1], expected_result[1])
+        self.assertEqual(result[2], expected_result[2])
+        self.assertEqual(result[3], expected_result[3])
+
+    def test_cat_input_from_header_2(self):
+        result = cat_input_from_header(self._header2)
+        expected_result = (
+            SkyCoord(66.42826274 * u.deg, 26.6216114 * u.deg, frame="icrs"),
+            1.5842334595383938,
+            "Lum",
+            0.142,
+        )
+
+        self.assertTrue(result[0].separation(expected_result[0]).arcsecond < 0.0001)
+        self.assertEqual(result[1], expected_result[1])
+        self.assertEqual(result[2], expected_result[2])
+        self.assertEqual(result[3], expected_result[3])
