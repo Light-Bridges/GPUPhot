@@ -18,7 +18,7 @@ from gpuphot.astrometry.utils import (
 
 
 class TestAstrometryUtils(TestCase):
-    # TTT2_QHY411-2_2023-02-19-20-56-11-676285_1993VB.fits
+    # TTT2_QHY411-2_2023-02-19-20-56-11-676285_1993VB.fits file
     _header2_str = """
     SIMPLE  =                    T / conforms to FITS standard                      
 BITPIX  =                  -32 / array data type                                
