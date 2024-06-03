@@ -1,2 +1,2 @@
-from .utils import *
-from .synt_stars import *
+from . import synt_stars
+from . import utils

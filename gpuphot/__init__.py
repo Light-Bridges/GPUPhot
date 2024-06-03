@@ -1,3 +1,3 @@
-from .phot import *
-from .stats import *
-from .astrometry import *
+from . import astrometry
+from . import phot
+from . import stats
