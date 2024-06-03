@@ -5,8 +5,8 @@ from astropy.convolution import discretize_model
 from astropy.modeling.models import Moffat2D
 from astropy.table import QTable
 
-from src.gpuphot.stats.io import pruebaPrint
 
+from gpuphot.stats.io import pruebaPrint
 
 def print_hello():
     pruebaPrint()
