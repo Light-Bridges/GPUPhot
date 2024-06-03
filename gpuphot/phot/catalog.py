@@ -5,7 +5,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord, angles
 from astroquery.vizier import Vizier
 
-from src.astrometry.utils import px_to_wcs, wcs_to_px
+from gpupthot.astrometry.utils import px_to_wcs, wcs_to_px
 
 
 def __getVizierALL(catalog):

@@ -18,13 +18,13 @@ from sklearn.linear_model import RANSACRegressor
 # from tensorflow.keras.models import load_model
 from tensorflow import keras
 
-from src.astrometry.utils import (
+from gpupthot.astrometry.utils import (
     cat_input_from_header,
     get_ccw,
     get_if_header_already_post_processed,
 )
-from src.phot.catalog import catalog_results, catalog_match
-from src.stats.utils import free_gpu_mem
+from gpupthot.phot.catalog import catalog_results, catalog_match
+from gpupthot.stats.utils import free_gpu_mem
 
 # import ttt.equipment.models as db
 from .utils import plate_scale_px

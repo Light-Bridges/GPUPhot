@@ -9,7 +9,7 @@ import cupy as cp
 import numpy as np
 from cupy.fft import fftn, ifftn, fftfreq
 
-from src.stats.subpixel_masked import _masked_phase_cross_correlation
+from gpupthot.stats.subpixel_masked import _masked_phase_cross_correlation
 
 
 def _upsampled_dft(data, upsampled_region_size,
