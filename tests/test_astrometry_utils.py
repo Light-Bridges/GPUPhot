@@ -5,7 +5,7 @@ import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
-from gpupthot.astrometry.utils import (
+from ..astrometry.utils import (
     get_target_ephemeris,
     px_to_wcs,
     wcs_to_px,
