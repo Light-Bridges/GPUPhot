@@ -24,19 +24,19 @@ try:
 except Exception as e:
     pass
 try:
-    from gpuphot.phot.photo_gpu import get_sky, get_fwhm_mof, gen_moff_filter2, detect_gpu
+    from src.phot.photo_gpu import get_sky, get_fwhm_mof, gen_moff_filter2, detect_gpu
 except Exception as e:
     pass
 try:
-    from gpuphot.stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
+    from src.stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
 except Exception as e:
     pass
 try:
-    from gpuphot.stats.io import fitsloader, mkhdu
+    from src.stats.io import fitsloader, mkhdu
 except Exception as e:
     pass
 try:
-    from gpuphot.stats.utils import free_gpu_mem
+    from src.stats.utils import free_gpu_mem
 except Exception as e:
     pass
 
