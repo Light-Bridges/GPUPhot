@@ -1,1 +1,1 @@
-from .astrometry import *
+from .gpuphot import *
