@@ -30,6 +30,8 @@ import numpy as np
 _null1 = lambda x: x
 _null2 = lambda *args: args
 
+def pruebaPrint():
+    print("pruebaPrint")
 
 class FitsContainer(object):
     '''

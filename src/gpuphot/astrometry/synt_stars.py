@@ -5,6 +5,11 @@ from astropy.convolution import discretize_model
 from astropy.modeling.models import Moffat2D
 from astropy.table import QTable
 
+from src.gpuphot.stats.io import pruebaPrint
+
+
+def print_hello():
+    pruebaPrint()
 
 def _generate_noise_rng():
     # Set up the random number generator, allowing a seed to be set from the environment
