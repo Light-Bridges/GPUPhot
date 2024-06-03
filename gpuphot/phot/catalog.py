@@ -5,8 +5,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord, angles
 from astroquery.vizier import Vizier
 
-from gpuphot.astrometry.utils import px_to_wcs, wcs_to_px
-
+from ..astrometry.utils import px_to_wcs, wcs_to_px
 
 def __getVizierALL(catalog):
     Vizier.ROW_LIMIT = -1

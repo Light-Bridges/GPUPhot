@@ -13,8 +13,8 @@ from skimage.transform._warps_cy import _warp_fast
 
 # from ttt.models import ObservingBlock, ObservingBlockLine
 # from django.utils import timezone
-from gpuphot.stats.reduction import center
-from gpuphot.stats.subpixel import (
+from ..stats.reduction import center
+from ..stats.subpixel import (
     phase_cross_correlation as phase_cross_correlation_gpu,
 )
 

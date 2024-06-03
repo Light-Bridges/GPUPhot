@@ -6,7 +6,7 @@ from astropy.modeling.models import Moffat2D
 from astropy.table import QTable
 
 
-from gpuphot.stats.io import pruebaPrint
+from ..stats.io import pruebaPrint
 
 def print_hello():
     pruebaPrint()
