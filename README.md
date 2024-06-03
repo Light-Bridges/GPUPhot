@@ -1,10 +1,8 @@
 # GPUPhot
 
-GPUPhot es un submódulo dedicado al procesamiento de imágenes utilizando GPU. Proporciona herramientas y utilidades para mejorar el rendimiento del procesamiento de imágenes.
+GPUPhot is a Python library for GPU accelerated photometry and astrometry.
 
-## Instalación
-
-Para instalar las dependencias, ejecuta:
+## Installation
 
 ```bash
-pip install -r requirements.txt
+pip install .
