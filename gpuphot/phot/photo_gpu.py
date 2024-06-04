@@ -14,18 +14,18 @@ from cupyx.scipy.ndimage import gaussian_filter, convolve, label, sum as nd_sum,
     median_filter
 from matplotlib import pyplot as plt
 from sklearn.linear_model import RANSACRegressor
+from ttt.equipment import models as db
 
-from cv.gpuphot.gpuphot.astrometry.utils import get_if_header_already_post_processed, get_scale, get_ccw
-from cv.gpuphot.gpuphot.phot.background import get_local_background_fft
-from cv.gpuphot.gpuphot.phot.catalog import cat_input_from_header, catalog_results, crossmatch_sources
-from cv.gpuphot.gpuphot.phot.convo import fill_image, get_aper_kernel, convolve_fft
-from cv.gpuphot.gpuphot.phot.psf import detect_isolated_stars, create_star_dataset, get_eigen_psfs, \
+from gpuphot.astrometry.utils import get_if_header_already_post_processed, get_scale, get_ccw
+from gpuphot.phot.background import get_local_background_fft
+from gpuphot.phot.catalog import cat_input_from_header, catalog_results, crossmatch_sources
+from gpuphot.phot.convo import fill_image, get_aper_kernel, convolve_fft
+from gpuphot.phot.psf import detect_isolated_stars, create_star_dataset, get_eigen_psfs, \
     project_all_stars_onto_eigenpsfs, create_coeff_map, detect_sources_pca, recreate_normed_star, fit_moffat, \
     detect_sources_kernel
-from cv.gpuphot.gpuphot.stats.s_util import free_gpu_mem
-from cv.gpuphot.gpuphot.utils.astro import plate_scale_px, deg_to_hms, radec_to_altaz, radec_to_gal, radec_to_ecl, \
+from gpuphot.stats.s_util import free_gpu_mem
+from gpuphot.utils.astro import plate_scale_px, deg_to_hms, radec_to_altaz, radec_to_gal, radec_to_ecl, \
     date_to_jd
-from ttt.equipment import models as db
 
 
 def get_solver():
@@ -35,7 +35,7 @@ def get_solver():
         cache = '/mnt/data/astrometry_cache'
 
     return astrometry.Solver(
-        astrometry.series_5200.index_files(
+        astrometry.series_5200.index_files(from ttt
             cache_directory=cache,
             scales={0, 1, 2, 3, 4, 5, 6},
         )

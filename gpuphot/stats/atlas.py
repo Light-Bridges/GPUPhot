@@ -7,10 +7,10 @@ from astroalign import find_transform
 from astropy.io import fits
 from cupyx.scipy.ndimage import shift
 from skimage.transform._warps_cy import _warp_fast
-
-from cv.gpuphot.gpuphot.stats.reduction import center
-from cv.gpuphot.gpuphot.stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
 from ttt.equipment.models import Header
+
+from gpuphot.stats.reduction import center
+from gpuphot.stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
 
 logger = logging.getLogger(__name__)
 

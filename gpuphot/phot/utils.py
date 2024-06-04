@@ -1,6 +1,6 @@
 import cupy as cp
 
-from cv.gpuphot.gpuphot.phot.convo import gen_apm_filter, convolve_fft
+from gpuphot.phot.convo import gen_apm_filter, convolve_fft
 
 
 def decompose_into_tiles(image, block_size):
@@ -11,12 +11,12 @@ def decompose_into_tiles(image, block_size):
     idx = 0
     for i in range(num_tiles_y):
         for j in range(num_tiles_x):
-            tiles[idx] = image[i*block_size:(i+1)*block_size, j*block_size:(j+1)*block_size]
+            tiles[idx] = image[i * block_size:(i + 1) * block_size, j * block_size:(j + 1) * block_size]
             idx += 1
     return tiles
 
 
-def calculate_tile_percentiles(tiles, qt = 70):
+def calculate_tile_percentiles(tiles, qt=70):
     return cp.percentile(tiles, qt, axis=(1, 2))
 
 
@@ -28,14 +28,15 @@ def recompose_from_percentiles(percentiles, original_shape, block_size):
     idx = 0
     for i in range(num_tiles_y):
         for j in range(num_tiles_x):
-            recomposed[i*block_size:(i+1)*block_size, j*block_size:(j+1)*block_size] = percentiles[idx]
+            recomposed[i * block_size:(i + 1) * block_size, j * block_size:(j + 1) * block_size] = percentiles[idx]
             idx += 1
-    recomposed[block_size*num_tiles_y:, :] = recomposed[block_size*num_tiles_y-1, :]
-    recomposed[:, block_size*num_tiles_x:] = recomposed[:, 2*(block_size*num_tiles_x-w):block_size*num_tiles_x-w]
+    recomposed[block_size * num_tiles_y:, :] = recomposed[block_size * num_tiles_y - 1, :]
+    recomposed[:, block_size * num_tiles_x:] = recomposed[:,
+                                               2 * (block_size * num_tiles_x - w):block_size * num_tiles_x - w]
     return recomposed
 
 
-def fill_nan_fft(image, lk, li=0, min_neighbors=5, pad = 301):
+def fill_nan_fft(image, lk, li=0, min_neighbors=5, pad=301):
     k_app = gen_apm_filter(lk, li=li, norm=False)
     image = image.astype(cp.double)
     not_nan_mask = (~cp.isnan(image)).astype(cp.double)

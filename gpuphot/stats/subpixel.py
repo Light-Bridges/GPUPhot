@@ -8,7 +8,7 @@ import cupy as cp
 import numpy as np
 from cupy.fft import fftn, ifftn, fftfreq
 
-from cv.gpuphot.gpuphot.stats.subpixel_masked import _masked_phase_cross_correlation
+from gpuphot.stats.subpixel_masked import _masked_phase_cross_correlation
 
 
 def phase_cross_correlation(reference_image, moving_image, *,

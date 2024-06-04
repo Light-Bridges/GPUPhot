@@ -173,7 +173,7 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
     final_shape = list(arr1.shape)
     for axis in axes:
         final_shape[axis] = fixed_image.shape[axis] + \
-            moving_image.shape[axis] - 1
+                            moving_image.shape[axis] - 1
     final_shape = tuple(final_shape)
     final_slice = tuple([slice(0, int(sz)) for sz in final_shape])
 
@@ -216,18 +216,18 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
 
     numerator = ifft(rotated_moving_fft * fixed_fft)
     numerator -= masked_correlated_fixed_fft * \
-        masked_correlated_rotated_moving_fft / number_overlap_masked_px
+                 masked_correlated_rotated_moving_fft / number_overlap_masked_px
 
     fixed_squared_fft = fft(cp.square(fixed_image))
     fixed_denom = ifft(rotated_moving_mask_fft * fixed_squared_fft)
     fixed_denom -= cp.square(masked_correlated_fixed_fft) / \
-        number_overlap_masked_px
+                   number_overlap_masked_px
     fixed_denom[:] = cp.fmax(fixed_denom, 0.0)
 
     rotated_moving_squared_fft = fft(cp.square(rotated_moving_image))
     moving_denom = ifft(fixed_mask_fft * rotated_moving_squared_fft)
     moving_denom -= cp.square(masked_correlated_rotated_moving_fft) / \
-        number_overlap_masked_px
+                    number_overlap_masked_px
     moving_denom[:] = cp.fmax(moving_denom, 0.0)
 
     denom = cp.sqrt(fixed_denom * moving_denom)
@@ -252,7 +252,7 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
 
     # explicitly set out dtype for compatibility with SciPy < 1.4, where
     # fftmodule will be numpy.fft which always uses float64 dtype.
-    out =cp.zeros_like(denom, dtype=float_dtype)
+    out = cp.zeros_like(denom, dtype=float_dtype)
     out[nonzero_indices] = numerator[nonzero_indices] / denom[nonzero_indices]
     cp.clip(out, a_min=-1, a_max=1, out=out)
 
