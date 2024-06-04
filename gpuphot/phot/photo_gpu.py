@@ -14,9 +14,8 @@ from cupyx.scipy.ndimage import gaussian_filter, convolve, label, sum as nd_sum,
     median_filter
 from matplotlib import pyplot as plt
 from sklearn.linear_model import RANSACRegressor
-from ttt.equipment import models as db
 
-from gpuphot.astrometry.utils import get_if_header_already_post_processed, get_scale, get_ccw
+from gpuphot.astrometry.utils import get_if_header_already_post_processed
 from gpuphot.phot.background import get_local_background_fft
 from gpuphot.phot.catalog import cat_input_from_header, catalog_results, crossmatch_sources
 from gpuphot.phot.convo import fill_image, get_aper_kernel, convolve_fft
@@ -24,8 +23,10 @@ from gpuphot.phot.psf import detect_isolated_stars, create_star_dataset, get_eig
     project_all_stars_onto_eigenpsfs, create_coeff_map, detect_sources_pca, recreate_normed_star, fit_moffat, \
     detect_sources_kernel
 from gpuphot.stats.s_util import free_gpu_mem
-from gpuphot.utils.astro import plate_scale_px, deg_to_hms, radec_to_altaz, radec_to_gal, radec_to_ecl, \
-    date_to_jd
+from gpuphot.utils.astro import plate_scale_px
+
+
+# from ttt.equipment import models as db
 
 
 def get_solver():
@@ -34,8 +35,8 @@ def get_solver():
     else:
         cache = '/mnt/data/astrometry_cache'
 
-    return astrometry.Solver(
-        astrometry.series_5200.index_files(from ttt
+    solver = astrometry.Solver(
+        astrometry.series_5200.index_files(
             cache_directory=cache,
             scales={0, 1, 2, 3, 4, 5, 6},
         )
@@ -44,6 +45,7 @@ def get_solver():
             scales={7, 8, 9, 10, 11},
         ),
     )
+    return solver
 
 
 def gen_apm_filter(lk):
@@ -130,7 +132,8 @@ def daofind_gpu_fast(img, sky, rms, sdet, mode='g', fw=0, alpha=0, beta=0, mem=c
     mem.free_all_blocks()
 
     res = np.asarray(
-        [y.get(), x.get(), peak.get(), flux_a.get(), flux_p.get(), npix.get(), sk_s.get()]).transpose().reshape((-1, 7))
+        [y.get(), x.get(), peak.get(), flux_a.get(), flux_p.get(), npix.get(), sk_s.get()]).transpose().reshape(
+        (-1, 7))
     df = pd.DataFrame(res, columns=['xcentroid', 'ycentroid', 'peak', 'flux_a', 'flux_p', 'npix', 'sks'])
     df = df[df.flux_a > 0]
     return df, lk
@@ -224,7 +227,8 @@ def gen_moff_filter2(alpha, beta):
     return (k_app, lk)
 
 
-def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, tile_section=3000, color_range=0.3,
+def process_image_new(imdata, imheader, db_header_obj, center_factor=0.5, ks=2, astrom=False, tile_section=3000,
+                      color_range=0.3,
                       SP_filt=True, pca_method=True, border=50, CR_filt=False):
     # cp.cuda.set_allocator(None)
     mempool = cp.get_default_memory_pool()
@@ -378,7 +382,8 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
         ymax = int(imdata.shape[0] * 0.5 * (1 + cf))
         center_mask = (source_coord[:, 0] > ymin) & (source_coord[:, 0] < ymax) & (source_coord[:, 1] > xmin) & (
                 source_coord[:, 1] < xmax)
-        zp, ezp, catnstar, min_mag, max_mag = get_zeropoint(result, source_flux[center_mask], source_noise[center_mask],
+        zp, ezp, catnstar, min_mag, max_mag = get_zeropoint(result, source_flux[center_mask],
+                                                            source_noise[center_mask],
                                                             source_coord[center_mask, :], imheader['EXPT1'],
                                                             dist_thres_px=int(fwhms[0]), solar_filter=color_range)
 
@@ -413,7 +418,8 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
 
         # get limiting magnitude
         df_phot_center = df_phot.loc[
-            (df_phot['X'] > xmin) & (df_phot['X'] < xmax) & (df_phot['Y'] > ymin) & (df_phot['Y'] < ymax)].reset_index(
+            (df_phot['X'] > xmin) & (df_phot['X'] < xmax) & (df_phot['Y'] > ymin) & (
+                    df_phot['Y'] < ymax)].reset_index(
             drop=True)
         df_phot_center['snr'] = df_phot_center['FLUX'] / df_phot_center['FLUXERR']
         df_phot_center['mag'] = -2.5 * np.log10(df_phot_center['FLUX'] / imheader['EXPT1']) + dic_calib['ZP']
@@ -431,12 +437,14 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
         # find target
         ref_coords = df_phot[['RA', 'DEC']].to_numpy()
         target_coord = np.array([float(imheader['POINTRA']) * 15, float(imheader['POINTDEC'])]).reshape(1, 2)
-        _, ref_coords_matched_idx = crossmatch_sources(target_coord, ref_coords, thres_px=10 * fwhms[0] * scale / 3600)
+        _, ref_coords_matched_idx = crossmatch_sources(target_coord, ref_coords,
+                                                       thres_px=10 * fwhms[0] * scale / 3600)
         if len(ref_coords_matched_idx) == 0:
             target_snr = 0
         else:
             target_snr = \
-                (df_phot.iloc[ref_coords_matched_idx]['FLUX'] / df_phot.iloc[ref_coords_matched_idx]['FLUXERR']).values[
+                (df_phot.iloc[ref_coords_matched_idx]['FLUX'] / df_phot.iloc[ref_coords_matched_idx][
+                    'FLUXERR']).values[
                     0]
         dic_calib['OBJECSNR'] = np.round(target_snr, 2)
 
@@ -449,9 +457,9 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
         imheader.insert('COMINIT', ('COMMENT', '***************************'))
 
         for v in dic_calib.keys():
-            imheader.insert('COMINIT', (v, dic_calib[v], db.Header.objects.get(name=v).description))
+            imheader.insert('COMINIT', (v, dic_calib[v], db_header_obj.get(name=v).description))
         imheader.insert('COMINIT', (
-            'DATEPROC', datetime.utcnow().isoformat()[:-7], db.Header.objects.get(name='DATE').description))
+            'DATEPROC', datetime.utcnow().isoformat()[:-7], db_header_obj.get(name='DATE').description))
         del imheader['COMINIT']
 
         del source_flux, source_coord, source_noise, result, coords, ra, dec, cat_x, cat_y, wcs, Y, X, RA, DEC, FLUX, FLUXERR
@@ -485,7 +493,8 @@ def perform_opt_photometry(img, back, conv_ima_sigma, source_coord, isolated_coo
         M = int(np.argmin(np.abs(radii - 2.5 / pxscale)))
 
     # get photometry
-    source_flux, back_flux, area = batch_aperture_photometry(img, back, cp.round(source_coord).astype(cp.int32), radii)
+    source_flux, back_flux, area = batch_aperture_photometry(img, back, cp.round(source_coord).astype(cp.int32),
+                                                             radii)
     conv_snr = conv_ima_sigma[
         cp.round(source_coord[:, 0]).astype(cp.int32), cp.round(source_coord[:, 1]).astype(cp.int32)]
     mempool.free_all_blocks()
@@ -497,8 +506,9 @@ def perform_opt_photometry(img, back, conv_ima_sigma, source_coord, isolated_coo
         xmax = int(img.shape[1] * 0.5 * (1 + center_factor))
         ymin = int(img.shape[0] * 0.5 * (1 - center_factor))
         ymax = int(img.shape[0] * 0.5 * (1 + center_factor))
-        center_mask = (isolated_coord[:, 0] > ymin) & (isolated_coord[:, 0] < ymax) & (isolated_coord[:, 1] > xmin) & (
-                isolated_coord[:, 1] < xmax)
+        center_mask = (isolated_coord[:, 0] > ymin) & (isolated_coord[:, 0] < ymax) & (
+                isolated_coord[:, 1] > xmin) & (
+                              isolated_coord[:, 1] < xmax)
 
         # get center and isolated masks
         _, source_coords_matched_idx = crossmatch_sources(isolated_coord[center_mask].get(), source_coord.get(),
@@ -685,8 +695,9 @@ def get_raw_photometry(imdata, imheader, aperture_rad_asec=None, astrom=True, SP
     del source_neg_mask
 
     back_n, area = aperture_photometry(rms, source_coord, aperture_rad)
-    source_noise = cp.sqrt(source_flux * imheader['GAIN'] + area * rdnoise ** 2 + back_n * imheader['GAIN']) / imheader[
-        'GAIN']
+    source_noise = cp.sqrt(source_flux * imheader['GAIN'] + area * rdnoise ** 2 + back_n * imheader['GAIN']) / \
+                   imheader[
+                       'GAIN']
     snr_mask = (source_flux / source_noise >= 2).get()
     del back_n, area
 
@@ -787,95 +798,97 @@ def astrometrice2(dfm, head0, im_shape):
         )
         nmatches = len(solution.matches)
         print(nmatches)
+        return solution
     except:
         nmatches = 0
     signal.alarm(0)
-    if nmatches > 0:
-        astro_exists = get_if_header_already_post_processed(head, "ASTROMETRY")
-        if astro_exists:
-            head = delete_header_from(head, 'ASTROMETRY')
-
-        head['COMINIT'] = 'e'
-        head.insert('COMINIT', ('COMMENT', '***************************'))
-        head.insert('COMINIT', ('COMMENT', '       ASTROMETRY          '))
-        head.insert('COMINIT', ('COMMENT', '***************************'))
-        h_wcs = solution.best_match().wcs_fields
-        # print(h_wcs)
-        for v in h_wcs:
-            head[v] = h_wcs[v]
-
-        px = head['NAXIS1'] / 2
-        py = head['NAXIS2'] / 2
-        w = WCS(h_wcs)
-        ra, dec = w.wcs_pix2world(px, py, 1)
-        ra = ra.tolist()
-        dec = dec.tolist()
-
-        # head['RA'] = ra
-        # head['DEC'] = dec
-
-        c1 = SkyCoord(ra * u.deg, dec * u.deg, frame='icrs')
-        c2 = SkyCoord(head['POINTRA'] * 360 / 24 * u.deg, head['POINTDEC'] * u.deg, frame='icrs')
-        sep = (c2.separation(c1)).arcsecond
-        print('Error de apuntado: ', sep, ' arcsec')
-
-        ra_hms, dec_dms = deg_to_hms(ra, dec)
-
-        try:
-            elev = head['SITEELEV']
-        except:
-            elev = head['SITEALT']
-
-        az, alt, airmass, zd = radec_to_altaz(ra, dec, head['SITELAT'], head['SITELONG'], elev, head['DATE-OBS'])
-        longal, latgal = radec_to_gal(ra, dec)
-        lonecl, latecl = radec_to_ecl(ra, dec)
-        scale = np.round(get_scale(head), 3)
-        ccw = np.round(get_ccw(head), 1)
-        fovx = np.round(head['NAXIS1'] * scale / 60, 2)
-        fovy = np.round(head['NAXIS2'] * scale / 60, 2)
-
-        head.insert('COMINIT', ('RA', ra, db.Header.objects.get(name='RA').description))
-        head.insert('COMINIT', ('DEC', dec, db.Header.objects.get(name='DEC').description))
-        head.insert('COMINIT', ('RAhms', ra_hms, db.Header.objects.get(name='RAhms').description))
-        head.insert('COMINIT', ('DECdms', dec_dms, db.Header.objects.get(name='DECdms').description))
-        head.insert('COMINIT', ('FOVX', fovx, db.Header.objects.get(name='FOVX').description))
-        head.insert('COMINIT', ('FOVY', fovy, db.Header.objects.get(name='FOVY').description))
-        head.insert('COMINIT', ('SCALE', scale, db.Header.objects.get(name='SCALE').description))
-        head.insert('COMINIT', ('CCW', ccw, db.Header.objects.get(name='CCW').description))
-        head.insert('COMINIT', ('AZ', az, db.Header.objects.get(name='AZ').description))
-        head.insert('COMINIT', ('ALT', alt, db.Header.objects.get(name='ALT').description))
-        head.insert('COMINIT', ('ZD', zd, db.Header.objects.get(name='ZD').description))
-        head.insert('COMINIT', ('AIRMASS', airmass, db.Header.objects.get(name='AIRMASS').description))
-        head.insert('COMINIT', ('LONGAL', longal, db.Header.objects.get(name='LONGAL').description))
-        head.insert('COMINIT', ('LATGAL', latgal, db.Header.objects.get(name='LATGAL').description))
-        head.insert('COMINIT', ('LONECL', lonecl, db.Header.objects.get(name='LONECL').description))
-        head.insert('COMINIT', ('LATECL', latecl, db.Header.objects.get(name='LATECL').description))
-        del head['COMINIT']
-
-        # Parche hasta que instroduzca en los raw
-        if 'JD-OBS' not in head:
-            try:
-                jd, mjd = date_to_jd(head['DATE-OBS'])
-                head.insert('PCDATE', ('JD-OBS', jd, db.Header.objects.get(name='JD-OBS').description))
-                head.insert('PCDATE', ('MJD-OBS', mjd, db.Header.objects.get(name='MJD-OBS').description))
-            except:
-                pass
-
-        if 'SCALEORI' not in head:
-            try:
-                head.insert('PARITY', ('SCALEORI', np.round(plate_scale_px(head['PXSIZE'], head['FOCALEN']), 3),
-                                       db.Header.objects.get(name='SCALEORI').description))
-            except:
-                pass
-        ######
-
-        return head
+    # if nmatches > 0:
+    #     astro_exists = get_if_header_already_post_processed(head, "ASTROMETRY")
+    #     if astro_exists:
+    #         head = delete_header_from(head, 'ASTROMETRY')
+    #
+    #     head['COMINIT'] = 'e'
+    #     head.insert('COMINIT', ('COMMENT', '***************************'))
+    #     head.insert('COMINIT', ('COMMENT', '       ASTROMETRY          '))
+    #     head.insert('COMINIT', ('COMMENT', '***************************'))
+    #     h_wcs = solution.best_match().wcs_fields
+    #     # print(h_wcs)
+    #     for v in h_wcs:
+    #         head[v] = h_wcs[v]
+    #
+    #     px = head['NAXIS1'] / 2
+    #     py = head['NAXIS2'] / 2
+    #     w = WCS(h_wcs)
+    #     ra, dec = w.wcs_pix2world(px, py, 1)
+    #     ra = ra.tolist()
+    #     dec = dec.tolist()
+    #
+    #     # head['RA'] = ra
+    #     # head['DEC'] = dec
+    #
+    #     c1 = SkyCoord(ra * u.deg, dec * u.deg, frame='icrs')
+    #     c2 = SkyCoord(head['POINTRA'] * 360 / 24 * u.deg, head['POINTDEC'] * u.deg, frame='icrs')
+    #     sep = (c2.separation(c1)).arcsecond
+    #     print('Error de apuntado: ', sep, ' arcsec')
+    #
+    #     ra_hms, dec_dms = deg_to_hms(ra, dec)
+    #
+    #     try:
+    #         elev = head['SITEELEV']
+    #     except:
+    #         elev = head['SITEALT']
+    #
+    #     az, alt, airmass, zd = radec_to_altaz(ra, dec, head['SITELAT'], head['SITELONG'], elev, head['DATE-OBS'])
+    #     longal, latgal = radec_to_gal(ra, dec)
+    #     lonecl, latecl = radec_to_ecl(ra, dec)
+    #     scale = np.round(get_scale(head), 3)
+    #     ccw = np.round(get_ccw(head), 1)
+    #     fovx = np.round(head['NAXIS1'] * scale / 60, 2)
+    #     fovy = np.round(head['NAXIS2'] * scale / 60, 2)
+    #
+    #     head.insert('COMINIT', ('RA', ra, db.Header.objects.get(name='RA').description))
+    #     head.insert('COMINIT', ('DEC', dec, db.Header.objects.get(name='DEC').description))
+    #     head.insert('COMINIT', ('RAhms', ra_hms, db.Header.objects.get(name='RAhms').description))
+    #     head.insert('COMINIT', ('DECdms', dec_dms, db.Header.objects.get(name='DECdms').description))
+    #     head.insert('COMINIT', ('FOVX', fovx, db.Header.objects.get(name='FOVX').description))
+    #     head.insert('COMINIT', ('FOVY', fovy, db.Header.objects.get(name='FOVY').description))
+    #     head.insert('COMINIT', ('SCALE', scale, db.Header.objects.get(name='SCALE').description))
+    #     head.insert('COMINIT', ('CCW', ccw, db.Header.objects.get(name='CCW').description))
+    #     head.insert('COMINIT', ('AZ', az, db.Header.objects.get(name='AZ').description))
+    #     head.insert('COMINIT', ('ALT', alt, db.Header.objects.get(name='ALT').description))
+    #     head.insert('COMINIT', ('ZD', zd, db.Header.objects.get(name='ZD').description))
+    #     head.insert('COMINIT', ('AIRMASS', airmass, db.Header.objects.get(name='AIRMASS').description))
+    #     head.insert('COMINIT', ('LONGAL', longal, db.Header.objects.get(name='LONGAL').description))
+    #     head.insert('COMINIT', ('LATGAL', latgal, db.Header.objects.get(name='LATGAL').description))
+    #     head.insert('COMINIT', ('LONECL', lonecl, db.Header.objects.get(name='LONECL').description))
+    #     head.insert('COMINIT', ('LATECL', latecl, db.Header.objects.get(name='LATECL').description))
+    #     del head['COMINIT']
+    #
+    #     # Parche hasta que instroduzca en los raw
+    #     if 'JD-OBS' not in head:
+    #         try:
+    #             jd, mjd = date_to_jd(head['DATE-OBS'])
+    #             head.insert('PCDATE', ('JD-OBS', jd, db.Header.objects.get(name='JD-OBS').description))
+    #             head.insert('PCDATE', ('MJD-OBS', mjd, db.Header.objects.get(name='MJD-OBS').description))
+    #         except:
+    #             pass
+    #
+    #     if 'SCALEORI' not in head:
+    #         try:
+    #             head.insert('PARITY', ('SCALEORI', np.round(plate_scale_px(head['PXSIZE'], head['FOCALEN']), 3),
+    #                                    db.Header.objects.get(name='SCALEORI').description))
+    #         except:
+    #             pass
+    #     ######
+    #
+    #     return head
     return None
 
 
 def get_zeropoint(df_catalog, flux, noise, coord, exptime, solar_filter=0.3, dist_thres_px=3, N=50, plot=False):
     cat_coords = np.array([df_catalog['Y'], df_catalog['X']]).T
-    source_coords_matched_idx, ref_coords_matched_idx = crossmatch_sources(coord, cat_coords, thres_px=dist_thres_px)
+    source_coords_matched_idx, ref_coords_matched_idx = crossmatch_sources(coord, cat_coords,
+                                                                           thres_px=dist_thres_px)
     solar_cat_filt = np.abs(df_catalog['SOLAR'])[ref_coords_matched_idx] < solar_filter
 
     source_coords_matched_idx = source_coords_matched_idx[solar_cat_filt]
