@@ -9,8 +9,8 @@ from os.path import basename
 import cupy as cp
 from astropy.io import fits
 
-from ..stats.io import mkhdu
-from ..stats.utils import (
+from gpuphot.stats.io import mkhdu
+from gpuphot.stats.utils import (
     judge_dtype,
     _elementwise_not,
     _checkfinite

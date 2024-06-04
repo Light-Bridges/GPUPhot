@@ -5,8 +5,7 @@ from astropy.convolution import discretize_model
 from astropy.modeling.models import Moffat2D
 from astropy.table import QTable
 
-
-from ..stats.io import pruebaPrint
+from gpuphot.stats.io import pruebaPrint
 
 def print_hello():
     pruebaPrint()
@@ -217,3 +216,5 @@ def create_synt_image(image, gain, rd_noise, texp, dark_cur, sky_level, fwhm, ns
 #
 #     except:
 #         continue
+if __name__ == '__main__':
+    print_hello()

@@ -15,7 +15,7 @@ from cupyx.scipy.fft import next_fast_len
 
 # from cupy.fft import fftn, ifftn, fftfreq
 
-# from .._shared.utils import _supported_float_type
+# from gpuphot._shared.utils import _supported_float_type
 
 
 def _masked_phase_cross_correlation(reference_image, moving_image,
