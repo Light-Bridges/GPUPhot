@@ -4,108 +4,11 @@ http://www.mathworks.com/matlabcentral/fileexchange/18401-efficient-subpixel-ima
 Cupyfication from skimage/registration/_phase_cross_correlation.py
 
 """
-
 import cupy as cp
 import numpy as np
 from cupy.fft import fftn, ifftn, fftfreq
 
-from gpuphot.stats.subpixel_masked import _masked_phase_cross_correlation
-
-
-def _upsampled_dft(data, upsampled_region_size,
-                   upsample_factor=1, axis_offsets=None):
-    """
-    Upsampled DFT by matrix multiplication.
-    This code is intended to provide the same result as if the following
-    operations were performed:
-        - Embed the array "data" in an array that is ``upsample_factor`` times
-          larger in each dimension.  ifftshift to bring the center of the
-          image to (1,1).
-        - Take the FFT of the larger array.
-        - Extract an ``[upsampled_region_size]`` region of the result, starting
-          with the ``[axis_offsets+1]`` element.
-    It achieves this result by computing the DFT in the output array without
-    the need to zeropad. Much faster and memory efficient than the zero-padded
-    FFT approach if ``upsampled_region_size`` is much smaller than
-    ``data.size * upsample_factor``.
-    Parameters
-    ----------
-    data : array
-        The input data array (DFT of original data) to upsample.
-    upsampled_region_size : integer or tuple of integers, optional
-        The size of the region to be sampled.  If one integer is provided, it
-        is duplicated up to the dimensionality of ``data``.
-    upsample_factor : integer, optional
-        The upsampling factor.  Defaults to 1.
-    axis_offsets : tuple of integers, optional
-        The offsets of the region to be sampled.  Defaults to None (uses
-        image center)
-    Returns
-    -------
-    output : ndarray
-            The upsampled DFT of the specified region.
-    """
-    #     # if people pass in an integer, expand it to a list of equal-sized sections
-    #     if not hasattr(upsampled_region_size, "__iter__"):
-    #         upsampled_region_size = [upsampled_region_size, ] * data.ndim
-    #     else:
-    #         if len(upsampled_region_size) != data.ndim:
-    #             raise ValueError("shape of upsampled region sizes must be equal "
-    #                              "to input data's number of dimensions.")
-
-    upsampled_region_size = [upsampled_region_size, ] * data.ndim
-
-    if axis_offsets is None:
-        axis_offsets = [0, ] * data.ndim
-    else:
-        if len(axis_offsets) != data.ndim:
-            raise ValueError("number of axis offsets must be equal to input "
-                             "data's number of dimensions.")
-
-    im2pi = 1j * 2 * np.pi
-
-    dim_properties = list(zip(data.shape, upsampled_region_size, axis_offsets))
-
-    for (n_items, ups_size, ax_offset) in dim_properties[::-1]:
-        kernel = ((cp.arange(ups_size) - ax_offset)[:, None]
-                  * fftfreq(n_items, upsample_factor))
-        kernel = cp.exp(-im2pi * kernel)
-        # use kernel with same precision as the data
-        kernel = kernel.astype(data.dtype, copy=False)
-
-        # Equivalent to:
-        #   data[i, j, k] = kernel[i, :] @ data[j, k].T
-        data = cp.tensordot(kernel, data, axes=(1, -1))
-    return data
-
-
-def _compute_phasediff(cross_correlation_max):
-    """
-    Compute global phase difference between the two images (should be
-        zero if images are non-negative).
-    Parameters
-    ----------
-    cross_correlation_max : complex
-        The complex value of the cross correlation at its maximum point.
-    """
-    return cp.arctan2(cross_correlation_max.imag, cross_correlation_max.real)
-
-
-def _compute_error(cross_correlation_max, src_amp, target_amp):
-    """
-    Compute RMS error metric between ``src_image`` and ``target_image``.
-    Parameters
-    ----------
-    cross_correlation_max : complex
-        The complex value of the cross correlation at its maximum point.
-    src_amp : float
-        The normalized average image intensity of the source image
-    target_amp : float
-        The normalized average image intensity of the target image
-    """
-    error = 1.0 - cross_correlation_max * cross_correlation_max.conj() / \
-            (src_amp * target_amp)
-    return cp.sqrt(np.abs(error))
+from cv.gpuphot.gpuphot.stats.subpixel_masked import _masked_phase_cross_correlation
 
 
 def phase_cross_correlation(reference_image, moving_image, *,
@@ -308,3 +211,99 @@ def phase_cross_correlation(reference_image, moving_image, *,
             _compute_phasediff(CCmax)
     else:
         return shifts, 0, 0
+
+
+def _upsampled_dft(data, upsampled_region_size,
+                   upsample_factor=1, axis_offsets=None):
+    """
+    Upsampled DFT by matrix multiplication.
+    This code is intended to provide the same result as if the following
+    operations were performed:
+        - Embed the array "data" in an array that is ``upsample_factor`` times
+          larger in each dimension.  ifftshift to bring the center of the
+          image to (1,1).
+        - Take the FFT of the larger array.
+        - Extract an ``[upsampled_region_size]`` region of the result, starting
+          with the ``[axis_offsets+1]`` element.
+    It achieves this result by computing the DFT in the output array without
+    the need to zeropad. Much faster and memory efficient than the zero-padded
+    FFT approach if ``upsampled_region_size`` is much smaller than
+    ``data.size * upsample_factor``.
+    Parameters
+    ----------
+    data : array
+        The input data array (DFT of original data) to upsample.
+    upsampled_region_size : integer or tuple of integers, optional
+        The size of the region to be sampled.  If one integer is provided, it
+        is duplicated up to the dimensionality of ``data``.
+    upsample_factor : integer, optional
+        The upsampling factor.  Defaults to 1.
+    axis_offsets : tuple of integers, optional
+        The offsets of the region to be sampled.  Defaults to None (uses
+        image center)
+    Returns
+    -------
+    output : ndarray
+            The upsampled DFT of the specified region.
+    """
+    #     # if people pass in an integer, expand it to a list of equal-sized sections
+    #     if not hasattr(upsampled_region_size, "__iter__"):
+    #         upsampled_region_size = [upsampled_region_size, ] * data.ndim
+    #     else:
+    #         if len(upsampled_region_size) != data.ndim:
+    #             raise ValueError("shape of upsampled region sizes must be equal "
+    #                              "to input data's number of dimensions.")
+
+    upsampled_region_size = [upsampled_region_size, ] * data.ndim
+
+    if axis_offsets is None:
+        axis_offsets = [0, ] * data.ndim
+    else:
+        if len(axis_offsets) != data.ndim:
+            raise ValueError("number of axis offsets must be equal to input "
+                             "data's number of dimensions.")
+
+    im2pi = 1j * 2 * np.pi
+
+    dim_properties = list(zip(data.shape, upsampled_region_size, axis_offsets))
+
+    for (n_items, ups_size, ax_offset) in dim_properties[::-1]:
+        kernel = ((cp.arange(ups_size) - ax_offset)[:, None]
+                  * fftfreq(n_items, upsample_factor))
+        kernel = cp.exp(-im2pi * kernel)
+        # use kernel with same precision as the data
+        kernel = kernel.astype(data.dtype, copy=False)
+
+        # Equivalent to:
+        #   data[i, j, k] = kernel[i, :] @ data[j, k].T
+        data = cp.tensordot(kernel, data, axes=(1, -1))
+    return data
+
+
+def _compute_error(cross_correlation_max, src_amp, target_amp):
+    """
+    Compute RMS error metric between ``src_image`` and ``target_image``.
+    Parameters
+    ----------
+    cross_correlation_max : complex
+        The complex value of the cross correlation at its maximum point.
+    src_amp : float
+        The normalized average image intensity of the source image
+    target_amp : float
+        The normalized average image intensity of the target image
+    """
+    error = 1.0 - cross_correlation_max * cross_correlation_max.conj() / \
+            (src_amp * target_amp)
+    return cp.sqrt(np.abs(error))
+
+
+def _compute_phasediff(cross_correlation_max):
+    """
+    Compute global phase difference between the two images (should be
+        zero if images are non-negative).
+    Parameters
+    ----------
+    cross_correlation_max : complex
+        The complex value of the cross correlation at its maximum point.
+    """
+    return cp.arctan2(cross_correlation_max.imag, cross_correlation_max.real)

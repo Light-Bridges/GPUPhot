@@ -1,60 +1,53 @@
-# Import libraries
+import cupy as cp
 
-import astropy.units as u
-from astropy.coordinates import SkyCoord, EarthLocation, AltAz
-from astropy.time import Time
+from cv.gpuphot.gpuphot.phot.convo import gen_apm_filter, convolve_fft
 
 
-def deg_to_hms(RA, DEC):
-    coords_deg = SkyCoord(RA * u.deg, DEC * u.deg, frame="icrs", unit="deg")
-    ra_hms = "%02d:%02d:%.6f" % coords_deg.ra.hms
-    if DEC > 0:
-        dec_dms = "%02d:%02d:%02.6f" % coords_deg.dec.dms
-    else:
-        coords_deg = SkyCoord(RA * u.deg, -1 * DEC * u.deg, frame="icrs", unit="deg")
-        dec_dms = "-%02d:%02d:%02.6f" % coords_deg.dec.dms
-    return ra_hms, dec_dms
+def decompose_into_tiles(image, block_size):
+    h, w = image.shape
+    num_tiles_y = h // block_size
+    num_tiles_x = w // block_size
+    tiles = cp.empty((num_tiles_y * num_tiles_x, block_size, block_size))
+    idx = 0
+    for i in range(num_tiles_y):
+        for j in range(num_tiles_x):
+            tiles[idx] = image[i*block_size:(i+1)*block_size, j*block_size:(j+1)*block_size]
+            idx += 1
+    return tiles
 
 
-def radec_to_altaz(RA, DEC, SITELAT, SITELONG, SITEALT, Date):
-    coords_deg = SkyCoord(RA * u.deg, DEC * u.deg, frame="icrs", unit="deg")
-    Observatory = EarthLocation(
-        lat=SITELAT * u.deg, lon=SITELONG * u.deg, height=SITEALT * u.m
-    )
-    aa = AltAz(location=Observatory, obstime=Date)
-    coords_altaz = coords_deg.transform_to(aa)
-    airmass = float(coords_altaz.secz)
-    zen = coords_altaz.zen
-    return (
-        round(coords_altaz.az.deg, 6),
-        round(coords_altaz.alt.deg, 6),
-        round(airmass, 6),
-        round(zen.deg, 6),
-    )
+def calculate_tile_percentiles(tiles, qt = 70):
+    return cp.percentile(tiles, qt, axis=(1, 2))
 
 
-def radec_to_gal(RA, DEC):
-    coords_gal = SkyCoord(RA * u.deg, DEC * u.deg, frame="icrs", unit="deg").galactic
-    return round(coords_gal.l.deg, 6), round(coords_gal.b.deg, 6)
+def recompose_from_percentiles(percentiles, original_shape, block_size):
+    h, w = original_shape
+    num_tiles_y = h // block_size
+    num_tiles_x = w // block_size
+    recomposed = cp.empty(original_shape)
+    idx = 0
+    for i in range(num_tiles_y):
+        for j in range(num_tiles_x):
+            recomposed[i*block_size:(i+1)*block_size, j*block_size:(j+1)*block_size] = percentiles[idx]
+            idx += 1
+    recomposed[block_size*num_tiles_y:, :] = recomposed[block_size*num_tiles_y-1, :]
+    recomposed[:, block_size*num_tiles_x:] = recomposed[:, 2*(block_size*num_tiles_x-w):block_size*num_tiles_x-w]
+    return recomposed
 
 
-def radec_to_ecl(RA, DEC):
-    coords_gal = SkyCoord(
-        RA * u.deg, DEC * u.deg, frame="icrs", unit="deg"
-    ).barycentricmeanecliptic
-    return round(coords_gal.lon.deg, 6), round(coords_gal.lat.deg, 6)
+def fill_nan_fft(image, lk, li=0, min_neighbors=5, pad = 301):
+    k_app = gen_apm_filter(lk, li=li, norm=False)
+    image = image.astype(cp.double)
+    not_nan_mask = (~cp.isnan(image)).astype(cp.double)
+    valid_neighbors = convolve_fft(not_nan_mask, k_app)
+    del not_nan_mask
+    image_zeroed = cp.where(cp.isnan(image), 0, image)
+    neighbor_sum = convolve_fft(image_zeroed, k_app)
+    del image_zeroed
+    result = cp.where((valid_neighbors >= min_neighbors) & (cp.isnan(image)), neighbor_sum / valid_neighbors, image)
+    del valid_neighbors
+    return result
 
 
-def date_to_jd(dateobs):
-    Date = Time(dateobs, scale="utc")
-    return Date.jd, Date.mjd
-
-
-def plate_scale_px(microns, focal):
-    # pixel size in microns
-    return plate_scale_mm(focal) * microns / 1000  # arcsec/px
-
-
-def plate_scale_mm(focal):
-    # focal length in mm
-    return 206265 / focal  # arcsec/mm
+def calculate_tile_nanmean(tiles):
+    return cp.nanmean(tiles, axis=(1, 2))
