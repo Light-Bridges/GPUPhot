@@ -1,7 +1,6 @@
 import gc
 import os
 import signal
-from datetime import datetime
 
 import astrometry
 import cupy as cp
@@ -24,9 +23,6 @@ from gpuphot.phot.psf import detect_isolated_stars, create_star_dataset, get_eig
     detect_sources_kernel
 from gpuphot.stats.s_util import free_gpu_mem
 from gpuphot.utils.astro import plate_scale_px
-
-
-# from ttt.equipment import models as db
 
 
 def get_solver():
@@ -227,7 +223,7 @@ def gen_moff_filter2(alpha, beta):
     return (k_app, lk)
 
 
-def process_image_new(imdata, imheader, db_header_obj, center_factor=0.5, ks=2, astrom=False, tile_section=3000,
+def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, tile_section=3000,
                       color_range=0.3,
                       SP_filt=True, pca_method=True, border=50, CR_filt=False):
     # cp.cuda.set_allocator(None)
@@ -451,22 +447,23 @@ def process_image_new(imdata, imheader, db_header_obj, center_factor=0.5, ks=2, 
         phot_exists = get_if_header_already_post_processed(imheader, "PHOTOMETRY")
         if phot_exists:
             imheader = delete_header_from(imheader, 'PHOTOMETRY')
-        imheader['COMINIT'] = 'e'
-        imheader.insert('COMINIT', ('COMMENT', '***************************'))
-        imheader.insert('COMINIT', ('COMMENT', '       PHOTOMETRY          '))
-        imheader.insert('COMINIT', ('COMMENT', '***************************'))
 
-        for v in dic_calib.keys():
-            imheader.insert('COMINIT', (v, dic_calib[v], db_header_obj.get(name=v).description))
-        imheader.insert('COMINIT', (
-            'DATEPROC', datetime.utcnow().isoformat()[:-7], db_header_obj.get(name='DATE').description))
-        del imheader['COMINIT']
+        # imheader['COMINIT'] = 'e'
+        # imheader.insert('COMINIT', ('COMMENT', '***************************'))
+        # imheader.insert('COMINIT', ('COMMENT', '       PHOTOMETRY          '))
+        # imheader.insert('COMINIT', ('COMMENT', '***************************'))
+        # for v in dic_calib.keys():
+        #     imheader.insert('COMINIT', (v, dic_calib[v], db_header_obj.get(name=v).description))
+        #
+        # imheader.insert('COMINIT', (
+        #     'DATEPROC', datetime.utcnow().isoformat()[:-7], db_header_obj.get(name='DATE').description))
+        # del imheader['COMINIT']
 
         del source_flux, source_coord, source_noise, result, coords, ra, dec, cat_x, cat_y, wcs, Y, X, RA, DEC, FLUX, FLUXERR
         mempool.free_all_blocks()
         gc.collect()
 
-        return df_phot, imheader
+        return df_phot, imheader, dic_calib
 
 
 def perform_opt_photometry(img, back, conv_ima_sigma, source_coord, isolated_coord, imheader, labels=None,

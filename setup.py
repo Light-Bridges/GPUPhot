@@ -1,3 +1,9 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
-setup()
+# Leer las dependencias desde requirements.txt
+with open('requirements.txt') as f:
+    requirements = f.read().splitlines()
+
+setup(
+    install_requires=requirements,
+)

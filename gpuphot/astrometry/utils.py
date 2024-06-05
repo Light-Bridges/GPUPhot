@@ -12,8 +12,8 @@ def get_if_header_already_post_processed(header, postprocess):
 def get_scale(hwcs):
     cd11 = hwcs['CD1_1']
     cd12 = hwcs['CD1_2']
-    cd21 = hwcs['CD2_1']
-    cd22 = hwcs['CD2_2']
+    # cd21 = hwcs['CD2_1']
+    # cd22 = hwcs['CD2_2']
     return np.sqrt(cd11 ** 2 + cd12 ** 2) * 3600
 
 

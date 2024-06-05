@@ -7,7 +7,6 @@ from astroalign import find_transform
 from astropy.io import fits
 from cupyx.scipy.ndimage import shift
 from skimage.transform._warps_cy import _warp_fast
-from ttt.equipment.models import Header
 
 from gpuphot.stats.reduction import center
 from gpuphot.stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
@@ -17,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 def reduction_atlas(cubes_path, size=2048, internal_shift=False):
     # Read cubes
-    heads = [];
-    idx = []
+    heads = []
+    # idx = []
     for c, cube in enumerate(cubes_path):
 
         logger.info('Reading cube %s' % cube)
@@ -72,11 +71,18 @@ def reduction_atlas(cubes_path, size=2048, internal_shift=False):
             im *= fc
             nnew, avgnew = sum_dyn_avg(nnew, avgnew, nnew1, im)
 
-            ima_header['ROT'] = (np.round(transf.rotation * 180 / np.pi, 4), Header.objects.get(name='ROT').description)
-            ima_header['SHX'] = (np.round(transf.translation[1], 2), Header.objects.get(name='SHX').description)
-            ima_header['SHY'] = (np.round(transf.translation[0], 2), Header.objects.get(name='SHY').description)
-            ima_header['ZOO'] = (np.round(transf.scale, 4), Header.objects.get(name='ZOO').description)
-            ima_header['FC'] = (np.round(fc, 4), Header.objects.get(name='FC').description)
+            # ima_header['ROT'] = (np.round(transf.rotation * 180 / np.pi, 4), Header.objects.get(name='ROT').description)
+            # ima_header['SHX'] = (np.round(transf.translation[1], 2), Header.objects.get(name='SHX').description)
+            # ima_header['SHY'] = (np.round(transf.translation[0], 2), Header.objects.get(name='SHY').description)
+            # ima_header['ZOO'] = (np.round(transf.scale, 4), Header.objects.get(name='ZOO').description)
+            # ima_header['FC'] = (np.round(fc, 4), Header.objects.get(name='FC').description)
+            temp_header = {
+                'ROT': np.round(transf.rotation * 180 / np.pi, 4),
+                'SHX': np.round(transf.translation[1], 2),
+                'SHY': np.round(transf.translation[0], 2),
+                'ZOO': np.round(transf.scale, 4),
+                'FC': np.round(fc, 4)
+            }
 
             heads.append(ima_header)
 
@@ -88,7 +94,7 @@ def reduction_atlas(cubes_path, size=2048, internal_shift=False):
     avgnew[avgnew < 0] = 0
     avgnew[avgnew > 2 ** 16] = 2 ** 16 - 1
 
-    return avgnew, nnew, heads
+    return avgnew, nnew, heads, temp_header
 
 
 def dyn_avg(valuenew, nold, avgold):

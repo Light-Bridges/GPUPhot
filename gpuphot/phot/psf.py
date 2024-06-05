@@ -29,7 +29,7 @@ def detect_isolated_stars(img, rms, pxscale, sat_lim=50000, min_snr=10, dist_ase
 
     lbs = label(mask)
     ids = cp.asarray([range(lbs[1] + 1)])
-    npix = nd_sum(mask, lbs[0], ids)
+    # npix = nd_sum(mask, lbs[0], ids)
     idx = cp.indices(img.shape, dtype=cp.int32)
     im1 = img * idx
     ids = ids[0]
@@ -110,7 +110,7 @@ def get_eigen_psfs(normed_star_dataset, n_components=5):
     pca = PCA(n_components=n_components)
     starset_flattened = normed_star_dataset.reshape(normed_star_dataset.shape[0],
                                                     normed_star_dataset.shape[1] ** 2).get()
-    pca_result = pca.fit_transform(starset_flattened)
+    # pca_result = pca.fit_transform(starset_flattened)
     eigen_psfs = pca.components_.reshape(-1, normed_star_dataset.shape[1], normed_star_dataset.shape[2])
     return eigen_psfs
 
@@ -161,7 +161,7 @@ def detect_sources_pca(img, rms, pxscale, eigen_psfs, coeff_map, min_snr=5):
     lbs = label(minimum_filter((conv_ima_sigma > min_snr), min_size).astype(cp.int32))
     mempool.free_all_blocks()
     ids = cp.asarray([range(lbs[1] + 1)])[0]
-    im1 = img * cp.indices(img.shape, dtype=cp.int32)
+    # im1 = img * cp.indices(img.shape, dtype=cp.int32)
 
     # find the peak of convolved image
     im1 = conv_ima_pca * cp.indices(conv_ima_pca.shape, dtype=cp.int32)
@@ -171,6 +171,27 @@ def detect_sources_pca(img, rms, pxscale, eigen_psfs, coeff_map, min_snr=5):
     del im1, lbs, ids, conv_ima_pca
     mempool.free_all_blocks()
     return coor, conv_ima_sigma
+
+
+def detect_sources_kernel(img, rms, kernel, pxscale, min_snr=5):
+    mempool = cp.get_default_memory_pool()
+    min_size = int(max(1 / pxscale, 2))
+    conv_ima = convolve_fft(img, cp.flip(kernel, (0, 1)))
+    conv_sigma = conv_ima / rms / cp.sqrt(kernel.shape[0] * kernel.shape[1])
+    lbs = label(minimum_filter((conv_sigma > min_snr), min_size).astype(cp.int32))
+    # del conv_sigma
+    mempool.free_all_blocks()
+    ids = cp.asarray([range(lbs[1] + 1)])[0]
+    # im1 = img * cp.indices(img.shape, dtype=cp.int32)
+
+    # find the peak of convolved image
+    im1 = conv_ima * cp.indices(conv_ima.shape, dtype=cp.int32)
+    x = (nd_sum(im1[0, :, :], lbs[0], ids) / nd_sum(conv_ima, lbs[0], ids))
+    y = (nd_sum(im1[1, :, :], lbs[0], ids) / nd_sum(conv_ima, lbs[0], ids))
+    coor = cp.asarray((x, y)).T
+    del im1, lbs, ids, conv_ima
+    mempool.free_all_blocks()
+    return coor, conv_sigma
 
 
 def recreate_normed_star(coeff_map, eigen_psfs, coords):
@@ -215,27 +236,6 @@ def fit_moffat(star_data):
                                      result.params['R'].stderr, result.params['B'].stderr)
 
     return r, Z, result, fwhm, fwhm_err
-
-
-def detect_sources_kernel(img, rms, kernel, pxscale, min_snr=5):
-    mempool = cp.get_default_memory_pool()
-    min_size = int(max(1 / pxscale, 2))
-    conv_ima = convolve_fft(img, cp.flip(kernel, (0, 1)))
-    conv_sigma = conv_ima / rms / cp.sqrt(kernel.shape[0] * kernel.shape[1])
-    lbs = label(minimum_filter((conv_sigma > min_snr), min_size).astype(cp.int32))
-    # del conv_sigma
-    mempool.free_all_blocks()
-    ids = cp.asarray([range(lbs[1] + 1)])[0]
-    im1 = img * cp.indices(img.shape, dtype=cp.int32)
-
-    # find the peak of convolved image
-    im1 = conv_ima * cp.indices(conv_ima.shape, dtype=cp.int32)
-    x = (nd_sum(im1[0, :, :], lbs[0], ids) / nd_sum(conv_ima, lbs[0], ids))
-    y = (nd_sum(im1[1, :, :], lbs[0], ids) / nd_sum(conv_ima, lbs[0], ids))
-    coor = cp.asarray((x, y)).T
-    del im1, lbs, ids, conv_ima
-    mempool.free_all_blocks()
-    return coor, conv_sigma
 
 
 def filter_centroids_kdtree(centroids, min_distance):

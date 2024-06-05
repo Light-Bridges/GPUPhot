@@ -54,7 +54,7 @@ def catalog_results(coocenter, radius, filter, inmodel, maglimit=22):
         solar_index = 0.01760 - 0.003226 + (0.3833 + 0.00686) * vizier_results['BP-RP'] + (-0.1345 + 0.1732) * \
                       vizier_results['BP-RP'] ** 2 - 0.36
         magerr = -2.5 * np.log10(vizier_results['F' + ref_filter[:2]] / (
-                    vizier_results['F' + ref_filter[:2]] + vizier_results['e_F' + ref_filter[:2]]))
+                vizier_results['F' + ref_filter[:2]] + vizier_results['e_F' + ref_filter[:2]]))
         result = pd.DataFrame({'ID': vizier_results['Source'],
                                'RA': vizier_results['RAJ2000'],
                                'DEC': vizier_results['DEJ2000'],
