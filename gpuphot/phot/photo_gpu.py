@@ -1,4 +1,5 @@
 import gc
+import logging
 import os
 import signal
 
@@ -23,6 +24,8 @@ from gpuphot.phot.psf import detect_isolated_stars, create_star_dataset, get_eig
     detect_sources_kernel
 from gpuphot.stats.s_util import free_gpu_mem
 from gpuphot.utils.astro import plate_scale_px
+
+logger = logging.getLogger(__name__)
 
 
 def get_solver():
@@ -101,12 +104,12 @@ def get_detections(model_mo, im, det=2, gain=1.024, rdnoise=2.3, scale=.21):
         Detected sources, sky, rms, FWHM, FWHM error, aperture size.
     """
     fw, efw, alpha, beta = get_fwhm_mof(model_mo, im, step=50, ns=50)
-    print('FWHM = ' + str(fw))
+    logger.debug('FWHM = ' + str(fw))
 
     im_g = cp.asarray(im)
     sky, rms, _ = get_sky(im_g, fw, qt=80)
 
-    print('Sky:', sky.mean(), ' RMS: ', rms.mean())
+    logger.debug('Sky:', sky.mean(), ' RMS: ', rms.mean())
 
     dfm, lk = daofind_gpu_fast(im_g, sky, rms, det, mode='m', alpha=alpha, beta=beta)
     dfm['snr'] = (dfm.flux_a) * gain / np.sqrt((dfm.flux_a + dfm.sks) * gain + rdnoise ** 2 * np.pi * lk ** 2)
@@ -557,7 +560,7 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
         ymin = int(imdata.shape[0] * 0.5 * (1 - cf))
         ymax = int(imdata.shape[0] * 0.5 * (1 + cf))
         center_mask = (source_coord[:, 0] > ymin) & (source_coord[:, 0] < ymax) & (source_coord[:, 1] > xmin) & (
-                    source_coord[:, 1] < xmax)
+                source_coord[:, 1] < xmax)
         zp, ezp, catnstar, min_mag, max_mag = get_zeropoint(result, source_flux[center_mask], source_noise[center_mask],
                                                             source_coord[center_mask, :], imheader['EXPT1'],
                                                             dist_thres_px=int(fwhms[0]), solar_filter=color_range)
@@ -605,7 +608,8 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
             target_snr = 0
         else:
             target_snr = \
-            (df_phot.iloc[ref_coords_matched_idx]['FLUX'] / df_phot.iloc[ref_coords_matched_idx]['FLUXERR']).values[0]
+                (df_phot.iloc[ref_coords_matched_idx]['FLUX'] / df_phot.iloc[ref_coords_matched_idx]['FLUXERR']).values[
+                    0]
         dic_calib['OBJECSNR'] = np.round(target_snr, 2)
 
         phot_exists = get_if_header_already_post_processed(imheader, "PHOTOMETRY")
@@ -682,7 +686,7 @@ def perform_opt_photometry(img, back, conv_ima_sigma, source_coord, isolated_coo
         ymin = int(img.shape[0] * 0.5 * (1 - center_factor))
         ymax = int(img.shape[0] * 0.5 * (1 + center_factor))
         center_mask = (isolated_coord[:, 0] > ymin) & (isolated_coord[:, 0] < ymax) & (isolated_coord[:, 1] > xmin) & (
-                    isolated_coord[:, 1] < xmax)
+                isolated_coord[:, 1] < xmax)
 
         # get center and isolated masks
         _, source_coords_matched_idx = crossmatch_sources(isolated_coord[center_mask].get(), source_coord.get(),
@@ -1067,7 +1071,7 @@ def astrometrice2(dfm, head0, im_shape):
             ),
         )
         nmatches = len(solution.matches)
-        print(nmatches)
+        logger.debug(nmatches)
         return solution
     except:
         nmatches = 0
@@ -1273,7 +1277,7 @@ def handler(signum, frame):
     frame : frame
         Stack frame.
     """
-    print("Astrometrization timeout!")
+    logger.error("Astrometrization timeout!")
     raise Exception("end of time")
 
 

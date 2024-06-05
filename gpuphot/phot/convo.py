@@ -1,5 +1,9 @@
+import logging
+
 import cupy as cp
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 def convolve_fft(image, kernel):

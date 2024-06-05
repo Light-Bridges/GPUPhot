@@ -4,11 +4,15 @@ http://www.mathworks.com/matlabcentral/fileexchange/18401-efficient-subpixel-ima
 Cupyfication from skimage/registration/_phase_cross_correlation.py
 """
 
+import logging
+
 import cupy as cp
 import numpy as np
 from cupy.fft import fftn, ifftn, fftfreq
 
 from gpuphot.stats.subpixel_masked import _masked_phase_cross_correlation
+
+logger = logging.getLogger(__name__)
 
 
 def phase_cross_correlation(reference_image, moving_image, *,

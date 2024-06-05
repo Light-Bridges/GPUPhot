@@ -1,6 +1,10 @@
+import logging
+
 import cupy as cp
 
 from gpuphot.phot.convo import gen_apm_filter, convolve_fft
+
+logger = logging.getLogger(__name__)
 
 
 def decompose_into_tiles(image, block_size):

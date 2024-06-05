@@ -1,3 +1,5 @@
+import logging
+
 import cupy as cp
 import numpy as np
 from cupyx.scipy.ndimage import minimum_filter, label, sum as nd_sum, laplace, gaussian_filter
@@ -7,6 +9,8 @@ from sklearn.decomposition import PCA
 
 from gpuphot.phot.convo import gaussian_kernel, convolve_fft
 from gpuphot.phot.utils import decompose_into_tiles, recompose_from_percentiles, fill_nan_fft, calculate_tile_nanmean
+
+logger = logging.getLogger(__name__)
 
 
 def detect_isolated_stars(img, rms, pxscale, sat_lim=50000, min_snr=10, dist_asec=20):
@@ -73,7 +77,7 @@ def detect_isolated_stars(img, rms, pxscale, sat_lim=50000, min_snr=10, dist_ase
     if cp.sum(m) == 0:
         m = (snr > 3) & (peak < sat_lim)
     if cp.sum(m) == 0:
-        print('No stars found')
+        logger.warning('No stars found')
 
     coor_f = cp.asarray(coor_f)[m]
     del coor, snr, peak, m

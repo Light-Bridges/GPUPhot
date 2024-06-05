@@ -1,9 +1,13 @@
+import logging
+
 import cupy as cp
 import numpy as np
 from cupyx.scipy.ndimage import binary_erosion, shift, convolve
 
 from gpuphot.stats.s_util import free_gpu_mem
 from gpuphot.stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
+
+logger = logging.getLogger(__name__)
 
 
 def center(im, size):
@@ -58,7 +62,7 @@ def register_shift(fc, uf=100, n=1000):
             shifted = (0, 0)
         fc1[i] = shift(cp.asarray(fc[i]), shift=(shifted[0], shifted[1]), order=1, mode='constant').get()
 
-        print(f"Detected subpixel offset (y, x): {shifted}")
+        logger.debug(f"Detected subpixel offset (y, x): {shifted}")
     return fc1
 
 
@@ -137,7 +141,7 @@ def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False, beta
         delta0 = delta
         iplus = center + n * sigma
         iminu = center - n * sigma
-        print('it=', iit, 'masked ', delta)
+        logger.debug('it=', iit, 'masked ', delta)
     del (iplus, iminu, mask)
     free_gpu_mem()
     center = center * f

@@ -1,6 +1,9 @@
 import gc
+import logging
 
 import cupy as cp
+
+logger = logging.getLogger(__name__)
 
 
 def free_gpu_mem():

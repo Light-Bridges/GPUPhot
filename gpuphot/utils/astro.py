@@ -1,6 +1,10 @@
+import logging
+
 from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
 from astropy.time import Time
+
+logger = logging.getLogger(__name__)
 
 
 def plate_scale_px(microns, focal):

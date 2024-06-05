@@ -1,9 +1,13 @@
+import logging
+
 import numpy as np
 import pandas as pd
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astroquery.vizier import Vizier
 from scipy.spatial import KDTree
+
+logger = logging.getLogger(__name__)
 
 
 def cat_input_from_header(header):

@@ -6,11 +6,14 @@ IEEE Transactions on Image Processing (2012)
 and the author's original MATLAB implementation, available on this website:
 http://www.dirkpadfield.com/
 """
+import logging
 from functools import partial
 
 import cupy as cp
 from cupyx.scipy import fft as fftmodule
 from cupyx.scipy.fft import next_fast_len
+
+logger = logging.getLogger(__name__)
 
 
 def _masked_phase_cross_correlation(reference_image, moving_image,

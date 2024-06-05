@@ -1,4 +1,8 @@
+import logging
+
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 def get_if_header_already_post_processed(header, postprocess):
