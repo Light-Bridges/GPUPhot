@@ -8,5 +8,10 @@ Antes de instalar la librería `gpuphot`, asegúrate de que los paquetes del sis
 
 ```bash
 bash install_dependencies.sh
+```
 
+Para instalar la librería `gpuphot`, puedes usar el comando:
+
+```bash 
 pip install .
+```
