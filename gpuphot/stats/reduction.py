@@ -2,7 +2,6 @@ import cupy as cp
 import numpy as np
 from cupyx.scipy.ndimage import binary_erosion, shift, convolve
 
-from gpuphot.phot.photo_gpu import gen_moff_filter2
 from gpuphot.stats.s_util import free_gpu_mem
 from gpuphot.stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
 
@@ -47,6 +46,7 @@ def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False, beta
     iplus = cp.zeros_like(data[0], dtype=cp.float32) + 1.e10
     iminu = cp.zeros_like(data[0], dtype=cp.float32) - 1.e10
     if alpha:
+        from gpuphot.phot.photo_gpu import gen_moff_filter2
         gf, lk = gen_moff_filter2(alpha, beta)
 
     for iit in range(it):
