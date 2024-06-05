@@ -7,14 +7,46 @@ from gpuphot.stats.subpixel import phase_cross_correlation as phase_cross_correl
 
 
 def center(im, size):
+    """
+    Center the image to the given size.
+
+    Parameters
+    ----------
+    im : ndarray
+        Input image.
+    size : int
+        Desired size for centering.
+
+    Returns
+    -------
+    ndarray
+        Centered image.
+    """
     if im.shape[0] > size:
         c0 = int((im.shape[0] - size) / 2)
     if im.shape[1] > size:
         c1 = int((im.shape[1] - size) / 2)
-    return cp.asarray(im[c0:-c0:, c1:-c1:])
+    return cp.asarray(im[c0:-c0, c1:-c1])
 
 
 def register_shift(fc, uf=100, n=1000):
+    """
+    Register and shift image stack based on phase cross-correlation.
+
+    Parameters
+    ----------
+    fc : ndarray
+        Stack of images to be registered.
+    uf : int, optional
+        Upsample factor for subpixel precision, by default 100.
+    n : int, optional
+        Size for centering the images, by default 1000.
+
+    Returns
+    -------
+    ndarray
+        Registered and shifted image stack.
+    """
     fc1 = fc.copy()
     im0 = center(fc[0], n)
     im0 = binary_erosion(im0 > (im0.mean() + im0.std()))
@@ -23,7 +55,6 @@ def register_shift(fc, uf=100, n=1000):
         im1 = binary_erosion(im1 > (im1.mean() + im1.std()))
         shifted, _, _ = phase_cross_correlation_gpu(im0.get(), im1.get(), upsample_factor=uf)
         if (np.abs(shifted[0]) > 300) | np.abs((shifted[1]) > 300):
-            # shifted, _, _ = phase_cross_correlation_gpu(fc[0],fc[i],upsample_factor=uf,reference_mask = ref_mas, overlap_ratio = .9)
             shifted = (0, 0)
         fc1[i] = shift(cp.asarray(fc[i]), shift=(shifted[0], shifted[1]), order=1, mode='constant').get()
 
@@ -32,10 +63,37 @@ def register_shift(fc, uf=100, n=1000):
 
 
 def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False, beta=False, tim=None):
+    """
+    Stack images with sigma clipping.
+
+    Parameters
+    ----------
+    data : ndarray
+        Stack of images to be processed.
+    it : int, optional
+        Number of iterations for sigma clipping, by default 5.
+    n : int, optional
+        Sigma clipping threshold, by default 3.
+    master : bool, optional
+        If True, use master bias subtraction, by default False.
+    mbias : ndarray, optional
+        Master bias image for subtraction, by default None.
+    alpha : float, optional
+        Parameter for Gaussian filter, by default False.
+    beta : float, optional
+        Parameter for Gaussian filter, by default False.
+    tim : ndarray, optional
+        Weights for time integration, by default None.
+
+    Returns
+    -------
+    tuple
+        (center, sigma) where center is the sigma-clipped mean image and sigma is the standard deviation image.
+    """
     nim = data.shape[0]
     if nim < 3:
         return cp.asarray(data.mean(axis=0)), None
-    if tim == None:
+    if tim is None:
         w = cp.ones(nim, dtype=cp.float32)
         f = 1.0
     else:

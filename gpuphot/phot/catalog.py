@@ -7,9 +7,32 @@ from scipy.spatial import KDTree
 
 
 def cat_input_from_header(header):
+    """
+    Extract catalog input parameters from FITS header.
+
+    Parameters
+    ----------
+    header : dict
+        FITS header containing observation metadata.
+
+    Returns
+    -------
+    tuple
+        (coocenter, FOV, filter, scale, inmodel) where:
+        - coocenter : SkyCoord
+            Sky coordinates of the image center.
+        - FOV : float
+            Field of view in degrees.
+        - filter : str
+            Filter used for the observation.
+        - scale : float
+            Pixel scale in arcseconds per pixel.
+        - inmodel : str
+            Instrument model used for the observation.
+    """
     try:
         coocenter = SkyCoord(ra=header['RA'], dec=header['DEC'], unit=(u.deg, u.deg), frame='icrs')
-    except:
+    except KeyError:
         coocenter = SkyCoord(ra=header['POINTRA'], dec=header['POINTDEC'], unit=(u.deg, u.deg), frame='icrs')
     scale = header['SCALE']
     FOV = np.sqrt(header['NAXIS1'] ** 2 + header['NAXIS2'] ** 2) * scale / 3600
@@ -19,6 +42,33 @@ def cat_input_from_header(header):
 
 
 def catalog_results(coocenter, radius, filter, inmodel, maglimit=22):
+    """
+    Retrieve catalog results from Vizier based on input parameters.
+
+    Parameters
+    ----------
+    coocenter : SkyCoord
+        Sky coordinates of the image center.
+    radius : float
+        Search radius in degrees.
+    filter : str
+        Filter used for the observation.
+    inmodel : str
+        Instrument model used for the observation.
+    maglimit : float, optional
+        Magnitude limit for the search, by default 22.
+
+    Returns
+    -------
+    tuple
+        (result, catalog, ref_filter) where:
+        - result : DataFrame
+            DataFrame containing catalog results.
+        - catalog : str
+            Catalog ID used for the search.
+        - ref_filter : str
+            Reference filter used for the magnitude calculation.
+    """
     if coocenter.dec.deg < -30:
         catalog = 'II/379'  # PANSTAR catalog
         ref_filter = 'gPSF'
@@ -47,7 +97,7 @@ def catalog_results(coocenter, radius, filter, inmodel, maglimit=22):
                                'SOLAR': solar_index})
         ref_filter = ref_filter[:-3]
 
-    elif filter == 'Open' or filter == 'OPEN' or filter == 'SDSSu':
+    elif filter in ['Open', 'OPEN', 'SDSSu']:
         catalog = 'I/355/gaiadr3'  # GAIA catalog
         ref_filter = 'BPmag'
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter)
@@ -63,17 +113,11 @@ def catalog_results(coocenter, radius, filter, inmodel, maglimit=22):
                                'SOLAR': solar_index})
         ref_filter = ref_filter[:-3]
 
-    # elif filter == 'SDSSu':
-    # QUÉ HACEMOS CON ESTE FILTRO??
-
-    elif filter == 'Lum' or filter == 'w':
+    elif filter in ['Lum', 'w']:
         catalog = 'II/349/ps1'  # PANSTAR catalog
         ref_filter = 'gmag'
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter)
         color = vizier_results['gmag'] - vizier_results['rmag']
-        # B = vizier_results['gmag'] + 0.213 + 0.587 * color
-        # V = vizier_results['rmag'] + 0.006 + 0.474 * color
-        # https://arxiv.org/pdf/1706.06147.pdf
         B = vizier_results['gmag'] + 0.194 + 0.561 * color
         V = vizier_results['gmag'] - 0.017 - 0.508 * color
         solar_index = B - V - 0.65
@@ -105,9 +149,6 @@ def catalog_results(coocenter, radius, filter, inmodel, maglimit=22):
         ref_filter = 'gmag'
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter)
         color = vizier_results['gmag'] - vizier_results['rmag']
-        # B = vizier_results['gmag'] + 0.213 + 0.587 * color
-        # V = vizier_results['rmag'] + 0.006 + 0.474 * color
-        # https://arxiv.org/pdf/1706.06147.pdf
         B = vizier_results['gmag'] + 0.194 + 0.561 * color
         V = vizier_results['gmag'] - 0.017 - 0.508 * color
         solar_index = B - V - 0.65
@@ -121,8 +162,6 @@ def catalog_results(coocenter, radius, filter, inmodel, maglimit=22):
         elif filter == 'SDSSzs':
             ref_filter = 'zmag'
 
-        # añadir Johnson
-
         result = pd.DataFrame({'ID': vizier_results['objID'],
                                'RA': vizier_results['RAJ2000'],
                                'DEC': vizier_results['DEJ2000'],
@@ -135,6 +174,27 @@ def catalog_results(coocenter, radius, filter, inmodel, maglimit=22):
 
 
 def crossmatch_sources(source_coords, ref_coords, thres_px=2):
+    """
+    Cross-match source coordinates with reference coordinates.
+
+    Parameters
+    ----------
+    source_coords : ndarray
+        Coordinates of the sources.
+    ref_coords : ndarray
+        Coordinates of the reference catalog.
+    thres_px : float, optional
+        Threshold distance in pixels for matching, by default 2.
+
+    Returns
+    -------
+    tuple
+        (source_coords_matched_idx, ref_coords_matched_idx) where:
+        - source_coords_matched_idx : ndarray
+            Indices of matched source coordinates.
+        - ref_coords_matched_idx : ndarray
+            Indices of matched reference coordinates.
+    """
     tree = KDTree(ref_coords)
     dist, idx = tree.query(source_coords, k=1)
     mask = dist < thres_px
@@ -144,6 +204,27 @@ def crossmatch_sources(source_coords, ref_coords, thres_px=2):
 
 
 def __getVizier(catalog, coocenter, radii, maglimit, ref_filter):
+    """
+    Query the Vizier catalog for objects within a specified region.
+
+    Parameters
+    ----------
+    catalog : str
+        Catalog ID to query.
+    coocenter : SkyCoord
+        Center coordinates for the search.
+    radii : float
+        Search radius in degrees.
+    maglimit : float
+        Magnitude limit for the search.
+    ref_filter : str
+        Reference filter for magnitude selection.
+
+    Returns
+    -------
+    Table
+        Vizier query results.
+    """
     Vizier.ROW_LIMIT = -1
     timeout = 60
     vizier_results = Vizier(timeout=timeout, row_limit=-1) \

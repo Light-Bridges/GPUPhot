@@ -16,23 +16,23 @@ from cupyx.scipy.fft import next_fast_len
 def _masked_phase_cross_correlation(reference_image, moving_image,
                                     reference_mask, moving_mask=None,
                                     overlap_ratio=0.3):
-    """Masked image translation registration by masked normalized
-    cross-correlation.
+    """
+    Masked image translation registration by masked normalized cross-correlation.
+
     Parameters
     ----------
     reference_image : ndarray
         Reference image.
     moving_image : ndarray
-        Image to register. Must be same dimensionality as ``reference_image``,
+        Image to register. Must be the same dimensionality as `reference_image`,
         but not necessarily the same size.
     reference_mask : ndarray
-        Boolean mask for ``reference_image``. The mask should evaluate
-        to ``True`` (or 1) on valid pixels. ``reference_mask`` should
-        have the same shape as ``reference_image``.
+        Boolean mask for `reference_image`. The mask should evaluate to `True`
+        (or 1) on valid pixels. `reference_mask` should have the same shape as `reference_image`.
     moving_mask : ndarray or None, optional
-        Boolean mask for ``moving_image``. The mask should evaluate to ``True``
-        (or 1) on valid pixels. ``moving_mask`` should have the same shape
-        as ``moving_image``. If ``None``, ``reference_mask`` will be used.
+        Boolean mask for `moving_image`. The mask should evaluate to `True`
+        (or 1) on valid pixels. `moving_mask` should have the same shape
+        as `moving_image`. If `None`, `reference_mask` will be used.
     overlap_ratio : float, optional
         Minimum allowed overlap ratio between images. The correlation for
         translations corresponding with an overlap ratio lower than this
@@ -40,12 +40,14 @@ def _masked_phase_cross_correlation(reference_image, moving_image,
         maximum translation, while a higher `overlap_ratio` leads to greater
         robustness against spurious matches due to small overlap between
         masked images.
+
     Returns
     -------
     shifts : ndarray
-        Shift vector (in pixels) required to register ``moving_image``
-        with ``reference_image``. Axis ordering is consistent with
-        numpy (e.g. Z, Y, X)
+        Shift vector (in pixels) required to register `moving_image`
+        with `reference_image`. Axis ordering is consistent with
+        numpy (e.g. Z, Y, X).
+
     References
     ----------
     .. [1] Dirk Padfield. Masked Object Registration in the Fourier Domain.
@@ -59,15 +61,14 @@ def _masked_phase_cross_correlation(reference_image, moving_image,
         if reference_image.shape != moving_image.shape:
             raise ValueError(
                 "Input images have different shapes, moving_mask must "
-                "be explicitely set.")
+                "be explicitly set.")
         moving_mask = reference_mask.astype(bool)
 
-    # We need masks to be of the same size as their respective images
+    # Ensure masks are the same size as their respective images
     for (im, mask) in [(reference_image, reference_mask),
                        (moving_image, moving_mask)]:
         if im.shape != mask.shape:
-            raise ValueError(
-                "Image sizes must match their respective mask sizes.")
+            raise ValueError("Image sizes must match their respective mask sizes.")
 
     xcorr = cross_correlate_masked(moving_image, reference_image,
                                    moving_mask, reference_mask,
@@ -80,8 +81,7 @@ def _masked_phase_cross_correlation(reference_image, moving_image,
     center = cp.mean(maxima, axis=0)
     shifts = center - cp.array(reference_image.shape) + 1
 
-    # The mismatch in size will impact the center location of the
-    # cross-correlation
+    # Adjust for size mismatch between reference and moving image
     size_mismatch = (cp.array(moving_image.shape)
                      - cp.array(reference_image.shape))
 
@@ -92,12 +92,13 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
                            overlap_ratio=0.3):
     """
     Masked normalized cross-correlation between arrays.
+
     Parameters
     ----------
     arr1 : ndarray
         First array.
     arr2 : ndarray
-        Seconds array. The dimensions of `arr2` along axes that are not
+        Second array. The dimensions of `arr2` along axes that are not
         transformed should be equal to that of `arr1`.
     m1 : ndarray
         Mask of `arr1`. The mask should evaluate to `True`
@@ -106,13 +107,11 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
         Mask of `arr2`. The mask should evaluate to `True`
         (or 1) on valid pixels. `m2` should have the same shape as `arr2`.
     mode : {'full', 'same'}, optional
-        'full':
-            This returns the convolution at each point of overlap. At
-            the end-points of the convolution, the signals do not overlap
-            completely, and boundary effects may be seen.
-        'same':
-            The output is the same size as `arr1`, centered with respect
-            to the `‘full’` output. Boundary effects are less prominent.
+        'full': This returns the convolution at each point of overlap. At
+        the end-points of the convolution, the signals do not overlap
+        completely, and boundary effects may be seen.
+        'same': The output is the same size as `arr1`, centered with respect
+        to the `‘full’` output. Boundary effects are less prominent.
     axes : tuple of ints, optional
         Axes along which to compute the cross-correlation.
     overlap_ratio : float, optional
@@ -122,14 +121,18 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
         maximum translation, while a higher `overlap_ratio` leads to greater
         robustness against spurious matches due to small overlap between
         masked images.
+
     Returns
     -------
     out : ndarray
         Masked normalized cross-correlation.
+
     Raises
     ------
-    ValueError : if correlation `mode` is not valid, or array dimensions along
+    ValueError
+        If correlation `mode` is not valid, or array dimensions along
         non-transformation axes are not equal.
+
     References
     ----------
     .. [1] Dirk Padfield. Masked Object Registration in the Fourier Domain.
@@ -144,11 +147,6 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
 
     fixed_image = cp.asarray(arr1)
     moving_image = cp.asarray(arr2)
-    # float_dtype = _supported_float_type(
-    #     [fixed_image.dtype, moving_image.dtype]
-    # )
-    # if float_dtype.kind == 'c':
-    #     raise ValueError("complex-valued arr1, arr2 are not supported")
 
     float_dtype = cp.float32
 
@@ -238,8 +236,7 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
     number_overlap_masked_px = number_overlap_masked_px[final_slice]
 
     if mode == 'same':
-        _centering = partial(_centered,
-                             newshape=fixed_image.shape, axes=axes)
+        _centering = partial(_centered, newshape=fixed_image.shape, axes=axes)
         denom = _centering(denom)
         numerator = _centering(numerator)
         number_overlap_masked_px = _centering(number_overlap_masked_px)
@@ -265,8 +262,22 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
 
 
 def _flip(arr, axes=None):
-    """ Reverse array over many axes. Generalization of arr[::-1] for many
-    dimensions. If `axes` is `None`, flip along all axes. """
+    """
+    Reverse array over many axes. Generalization of arr[::-1] for many
+    dimensions. If `axes` is `None`, flip along all axes.
+
+    Parameters
+    ----------
+    arr : ndarray
+        Input array to be flipped.
+    axes : tuple of ints, optional
+        Axes over which to flip the array. If None, flips over all axes.
+
+    Returns
+    -------
+    ndarray
+        Flipped array.
+    """
     if axes is None:
         reverse = [slice(None, None, -1)] * arr.ndim
     else:
@@ -278,8 +289,24 @@ def _flip(arr, axes=None):
 
 
 def _centered(arr, newshape, axes):
-    """ Return the center `newshape` portion of `arr`, leaving axes not
-    in `axes` untouched. """
+    """
+    Return the center `newshape` portion of `arr`, leaving axes not
+    in `axes` untouched.
+
+    Parameters
+    ----------
+    arr : ndarray
+        Input array.
+    newshape : tuple of ints
+        Shape of the centered output array.
+    axes : tuple of ints
+        Axes along which to center the array.
+
+    Returns
+    -------
+    ndarray
+        Centered array.
+    """
     newshape = cp.asarray(newshape)
     currshape = cp.array(arr.shape)
 

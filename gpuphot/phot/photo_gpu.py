@@ -26,6 +26,14 @@ from gpuphot.utils.astro import plate_scale_px
 
 
 def get_solver():
+    """
+    Get the astrometry solver with index files.
+
+    Returns
+    -------
+    astrometry.Solver
+        Configured astrometry solver instance.
+    """
     if os.path.exists('/data'):
         cache = '/data/astrometry_cache'
     else:
@@ -45,6 +53,19 @@ def get_solver():
 
 
 def gen_apm_filter(lk):
+    """
+    Generate an aperture filter.
+
+    Parameters
+    ----------
+    lk : int
+        Aperture radius.
+
+    Returns
+    -------
+    cupy.ndarray
+        Generated aperture filter.
+    """
     k_dim = (2 * lk + 1, 2 * lk + 1)
     indi = cp.indices(k_dim)
     fw2 = lk ** 2
@@ -52,10 +73,33 @@ def gen_apm_filter(lk):
     struc = cp.where(((lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2) < fw2)
     k_app[struc] = 1
     k_app = k_app / k_app.sum()
-    return (k_app)
+    return k_app
 
 
 def get_detections(model_mo, im, det=2, gain=1.024, rdnoise=2.3, scale=.21):
+    """
+    Detect sources in an image using a model.
+
+    Parameters
+    ----------
+    model_mo : Model
+        Model to use for detection.
+    im : ndarray
+        Input image.
+    det : float, optional
+        Detection threshold, by default 2.
+    gain : float, optional
+        Gain value, by default 1.024.
+    rdnoise : float, optional
+        Read noise value, by default 2.3.
+    scale : float, optional
+        Pixel scale in arcsec/pixel, by default 0.21.
+
+    Returns
+    -------
+    tuple
+        Detected sources, sky, rms, FWHM, FWHM error, aperture size.
+    """
     fw, efw, alpha, beta = get_fwhm_mof(model_mo, im, step=50, ns=50)
     print('FWHM = ' + str(fw))
 
@@ -65,20 +109,47 @@ def get_detections(model_mo, im, det=2, gain=1.024, rdnoise=2.3, scale=.21):
     print('Sky:', sky.mean(), ' RMS: ', rms.mean())
 
     dfm, lk = daofind_gpu_fast(im_g, sky, rms, det, mode='m', alpha=alpha, beta=beta)
-    # dfm = dfm[dfm.sks>0]
-
     dfm['snr'] = (dfm.flux_a) * gain / np.sqrt((dfm.flux_a + dfm.sks) * gain + rdnoise ** 2 * np.pi * lk ** 2)
     dfm = dfm[dfm.xcentroid == dfm.xcentroid]
     dfm = dfm[dfm.flux_a == dfm.flux_a]
     a = (dfm.peak) / dfm.flux_a
     dfm = dfm[a < scale / 2]
     dfm['idx'] = np.round(dfm.xcentroid) * im.shape[0] + np.round(dfm.ycentroid)
-    del (im_g)
+    del im_g
     free_gpu_mem()
     return dfm, sky, rms, fw, efw, 2 * lk + 1
 
 
 def daofind_gpu_fast(img, sky, rms, sdet, mode='g', fw=0, alpha=0, beta=0, mem=cp.get_default_pinned_memory_pool()):
+    """
+    Detect sources in an image using DAOFind algorithm on GPU.
+
+    Parameters
+    ----------
+    img : ndarray
+        Input image.
+    sky : ndarray
+        Sky background.
+    rms : ndarray
+        RMS noise.
+    sdet : float
+        Detection threshold.
+    mode : str, optional
+        Mode for detection ('g' for Gaussian, 'm' for Moffat), by default 'g'.
+    fw : float, optional
+        Full width at half maximum, by default 0.
+    alpha : float, optional
+        Alpha parameter for Moffat filter, by default 0.
+    beta : float, optional
+        Beta parameter for Moffat filter, by default 0.
+    mem : cupy.cuda.memory.PinnedMemoryPool, optional
+        Memory pool, by default cp.get_default_pinned_memory_pool().
+
+    Returns
+    -------
+    tuple
+        Dataframe of detected sources and aperture size.
+    """
     thres = sdet * cp.mean(rms)
     sigma_r = (fw / (2.0 * np.sqrt(2.0 * np.log(2.0))))
 
@@ -95,7 +166,7 @@ def daofind_gpu_fast(img, sky, rms, sdet, mode='g', fw=0, alpha=0, beta=0, mem=c
     lbs = label(g1)
     ids = cp.asarray([range(lbs[1])])
     npix = nd_sum(g1, lbs[0], ids)
-    del (g1)
+    del g1
     mem.free_all_blocks()
     idx = cp.indices(img.shape, dtype=cp.int16)
     im1 = g * idx
@@ -106,49 +177,73 @@ def daofind_gpu_fast(img, sky, rms, sdet, mode='g', fw=0, alpha=0, beta=0, mem=c
     coor = (cp.round(x).astype(cp.int), cp.round(y).astype(cp.int))
 
     lk = np.round(lk * 3).astype(np.int)
-    # sk_s = sky[coor]*np.pi*lk**2
     sk_s = (sky[coor] - cp.mean(sky)) / rms[coor]
-    del (rms)
+    del rms
     mem.free_all_blocks()
 
     k_app = gen_ap_filter(lk)
 
     fot_p = maximum_filter(g, footprint=k_app, origin=(0, 0))
-    mm = cp.get_default_memory_pool().used_bytes()
     flux_p = fot_p[coor] / thres
-    del (g, fot_p)
+    del g, fot_p
     mem.free_all_blocks()
 
     mpea = maximum_filter(img - sky, footprint=k_app, origin=(0, 0))
     peak = mpea[coor]
-    del (mpea)
+    del mpea
     fot_a = convolve(img - sky, k_app, origin=(0, 0))
-    flux_a = fot_a[coor]  # - sky[coor]*np.pi*lk**2
-    del (fot_a, k_app)
+    flux_a = fot_a[coor]
+    del fot_a, k_app
     mem.free_all_blocks()
 
     res = np.asarray(
-        [y.get(), x.get(), peak.get(), flux_a.get(), flux_p.get(), npix.get(), sk_s.get()]).transpose().reshape(
-        (-1, 7))
+        [y.get(), x.get(), peak.get(), flux_a.get(), flux_p.get(), npix.get(), sk_s.get()]).transpose().reshape((-1, 7))
     df = pd.DataFrame(res, columns=['xcentroid', 'ycentroid', 'peak', 'flux_a', 'flux_p', 'npix', 'sks'])
     df = df[df.flux_a > 0]
     return df, lk
 
 
 def gen_ap_filter(lk):
+    """
+    Generate an aperture filter.
+
+    Parameters
+    ----------
+    lk : int
+        Aperture radius.
+
+    Returns
+    -------
+    cupy.ndarray
+        Generated aperture filter.
+    """
     k_dim = (2 * lk + 1, 2 * lk + 1)
     indi = cp.indices(k_dim)
     fw2 = lk ** 2
     k_app = cp.zeros(k_dim)
     struc = cp.where(((lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2) < fw2)
     k_app[struc] = 1
-    return (k_app)
+    return k_app
 
 
 def gen_moff_filter(alpha, beta):
+    """
+    Generate a Moffat filter.
+
+    Parameters
+    ----------
+    alpha : float
+        Alpha parameter for Moffat filter.
+    beta : float
+        Beta parameter for Moffat filter.
+
+    Returns
+    -------
+    tuple
+        Generated Moffat filter and aperture size.
+    """
     fw = alpha * (2 * np.sqrt(2 ** (1 / beta) - 1))
     sigma_r = (fw / (2.0 * np.sqrt(2.0 * np.log(2.0))))
-    # sigma_r2 = sigma_r*sigma_r
     lk = np.ceil(sigma_r).astype(np.int16) * 4
     k_dim = (2 * lk + 1, 2 * lk + 1)
     indi = cp.indices(k_dim)
@@ -158,25 +253,56 @@ def gen_moff_filter(alpha, beta):
     ksum2 = cp.sum(ker * ker)
     n = k_dim[0] ** 2
     k_app = (ker - ksum / n) / (ksum2 - ksum * ksum / n)
-    return (k_app, lk)
+    return k_app, lk
 
 
 def gen_gauss_filter(fw):
+    """
+    Generate a Gaussian filter.
+
+    Parameters
+    ----------
+    fw : float
+        Full width at half maximum for Gaussian filter.
+
+    Returns
+    -------
+    tuple
+        Generated Gaussian filter and aperture size.
+    """
     sigma_r = (fw / (2.0 * np.sqrt(2.0 * np.log(2.0))))
-    sigma_r2 = sigma_r * sigma_r
     lk = np.ceil(sigma_r).astype(np.int16) * 4
     k_dim = (2 * lk + 1, 2 * lk + 1)
     indi = cp.indices(k_dim)
     r2 = (lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2
-    ker = cp.exp(-r2 / 2 / sigma_r2)
+    ker = cp.exp(-r2 / 2 / sigma_r ** 2)
     ksum = cp.sum(ker)
     ksum2 = cp.sum(ker * ker)
     n = k_dim[0] ** 2
     k_app = (ker - ksum / n) / (ksum2 - ksum * ksum / n)
-    return (k_app, lk)
+    return k_app, lk
 
 
 def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool()):
+    """
+    Estimate the sky background and RMS noise.
+
+    Parameters
+    ----------
+    im_g : ndarray
+        Input image.
+    fw : float
+        Full width at half maximum.
+    qt : float, optional
+        Quantile for sky estimation, by default 90.
+    mem : cupy.cuda.memory.PinnedMemoryPool, optional
+        Memory pool, by default cp.get_default_memory_pool().
+
+    Returns
+    -------
+    tuple
+        Estimated sky background, RMS noise, and memory used.
+    """
     sigma_r = (fw / (2.0 * np.sqrt(2.0 * np.log(2.0))))
     lk = np.ceil(sigma_r).astype(np.int16) * 4
     k_app = gen_apm_filter(2 * lk)
@@ -188,7 +314,6 @@ def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool()):
     cut1 = cp.percentile((fot_m * fot_m2).flatten(), qt)
     mask = (fot_m * fot_m2 > cut1)
     mm = mem.used_bytes()
-
     fot_m[mask] = None
     fot_m2[mask] = None
     del (cut1, mask)
@@ -198,6 +323,19 @@ def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool()):
 
 
 def SP_filter_cupy(img):
+    """
+    Apply a median filter to remove salt-and-pepper noise.
+
+    Parameters
+    ----------
+    img : cupy.ndarray
+        Input image.
+
+    Returns
+    -------
+    cupy.ndarray
+        Filtered image.
+    """
     med_filter = median_filter(img, size=3)
     dif = img - med_filter
     med = cp.nanmedian(dif)
@@ -209,24 +347,69 @@ def SP_filter_cupy(img):
 
 
 def gen_moff_filter2(alpha, beta):
+    """
+    Generate a Moffat filter with adjusted alpha.
+
+    Parameters
+    ----------
+    alpha : float
+        Alpha parameter for Moffat filter.
+    beta : float
+        Beta parameter for Moffat filter.
+
+    Returns
+    -------
+    tuple
+        Generated Moffat filter and aperture size.
+    """
     alpha = alpha / 2
     fw = alpha * (2 * np.sqrt(2 ** (1 / beta) - 1))
     sigma_r = (fw / (2.0 * np.sqrt(2.0 * np.log(2.0))))
-    # sigma_r2 = sigma_r*sigma_r
     lk = np.ceil(sigma_r).astype(np.int16) * 4
     k_dim = (2 * lk + 1, 2 * lk + 1)
     indi = cp.indices(k_dim)
     r2 = (lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2
     ker = (1 + r2 / alpha ** 2) ** (-beta)
     ksum = cp.sum(ker)
-    k_app = (ker) / ksum
-    return (k_app, lk)
+    k_app = ker / ksum
+    return k_app, lk
 
 
-def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, tile_section=3000,
-                      color_range=0.3,
+def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, tile_section=3000, color_range=0.3,
                       SP_filt=True, pca_method=True, border=50, CR_filt=False):
-    # cp.cuda.set_allocator(None)
+    """
+    Process an astronomical image.
+
+    Parameters
+    ----------
+    imdata : ndarray
+        Image data.
+    imheader : dict
+        FITS header.
+    center_factor : float, optional
+        Factor for center region, by default 0.5.
+    ks : int, optional
+        Aperture size for dilation, by default 2.
+    astrom : bool, optional
+        Whether to perform astrometry, by default False.
+    tile_section : int, optional
+        Tile section size, by default 3000.
+    color_range : float, optional
+        Color range for solar filter, by default 0.3.
+    SP_filt : bool, optional
+        Whether to apply salt-and-pepper filter, by default True.
+    pca_method : bool, optional
+        Whether to use PCA method, by default True.
+    border : int, optional
+        Border size to exclude, by default 50.
+    CR_filt : bool, optional
+        Whether to apply cosmic ray filter, by default False.
+
+    Returns
+    -------
+    tuple
+        Dataframe of photometry, updated header, and calibration dictionary.
+    """
     mempool = cp.get_default_memory_pool()
     img_cp = cp.asarray(imdata)
 
@@ -244,7 +427,6 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
         rdnoise = imheader['RDNOISE']
     rms = cp.sqrt(cp.abs(back) * imheader['GAIN'] + rdnoise ** 2) / imheader['GAIN'] / cp.sqrt(imheader['TOTIMA'])
 
-    # create isolated star dataset
     sources = detect_isolated_stars(img[border:-border, border:-border], rms[border:-border, border:-border], scale,
                                     sat_lim=imheader['SATLEVEL'] * 0.8, min_snr=10, dist_asec=10)
     sources = sources + border
@@ -349,10 +531,8 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
         gc.collect()
 
         if astrom:
-            # if 'CRVAL1' not in imheader:
-            dfm = pd.DataFrame({'xcentroid': source_coord[:, 1] + 1,
-                                'ycentroid': source_coord[:, 0] + 1,
-                                'flux': source_flux})
+            dfm = pd.DataFrame(
+                {'xcentroid': source_coord[:, 1] + 1, 'ycentroid': source_coord[:, 0] + 1, 'flux': source_flux})
             dfm = dfm.sort_values('flux', ascending=False)
             imheader = astrometrice2(dfm, imheader, imdata.shape)
 
@@ -377,24 +557,15 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
         ymin = int(imdata.shape[0] * 0.5 * (1 - cf))
         ymax = int(imdata.shape[0] * 0.5 * (1 + cf))
         center_mask = (source_coord[:, 0] > ymin) & (source_coord[:, 0] < ymax) & (source_coord[:, 1] > xmin) & (
-                source_coord[:, 1] < xmax)
-        zp, ezp, catnstar, min_mag, max_mag = get_zeropoint(result, source_flux[center_mask],
-                                                            source_noise[center_mask],
+                    source_coord[:, 1] < xmax)
+        zp, ezp, catnstar, min_mag, max_mag = get_zeropoint(result, source_flux[center_mask], source_noise[center_mask],
                                                             source_coord[center_mask, :], imheader['EXPT1'],
                                                             dist_thres_px=int(fwhms[0]), solar_filter=color_range)
 
-        dic_calib = {'ZP': np.round(zp, 4),
-                     'EZP': np.round(ezp, 4),
-                     'CATALOG': catalog,
-                     'CATBAND': ref_filter,
-                     'CATNSTAR': catnstar,
-                     'ZPMINMAG': np.round(min_mag, 2),
-                     'ZPMAXMAG': np.round(max_mag, 2),
-                     'BVMIN': np.round(0.65 - color_range, 2),
-                     'BVMAX': np.round(0.65 + color_range, 2),
-                     'APINTER': np.round(pov[1], 3),
-                     'APSLOPE': np.round(pov[0], 3),
-                     'FLUXSKY': np.round(fluxsky, 6)}
+        dic_calib = {'ZP': np.round(zp, 4), 'EZP': np.round(ezp, 4), 'CATALOG': catalog, 'CATBAND': ref_filter,
+                     'CATNSTAR': catnstar, 'ZPMINMAG': np.round(min_mag, 2), 'ZPMAXMAG': np.round(max_mag, 2),
+                     'BVMIN': np.round(0.65 - color_range, 2), 'BVMAX': np.round(0.65 + color_range, 2),
+                     'APINTER': np.round(pov[1], 3), 'APSLOPE': np.round(pov[0], 3), 'FLUXSKY': np.round(fluxsky, 6)}
 
         for i, fwhm in enumerate(fwhms):
             dic_calib[fwhm_label[i]] = np.round(fwhm, 2)
@@ -402,20 +573,16 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
         # get photometry dataframe
         Y = source_coord[:, 0]
         X = source_coord[:, 1]
-        RA, DEC = wcs.all_pix2world(X, Y, 0, )
+        RA, DEC = wcs.all_pix2world(X, Y, 0)
         FLUX = source_flux
         FLUXERR = source_noise
-        df_phot = pd.DataFrame({'X': np.round(X, 2),
-                                'Y': np.round(Y, 2),
-                                'RA': np.round(RA, 6),
-                                'DEC': np.round(DEC, 6),
-                                'FLUX': np.round(FLUX, 2),
-                                'FLUXERR': np.round(FLUXERR, 2)})
+        df_phot = pd.DataFrame(
+            {'X': np.round(X, 2), 'Y': np.round(Y, 2), 'RA': np.round(RA, 6), 'DEC': np.round(DEC, 6),
+             'FLUX': np.round(FLUX, 2), 'FLUXERR': np.round(FLUXERR, 2)})
 
         # get limiting magnitude
         df_phot_center = df_phot.loc[
-            (df_phot['X'] > xmin) & (df_phot['X'] < xmax) & (df_phot['Y'] > ymin) & (
-                    df_phot['Y'] < ymax)].reset_index(
+            (df_phot['X'] > xmin) & (df_phot['X'] < xmax) & (df_phot['Y'] > ymin) & (df_phot['Y'] < ymax)].reset_index(
             drop=True)
         df_phot_center['snr'] = df_phot_center['FLUX'] / df_phot_center['FLUXERR']
         df_phot_center['mag'] = -2.5 * np.log10(df_phot_center['FLUX'] / imheader['EXPT1']) + dic_calib['ZP']
@@ -433,31 +600,17 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
         # find target
         ref_coords = df_phot[['RA', 'DEC']].to_numpy()
         target_coord = np.array([float(imheader['POINTRA']) * 15, float(imheader['POINTDEC'])]).reshape(1, 2)
-        _, ref_coords_matched_idx = crossmatch_sources(target_coord, ref_coords,
-                                                       thres_px=10 * fwhms[0] * scale / 3600)
+        _, ref_coords_matched_idx = crossmatch_sources(target_coord, ref_coords, thres_px=10 * fwhms[0] * scale / 3600)
         if len(ref_coords_matched_idx) == 0:
             target_snr = 0
         else:
             target_snr = \
-                (df_phot.iloc[ref_coords_matched_idx]['FLUX'] / df_phot.iloc[ref_coords_matched_idx][
-                    'FLUXERR']).values[
-                    0]
+            (df_phot.iloc[ref_coords_matched_idx]['FLUX'] / df_phot.iloc[ref_coords_matched_idx]['FLUXERR']).values[0]
         dic_calib['OBJECSNR'] = np.round(target_snr, 2)
 
         phot_exists = get_if_header_already_post_processed(imheader, "PHOTOMETRY")
         if phot_exists:
             imheader = delete_header_from(imheader, 'PHOTOMETRY')
-
-        # imheader['COMINIT'] = 'e'
-        # imheader.insert('COMINIT', ('COMMENT', '***************************'))
-        # imheader.insert('COMINIT', ('COMMENT', '       PHOTOMETRY          '))
-        # imheader.insert('COMINIT', ('COMMENT', '***************************'))
-        # for v in dic_calib.keys():
-        #     imheader.insert('COMINIT', (v, dic_calib[v], db_header_obj.get(name=v).description))
-        #
-        # imheader.insert('COMINIT', (
-        #     'DATEPROC', datetime.utcnow().isoformat()[:-7], db_header_obj.get(name='DATE').description))
-        # del imheader['COMINIT']
 
         del source_flux, source_coord, source_noise, result, coords, ra, dec, cat_x, cat_y, wcs, Y, X, RA, DEC, FLUX, FLUXERR
         mempool.free_all_blocks()
@@ -468,6 +621,33 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
 
 def perform_opt_photometry(img, back, conv_ima_sigma, source_coord, isolated_coord, imheader, labels=None,
                            center_factor=1):
+    """
+    Perform optimal photometry on detected sources.
+
+    Parameters
+    ----------
+    img : ndarray
+        Image data.
+    back : ndarray
+        Background image.
+    conv_ima_sigma : ndarray
+        Convolved image sigma.
+    source_coord : ndarray
+        Coordinates of detected sources.
+    isolated_coord : ndarray
+        Coordinates of isolated sources.
+    imheader : dict
+        FITS header.
+    labels : ndarray, optional
+        Labels for sources, by default None.
+    center_factor : float, optional
+        Factor for center region, by default 1.
+
+    Returns
+    -------
+    tuple
+        Optimal flux, noise, coordinates, and photometry parameters.
+    """
     mempool = cp.get_default_memory_pool()
 
     gain = imheader['GAIN']
@@ -489,9 +669,7 @@ def perform_opt_photometry(img, back, conv_ima_sigma, source_coord, isolated_coo
         radii = np.arange(min_radii, max_radii, 1)
         M = int(np.argmin(np.abs(radii - 2.5 / pxscale)))
 
-    # get photometry
-    source_flux, back_flux, area = batch_aperture_photometry(img, back, cp.round(source_coord).astype(cp.int32),
-                                                             radii)
+    source_flux, back_flux, area = batch_aperture_photometry(img, back, cp.round(source_coord).astype(cp.int32), radii)
     conv_snr = conv_ima_sigma[
         cp.round(source_coord[:, 0]).astype(cp.int32), cp.round(source_coord[:, 1]).astype(cp.int32)]
     mempool.free_all_blocks()
@@ -503,9 +681,8 @@ def perform_opt_photometry(img, back, conv_ima_sigma, source_coord, isolated_coo
         xmax = int(img.shape[1] * 0.5 * (1 + center_factor))
         ymin = int(img.shape[0] * 0.5 * (1 - center_factor))
         ymax = int(img.shape[0] * 0.5 * (1 + center_factor))
-        center_mask = (isolated_coord[:, 0] > ymin) & (isolated_coord[:, 0] < ymax) & (
-                isolated_coord[:, 1] > xmin) & (
-                              isolated_coord[:, 1] < xmax)
+        center_mask = (isolated_coord[:, 0] > ymin) & (isolated_coord[:, 0] < ymax) & (isolated_coord[:, 1] > xmin) & (
+                    isolated_coord[:, 1] < xmax)
 
         # get center and isolated masks
         _, source_coords_matched_idx = crossmatch_sources(isolated_coord[center_mask].get(), source_coord.get(),
@@ -553,7 +730,6 @@ def perform_opt_photometry(img, back, conv_ima_sigma, source_coord, isolated_coo
         opt_noise = cp.zeros(source_coord.shape[0])
         opt_rads = cp.zeros(source_coord.shape[0])
         for lab in np.unique(labels):
-
             lab_source_mask = cp.array(labels == lab)
             lab_source_match = lab_source_mask[source_coords_matched_idx]
 
@@ -618,7 +794,25 @@ def perform_opt_photometry(img, back, conv_ima_sigma, source_coord, isolated_coo
 
 
 def batch_aperture_photometry(img, back, positions, radii):
-    # cp.cuda.set_allocator(cp.cuda.MemoryPool().malloc)
+    """
+    Perform aperture photometry in batch mode.
+
+    Parameters
+    ----------
+    img : ndarray
+        Image data.
+    back : ndarray
+        Background image.
+    positions : ndarray
+        Positions of sources.
+    radii : ndarray
+        Aperture radii.
+
+    Returns
+    -------
+    tuple
+        Flux, background flux, and area of apertures.
+    """
     mempool = cp.get_default_memory_pool()
 
     flux = cp.zeros((len(radii), len(positions)))
@@ -649,13 +843,34 @@ def batch_aperture_photometry(img, back, positions, radii):
     del convolved, kernel, back_c, img_c
     mempool.free_all_blocks()
     gc.collect()
-    # cp.cuda.set_allocator(None)
 
     return flux, back_flux, area
 
 
 def get_raw_photometry(imdata, imheader, aperture_rad_asec=None, astrom=True, SP_filt=True, ks=2):
-    # cp.cuda.set_allocator(None)
+    """
+    Get raw photometry for an astronomical image.
+
+    Parameters
+    ----------
+    imdata : ndarray
+        Image data.
+    imheader : dict
+        FITS header.
+    aperture_rad_asec : float, optional
+        Aperture radius in arcseconds, by default None.
+    astrom : bool, optional
+        Whether to perform astrometry, by default True.
+    SP_filt : bool, optional
+        Whether to apply salt-and-pepper filter, by default True.
+    ks : int, optional
+        Aperture size for dilation, by default 2.
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe containing photometry results.
+    """
     mempool = cp.get_default_memory_pool()
     img_cp = cp.asarray(imdata)
 
@@ -692,9 +907,8 @@ def get_raw_photometry(imdata, imheader, aperture_rad_asec=None, astrom=True, SP
     del source_neg_mask
 
     back_n, area = aperture_photometry(rms, source_coord, aperture_rad)
-    source_noise = cp.sqrt(source_flux * imheader['GAIN'] + area * rdnoise ** 2 + back_n * imheader['GAIN']) / \
-                   imheader[
-                       'GAIN']
+    source_noise = cp.sqrt(source_flux * imheader['GAIN'] + area * rdnoise ** 2 + back_n * imheader['GAIN']) / imheader[
+        'GAIN']
     snr_mask = (source_flux / source_noise >= 2).get()
     del back_n, area
 
@@ -707,10 +921,7 @@ def get_raw_photometry(imdata, imheader, aperture_rad_asec=None, astrom=True, SP
     gc.collect()
 
     if astrom:
-        # if 'CRVAL1' not in imheader:
-        dfm = pd.DataFrame({'xcentroid': source_coord[:, 1],
-                            'ycentroid': source_coord[:, 0],
-                            'flux': source_flux})
+        dfm = pd.DataFrame({'xcentroid': source_coord[:, 1], 'ycentroid': source_coord[:, 0], 'flux': source_flux})
         dfm = dfm.sort_values('flux', ascending=False)
         imheader = astrometrice2(dfm, imheader, imdata.shape)
     wcs = WCS(imheader)
@@ -718,15 +929,11 @@ def get_raw_photometry(imdata, imheader, aperture_rad_asec=None, astrom=True, SP
     # get photometry dataframe
     Y = source_coord[:, 0]
     X = source_coord[:, 1]
-    RA, DEC = wcs.all_pix2world(X, Y, 0, )
+    RA, DEC = wcs.all_pix2world(X, Y, 0)
     FLUX = source_flux
     FLUXERR = source_noise
-    df_phot = pd.DataFrame({'DATE': imheader['DATE-OBS'],
-                            'FILTER': imheader['FILTER'],
-                            'EXPTIME': imheader['EXPT1'],
-                            'RA': np.round(RA, 6),
-                            'DEC': np.round(DEC, 6),
-                            'FLUX': np.round(FLUX, 2),
+    df_phot = pd.DataFrame({'DATE': imheader['DATE-OBS'], 'FILTER': imheader['FILTER'], 'EXPTIME': imheader['EXPT1'],
+                            'RA': np.round(RA, 6), 'DEC': np.round(DEC, 6), 'FLUX': np.round(FLUX, 2),
                             'FLUXERR': np.round(FLUXERR, 2)})
 
     del X, Y, RA, DEC, FLUX, FLUXERR
@@ -737,6 +944,23 @@ def get_raw_photometry(imdata, imheader, aperture_rad_asec=None, astrom=True, SP
 
 
 def aperture_photometry(img, positions, aper_rad):
+    """
+    Perform aperture photometry.
+
+    Parameters
+    ----------
+    img : ndarray
+        Image data.
+    positions : ndarray
+        Positions of sources.
+    aper_rad : int
+        Aperture radius.
+
+    Returns
+    -------
+    tuple
+        Flux and area of apertures.
+    """
     kernel, area = get_aper_kernel(aper_rad)
     conv_ima = convolve_fft(img, kernel)
     positions = cp.array(cp.round(positions)).astype(cp.int32)
@@ -746,6 +970,27 @@ def aperture_photometry(img, positions, aper_rad):
 
 
 def get_fwhm_mof(model, img, step=50, ns=25, mins=3):
+    """
+    Get the full width at half maximum using Moffat model.
+
+    Parameters
+    ----------
+    model : Model
+        Model to use for FWHM estimation.
+    img : ndarray
+        Image data.
+    step : int, optional
+        Step size for sampling, by default 50.
+    ns : int, optional
+        Number of samples, by default 25.
+    mins : int, optional
+        Minimum number of stars, by default 3.
+
+    Returns
+    -------
+    tuple
+        Mean FWHM, standard deviation of FWHM, mean alpha, and mean beta.
+    """
     ims, cs = sample_im(img, step, ns)
     pred2 = model.predict(ims)
     alpha, beta, nstar, fwhm = pred_mof(pred2)
@@ -754,6 +999,21 @@ def get_fwhm_mof(model, img, step=50, ns=25, mins=3):
 
 
 def cov_nan(img, nc=10):
+    """
+    Fill NaN values in an image using convolution.
+
+    Parameters
+    ----------
+    img : ndarray
+        Input image.
+    nc : int, optional
+        Number of chunks, by default 10.
+
+    Returns
+    -------
+    ndarray
+        Image with NaN values filled.
+    """
     delta = np.round((img.shape[0]) / nc).astype(int)
     for i in range(nc):
         for j in range(nc):
@@ -762,26 +1022,40 @@ def cov_nan(img, nc=10):
             img[(delta * i):(delta * (i + 1)), (delta * j):(delta * (j + 1))] = ii
     img[cp.isnan(img)] = cp.nanmean(img)
     img[cp.isinf(img)] = cp.nanmean(img)
-    return (img)
+    return img
 
 
 def astrometrice2(dfm, head0, im_shape):
+    """
+    Perform astrometry on an image.
+
+    Parameters
+    ----------
+    dfm : pd.DataFrame
+        Dataframe containing detected sources.
+    head0 : dict
+        FITS header.
+    im_shape : tuple
+        Shape of the image.
+
+    Returns
+    -------
+    dict
+        Updated FITS header.
+    """
     head = head0.copy()
     arcsec_per_pixel = plate_scale_px(head['PXSIZE'], head['FOCALEN']) * head['XBINNING']
 
     signal.signal(signal.SIGALRM, handler)
-    signal.alarm(120)  # Timeout
+    signal.alarm(120)
     try:
-        #    if True:
         solution = get_solver().solve(
-            stars_xs=dfm['xcentroid'],  # [0:ms],
-            stars_ys=dfm['ycentroid'],  # [0:ms],
+            stars_xs=dfm['xcentroid'],
+            stars_ys=dfm['ycentroid'],
             size_hint=astrometry.SizeHint(
                 lower_arcsec_per_pixel=arcsec_per_pixel * .8,
-                upper_arcsec_per_pixel=arcsec_per_pixel * 1.2, ),
-            # lower_arcsec_per_pixel=.09,
-            # upper_arcsec_per_pixel=162,),
-            # position_hint = None,
+                upper_arcsec_per_pixel=arcsec_per_pixel * 1.2,
+            ),
             position_hint=astrometry.PositionHint(
                 ra_deg=head['POINTRA'] * 360 / 24,
                 dec_deg=head['POINTDEC'],
@@ -789,7 +1063,6 @@ def astrometrice2(dfm, head0, im_shape):
             ),
             solution_parameters=astrometry.SolutionParameters(
                 logodds_callback=logodds_callback_100,
-                # logodds_callback = logodds_callback3,
                 sip_order=3,
             ),
         )
@@ -799,93 +1072,41 @@ def astrometrice2(dfm, head0, im_shape):
     except:
         nmatches = 0
     signal.alarm(0)
-    # if nmatches > 0:
-    #     astro_exists = get_if_header_already_post_processed(head, "ASTROMETRY")
-    #     if astro_exists:
-    #         head = delete_header_from(head, 'ASTROMETRY')
-    #
-    #     head['COMINIT'] = 'e'
-    #     head.insert('COMINIT', ('COMMENT', '***************************'))
-    #     head.insert('COMINIT', ('COMMENT', '       ASTROMETRY          '))
-    #     head.insert('COMINIT', ('COMMENT', '***************************'))
-    #     h_wcs = solution.best_match().wcs_fields
-    #     # print(h_wcs)
-    #     for v in h_wcs:
-    #         head[v] = h_wcs[v]
-    #
-    #     px = head['NAXIS1'] / 2
-    #     py = head['NAXIS2'] / 2
-    #     w = WCS(h_wcs)
-    #     ra, dec = w.wcs_pix2world(px, py, 1)
-    #     ra = ra.tolist()
-    #     dec = dec.tolist()
-    #
-    #     # head['RA'] = ra
-    #     # head['DEC'] = dec
-    #
-    #     c1 = SkyCoord(ra * u.deg, dec * u.deg, frame='icrs')
-    #     c2 = SkyCoord(head['POINTRA'] * 360 / 24 * u.deg, head['POINTDEC'] * u.deg, frame='icrs')
-    #     sep = (c2.separation(c1)).arcsecond
-    #     print('Error de apuntado: ', sep, ' arcsec')
-    #
-    #     ra_hms, dec_dms = deg_to_hms(ra, dec)
-    #
-    #     try:
-    #         elev = head['SITEELEV']
-    #     except:
-    #         elev = head['SITEALT']
-    #
-    #     az, alt, airmass, zd = radec_to_altaz(ra, dec, head['SITELAT'], head['SITELONG'], elev, head['DATE-OBS'])
-    #     longal, latgal = radec_to_gal(ra, dec)
-    #     lonecl, latecl = radec_to_ecl(ra, dec)
-    #     scale = np.round(get_scale(head), 3)
-    #     ccw = np.round(get_ccw(head), 1)
-    #     fovx = np.round(head['NAXIS1'] * scale / 60, 2)
-    #     fovy = np.round(head['NAXIS2'] * scale / 60, 2)
-    #
-    #     head.insert('COMINIT', ('RA', ra, db.Header.objects.get(name='RA').description))
-    #     head.insert('COMINIT', ('DEC', dec, db.Header.objects.get(name='DEC').description))
-    #     head.insert('COMINIT', ('RAhms', ra_hms, db.Header.objects.get(name='RAhms').description))
-    #     head.insert('COMINIT', ('DECdms', dec_dms, db.Header.objects.get(name='DECdms').description))
-    #     head.insert('COMINIT', ('FOVX', fovx, db.Header.objects.get(name='FOVX').description))
-    #     head.insert('COMINIT', ('FOVY', fovy, db.Header.objects.get(name='FOVY').description))
-    #     head.insert('COMINIT', ('SCALE', scale, db.Header.objects.get(name='SCALE').description))
-    #     head.insert('COMINIT', ('CCW', ccw, db.Header.objects.get(name='CCW').description))
-    #     head.insert('COMINIT', ('AZ', az, db.Header.objects.get(name='AZ').description))
-    #     head.insert('COMINIT', ('ALT', alt, db.Header.objects.get(name='ALT').description))
-    #     head.insert('COMINIT', ('ZD', zd, db.Header.objects.get(name='ZD').description))
-    #     head.insert('COMINIT', ('AIRMASS', airmass, db.Header.objects.get(name='AIRMASS').description))
-    #     head.insert('COMINIT', ('LONGAL', longal, db.Header.objects.get(name='LONGAL').description))
-    #     head.insert('COMINIT', ('LATGAL', latgal, db.Header.objects.get(name='LATGAL').description))
-    #     head.insert('COMINIT', ('LONECL', lonecl, db.Header.objects.get(name='LONECL').description))
-    #     head.insert('COMINIT', ('LATECL', latecl, db.Header.objects.get(name='LATECL').description))
-    #     del head['COMINIT']
-    #
-    #     # Parche hasta que instroduzca en los raw
-    #     if 'JD-OBS' not in head:
-    #         try:
-    #             jd, mjd = date_to_jd(head['DATE-OBS'])
-    #             head.insert('PCDATE', ('JD-OBS', jd, db.Header.objects.get(name='JD-OBS').description))
-    #             head.insert('PCDATE', ('MJD-OBS', mjd, db.Header.objects.get(name='MJD-OBS').description))
-    #         except:
-    #             pass
-    #
-    #     if 'SCALEORI' not in head:
-    #         try:
-    #             head.insert('PARITY', ('SCALEORI', np.round(plate_scale_px(head['PXSIZE'], head['FOCALEN']), 3),
-    #                                    db.Header.objects.get(name='SCALEORI').description))
-    #         except:
-    #             pass
-    #     ######
-    #
-    #     return head
     return None
 
 
 def get_zeropoint(df_catalog, flux, noise, coord, exptime, solar_filter=0.3, dist_thres_px=3, N=50, plot=False):
+    """
+    Calculate the zeropoint for photometry.
+
+    Parameters
+    ----------
+    df_catalog : pd.DataFrame
+        Catalog dataframe.
+    flux : ndarray
+        Flux values.
+    noise : ndarray
+        Noise values.
+    coord : ndarray
+        Coordinates of sources.
+    exptime : float
+        Exposure time.
+    solar_filter : float, optional
+        Solar filter, by default 0.3.
+    dist_thres_px : int, optional
+        Distance threshold in pixels, by default 3.
+    N : int, optional
+        Number of brightest stars to use, by default 50.
+    plot : bool, optional
+        Whether to plot the results, by default False.
+
+    Returns
+    -------
+    tuple
+        Zeropoint, error in zeropoint, number of stars, minimum magnitude, and maximum magnitude.
+    """
     cat_coords = np.array([df_catalog['Y'], df_catalog['X']]).T
-    source_coords_matched_idx, ref_coords_matched_idx = crossmatch_sources(coord, cat_coords,
-                                                                           thres_px=dist_thres_px)
+    source_coords_matched_idx, ref_coords_matched_idx = crossmatch_sources(coord, cat_coords, thres_px=dist_thres_px)
     solar_cat_filt = np.abs(df_catalog['SOLAR'])[ref_coords_matched_idx] < solar_filter
 
     source_coords_matched_idx = source_coords_matched_idx[solar_cat_filt]
@@ -956,6 +1177,21 @@ def get_zeropoint(df_catalog, flux, noise, coord, exptime, solar_filter=0.3, dis
 
 
 def delete_header_from(header, val):
+    """
+    Delete a section from the FITS header.
+
+    Parameters
+    ----------
+    header : dict
+        FITS header.
+    val : str
+        Value to delete.
+
+    Returns
+    -------
+    dict
+        Updated FITS header.
+    """
     for i, v in enumerate(header.values()):
         if val in str(v): idx = i - 1
     for i in range(len(header) - idx):
@@ -964,6 +1200,23 @@ def delete_header_from(header, val):
 
 
 def sample_im(img, nc=50, ns=100):
+    """
+    Sample an image.
+
+    Parameters
+    ----------
+    img : ndarray
+        Input image.
+    nc : int, optional
+        Number of chunks, by default 50.
+    ns : int, optional
+        Number of samples, by default 100.
+
+    Returns
+    -------
+    tuple
+        Sampled images and scaling factors.
+    """
     delta = np.round((img.shape[0] - 512) / nc).astype(int)
     pi = 512 * 512
     lim = []
@@ -985,10 +1238,23 @@ def sample_im(img, nc=50, ns=100):
     iac2 = np.asarray(lim)
     icmax2 = np.asarray(cmax)
     iac2 = iac2.reshape(-1, 512, 512, 1)
-    return (iac2, icmax2)
+    return iac2, icmax2
 
 
 def pred_mof(pred):
+    """
+    Predict Moffat parameters.
+
+    Parameters
+    ----------
+    pred : ndarray
+        Predicted values.
+
+    Returns
+    -------
+    tuple
+        Alpha, beta, number of stars, and FWHM.
+    """
     alpha = pred[:, 1]
     beta = pred[:, 0] * 0.4 + 4.565
     nstar = pred[:, 2] * 200
@@ -997,12 +1263,34 @@ def pred_mof(pred):
 
 
 def handler(signum, frame):
+    """
+    Timeout handler for astrometry.
+
+    Parameters
+    ----------
+    signum : int
+        Signal number.
+    frame : frame
+        Stack frame.
+    """
     print("Astrometrization timeout!")
     raise Exception("end of time")
 
 
 def logodds_callback_100(logodds):
-    # print(logodds)
+    """
+    Callback function for astrometry.
+
+    Parameters
+    ----------
+    logodds : float
+        Log odds value.
+
+    Returns
+    -------
+    astrometry.Action
+        Action to take (CONTINUE or STOP).
+    """
     if (logodds[0] > 100.0) | (len(logodds) > 2):
         return astrometry.Action.STOP
     else:

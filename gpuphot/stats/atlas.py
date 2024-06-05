@@ -15,11 +15,31 @@ logger = logging.getLogger(__name__)
 
 
 def reduction_atlas(cubes_path, size=2048, internal_shift=False):
-    # Read cubes
-    heads = []
-    # idx = []
-    for c, cube in enumerate(cubes_path):
+    """
+    Perform reduction on a list of FITS image cubes to produce a combined image.
 
+    This function reads a series of FITS cubes, applies internal shifting if required, and combines them into a single averaged image. It uses GPU acceleration for computational efficiency.
+
+    Parameters
+    ----------
+    cubes_path : list of str
+        List of file paths to the FITS image cubes.
+    size : int, optional
+        Size of the subimage to be centered and processed, by default 2048.
+    internal_shift : bool, optional
+        Whether to apply internal shifting to align images within each cube, by default False.
+
+    Returns
+    -------
+    tuple
+        (avgnew, nnew, heads, temp_header) where:
+        - avgnew is the final combined image.
+        - nnew is the count of non-zero pixel contributions for each pixel.
+        - heads is a list of headers from the FITS files.
+        - temp_header is a dictionary with transformation parameters for the alignment.
+    """
+    heads = []
+    for c, cube in enumerate(cubes_path):
         logger.info('Reading cube %s' % cube)
         with fits.open(cube) as ima:
             data = ima[1].data.astype(np.float32)
@@ -34,13 +54,11 @@ def reduction_atlas(cubes_path, size=2048, internal_shift=False):
                 if internal_shift:
                     shifted, _, _ = phase_cross_correlation_gpu(center(im0cp, size), center(im, size))
                     im = shift(im, shift=(shifted[0], shifted[1]), mode='constant')
-
                 nnew, avgnew = dyn_avg(im, nnew, avgnew)
                 del im
 
             f0 = cp.nansum(center(avgnew, size)).get()
             heads = [ima_header]
-
             del im0cp, data
             gc.collect()
 
@@ -71,11 +89,6 @@ def reduction_atlas(cubes_path, size=2048, internal_shift=False):
             im *= fc
             nnew, avgnew = sum_dyn_avg(nnew, avgnew, nnew1, im)
 
-            # ima_header['ROT'] = (np.round(transf.rotation * 180 / np.pi, 4), Header.objects.get(name='ROT').description)
-            # ima_header['SHX'] = (np.round(transf.translation[1], 2), Header.objects.get(name='SHX').description)
-            # ima_header['SHY'] = (np.round(transf.translation[0], 2), Header.objects.get(name='SHY').description)
-            # ima_header['ZOO'] = (np.round(transf.scale, 4), Header.objects.get(name='ZOO').description)
-            # ima_header['FC'] = (np.round(fc, 4), Header.objects.get(name='FC').description)
             temp_header = {
                 'ROT': np.round(transf.rotation * 180 / np.pi, 4),
                 'SHX': np.round(transf.translation[1], 2),
@@ -83,9 +96,7 @@ def reduction_atlas(cubes_path, size=2048, internal_shift=False):
                 'ZOO': np.round(transf.scale, 4),
                 'FC': np.round(fc, 4)
             }
-
             heads.append(ima_header)
-
             del avgnew1, alig
             gc.collect()
 
@@ -98,6 +109,24 @@ def reduction_atlas(cubes_path, size=2048, internal_shift=False):
 
 
 def dyn_avg(valuenew, nold, avgold):
+    """
+    Compute the dynamic average for image combination.
+
+    Parameters
+    ----------
+    valuenew : cupy.ndarray
+        New image values to be averaged.
+    nold : cupy.ndarray
+        Previous count of non-zero pixel contributions.
+    avgold : cupy.ndarray
+        Previous average image values.
+
+    Returns
+    -------
+    tuple
+        (nnew, avgnew) where nnew is the updated count of non-zero pixel contributions
+        and avgnew is the updated average image values.
+    """
     nnew = nold + (valuenew != 0).astype(cp.int16)
     if cp.sum(nold) == 0:
         return nnew, valuenew
@@ -107,6 +136,26 @@ def dyn_avg(valuenew, nold, avgold):
 
 
 def sum_dyn_avg(n1, avg1, n2, avg2):
+    """
+    Combine two sets of dynamic averages.
+
+    Parameters
+    ----------
+    n1 : cupy.ndarray
+        First set of non-zero pixel contributions.
+    avg1 : cupy.ndarray
+        First set of average image values.
+    n2 : cupy.ndarray
+        Second set of non-zero pixel contributions.
+    avg2 : cupy.ndarray
+        Second set of average image values.
+
+    Returns
+    -------
+    tuple
+        (n_combined, avg_combined) where n_combined is the combined count of non-zero pixel contributions
+        and avg_combined is the combined average image values.
+    """
     n_combined = n1 + n2
     avg_combined = (n1 * avg1 + n2 * avg2) / n_combined
     return n_combined, avg_combined
