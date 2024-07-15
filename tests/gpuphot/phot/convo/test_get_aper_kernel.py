@@ -4,7 +4,7 @@ from gpuphot.phot import convo
 class TestGet_aper_kernel(unittest.TestCase):
     def test_get_aper_kernel_example1(self):
         # Add your test cases here
-        pass
+        self.assertTrue(False)
 
 if __name__ == '__main__':
     unittest.main()
