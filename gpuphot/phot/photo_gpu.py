@@ -1,7 +1,7 @@
 import gc
 import logging
-import os
 import signal
+import traceback
 
 import astrometry
 import cupy as cp
@@ -325,7 +325,7 @@ def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool()):
     return fot_m, fot_m2, mm
 
 
-def SP_filter_cupy(img):
+def SP_filter_cupy(img, filter_size=3, high_threshold_factor=10, low_threshold_factor=5, scaling_factor=1.4826):
     """
     Apply a median filter to remove salt-and-pepper noise.
 
@@ -333,19 +333,39 @@ def SP_filter_cupy(img):
     ----------
     img : cupy.ndarray
         Input image.
+    filter_size : int, optional
+        Size of the median filter (default is 3).
+    high_threshold_factor : float, optional
+        Factor to determine the high threshold for noise detection (default is 10).
+    low_threshold_factor : float, optional
+        Factor to determine the low threshold for noise detection (default is 5).
+    scaling_factor : float, optional
+        Scaling factor for estimating the standard deviation from MAD (default is 1.4826).
 
     Returns
     -------
     cupy.ndarray
         Filtered image.
     """
-    med_filter = median_filter(img, size=3)
+    # Apply median filter
+    med_filter = median_filter(img, size=filter_size)
+
+    # Calculate difference between original and filtered image
     dif = img - med_filter
+
+    # Calculate the median and the median absolute deviation
     med = cp.nanmedian(dif)
-    ms = 1.4826 * cp.nanmedian(cp.abs(dif - med))
-    mask = (dif > med + 10 * ms) | (dif < med - 5 * ms)
+    ms = scaling_factor * cp.nanmedian(cp.abs(dif - med))
+
+    # Create mask based on the provided thresholds
+    mask = (dif > med + high_threshold_factor * ms) | (dif < med - low_threshold_factor * ms)
+
+    # Replace noisy pixels with the median filter values
     img[mask] = med_filter[mask]
+
+    # Clean up temporary variables
     del med_filter, dif, med, ms, mask
+
     return img
 
 
@@ -875,23 +895,30 @@ def get_raw_photometry(imdata, imheader, aperture_rad_asec=None, astrom=True, SP
     pd.DataFrame
         Dataframe containing photometry results.
     """
+    start_time = time.time()
+
+    logger.debug("Start photometry extraction")
     mempool = cp.get_default_memory_pool()
     img_cp = cp.asarray(imdata)
 
     scale = plate_scale_px(imheader['PXSIZE'], imheader['FOCALEN']) * imheader['XBINNING']
     back, _ = get_local_background_fft(img_cp, scale, ks=ks)
     gc.collect()
+    logger.debug(f"Background calculation completed in {time.time() - start_time:.2f} seconds")
+
     if SP_filt:
         img = SP_filter_cupy(img_cp - back)
     else:
         img = img_cp - back
+    logger.debug(f"Salt-and-pepper filter applied in {time.time() - start_time:.2f} seconds")
+
     try:
         rdnoise = imheader['GAIN'] * imheader['BIASSTD'] * np.sqrt(imheader['TOTIMA'])
     except:
         rdnoise = imheader['RDNOISE']
     rms = cp.sqrt(cp.abs(back) * imheader['GAIN'] * np.sqrt(imheader['TOTIMA']) + rdnoise ** 2) / imheader['GAIN']
+    logger.debug(f"RMS calculation completed in {time.time() - start_time:.2f} seconds")
 
-    # create isolated star dataset
     sources = detect_isolated_stars(img, rms, scale, sat_lim=imheader['SATLEVEL'] * 0.8, min_snr=10, dist_asec=10)
     star_dataset, coord, scaling = create_star_dataset(img, sources, scale)
     normed_star_dataset = ((star_dataset.astype(cp.double) - scaling[:, 1][:, None, None]) / cp.sqrt(
@@ -900,6 +927,7 @@ def get_raw_photometry(imdata, imheader, aperture_rad_asec=None, astrom=True, SP
     psf = cp.mean(normed_star_dataset[sst, :, :], axis=0)
     sources = detect_sources_kernel(img, rms, psf, scale, min_snr=5)
     del star_dataset, coord, scaling, sst, psf
+    logger.debug(f"Source detection completed in {time.time() - start_time:.2f} seconds")
 
     if aperture_rad_asec is None: aperture_rad_asec = 1
     aperture_rad = int(max(aperture_rad_asec / scale, 1))
@@ -923,6 +951,7 @@ def get_raw_photometry(imdata, imheader, aperture_rad_asec=None, astrom=True, SP
     del img, img_cp, rms, sources, back
     mempool.free_all_blocks()
     gc.collect()
+    logger.debug(f"Photometry extraction completed in {time.time() - start_time:.2f} seconds")
 
     if astrom:
         dfm = pd.DataFrame({'xcentroid': source_coord[:, 1], 'ycentroid': source_coord[:, 0], 'flux': source_flux})
@@ -930,7 +959,6 @@ def get_raw_photometry(imdata, imheader, aperture_rad_asec=None, astrom=True, SP
         imheader = astrometrice2(dfm, imheader, imdata.shape)
     wcs = WCS(imheader)
 
-    # get photometry dataframe
     Y = source_coord[:, 0]
     X = source_coord[:, 1]
     RA, DEC = wcs.all_pix2world(X, Y, 0)
@@ -943,6 +971,7 @@ def get_raw_photometry(imdata, imheader, aperture_rad_asec=None, astrom=True, SP
     del X, Y, RA, DEC, FLUX, FLUXERR
     mempool.free_all_blocks()
     gc.collect()
+    logger.debug(f"Astrometry and final data preparation completed in {time.time() - start_time:.2f} seconds")
 
     return df_phot
 
@@ -1299,3 +1328,32 @@ def logodds_callback_100(logodds):
         return astrometry.Action.STOP
     else:
         return astrometry.Action.CONTINUE
+
+
+if __name__ == "__main__":
+
+    import time
+    import cupy as cp
+    from astropy.io import fits
+    import os
+
+    # Root image directory
+    directory_path = os.path.join(os.path.dirname(__file__), '..', '..', 'tests', 'data')
+
+    # Get all subdirectories and find if exists a FITS file
+    for root, dirs, files in os.walk(directory_path):
+        for file in files:
+            if file.endswith('.fits'):
+                if "TTT1" in file:
+                    image_path = os.path.join(root, file)
+                    try:
+                        print(f"Processing {image_path}")
+                        start_time = time.time()
+                        image_cp = cp.asarray(fits.getdata(image_path))
+                        resul = SP_filter_cupy(image_cp)
+                        end_time = time.time()
+                        print(f"Elapsed time for {file}: {end_time - start_time:.2f} seconds")
+                    except Exception as e:
+                        print(f"Error processing {image_path}: {e}")
+                        print("Traceback:")
+                        traceback.print_exc()

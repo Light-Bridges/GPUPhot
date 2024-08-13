@@ -21,6 +21,10 @@ def get_if_header_already_post_processed(header, postprocess):
     bool
         True if the post-processing string is found in the header comments, False otherwise.
     """
+    if "COMMENT" not in header:
+        logger.warning("No comments found in header.")
+        return False
+
     comments = list()
     for comment in header["COMMENT"]:
         comments.append(comment.strip("   "))
