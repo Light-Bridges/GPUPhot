@@ -76,3 +76,7 @@ def get_local_background_fft(image, pxscale, qt=60, fill_aper=15, avg_aper=15, t
     del img_filled
     mempool.free_all_blocks()
     return img_filled_m, img_filled_2
+
+
+if __name__ == "__main__":
+    logger.info(get_local_background_fft(cp.random.rand(100, 100), 1))
