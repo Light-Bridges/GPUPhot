@@ -7,8 +7,8 @@ from lmfit import Model
 from scipy.spatial import KDTree
 from sklearn.decomposition import PCA
 
-from gpuphot.phot.convo import gaussian_kernel, convolve_fft
-from gpuphot.phot.utils import decompose_into_tiles, recompose_from_percentiles, fill_nan_fft, calculate_tile_nanmean
+from .convo import gaussian_kernel, convolve_fft
+from .utils import decompose_into_tiles, recompose_from_percentiles, fill_nan_fft, calculate_tile_nanmean
 
 logger = logging.getLogger(__name__)
 

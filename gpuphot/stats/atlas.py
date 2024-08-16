@@ -8,8 +8,8 @@ from astropy.io import fits
 from cupyx.scipy.ndimage import shift
 from skimage.transform._warps_cy import _warp_fast
 
-from gpuphot.stats.reduction import center
-from gpuphot.stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
+from ..stats.reduction import center
+from ..stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
 
 logger = logging.getLogger(__name__)
 

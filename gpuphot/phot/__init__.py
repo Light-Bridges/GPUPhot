@@ -1,6 +1,1 @@
-from convo import *
-from utils import *
-from catalog import *
-from background import *
-from photo_gpu import *
-from psf import *
+__all__ = ['background', 'catalog', 'convo', 'photo_gpu', 'psf', 'utils']

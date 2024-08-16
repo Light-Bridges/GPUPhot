@@ -15,15 +15,15 @@ from cupyx.scipy.ndimage import gaussian_filter, convolve, label, sum as nd_sum,
 from matplotlib import pyplot as plt
 from sklearn.linear_model import RANSACRegressor
 
-from gpuphot.astrometry.utils import get_if_header_already_post_processed
-from gpuphot.phot.background import get_local_background_fft
-from gpuphot.phot.catalog import cat_input_from_header, catalog_results, crossmatch_sources
-from gpuphot.phot.convo import fill_image, get_aper_kernel, convolve_fft
-from gpuphot.phot.psf import detect_isolated_stars, create_star_dataset, get_eigen_psfs, \
+from .background import get_local_background_fft
+from .catalog import cat_input_from_header, catalog_results, crossmatch_sources
+from .convo import fill_image, get_aper_kernel, convolve_fft
+from .psf import detect_isolated_stars, create_star_dataset, get_eigen_psfs, \
     project_all_stars_onto_eigenpsfs, create_coeff_map, detect_sources_pca, recreate_normed_star, fit_moffat, \
     detect_sources_kernel
-from gpuphot.stats.s_util import free_gpu_mem
-from gpuphot.utils.astro import plate_scale_px
+from ..astrometry.utils import get_if_header_already_post_processed
+from ..stats.s_util import free_gpu_mem
+from ..utils.astro import plate_scale_px
 
 logger = logging.getLogger(__name__)
 
