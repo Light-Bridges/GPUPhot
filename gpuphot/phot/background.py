@@ -3,8 +3,8 @@ import logging
 import cupy as cp
 from cupyx.scipy.ndimage import gaussian_filter, binary_erosion, binary_dilation
 
-from gpuphot.phot.convo import get_mean_std
-from gpuphot.phot.utils import decompose_into_tiles, calculate_tile_percentiles, recompose_from_percentiles, \
+from .convo import get_mean_std
+from .utils import decompose_into_tiles, calculate_tile_percentiles, recompose_from_percentiles, \
     fill_nan_fft
 
 logger = logging.getLogger(__name__)
