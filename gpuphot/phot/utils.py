@@ -23,7 +23,7 @@ def decompose_into_tiles(image, block_size):
     ndarray
         A stack of tiles extracted from the image.
     """
-    h, w = image.shape
+    (h, w) = image.shape
     num_tiles_y = h // block_size
     num_tiles_x = w // block_size
     tiles = cp.empty((num_tiles_y * num_tiles_x, block_size, block_size))
@@ -72,7 +72,7 @@ def recompose_from_percentiles(percentiles, original_shape, block_size):
     ndarray
         Reconstructed image from the percentiles.
     """
-    h, w = original_shape
+    (h, w) = original_shape
     num_tiles_y = h // block_size
     num_tiles_x = w // block_size
     recomposed = cp.empty(original_shape)
@@ -117,7 +117,7 @@ def fill_nan_fft(image, lk, li=0, min_neighbors=5, pad=301):
     image_zeroed = cp.where(cp.isnan(image), 0, image)
     neighbor_sum = convolve_fft(image_zeroed, k_app)
     del image_zeroed
-    result = cp.where((valid_neighbors >= min_neighbors) & (cp.isnan(image)), neighbor_sum / valid_neighbors, image)
+    result = cp.where((valid_neighbors >= min_neighbors) & cp.isnan(image), neighbor_sum / valid_neighbors, image)
     del valid_neighbors
     return result
 

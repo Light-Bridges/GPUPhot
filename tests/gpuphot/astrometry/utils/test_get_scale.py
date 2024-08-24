@@ -5,14 +5,16 @@ from astropy.io import fits
 
 from gpuphot.astrometry.utils import get_scale
 
+
 class TestGetScale(unittest.TestCase):
+
     def _test_fits_file(self, file_path, expected_result):
         with fits.open(file_path) as hdul:
             header = hdul[0].header
             wcs_params = {key: header.get(key, 0.0) for key in ['CD1_1', 'CD1_2']}
             result = get_scale(hwcs=wcs_params)
-            self.assertAlmostEqual(expected_result, result, places=6, msg=f"El resultado para {file_path} no es el esperado.")
-
+            self.assertAlmostEqual(expected_result, result, places=6,
+                                   msg=f'El resultado para {file_path} no es el esperado.')
 
     def test_image_calib_1(self):
         file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
@@ -158,8 +160,6 @@ class TestGetScale(unittest.TestCase):
         expected_result = 0
         self._test_fits_file(file_path, expected_result)
 
-
-    # Tests adicionales para combinaciones posibles de parámetros
     def test_ccw_combination_1(self):
         hwcs = {'CD1_1': 1.0, 'CD1_2': 0.0}
         expected_result = 3600.0
@@ -183,6 +183,7 @@ class TestGetScale(unittest.TestCase):
         expected_result = 3600.0
         result = get_scale(hwcs)
         self.assertAlmostEqual(result, expected_result, places=6)
+
 
 if __name__ == '__main__':
     unittest.main()

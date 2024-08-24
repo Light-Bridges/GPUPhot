@@ -23,7 +23,7 @@ def plate_scale_px(microns, focal):
     float
         Plate scale in arcseconds per pixel.
     """
-    return plate_scale_mm(focal) * microns / 1000  # arcsec/px
+    return plate_scale_mm(focal) * microns / 1000
 
 
 def deg_to_hms(RA, DEC):
@@ -49,7 +49,7 @@ def deg_to_hms(RA, DEC):
     else:
         coords_deg = SkyCoord(RA * u.deg, -1 * DEC * u.deg, frame='icrs', unit='deg')
         dec_dms = '-%02d:%02d:%02.6f' % coords_deg.dec.dms
-    return ra_hms, dec_dms
+    return (ra_hms, dec_dms)
 
 
 def radec_to_altaz(RA, DEC, SITELAT, SITELON, SITEELEV, date):
@@ -83,7 +83,7 @@ def radec_to_altaz(RA, DEC, SITELAT, SITELON, SITEELEV, date):
     coords_altaz = coords_deg.transform_to(aa)
     airmass = float(coords_altaz.secz)
     zen = coords_altaz.zen
-    return round(coords_altaz.az.deg, 6), round(coords_altaz.alt.deg, 6), round(airmass, 6), round(zen.deg, 6)
+    return (round(coords_altaz.az.deg, 6), round(coords_altaz.alt.deg, 6), round(airmass, 6), round(zen.deg, 6))
 
 
 def radec_to_gal(RA, DEC):
@@ -103,7 +103,7 @@ def radec_to_gal(RA, DEC):
         (l, b) where l is galactic longitude in degrees and b is galactic latitude in degrees.
     """
     coords_gal = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg').galactic
-    return round(coords_gal.l.deg, 6), round(coords_gal.b.deg, 6)
+    return (round(coords_gal.l.deg, 6), round(coords_gal.b.deg, 6))
 
 
 def radec_to_ecl(RA, DEC):
@@ -123,7 +123,7 @@ def radec_to_ecl(RA, DEC):
         (lon, lat) where lon is ecliptic longitude in degrees and lat is ecliptic latitude in degrees.
     """
     coords_gal = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg').barycentricmeanecliptic
-    return round(coords_gal.lon.deg, 6), round(coords_gal.lat.deg, 6)
+    return (round(coords_gal.lon.deg, 6), round(coords_gal.lat.deg, 6))
 
 
 def date_to_jd(dateobs):
@@ -141,7 +141,7 @@ def date_to_jd(dateobs):
         (jd, mjd) where jd is Julian Date and mjd is Modified Julian Date.
     """
     date = Time(dateobs, scale='utc')
-    return date.jd, date.mjd
+    return (date.jd, date.mjd)
 
 
 def plate_scale_mm(focal):
@@ -158,4 +158,4 @@ def plate_scale_mm(focal):
     float
         Plate scale in arcseconds per millimeter.
     """
-    return 206265 / focal  # arcsec/mm
+    return 206265 / focal

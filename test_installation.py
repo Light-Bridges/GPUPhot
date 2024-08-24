@@ -1,9 +1,4 @@
-# test_installation.py
-
-
 def main():
-    print("Librería instalada y funcionando correctamente")
-
-
-if __name__ == "__main__":
+    print('Librería instalada y funcionando correctamente')
+if __name__ == '__main__':
     main()

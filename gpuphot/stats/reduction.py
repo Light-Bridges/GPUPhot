@@ -53,16 +53,15 @@ def register_shift(fc, uf=100, n=1000):
     """
     fc1 = fc.copy()
     im0 = center(fc[0], n)
-    im0 = binary_erosion(im0 > (im0.mean() + im0.std()))
+    im0 = binary_erosion(im0 > im0.mean() + im0.std())
     for i in np.arange(1, fc.shape[0]):
         im1 = center(fc[i], n)
-        im1 = binary_erosion(im1 > (im1.mean() + im1.std()))
-        shifted, _, _ = phase_cross_correlation_gpu(im0.get(), im1.get(), upsample_factor=uf)
-        if (np.abs(shifted[0]) > 300) | np.abs((shifted[1]) > 300):
+        im1 = binary_erosion(im1 > im1.mean() + im1.std())
+        (shifted, _, _) = phase_cross_correlation_gpu(im0.get(), im1.get(), upsample_factor=uf)
+        if (np.abs(shifted[0]) > 300) | np.abs(shifted[1] > 300):
             shifted = (0, 0)
         fc1[i] = shift(cp.asarray(fc[i]), shift=(shifted[0], shifted[1]), order=1, mode='constant').get()
-
-        logger.debug(f"Detected subpixel offset (y, x): {shifted}")
+        logger.debug(f'Detected subpixel offset (y, x): {shifted}')
     return fc1
 
 
@@ -96,21 +95,19 @@ def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False, beta
     """
     nim = data.shape[0]
     if nim < 3:
-        return cp.asarray(data.mean(axis=0)), None
+        return (cp.asarray(data.mean(axis=0)), None)
     if tim is None:
         w = cp.ones(nim, dtype=cp.float32)
         f = 1.0
     else:
         w = cp.asarray(tim) / np.sum(tim)
         f = nim
-
     delta0 = -1
-    iplus = cp.zeros_like(data[0], dtype=cp.float32) + 1.e10
-    iminu = cp.zeros_like(data[0], dtype=cp.float32) - 1.e10
+    iplus = cp.zeros_like(data[0], dtype=cp.float32) + 10000000000.0
+    iminu = cp.zeros_like(data[0], dtype=cp.float32) - 10000000000.0
     if alpha:
         from ..phot.photo_gpu import gen_moff_filter2
-        gf, lk = gen_moff_filter2(alpha, beta)
-
+        (gf, lk) = gen_moff_filter2(alpha, beta)
     for iit in range(it):
         center = cp.zeros_like(data[0], dtype=cp.float32)
         sigma = cp.zeros_like(data[0], dtype=cp.float32)
@@ -123,8 +120,7 @@ def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False, beta
                 im = im / cp.mean(im)
             if alpha:
                 im = convolve(im, gf, origin=(0, 0))
-
-            mk = (im >= iminu)
+            mk = im >= iminu
             mk = mk * (im <= iplus)
             im = im * mk
             center = center + im * w[i]
@@ -148,4 +144,4 @@ def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False, beta
     sigma = sigma * f
     center[center != center] = im[center != center]
     del im
-    return center, sigma
+    return (center, sigma)
