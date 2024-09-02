@@ -169,13 +169,6 @@ def gen_apm_filter(lk, li=0, norm=True):
     return k_app
 
 
-def fill_image(image_shape):
-    h, w = image_shape
-    new_height = 2 ** int(np.ceil(np.log2(h)))
-    new_width = 2 ** int(np.ceil(np.log2(w)))
-    return (new_height, new_width)
-
-
 def batch_aper_kernel(radius):
     kernel = cp.zeros((2 * radius[-1] + 1, 2 * radius[-1] + 1))
     y, x = cp.indices(kernel.shape)

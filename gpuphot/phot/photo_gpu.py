@@ -495,10 +495,10 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
         mempool.free_all_blocks()
         gc.collect()
         center_factor = np.min((center_factor, 1))
-        xmin = int(imdata.shape[1] * 0.5 * (1 - center_factor))
-        xmax = int(imdata.shape[1] * 0.5 * (1 + center_factor))
-        ymin = int(imdata.shape[0] * 0.5 * (1 - center_factor))
-        ymax = int(imdata.shape[0] * 0.5 * (1 + center_factor))
+        # xmin = int(imdata.shape[1] * 0.5 * (1 - center_factor))
+        # xmax = int(imdata.shape[1] * 0.5 * (1 + center_factor))
+        # ymin = int(imdata.shape[0] * 0.5 * (1 - center_factor))
+        # ymax = int(imdata.shape[0] * 0.5 * (1 + center_factor))
         cf = np.min((0.3, 1))
         xmin = int(imdata.shape[1] * 0.5 * (1 - cf))
         xmax = int(imdata.shape[1] * 0.5 * (1 + cf))
@@ -508,7 +508,7 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
         s = cp.std(back[ymin:ymax, xmin:xmax])
         mask = cp.abs(back[ymin:ymax, xmin:xmax] - m) < 3 * s
         m = cp.median(back[ymin:ymax, xmin:xmax][mask])
-        s = cp.std(back[ymin:ymax, xmin:xmax][mask])
+        # s = cp.std(back[ymin:ymax, xmin:xmax][mask])
         fluxsky = np.round(m.get(), 6)
         del back
         mempool.free_all_blocks()
@@ -716,11 +716,12 @@ def perform_opt_photometry(img, back, conv_ima_sigma, source_coord, isolated_coo
                 pov0 = pov.copy()
                 pov0[1] += min_radii
             fluxes_lab = source_flux[:, lab_source_mask] / corr_fact[:, None]
-            noise_phot = cp.sqrt(source_flux[:, lab_source_mask] / corr_fact[:, None] * gain + area.reshape(-1,
-                                                                                                            1) * rdnoise ** 2 + back_flux[
-                                                                                                                                :,
-                                                                                                                                lab_source_mask] * gain) / gain / cp.sqrt(
-                n)
+            # noise_phot = (
+            #         cp.sqrt(source_flux[:, lab_source_mask] / corr_fact[:, None] * gain + area.reshape(-1,
+            #                                                                                            1) * rdnoise ** 2 + back_flux[
+            #                                                                                                                :,
+            #                                                                                                                lab_source_mask] * gain) / gain / cp.sqrt(
+            #     n))
             opt_rad = np.round(
                 np.fmax(np.fmin(pov[0] * np.log10(conv_snr[lab_source_mask].get()) + pov[1], M), 0)).astype(int)
             opt_flux[lab_source_mask] = fluxes_lab[opt_rad, np.arange(fluxes_lab.shape[1])]
@@ -991,7 +992,8 @@ def astrometrice2(dfm, head0, im_shape):
         logger.debug(nmatches)
         return solution
     except:
-        nmatches = 0
+        pass
+        # nmatches = 0
     signal.alarm(0)
     return None
 
@@ -1218,7 +1220,7 @@ def gen_gauss_filter(fw):
 
 def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix=4, mincut=10,
                mem=cp.get_default_pinned_memory_pool()):
-    thres = sdet * cp.mean(rms)
+    # thres = sdet * cp.mean(rms)
     gf, lk = gen_gauss_filter(fw)
     g = convolve((img - sky), gf, origin=(0, 0))
     # g= img-sky
