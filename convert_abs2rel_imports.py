@@ -63,5 +63,5 @@ def transform_imports_in_directory(directory, exclude_dirs=None):
                     print(f'Error al transformar {file_path}: {e}')
 if __name__ == '__main__':
     directorio = input('Introduce el directorio que deseas analizar: ')
-    exclude_dirs = ['.venv', '__pycache__']
+    exclude_dirs = ['.venv', '__pycache__','dev']
     transform_imports_in_directory(directorio, exclude_dirs)
