@@ -154,8 +154,8 @@ def get_eigen_psfs(normed_star_dataset, n_components=5):
         Eigen PSFs.
     """
     pca = PCA(n_components=n_components)
-    starset_flattened = normed_star_dataset.reshape(normed_star_dataset.shape[0],
-                                                    normed_star_dataset.shape[1] ** 2).get()
+    # starset_flattened = normed_star_dataset.reshape(normed_star_dataset.shape[0],
+    #                                                 normed_star_dataset.shape[1] ** 2).get()
     eigen_psfs = pca.components_.reshape(-1, normed_star_dataset.shape[1], normed_star_dataset.shape[2])
     return eigen_psfs
 
@@ -446,10 +446,8 @@ def moffat_fwhm(R, B, R_err, B_err):
     """
     FWHM = 2 * R * np.sqrt(2 ** (1 / B) - 1)
     FWHM_err = 2 * R_err * np.sqrt(2 ** (1 / B) - 1) + 2 * R * B_err * (np.log(2) * 2 ** (1 / B - 1)) / (
-                B ** 2 * np.sqrt(2 ** (1 / B) - 1))
+            B ** 2 * np.sqrt(2 ** (1 / B) - 1))
     return (FWHM, FWHM_err)
-
-
 
 #
 #

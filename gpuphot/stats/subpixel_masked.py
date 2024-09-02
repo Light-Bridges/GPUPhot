@@ -250,7 +250,6 @@ def _centered(arr, newshape, axes):
         slices[ax] = slice(startind, endind)
     return arr[tuple(slices)]
 
-
 # def _centered(arr, newshape, axes):
 #     """ Return the center `newshape` portion of `arr`, leaving axes not
 #     in `axes` untouched. """

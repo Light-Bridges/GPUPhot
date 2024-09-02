@@ -1,7 +1,6 @@
 import ast
 import os
-import sys
-import importlib.util
+
 
 class ImportTransformer(ast.NodeTransformer):
     """
@@ -32,6 +31,7 @@ class ImportTransformer(ast.NodeTransformer):
         module_path = os.path.relpath(self.module_path, start=self.project_root)
         return os.path.splitext(module_path)[0].replace(os.path.sep, '.')
 
+
 def transform_imports_in_file(file_path):
     """
     Transforma las importaciones absolutas a importaciones relativas en un archivo Python dado.
@@ -42,6 +42,7 @@ def transform_imports_in_file(file_path):
     transformed_tree = transformer.visit(tree)
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(ast.unparse(transformed_tree))
+
 
 def transform_imports_in_directory(directory, exclude_dirs=None):
     """
@@ -61,7 +62,9 @@ def transform_imports_in_directory(directory, exclude_dirs=None):
                     print(f'Transformado: {file_path}')
                 except Exception as e:
                     print(f'Error al transformar {file_path}: {e}')
+
+
 if __name__ == '__main__':
     directorio = input('Introduce el directorio que deseas analizar: ')
-    exclude_dirs = ['.venv', '__pycache__','dev']
+    exclude_dirs = ['.venv', '__pycache__', 'dev']
     transform_imports_in_directory(directorio, exclude_dirs)

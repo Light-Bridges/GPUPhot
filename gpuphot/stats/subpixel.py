@@ -79,8 +79,9 @@ def phase_cross_correlation(reference_image, moving_image, *, upsample_factor=1,
     """
     if reference_mask is not None or moving_mask is not None:
         return (
-        _masked_phase_cross_correlation(reference_image, moving_image, reference_mask, moving_mask, overlap_ratio), 0,
-        0)
+            _masked_phase_cross_correlation(reference_image, moving_image, reference_mask, moving_mask, overlap_ratio),
+            0,
+            0)
     if reference_image.shape != moving_image.shape:
         raise ValueError('images must be same shape')
     if space.lower() == 'fourier':

@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 from . import common
 
+
 def free_gpu_mem():
     """
     Frees all allocated GPU memory blocks and triggers garbage collection.
@@ -14,10 +15,6 @@ def free_gpu_mem():
     This function frees all blocks in the default memory pool and the default
     pinned memory pool of CuPy, and then runs the garbage collector to free up
     any additional resources that might be held.
-
-    Parameters
-    ----------
-    None
 
     Returns
     -------
@@ -41,17 +38,17 @@ def free_gpu_mem():
     pinned_mempool.free_all_blocks()
     gc.collect()
 
+
 def set_dtype(dtype):
-    '''
+    """
     Change the default dtype used in all functions
     and classes in this package.
     Parameters
     ----------
     dtype : str or dtype
-    '''
+    """
 
     common.default_dtype = judge_dtype(dtype).name
-
 
 
 def judge_dtype(dtype):
@@ -67,7 +64,7 @@ def judge_dtype(dtype):
 
 
 def reduction(image, bias, dark, flat, out=None, dtype=None):
-    '''
+    """
     This function is equal to the equation:
     out = (image - bias - dark) / flat, but needs less memory.
     Therefore, each inputs must be broadcastable shape.
@@ -89,7 +86,7 @@ def reduction(image, bias, dark, flat, out=None, dtype=None):
     Returns
     -------
     out : cupy.ndarray
-    '''
+    """
     dtype = judge_dtype(dtype)
     asarray = lambda x: cp.asarray(x, dtype=dtype)
 
@@ -107,7 +104,6 @@ def reduction(image, bias, dark, flat, out=None, dtype=None):
     reduction_kernel(image, bias, dark, flat, out)
 
     return out
-
 
 
 reduction_kernel = cp.ElementwiseKernel(
