@@ -2,11 +2,13 @@ import gc
 import logging
 import signal
 import traceback
+from pathlib import Path
 
 import astrometry
 import cupy as cp
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
@@ -14,10 +16,11 @@ from cupyx.scipy.ndimage import gaussian_filter, convolve, label, sum as nd_sum,
     median_filter
 from matplotlib import pyplot as plt
 from sklearn.linear_model import RANSACRegressor
+from tensorflow.keras.models import load_model
 
 from .background import get_local_background_fft
 from .catalog import cat_input_from_header, catalog_results, crossmatch_sources
-from .convo import fill_image, get_aper_kernel, convolve_fft
+from .convo import fill_image, get_aper_kernel, convolve_fft, gen_apm_filter
 from .psf import detect_isolated_stars, create_star_dataset, get_eigen_psfs, project_all_stars_onto_eigenpsfs, \
     create_coeff_map, detect_sources_pca, recreate_normed_star, fit_moffat, detect_sources_kernel
 from ..astrometry.utils import get_if_header_already_post_processed
@@ -27,7 +30,7 @@ from ..utils.astro import plate_scale_px
 logger = logging.getLogger(__name__)
 
 
-def get_solver():
+def get_solver():  # TODO this function need set as parameter from function that use it
     """
     Get the astrometry solver with index files.
 
@@ -46,28 +49,45 @@ def get_solver():
     return solver
 
 
-def gen_apm_filter(lk):
-    """
-    Generate an aperture filter.
+def init_gpu():
+    print('Tensorflow version ' + tf.__version__)
+    gpus = tf.config.list_physical_devices('GPU')
+    tf.config.set_logical_device_configuration(
+        gpus[0],
+        [tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
 
-    Parameters
-    ----------
-    lk : int
-        Aperture radius.
 
-    Returns
-    -------
-    cupy.ndarray
-        Generated aperture filter.
-    """
-    k_dim = (2 * lk + 1, 2 * lk + 1)
-    indi = cp.indices(k_dim)
-    fw2 = lk ** 2
-    k_app = cp.zeros(k_dim)
-    struc = cp.where((lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2 < fw2)
-    k_app[struc] = 1
-    k_app = k_app / k_app.sum()
-    return k_app
+def get_fwhm_model(model_path=Path(__file__).parent.parent):
+    name = f'{model_path}/fwhm/fwhm_3_2_mofatt_ns_mix_100_model'
+    if tf.__version__ == '2.4.1':
+        name = name + '_old'
+    model = load_model(name)
+    return model
+
+
+#
+# def gen_apm_filter(lk):
+#     """
+#     Generate an aperture filter.
+#
+#     Parameters
+#     ----------
+#     lk : int
+#         Aperture radius.
+#
+#     Returns
+#     -------
+#     cupy.ndarray
+#         Generated aperture filter.
+#     """
+#     k_dim = (2 * lk + 1, 2 * lk + 1)
+#     indi = cp.indices(k_dim)
+#     fw2 = lk ** 2
+#     k_app = cp.zeros(k_dim)
+#     struc = cp.where((lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2 < fw2)
+#     k_app[struc] = 1
+#     k_app = k_app / k_app.sum()
+#     return k_app
 
 
 def get_detections(model_mo, im, det=2, gain=1.024, rdnoise=2.3, scale=0.21):
@@ -237,31 +257,32 @@ def gen_moff_filter(alpha, beta):
     return (k_app, lk)
 
 
-def gen_gauss_filter(fw):
-    """
-    Generate a Gaussian filter.
-
-    Parameters
-    ----------
-    fw : float
-        Full width at half maximum for Gaussian filter.
-
-    Returns
-    -------
-    tuple
-        Generated Gaussian filter and aperture size.
-    """
-    sigma_r = fw / (2.0 * np.sqrt(2.0 * np.log(2.0)))
-    lk = np.ceil(sigma_r).astype(np.int16) * 4
-    k_dim = (2 * lk + 1, 2 * lk + 1)
-    indi = cp.indices(k_dim)
-    r2 = (lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2
-    ker = cp.exp(-r2 / 2 / sigma_r ** 2)
-    ksum = cp.sum(ker)
-    ksum2 = cp.sum(ker * ker)
-    n = k_dim[0] ** 2
-    k_app = (ker - ksum / n) / (ksum2 - ksum * ksum / n)
-    return (k_app, lk)
+#
+# def gen_gauss_filter(fw):
+#     """
+#     Generate a Gaussian filter.
+#
+#     Parameters
+#     ----------
+#     fw : float
+#         Full width at half maximum for Gaussian filter.
+#
+#     Returns
+#     -------
+#     tuple
+#         Generated Gaussian filter and aperture size.
+#     """
+#     sigma_r = fw / (2.0 * np.sqrt(2.0 * np.log(2.0)))
+#     lk = np.ceil(sigma_r).astype(np.int16) * 4
+#     k_dim = (2 * lk + 1, 2 * lk + 1)
+#     indi = cp.indices(k_dim)
+#     r2 = (lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2
+#     ker = cp.exp(-r2 / 2 / sigma_r ** 2)
+#     ksum = cp.sum(ker)
+#     ksum2 = cp.sum(ker * ker)
+#     n = k_dim[0] ** 2
+#     k_app = (ker - ksum / n) / (ksum2 - ksum * ksum / n)
+#     return (k_app, lk)
 
 
 def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool()):
@@ -515,7 +536,7 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
         ymin = int(imdata.shape[0] * 0.5 * (1 - cf))
         ymax = int(imdata.shape[0] * 0.5 * (1 + cf))
         center_mask = (source_coord[:, 0] > ymin) & (source_coord[:, 0] < ymax) & (source_coord[:, 1] > xmin) & (
-                    source_coord[:, 1] < xmax)
+                source_coord[:, 1] < xmax)
         (zp, ezp, catnstar, min_mag, max_mag) = get_zeropoint(result, source_flux[center_mask],
                                                               source_noise[center_mask], source_coord[center_mask, :],
                                                               imheader['EXPT1'], dist_thres_px=int(fwhms[0]),
@@ -557,7 +578,8 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
             target_snr = 0
         else:
             target_snr = \
-            (df_phot.iloc[ref_coords_matched_idx]['FLUX'] / df_phot.iloc[ref_coords_matched_idx]['FLUXERR']).values[0]
+                (df_phot.iloc[ref_coords_matched_idx]['FLUX'] / df_phot.iloc[ref_coords_matched_idx]['FLUXERR']).values[
+                    0]
         dic_calib['OBJECSNR'] = np.round(target_snr, 2)
         phot_exists = get_if_header_already_post_processed(imheader, 'PHOTOMETRY')
         if phot_exists:
@@ -628,7 +650,7 @@ def perform_opt_photometry(img, back, conv_ima_sigma, source_coord, isolated_coo
         ymin = int(img.shape[0] * 0.5 * (1 - center_factor))
         ymax = int(img.shape[0] * 0.5 * (1 + center_factor))
         center_mask = (isolated_coord[:, 0] > ymin) & (isolated_coord[:, 0] < ymax) & (isolated_coord[:, 1] > xmin) & (
-                    isolated_coord[:, 1] < xmax)
+                isolated_coord[:, 1] < xmax)
         (_, source_coords_matched_idx) = crossmatch_sources(isolated_coord[center_mask].get(), source_coord.get(),
                                                             thres_px=3)
         center_isolated_flux = source_flux[:, source_coords_matched_idx]
@@ -1166,6 +1188,88 @@ def handler(signum, frame):
     """
     logger.error('Astrometrization timeout!')
     raise Exception('end of time')
+
+
+def sigma_clip(img, sclip):
+    img0 = img.copy()
+    for i in range(5):
+        imed = cp.nanmean(img0)
+        rms = cp.nanstd(img0)
+        img0[img0 >= imed + sclip * rms] = cp.nan
+        img0[img0 <= imed - sclip * rms] = cp.nan
+    del (img0)
+    return (imed, rms)
+
+
+def gen_gauss_filter(fw):
+    sigma_r = (fw / (2.0 * np.sqrt(2.0 * np.log(2.0))))
+    sigma_r2 = sigma_r * sigma_r
+    lk = np.ceil(sigma_r).astype(np.int16) * 4
+    k_dim = (2 * lk + 1, 2 * lk + 1)
+    indi = cp.indices(k_dim)
+    r2 = (lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2
+    ker = cp.exp(-r2 / 2 / sigma_r2)
+    ksum = cp.sum(ker)
+    ksum2 = cp.sum(ker * ker)
+    n = k_dim[0] ** 2
+    k_app = (ker - ksum / n) / (ksum2 - ksum * ksum / n)
+    return (k_app, lk)
+
+
+def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix=4, mincut=10,
+               mem=cp.get_default_pinned_memory_pool()):
+    thres = sdet * cp.mean(rms)
+    gf, lk = gen_gauss_filter(fw)
+    g = convolve((img - sky), gf, origin=(0, 0))
+    # g= img-sky
+    g1 = ((g) / rms > sdet).astype(cp.int32)
+    del (rms)
+    mem.free_all_blocks()
+    label_im, nb_labels = label(g1)
+    ids0 = cp.asarray([range(nb_labels + 1)])
+    npix = nd_sum(g1, label_im, ids0)
+
+    # remove small regions
+    ids = ids0[(npix > mincut) & (npix > 0)]
+    idm = ids0[(npix <= minpix) & (npix > 0)]
+    npix = npix[(npix > mincut) & (npix > 0)]
+    if minpix == 0:
+        mask = False
+    else:
+        mask = cp.isin(label_im, cp.asarray(idm))
+    # print(label_im[:10,:10])
+
+    del (g1)
+    mem.free_all_blocks()
+
+    idx = cp.indices(img.shape, dtype=cp.int16)
+    im1 = g * idx
+
+    x = (nd_mean(im1[0, :, :], label_im, ids) / nd_mean(g, label_im, ids))
+    y = (nd_mean(im1[1, :, :], label_im, ids) / nd_mean(g, label_im, ids))
+
+    el = (nd_mean(im1[0, :, :] * im1[1, :, :], label_im, ids) / nd_mean(g, label_im, ids))
+    el = el - x * y
+    coor = (x.astype(cp.int), y.astype(cp.int))
+    mm = cp.get_default_memory_pool().used_bytes()
+
+    flux = g[coor]
+    del (g)
+    mem.free_all_blocks()
+
+    res = np.asarray([y.get(), x.get(), flux.get(), npix.get(), el.get()]).transpose().reshape((-1, 5))
+    df = pd.DataFrame(res, columns=['xcentroid', 'ycentroid', 'flux', 'npix', 'elip'])
+    # df = df[df.flux>0]
+    return (df, mask, mm)
+
+
+def get_peak_image(img, positions, aper_rad):
+    lk = 2 * aper_rad
+    img_m = maximum_filter(img, size=lk)
+    positions = cp.array(cp.round(positions)).astype(cp.int32)
+    P = img_m[positions[:, 0], positions[:, 1]]
+    del img_m, positions
+    return P
 
 
 def logodds_callback_100(logodds):

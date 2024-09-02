@@ -2,6 +2,7 @@ import logging
 
 import cupy as cp
 import numpy as np
+from astropy.io import fits
 from cupyx.scipy.ndimage import binary_erosion, shift, convolve
 
 from ..stats.s_util import free_gpu_mem
@@ -145,3 +146,22 @@ def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False, beta
     center[center != center] = im[center != center]
     del im
     return (center, sigma)
+
+
+def register_shift_frames(frames_list, upsample_factor=100, center_size=1000, shift_limit_pix=300):
+    fc0 = cp.asarray(fits.getdata(frames_list[0]), dtype=cp.float32)
+    im0 = center(fc0, center_size)
+    im0 = binary_erosion(im0 > (im0.mean() + im0.std()))
+    fc = cp.zeros((len(frames_list), fc0.shape[0], fc0.shape[1]), dtype=cp.float32)
+    fc[0, :] = fc0
+    del fc0
+    for i in np.arange(1, len(frames_list)):
+        fc1 = cp.asarray(fits.getdata(frames_list[i]), dtype=cp.float32)
+        im1 = center(fc1, center_size)
+        im1 = binary_erosion(im1 > (im1.mean() + im1.std()))
+        shifted, _, _ = phase_cross_correlation_gpu(im0, im1, upsample_factor=upsample_factor)
+        if (np.abs(shifted[0]) > shift_limit_pix) | np.abs((shifted[1]) > shift_limit_pix):
+            shifted = (0, 0)
+        print(f"Detected subpixel offset (y, x): {shifted}")
+        fc[i, :] = shift(fc1, shift=(shifted[0], shifted[1]), order=1, mode='constant')
+    return fc

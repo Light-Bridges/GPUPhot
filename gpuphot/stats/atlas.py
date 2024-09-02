@@ -13,7 +13,19 @@ from ..stats.subpixel import phase_cross_correlation as phase_cross_correlation_
 
 logger = logging.getLogger(__name__)
 
-
+def dyn_avgstd(valuenew, nold, avgold, stdold):
+    valuenew = cp.asarray(valuenew, dtype=np.double)
+    nnew = nold + (valuenew != 0).astype(cp.int32)
+    if cp.sum(nold) == 0:
+        avgnew = cp.asarray(valuenew, dtype=np.double)
+        stdnew = cp.zeros_like(valuenew, dtype=np.double)
+    else:
+        avgnew = avgold + (valuenew - avgold) / nnew
+        stdnew = np.sqrt(
+            nold / nnew * stdold ** 2 +
+            (valuenew - avgnew) * (valuenew - avgold) / nnew
+        )
+    return nnew, avgnew, stdnew
 def reduction_atlas(cubes_path, size=2048, internal_shift=False):
     """
     Perform reduction on a list of FITS image cubes to produce a combined image.

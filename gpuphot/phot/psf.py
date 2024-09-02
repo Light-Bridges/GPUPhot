@@ -448,3 +448,56 @@ def moffat_fwhm(R, B, R_err, B_err):
     FWHM_err = 2 * R_err * np.sqrt(2 ** (1 / B) - 1) + 2 * R * B_err * (np.log(2) * 2 ** (1 / B - 1)) / (
                 B ** 2 * np.sqrt(2 ** (1 / B) - 1))
     return (FWHM, FWHM_err)
+
+
+
+#
+#
+# def recreate_normed_star_vectorized(coeff_map, eigen_psfs, xs, ys):
+#     coeffs = coeff_map[:, ys, xs]
+#     coeffs = coeffs.reshape(-1, coeffs.shape[-1])
+#     reshaped_eigen_psfs = eigen_psfs.reshape(eigen_psfs.shape[0], -1)
+#     kernels = cp.dot(coeffs.T, reshaped_eigen_psfs)
+#     kernels = kernels.reshape(xs.size, eigen_psfs.shape[1], eigen_psfs.shape[2])
+#     del coeffs, reshaped_eigen_psfs
+#     return kernels
+#
+#
+# def rescale_kernel(kernel, flux):
+#     kernel -= cp.mean(cp.concatenate((kernel[0,:], kernel[-1,:], kernel[:,0], kernel[:,-1])))
+#     kernel /= cp.sum(kernel)
+#     kernel *= flux
+#     return kernel
+#
+# def norm_kernel(kernel):
+#     kernel -= cp.min(kernel)
+#     kernel /= cp.sum(kernel)
+#     return kernel
+#
+# def test_dimensionality(coefficients, num_stars, num_eigen_psfs):
+#     assert coefficients.shape == (num_stars, num_eigen_psfs), "Dimensionality test failed!"
+#
+# def test_orthogonality(eigen_psfs):
+#     num_eigen_psfs = eigen_psfs.shape[0]
+#     eigen_psfs_matrix = eigen_psfs.reshape((num_eigen_psfs, -1))
+#     for i in range(num_eigen_psfs):
+#         for j in range(i+1, num_eigen_psfs):
+#             dot_product = cp.dot(eigen_psfs_matrix[i], eigen_psfs_matrix[j].T)
+#             assert cp.all(cp.isclose(dot_product, 0)), f"Orthogonality test failed for components {i} and {j}!"
+#
+# def test_variance_consistency(coefficients):
+#     variances = cp.var(coefficients, axis=0)
+#     assert cp.all(variances[:-1] >= variances[1:]), "Variance consistency test failed!"
+#
+# def test_correlation(coefficients):
+#     correlation_matrix = cp.corrcoef(coefficients, rowvar=False)
+#     off_diagonal_correlation = correlation_matrix - cp.diag(cp.diag(correlation_matrix))
+#     assert cp.all(cp.abs(off_diagonal_correlation) < 0.1), "Correlation test failed!"
+#
+# def test_eigen_psf_normalization(eigen_psfs):
+#     for eigen_psf in eigen_psfs:
+#         assert cp.isclose(cp.linalg.norm(eigen_psf), 1), "Eigen PSF normalization test failed!"
+#
+# def test_mean(coefficients, eigen_psfs):
+#     psfs = cp.dot(coefficients, eigen_psfs)
+#     assert cp.all(cp.isclose(cp.mean(psfs, axis=1), 0)), "Mean test failed!"

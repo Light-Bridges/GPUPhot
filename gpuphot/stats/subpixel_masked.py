@@ -249,3 +249,19 @@ def _centered(arr, newshape, axes):
         endind = startind + newshape[ax]
         slices[ax] = slice(startind, endind)
     return arr[tuple(slices)]
+
+
+# def _centered(arr, newshape, axes):
+#     """ Return the center `newshape` portion of `arr`, leaving axes not
+#     in `axes` untouched. """
+#     newshape = cp.asarray(newshape)
+#     currshape = cp.array(arr.shape)
+#
+#     slices = [slice(None, None)] * arr.ndim
+#
+#     for ax in axes:
+#         startind = (currshape[ax] - newshape[ax]) // 2
+#         endind = startind + newshape[ax]
+#         slices[ax] = slice(startind, endind)
+#
+#     return arr[tuple(slices)]
