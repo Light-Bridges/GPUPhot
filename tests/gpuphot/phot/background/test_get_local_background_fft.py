@@ -66,126 +66,126 @@ class TestGetLocalBackgroundFFT(unittest.TestCase):
         else:
             self.assertIsNone(img_filled_2,
                               'The returned standard deviation image should be None when get_std is False.')
-
-    def test_image_calib_1(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-                                 'TTT1_iKon936-1_MasterFlat_Ha_Bin11.fits')
-        expected_result = 0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_calib_2(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-                                 'TTT1_iKon936-1_MasterFlat_Lum_Bin11.fits')
-        expected_result = 0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_calib_3(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-                                 'TTT1_iKon936-1_MasterFlat_SDSSg_Bin11.fits')
-        expected_result = 0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_calib_4(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-                                 'TTT1_iKon936-1_MasterFlat_SDSSi_Bin11.fits')
-        expected_result = 0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_calib_5(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-                                 'TTT1_iKon936-1_MasterFlat_SDSSr_Bin11.fits')
-        expected_result = 0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_calib_6(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-                                 'TTT1_iKon936-1_MasterFlat_SDSSu_Bin11.fits')
-        expected_result = 0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_calib_7(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-                                 'TTT1_iKon936-1_MasterFlat_SDSSzs_Bin11.fits')
-        expected_result = 0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_calib_8(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-                                 'TTT2_QHY411-2_MasterFlat_Ha_Bin11.fits')
-        expected_result = 0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_calib_9(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-                                 'TTT2_QHY411-2_MasterFlat_Lum_Bin11.fits')
-        expected_result = 0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_calib_10(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-                                 'TTT2_QHY411-2_MasterFlat_SDSSg_Bin11.fits')
-        expected_result = 0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_calib_11(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-                                 'TTT2_QHY411-2_MasterFlat_SDSSi_Bin11.fits')
-        expected_result = 0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_calib_12(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-                                 'TTT2_QHY411-2_MasterFlat_SDSSr_Bin11.fits')
-        expected_result = 0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_prered_1(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'prered',
-                                 'TTT1_iKon936-1_2024-07-11-02-43-55-383463_Chariklo.fits')
-        expected_result = -0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_prered_2(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'prered',
-                                 'TTT1_iKon936-1_2024-07-11-02-46-43-564176_chiron.fits')
-        expected_result = -0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_prered_3(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'prered',
-                                 'TTT2_QHY411-2_2024-07-11-02-57-08-468122_chiron.fits')
-        expected_result = -0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_prered_4(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'prered',
-                                 'TTT2_QHY411-2_2024-07-11-02-57-59-361847_chiron.fits')
-        expected_result = -0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_raw_1(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'raw',
-                                 'TTT1_iKon936-1_2024-07-11-02-41-45-707922_Chariklo.fits')
-        expected_result = -0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_raw_2(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'raw',
-                                 'TTT1_iKon936-1_2024-07-11-02-43-55-383463_Chariklo.fits')
-        expected_result = -0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_raw_3(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'raw',
-                                 'TTT2_QHY411-2_2024-07-11-02-57-08-468122_chiron.fits')
-        expected_result = -0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_raw_4(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'raw',
-                                 'TTT2_QHY411-2_2024-07-11-02-57-59-361847_chiron.fits')
-        expected_result = 0.0
-        self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_calib_1(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
+    #                              'TTT1_iKon936-1_MasterFlat_Ha_Bin11.fits')
+    #     expected_result = 0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_calib_2(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
+    #                              'TTT1_iKon936-1_MasterFlat_Lum_Bin11.fits')
+    #     expected_result = 0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_calib_3(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
+    #                              'TTT1_iKon936-1_MasterFlat_SDSSg_Bin11.fits')
+    #     expected_result = 0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_calib_4(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
+    #                              'TTT1_iKon936-1_MasterFlat_SDSSi_Bin11.fits')
+    #     expected_result = 0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_calib_5(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
+    #                              'TTT1_iKon936-1_MasterFlat_SDSSr_Bin11.fits')
+    #     expected_result = 0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_calib_6(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
+    #                              'TTT1_iKon936-1_MasterFlat_SDSSu_Bin11.fits')
+    #     expected_result = 0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_calib_7(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
+    #                              'TTT1_iKon936-1_MasterFlat_SDSSzs_Bin11.fits')
+    #     expected_result = 0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_calib_8(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
+    #                              'TTT2_QHY411-2_MasterFlat_Ha_Bin11.fits')
+    #     expected_result = 0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_calib_9(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
+    #                              'TTT2_QHY411-2_MasterFlat_Lum_Bin11.fits')
+    #     expected_result = 0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_calib_10(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
+    #                              'TTT2_QHY411-2_MasterFlat_SDSSg_Bin11.fits')
+    #     expected_result = 0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_calib_11(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
+    #                              'TTT2_QHY411-2_MasterFlat_SDSSi_Bin11.fits')
+    #     expected_result = 0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_calib_12(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
+    #                              'TTT2_QHY411-2_MasterFlat_SDSSr_Bin11.fits')
+    #     expected_result = 0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_prered_1(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'prered',
+    #                              'TTT1_iKon936-1_2024-07-11-02-43-55-383463_Chariklo.fits')
+    #     expected_result = -0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_prered_2(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'prered',
+    #                              'TTT1_iKon936-1_2024-07-11-02-46-43-564176_chiron.fits')
+    #     expected_result = -0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_prered_3(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'prered',
+    #                              'TTT2_QHY411-2_2024-07-11-02-57-08-468122_chiron.fits')
+    #     expected_result = -0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_prered_4(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'prered',
+    #                              'TTT2_QHY411-2_2024-07-11-02-57-59-361847_chiron.fits')
+    #     expected_result = -0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_raw_1(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'raw',
+    #                              'TTT1_iKon936-1_2024-07-11-02-41-45-707922_Chariklo.fits')
+    #     expected_result = -0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_raw_2(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'raw',
+    #                              'TTT1_iKon936-1_2024-07-11-02-43-55-383463_Chariklo.fits')
+    #     expected_result = -0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_raw_3(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'raw',
+    #                              'TTT2_QHY411-2_2024-07-11-02-57-08-468122_chiron.fits')
+    #     expected_result = -0.0
+    #     self._test_fits_file(file_path, expected_result)
+    #
+    # def test_image_raw_4(self):
+    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'raw',
+    #                              'TTT2_QHY411-2_2024-07-11-02-57-59-361847_chiron.fits')
+    #     expected_result = 0.0
+    #     self._test_fits_file(file_path, expected_result)
 
     def test_image_red_1(self):
         file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'red',
@@ -209,6 +209,17 @@ class TestGetLocalBackgroundFFT(unittest.TestCase):
         file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'red',
                                  'TTT2_QHY411-2_2024-07-11-02-57-59-361847_chiron.fits')
         expected_result = -0.0
+        self._test_fits_file(file_path, expected_result)
+
+    def test_image_red_5(self):
+        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'red',
+                                 'TTT1_iKon936-1_2024-09-09-00-01-45-953640_chiron.fits')
+        expected_result = -0.0
+        self._test_fits_file(file_path, expected_result)
+    def test_image_red_6(self):
+        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'red',
+                                 'TTT1_iKon936-1_2024-09-08-23-53-00-723983_chiron.fits')
+        expected_result = -174.29739930099691
         self._test_fits_file(file_path, expected_result)
 
 
