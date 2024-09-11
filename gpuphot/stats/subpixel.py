@@ -173,7 +173,6 @@ def phase_cross_correlation(reference_image, moving_image, *,
         return shifts, 0, 0
 
 
-
 def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
                    axis_offsets=None):
     logger.debug(

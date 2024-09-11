@@ -626,7 +626,6 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
         return df_phot, imheader, dic_calib
 
 
-
 def perform_opt_photometry(img, back, conv_ima_sigma, source_coord,
                            isolated_coord, imheader, labels=None, center_factor=1):
     logger.debug(
@@ -1341,7 +1340,6 @@ def handler(signum, frame):
     raise Exception('end of time')
 
 
-
 def sigma_clip(img, sclip):
     logger.debug(f'Iniciando función sigma_clip(img={img}, sclip={sclip})')
     start_time = time.time()
@@ -1465,7 +1463,6 @@ def logodds_callback_100(logodds):
             f'Función logodds_callback_100 completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
         )
         return astrometry.Action.CONTINUE
-
 
 
 if __name__ == '__main__':

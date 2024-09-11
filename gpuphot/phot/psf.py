@@ -545,7 +545,7 @@ def moffat_fwhm(R, B, R_err, B_err):
     FWHM = 2 * R * np.sqrt(2 ** (1 / B) - 1)
     FWHM_err = 2 * R_err * np.sqrt(2 ** (1 / B) - 1) + 2 * R * B_err * (np.
                                                                         log(2) * 2 ** (1 / B - 1)) / (
-                           B ** 2 * np.sqrt(2 ** (1 / B) - 1))
+                       B ** 2 * np.sqrt(2 ** (1 / B) - 1))
     logger.debug(
         f'Función moffat_fwhm completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
     )

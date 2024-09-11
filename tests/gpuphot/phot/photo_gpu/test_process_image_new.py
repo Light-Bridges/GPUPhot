@@ -75,7 +75,7 @@ class TestProcess_image_new(unittest.TestCase):
 
     def test_raw_1(self):
 
-        directory_path = os.path.join(get_tests_data_path(),'red')
+        directory_path = os.path.join(get_tests_data_path(), 'red')
 
         print(f'Root folder: {directory_path}')
         for (root, dirs, files) in os.walk(directory_path):

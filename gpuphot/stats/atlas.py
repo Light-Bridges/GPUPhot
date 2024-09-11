@@ -174,7 +174,6 @@ def dyn_avg(valuenew, nold, avgold):
         return nnew, avgnew
 
 
-
 def sum_dyn_avg(n1, avg1, n2, avg2):
     logger.debug(
         f'Iniciando función sum_dyn_avg(n1={n1}, avg1={avg1}, n2={n2}, avg2={avg2})'
