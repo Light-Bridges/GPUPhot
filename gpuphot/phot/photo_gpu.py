@@ -1,8 +1,8 @@
 import gc
+# from tensorflow.keras.models import load_model
 import logging
 import signal
 import traceback
-# from pathlib import Path
 
 import astrometry
 import cupy as cp
@@ -16,7 +16,6 @@ from cupyx.scipy.ndimage import gaussian_filter, convolve, label, sum as nd_sum,
     median_filter
 from matplotlib import pyplot as plt
 from sklearn.linear_model import RANSACRegressor
-# from tensorflow.keras.models import load_model
 
 from .background import get_local_background_fft
 from .catalog import cat_input_from_header, catalog_results, crossmatch_sources
@@ -26,6 +25,8 @@ from .psf import detect_isolated_stars, create_star_dataset, get_eigen_psfs, pro
 from ..astrometry.utils import get_if_header_already_post_processed
 from ..stats.s_util import free_gpu_mem
 from ..utils.astro import plate_scale_px
+
+# from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
