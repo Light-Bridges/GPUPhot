@@ -1,19 +1,28 @@
 import logging
+import time
 
+logging.basicConfig(level=logging.DEBUG, format=
+'%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+import logging
 import cupy as cp
 import numpy as np
 from cupyx.scipy.ndimage import minimum_filter, label, sum as nd_sum, laplace, gaussian_filter
 from lmfit import Model
 from scipy.spatial import KDTree
 from sklearn.decomposition import PCA
-
 from .convo import gaussian_kernel, convolve_fft
 from .utils import decompose_into_tiles, recompose_from_percentiles, fill_nan_fft, calculate_tile_nanmean
 
 logger = logging.getLogger(__name__)
 
 
-def detect_isolated_stars(img, rms, pxscale, sat_lim=50000, min_snr=10, dist_asec=20):
+def detect_isolated_stars(img, rms, pxscale, sat_lim=50000, min_snr=10,
+                          dist_asec=20):
+    logger.debug(
+        f'Iniciando función detect_isolated_stars(img={img}, rms={rms}, pxscale={pxscale}, sat_lim={sat_lim}, min_snr={min_snr}, dist_asec={dist_asec})'
+    )
+    start_time = time.time()
     """
     Detect isolated stars in an image.
 
@@ -62,7 +71,8 @@ def detect_isolated_stars(img, rms, pxscale, sat_lim=50000, min_snr=10, dist_ase
     y = nd_sum(im1[1, :, :], lbs[0], ids) / s
     del im1, idx, lbs, ids, s
     mempool.free_all_blocks()
-    coor = cp.asarray((cp.round(x).astype(cp.int32), cp.round(y).astype(cp.int32))).T
+    coor = cp.asarray((cp.round(x).astype(cp.int32), cp.round(y).astype(cp.
+                                                                        int32))).T
     coor_f = filter_centroids_kdtree(coor.get(), dist_px)
     snr = conv_sigma[coor_f[:, 0], coor_f[:, 1]]
     peak = img[coor_f[:, 0], coor_f[:, 1]]
@@ -74,10 +84,18 @@ def detect_isolated_stars(img, rms, pxscale, sat_lim=50000, min_snr=10, dist_ase
     coor_f = cp.asarray(coor_f)[m]
     del coor, snr, peak, m
     mempool.free_all_blocks()
+    logger.debug(
+        f'Función detect_isolated_stars completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return coor_f
 
 
-def create_star_dataset(img, coords, pxscale, N=3000, CR_filter=False, CR_thres=30):
+def create_star_dataset(img, coords, pxscale, N=3000, CR_filter=False,
+                        CR_thres=30):
+    logger.debug(
+        f'Iniciando función create_star_dataset(img={img}, coords={coords}, pxscale={pxscale}, N={N}, CR_filter={CR_filter}, CR_thres={CR_thres})'
+    )
+    start_time = time.time()
     """
     Create a dataset of star images.
 
@@ -104,15 +122,17 @@ def create_star_dataset(img, coords, pxscale, N=3000, CR_filter=False, CR_thres=
     """
     f = max(int(5 / pxscale), 6)
     n = max(int(1 / pxscale), 2)
-    star_dataset = cp.zeros((len(coords), 2 * f + 1, 2 * f + 1), dtype=cp.float32)
+    star_dataset = cp.zeros((len(coords), 2 * f + 1, 2 * f + 1), dtype=cp.
+                            float32)
     scaling_dataset = cp.zeros((len(coords), 4), dtype=cp.float32)
     idx = cp.arange(len(coords))
-    for (i, (y, x)) in enumerate(coords):
+    for i, (y, x) in enumerate(coords):
         x_min = x - f
         x_max = x + f + 1
         y_min = y - f
         y_max = y + f + 1
-        if x_min < 0 or y_min < 0 or x_max > img.shape[1] or (y_max > img.shape[0]):
+        if x_min < 0 or y_min < 0 or x_max > img.shape[1] or y_max > img.shape[
+            0]:
             idx = idx[idx != i]
             continue
         subima = img[y_min:y_max, x_min:x_max][::-1, :]
@@ -134,10 +154,17 @@ def create_star_dataset(img, coords, pxscale, N=3000, CR_filter=False, CR_thres=
     N = min(N, len(idx))
     idx = idx[cp.argsort(scaling_dataset[:, 3])[-N:]]
     del subima, peak_pos, peak, x_min, x_max, y_min, y_max, f, n
-    return (star_dataset[idx], coords[idx], scaling_dataset[idx])
+    logger.debug(
+        f'Función create_star_dataset completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
+    return star_dataset[idx], coords[idx], scaling_dataset[idx]
 
 
 def get_eigen_psfs(normed_star_dataset, n_components=5):
+    logger.debug(
+        f'Iniciando función get_eigen_psfs(normed_star_dataset={normed_star_dataset}, n_components={n_components})'
+    )
+    start_time = time.time()
     """
     Calculate eigen PSFs using PCA.
 
@@ -154,13 +181,19 @@ def get_eigen_psfs(normed_star_dataset, n_components=5):
         Eigen PSFs.
     """
     pca = PCA(n_components=n_components)
-    # starset_flattened = normed_star_dataset.reshape(normed_star_dataset.shape[0],
-    #                                                 normed_star_dataset.shape[1] ** 2).get()
-    eigen_psfs = pca.components_.reshape(-1, normed_star_dataset.shape[1], normed_star_dataset.shape[2])
+    eigen_psfs = pca.components_.reshape(-1, normed_star_dataset.shape[1],
+                                         normed_star_dataset.shape[2])
+    logger.debug(
+        f'Función get_eigen_psfs completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return eigen_psfs
 
 
 def project_all_stars_onto_eigenpsfs(normed_star_dataset, eigen_psfs):
+    logger.debug(
+        f'Iniciando función project_all_stars_onto_eigenpsfs(normed_star_dataset={normed_star_dataset}, eigen_psfs={eigen_psfs})'
+    )
+    start_time = time.time()
     """
     Project all stars onto eigen PSFs.
 
@@ -177,15 +210,25 @@ def project_all_stars_onto_eigenpsfs(normed_star_dataset, eigen_psfs):
         Coefficients matrix.
     """
     num_stars = normed_star_dataset.shape[0]
-    flattened_star_dim = normed_star_dataset.shape[1] * normed_star_dataset.shape[2]
+    flattened_star_dim = normed_star_dataset.shape[1
+                         ] * normed_star_dataset.shape[2]
     stars_matrix = normed_star_dataset.reshape((num_stars, flattened_star_dim))
-    eigen_matrix = eigen_psfs.reshape((eigen_psfs.shape[0], flattened_star_dim)).T
+    eigen_matrix = eigen_psfs.reshape((eigen_psfs.shape[0], flattened_star_dim)
+                                      ).T
     coefficients_matrix = cp.dot(stars_matrix, eigen_matrix)
     del stars_matrix, eigen_matrix, flattened_star_dim
+    logger.debug(
+        f'Función project_all_stars_onto_eigenpsfs completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return coefficients_matrix
 
 
-def create_coeff_map(img_shape, positions, coefficients, pxscale, tile_section=None, smooth=False):
+def create_coeff_map(img_shape, positions, coefficients, pxscale,
+                     tile_section=None, smooth=False):
+    logger.debug(
+        f'Iniciando función create_coeff_map(img_shape={img_shape}, positions={positions}, coefficients={coefficients}, pxscale={pxscale}, tile_section={tile_section}, smooth={smooth})'
+    )
+    start_time = time.time()
     """
     Create a coefficient map from image shape, positions, and coefficients.
 
@@ -209,7 +252,8 @@ def create_coeff_map(img_shape, positions, coefficients, pxscale, tile_section=N
     ndarray
         Coefficient map.
     """
-    coeff_map = cp.nan * cp.ones((coefficients.shape[0], img_shape[0], img_shape[1]), dtype=cp.float32)
+    coeff_map = cp.nan * cp.ones((coefficients.shape[0], img_shape[0],
+                                  img_shape[1]), dtype=cp.float32)
     coeff_map[:, positions[:, 0], positions[:, 1]] = coefficients
     if tile_section is None:
         block_size = int(200 / pxscale)
@@ -218,17 +262,26 @@ def create_coeff_map(img_shape, positions, coefficients, pxscale, tile_section=N
     for c in range(coefficients.shape[0]):
         tiles = decompose_into_tiles(coeff_map[c, :, :], block_size)
         tiles = calculate_tile_nanmean(tiles)
-        tiles = tiles.reshape((img_shape[0] // block_size, img_shape[1] // block_size))
+        tiles = tiles.reshape((img_shape[0] // block_size, img_shape[1] //
+                               block_size))
         while cp.sum(cp.isnan(tiles)) > 0:
             tiles = fill_nan_fft(tiles, 2, 0, min_neighbors=2, pad=1)
         if smooth:
             tiles = gaussian_filter(tiles, min(1, 2 / pxscale))
-        coeff_map[c, :, :] = recompose_from_percentiles(tiles.reshape(-1), img_shape, block_size)
+        coeff_map[c, :, :] = recompose_from_percentiles(tiles.reshape(-1),
+                                                        img_shape, block_size)
     del tiles
+    logger.debug(
+        f'Función create_coeff_map completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return coeff_map
 
 
 def detect_sources_pca(img, rms, pxscale, eigen_psfs, coeff_map, min_snr=5):
+    logger.debug(
+        f'Iniciando función detect_sources_pca(img={img}, rms={rms}, pxscale={pxscale}, eigen_psfs={eigen_psfs}, coeff_map={coeff_map}, min_snr={min_snr})'
+    )
+    start_time = time.time()
     """
     Detect sources using PCA.
 
@@ -258,8 +311,10 @@ def detect_sources_pca(img, rms, pxscale, eigen_psfs, coeff_map, min_snr=5):
     for e in range(eigen_psfs.shape[0]):
         flipped_psf = cp.flip(eigen_psfs[e], (0, 1))
         conv_ima_pca += convolve_fft(img, flipped_psf) * coeff_map[e, :, :]
-    conv_ima_sigma = conv_ima_pca / rms / cp.sqrt(eigen_psfs.shape[1] * eigen_psfs.shape[2])
-    lbs = label(minimum_filter(conv_ima_sigma > min_snr, min_size).astype(cp.int32))
+    conv_ima_sigma = conv_ima_pca / rms / cp.sqrt(eigen_psfs.shape[1] *
+                                                  eigen_psfs.shape[2])
+    lbs = label(minimum_filter(conv_ima_sigma > min_snr, min_size).astype(
+        cp.int32))
     mempool.free_all_blocks()
     ids = cp.asarray([range(lbs[1] + 1)])[0]
     im1 = conv_ima_pca * cp.indices(conv_ima_pca.shape, dtype=cp.int32)
@@ -268,10 +323,17 @@ def detect_sources_pca(img, rms, pxscale, eigen_psfs, coeff_map, min_snr=5):
     coor = cp.asarray((x, y)).T
     del im1, lbs, ids, conv_ima_pca
     mempool.free_all_blocks()
-    return (coor, conv_ima_sigma)
+    logger.debug(
+        f'Función detect_sources_pca completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
+    return coor, conv_ima_sigma
 
 
 def detect_sources_kernel(img, rms, kernel, pxscale, min_snr=5):
+    logger.debug(
+        f'Iniciando función detect_sources_kernel(img={img}, rms={rms}, kernel={kernel}, pxscale={pxscale}, min_snr={min_snr})'
+    )
+    start_time = time.time()
     """
     Detect sources using a convolution kernel.
 
@@ -297,7 +359,8 @@ def detect_sources_kernel(img, rms, kernel, pxscale, min_snr=5):
     min_size = int(max(1 / pxscale, 2))
     conv_ima = convolve_fft(img, cp.flip(kernel, (0, 1)))
     conv_sigma = conv_ima / rms / cp.sqrt(kernel.shape[0] * kernel.shape[1])
-    lbs = label(minimum_filter(conv_sigma > min_snr, min_size).astype(cp.int32))
+    lbs = label(minimum_filter(conv_sigma > min_snr, min_size).astype(cp.int32)
+                )
     mempool.free_all_blocks()
     ids = cp.asarray([range(lbs[1] + 1)])[0]
     im1 = conv_ima * cp.indices(conv_ima.shape, dtype=cp.int32)
@@ -306,10 +369,17 @@ def detect_sources_kernel(img, rms, kernel, pxscale, min_snr=5):
     coor = cp.asarray((x, y)).T
     del im1, lbs, ids, conv_ima
     mempool.free_all_blocks()
-    return (coor, conv_sigma)
+    logger.debug(
+        f'Función detect_sources_kernel completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
+    return coor, conv_sigma
 
 
 def recreate_normed_star(coeff_map, eigen_psfs, coords):
+    logger.debug(
+        f'Iniciando función recreate_normed_star(coeff_map={coeff_map}, eigen_psfs={eigen_psfs}, coords={coords})'
+    )
+    start_time = time.time()
     """
     Recreate a normalized star from coefficients and eigen PSFs.
 
@@ -327,14 +397,19 @@ def recreate_normed_star(coeff_map, eigen_psfs, coords):
     ndarray
         Recreated star.
     """
-    (x, y) = coords
+    x, y = coords
     coeff = coeff_map[:, y, x]
     kernel = cp.dot(coeff, eigen_psfs.reshape((eigen_psfs.shape[0], -1)))
     kernel = kernel.reshape((eigen_psfs.shape[1], eigen_psfs.shape[2]))
+    logger.debug(
+        f'Función recreate_normed_star completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return kernel
 
 
 def fit_moffat(star_data):
+    logger.debug(f'Iniciando función fit_moffat(star_data={star_data})')
+    start_time = time.time()
     """
     Fit a Moffat profile to star data.
 
@@ -350,8 +425,9 @@ def fit_moffat(star_data):
         Z is the fitted Moffat profile, result is the fitting result,
         fwhm is the full width at half maximum, and fwhm_err is the error in FWHM.
     """
-    (ax, ay) = np.meshgrid(np.arange(star_data.shape[1]), np.arange(star_data.shape[0]))
-    (X, Y, Z) = (ax.ravel(), ay.ravel(), star_data.ravel())
+    ax, ay = np.meshgrid(np.arange(star_data.shape[1]), np.arange(star_data
+                                                                  .shape[0]))
+    X, Y, Z = ax.ravel(), ay.ravel(), star_data.ravel()
     center = np.array([X[np.argmax(Z)], Y[np.argmax(Z)]]).astype(int)
     r = np.sqrt((X - center[0]) ** 2 + (Y - center[1]) ** 2)
     sky = np.median(Z[r > np.percentile(r, 0.7)])
@@ -365,14 +441,23 @@ def fit_moffat(star_data):
     params = model.make_params(r0=0, A=peak)
     result = model.fit(Z, r=r, params=params)
     if result.params['R'].stderr is None or result.params['R'].stderr is None:
-        (fwhm, fwhm_err) = moffat_fwhm(result.params['R'].value, result.params['B'].value, 1e+30, 1e+30)
+        fwhm, fwhm_err = moffat_fwhm(result.params['R'].value, result.
+                                     params['B'].value, 1e+30, 1e+30)
     else:
-        (fwhm, fwhm_err) = moffat_fwhm(result.params['R'].value, result.params['B'].value, result.params['R'].stderr,
-                                       result.params['B'].stderr)
-    return (r, Z, result, fwhm, fwhm_err)
+        fwhm, fwhm_err = moffat_fwhm(result.params['R'].value, result.
+                                     params['B'].value, result.params['R'].stderr, result.params['B'
+                                     ].stderr)
+    logger.debug(
+        f'Función fit_moffat completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
+    return r, Z, result, fwhm, fwhm_err
 
 
 def filter_centroids_kdtree(centroids, min_distance):
+    logger.debug(
+        f'Iniciando función filter_centroids_kdtree(centroids={centroids}, min_distance={min_distance})'
+    )
+    start_time = time.time()
     """
     Filter centroids based on a minimum distance using KDTree.
 
@@ -391,13 +476,19 @@ def filter_centroids_kdtree(centroids, min_distance):
     tree = KDTree(centroids)
     filtered = []
     for centroid in centroids:
-        (dist, _) = tree.query(centroid, k=2)
+        dist, _ = tree.query(centroid, k=2)
         if dist[1] >= min_distance:
             filtered.append(centroid)
+    logger.debug(
+        f'Función filter_centroids_kdtree completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return np.array(filtered)
 
 
 def moffat(r, A=1.0, r0=0.0, B=1.0, R=1.0):
+    logger.debug(
+        f'Iniciando función moffat(r={r}, A={A}, r0={r0}, B={B}, R={R})')
+    start_time = time.time()
     """
     Moffat function.
 
@@ -421,10 +512,17 @@ def moffat(r, A=1.0, r0=0.0, B=1.0, R=1.0):
     ndarray
         Moffat function values.
     """
-    return A * (1 + ((r - r0) / R) ** 2) ** (-B)
+    logger.debug(
+        f'Función moffat completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
+    return A * (1 + ((r - r0) / R) ** 2) ** -B
 
 
 def moffat_fwhm(R, B, R_err, B_err):
+    logger.debug(
+        f'Iniciando función moffat_fwhm(R={R}, B={B}, R_err={R_err}, B_err={B_err})'
+    )
+    start_time = time.time()
     """
     Calculate the full width at half maximum (FWHM) of a Moffat function.
 
@@ -445,57 +543,10 @@ def moffat_fwhm(R, B, R_err, B_err):
         (FWHM, FWHM_err) where FWHM is the full width at half maximum and FWHM_err is the error in FWHM.
     """
     FWHM = 2 * R * np.sqrt(2 ** (1 / B) - 1)
-    FWHM_err = 2 * R_err * np.sqrt(2 ** (1 / B) - 1) + 2 * R * B_err * (np.log(2) * 2 ** (1 / B - 1)) / (
-            B ** 2 * np.sqrt(2 ** (1 / B) - 1))
-    return (FWHM, FWHM_err)
-
-#
-#
-# def recreate_normed_star_vectorized(coeff_map, eigen_psfs, xs, ys):
-#     coeffs = coeff_map[:, ys, xs]
-#     coeffs = coeffs.reshape(-1, coeffs.shape[-1])
-#     reshaped_eigen_psfs = eigen_psfs.reshape(eigen_psfs.shape[0], -1)
-#     kernels = cp.dot(coeffs.T, reshaped_eigen_psfs)
-#     kernels = kernels.reshape(xs.size, eigen_psfs.shape[1], eigen_psfs.shape[2])
-#     del coeffs, reshaped_eigen_psfs
-#     return kernels
-#
-#
-# def rescale_kernel(kernel, flux):
-#     kernel -= cp.mean(cp.concatenate((kernel[0,:], kernel[-1,:], kernel[:,0], kernel[:,-1])))
-#     kernel /= cp.sum(kernel)
-#     kernel *= flux
-#     return kernel
-#
-# def norm_kernel(kernel):
-#     kernel -= cp.min(kernel)
-#     kernel /= cp.sum(kernel)
-#     return kernel
-#
-# def test_dimensionality(coefficients, num_stars, num_eigen_psfs):
-#     assert coefficients.shape == (num_stars, num_eigen_psfs), "Dimensionality test failed!"
-#
-# def test_orthogonality(eigen_psfs):
-#     num_eigen_psfs = eigen_psfs.shape[0]
-#     eigen_psfs_matrix = eigen_psfs.reshape((num_eigen_psfs, -1))
-#     for i in range(num_eigen_psfs):
-#         for j in range(i+1, num_eigen_psfs):
-#             dot_product = cp.dot(eigen_psfs_matrix[i], eigen_psfs_matrix[j].T)
-#             assert cp.all(cp.isclose(dot_product, 0)), f"Orthogonality test failed for components {i} and {j}!"
-#
-# def test_variance_consistency(coefficients):
-#     variances = cp.var(coefficients, axis=0)
-#     assert cp.all(variances[:-1] >= variances[1:]), "Variance consistency test failed!"
-#
-# def test_correlation(coefficients):
-#     correlation_matrix = cp.corrcoef(coefficients, rowvar=False)
-#     off_diagonal_correlation = correlation_matrix - cp.diag(cp.diag(correlation_matrix))
-#     assert cp.all(cp.abs(off_diagonal_correlation) < 0.1), "Correlation test failed!"
-#
-# def test_eigen_psf_normalization(eigen_psfs):
-#     for eigen_psf in eigen_psfs:
-#         assert cp.isclose(cp.linalg.norm(eigen_psf), 1), "Eigen PSF normalization test failed!"
-#
-# def test_mean(coefficients, eigen_psfs):
-#     psfs = cp.dot(coefficients, eigen_psfs)
-#     assert cp.all(cp.isclose(cp.mean(psfs, axis=1), 0)), "Mean test failed!"
+    FWHM_err = 2 * R_err * np.sqrt(2 ** (1 / B) - 1) + 2 * R * B_err * (np.
+                                                                        log(2) * 2 ** (1 / B - 1)) / (
+                           B ** 2 * np.sqrt(2 ** (1 / B) - 1))
+    logger.debug(
+        f'Función moffat_fwhm completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
+    return FWHM, FWHM_err

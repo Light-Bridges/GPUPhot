@@ -1,3 +1,4 @@
+import logging
 import os
 import signal
 import unittest
@@ -8,6 +9,10 @@ from astropy.io import fits
 from gpuphot.phot.photo_gpu import process_image_new
 from gpuphot.stats.s_util import free_gpu_mem
 from tests.gpuphot.utils import get_tests_data_path
+
+logging.basicConfig(level=logging.DEBUG, format=
+'%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 # import tensorflow as tf
@@ -70,7 +75,7 @@ class TestProcess_image_new(unittest.TestCase):
 
     def test_raw_1(self):
 
-        directory_path = os.path.join(get_tests_data_path())
+        directory_path = os.path.join(get_tests_data_path(),'red')
 
         print(f'Root folder: {directory_path}')
         for (root, dirs, files) in os.walk(directory_path):
@@ -79,8 +84,9 @@ class TestProcess_image_new(unittest.TestCase):
                     try:
                         self._task_caller(os.path.join(root, file))
                     except Exception as e:
+                        logger.error(f"Error processing {file}: {e}")
+                        logger.exception(e)
                         free_gpu_mem()
-                        print(e)
 
 
 if __name__ == '__main__':

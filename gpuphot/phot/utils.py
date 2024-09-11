@@ -1,13 +1,21 @@
 import logging
+import time
 
+logging.basicConfig(level=logging.DEBUG, format=
+'%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+import logging
 import cupy as cp
-
 from .convo import gen_apm_filter, convolve_fft
 
 logger = logging.getLogger(__name__)
 
 
 def decompose_into_tiles(image, block_size):
+    logger.debug(
+        f'Iniciando función decompose_into_tiles(image={image}, block_size={block_size})'
+    )
+    start_time = time.time()
     """
     Decompose an image into smaller tiles of specified block size.
 
@@ -23,19 +31,27 @@ def decompose_into_tiles(image, block_size):
     ndarray
         A stack of tiles extracted from the image.
     """
-    (h, w) = image.shape
+    h, w = image.shape
     num_tiles_y = h // block_size
     num_tiles_x = w // block_size
     tiles = cp.empty((num_tiles_y * num_tiles_x, block_size, block_size))
     idx = 0
     for i in range(num_tiles_y):
         for j in range(num_tiles_x):
-            tiles[idx] = image[i * block_size:(i + 1) * block_size, j * block_size:(j + 1) * block_size]
+            tiles[idx] = image[i * block_size:(i + 1) * block_size, j *
+                                                                    block_size:(j + 1) * block_size]
             idx += 1
+    logger.debug(
+        f'Función decompose_into_tiles completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return tiles
 
 
 def calculate_tile_percentiles(tiles, qt=70):
+    logger.debug(
+        f'Iniciando función calculate_tile_percentiles(tiles={tiles}, qt={qt})'
+    )
+    start_time = time.time()
     """
     Calculate the percentiles of tiles along specified axes.
 
@@ -51,10 +67,17 @@ def calculate_tile_percentiles(tiles, qt=70):
     ndarray
         Percentile values of the tiles.
     """
+    logger.debug(
+        f'Función calculate_tile_percentiles completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return cp.percentile(tiles, qt, axis=(1, 2))
 
 
 def recompose_from_percentiles(percentiles, original_shape, block_size):
+    logger.debug(
+        f'Iniciando función recompose_from_percentiles(percentiles={percentiles}, original_shape={original_shape}, block_size={block_size})'
+    )
+    start_time = time.time()
     """
     Recompose an image from its percentile values.
 
@@ -72,22 +95,31 @@ def recompose_from_percentiles(percentiles, original_shape, block_size):
     ndarray
         Reconstructed image from the percentiles.
     """
-    (h, w) = original_shape
+    h, w = original_shape
     num_tiles_y = h // block_size
     num_tiles_x = w // block_size
     recomposed = cp.empty(original_shape)
     idx = 0
     for i in range(num_tiles_y):
         for j in range(num_tiles_x):
-            recomposed[i * block_size:(i + 1) * block_size, j * block_size:(j + 1) * block_size] = percentiles[idx]
+            recomposed[i * block_size:(i + 1) * block_size, j * block_size:
+                                                            (j + 1) * block_size] = percentiles[idx]
             idx += 1
-    recomposed[block_size * num_tiles_y:, :] = recomposed[block_size * num_tiles_y - 1, :]
-    recomposed[:, block_size * num_tiles_x:] = recomposed[:,
-                                               2 * (block_size * num_tiles_x - w):block_size * num_tiles_x - w]
+    recomposed[block_size * num_tiles_y:, :] = recomposed[block_size *
+                                                          num_tiles_y - 1, :]
+    recomposed[:, block_size * num_tiles_x:] = recomposed[:, 2 * (
+            block_size * num_tiles_x - w):block_size * num_tiles_x - w]
+    logger.debug(
+        f'Función recompose_from_percentiles completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return recomposed
 
 
 def fill_nan_fft(image, lk, li=0, min_neighbors=5, pad=301):
+    logger.debug(
+        f'Iniciando función fill_nan_fft(image={image}, lk={lk}, li={li}, min_neighbors={min_neighbors}, pad={pad})'
+    )
+    start_time = time.time()
     """
     Fill NaN values in an image using FFT-based convolution with a specified filter.
 
@@ -117,12 +149,18 @@ def fill_nan_fft(image, lk, li=0, min_neighbors=5, pad=301):
     image_zeroed = cp.where(cp.isnan(image), 0, image)
     neighbor_sum = convolve_fft(image_zeroed, k_app)
     del image_zeroed
-    result = cp.where((valid_neighbors >= min_neighbors) & cp.isnan(image), neighbor_sum / valid_neighbors, image)
+    result = cp.where((valid_neighbors >= min_neighbors) & cp.isnan(image),
+                      neighbor_sum / valid_neighbors, image)
     del valid_neighbors
+    logger.debug(
+        f'Función fill_nan_fft completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return result
 
 
 def calculate_tile_nanmean(tiles):
+    logger.debug(f'Iniciando función calculate_tile_nanmean(tiles={tiles})')
+    start_time = time.time()
     """
     Calculate the mean of tiles ignoring NaN values.
 
@@ -136,4 +174,7 @@ def calculate_tile_nanmean(tiles):
     ndarray
         Mean values of the tiles, ignoring NaN values.
     """
+    logger.debug(
+        f'Función calculate_tile_nanmean completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return cp.nanmean(tiles, axis=(1, 2))

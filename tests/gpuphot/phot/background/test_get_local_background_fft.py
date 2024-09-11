@@ -66,6 +66,7 @@ class TestGetLocalBackgroundFFT(unittest.TestCase):
         else:
             self.assertIsNone(img_filled_2,
                               'The returned standard deviation image should be None when get_std is False.')
+
     #
     # def test_image_calib_1(self):
     #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
@@ -216,6 +217,7 @@ class TestGetLocalBackgroundFFT(unittest.TestCase):
                                  'TTT1_iKon936-1_2024-09-09-00-01-45-953640_chiron.fits')
         expected_result = -0.0
         self._test_fits_file(file_path, expected_result)
+
     def test_image_red_6(self):
         file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'red',
                                  'TTT1_iKon936-1_2024-09-08-23-53-00-723983_chiron.fits')

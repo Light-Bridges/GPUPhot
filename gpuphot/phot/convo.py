@@ -1,5 +1,10 @@
 import logging
+import time
 
+logging.basicConfig(level=logging.DEBUG, format=
+'%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+import logging
 import cupy as cp
 import numpy as np
 
@@ -7,6 +12,9 @@ logger = logging.getLogger(__name__)
 
 
 def convolve_fft(image, kernel):
+    logger.debug(
+        f'Iniciando función convolve_fft(image={image}, kernel={kernel})')
+    start_time = time.time()
     """
     Perform convolution of an image with a kernel using FFT.
 
@@ -25,19 +33,27 @@ def convolve_fft(image, kernel):
     image_shape = image.shape
     kernel_shape = kernel.shape
     padding = int((kernel_shape[0] - 1) / 2)
-    new_image_shape = fill_image((image_shape[0] + 2 * padding, image_shape[1] + 2 * padding))
+    new_image_shape = fill_image((image_shape[0] + 2 * padding, image_shape
+    [1] + 2 * padding))
     padded_image = cp.pad(image, ((padding, padding), (padding, padding)))
-    padded_kernel = cp.pad(kernel,
-                           ((0, new_image_shape[0] - kernel_shape[0]), (0, new_image_shape[1] - kernel_shape[1])))
+    padded_kernel = cp.pad(kernel, ((0, new_image_shape[0] - kernel_shape[0
+    ]), (0, new_image_shape[1] - kernel_shape[1])))
     F_image = cp.fft.rfft2(padded_image, s=new_image_shape)
     F_kernel = cp.fft.rfft2(padded_kernel, s=new_image_shape)
     F_convolved = F_image * F_kernel
     convolved = cp.fft.irfft2(F_convolved, s=new_image_shape)
-    convolved = convolved[padding:padding + image_shape[0], padding:padding + image_shape[1]]
+    convolved = convolved[padding:padding + image_shape[0], padding:padding +
+                                                                    image_shape[1]]
+    logger.debug(
+        f'Función convolve_fft completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return convolved
 
 
 def get_mean_std(im_g, lk, std=True):
+    logger.debug(
+        f'Iniciando función get_mean_std(im_g={im_g}, lk={lk}, std={std})')
+    start_time = time.time()
     """
     Calculate the mean and standard deviation of an image using a Gaussian kernel.
 
@@ -63,10 +79,15 @@ def get_mean_std(im_g, lk, std=True):
     else:
         fot_m2 = None
     del k_app
-    return (fot_m, fot_m2)
+    logger.debug(
+        f'Función get_mean_std completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
+    return fot_m, fot_m2
 
 
 def gaussian_kernel(lk, sigma):
+    logger.debug(f'Iniciando función gaussian_kernel(lk={lk}, sigma={sigma})')
+    start_time = time.time()
     """
     Generate a Gaussian kernel.
 
@@ -82,16 +103,22 @@ def gaussian_kernel(lk, sigma):
     ndarray
         Gaussian kernel.
     """
-    k_dim = (2 * lk + 1, 2 * lk + 1)
+    k_dim = 2 * lk + 1, 2 * lk + 1
     x = cp.linspace(-lk, lk, k_dim[0])
     y = cp.linspace(-lk, lk, k_dim[1])
-    (xx, yy) = cp.meshgrid(x, y)
+    xx, yy = cp.meshgrid(x, y)
     kernel = cp.exp(-(xx ** 2 + yy ** 2) / (2 * sigma ** 2))
     del x, y, xx, yy
+    logger.debug(
+        f'Función gaussian_kernel completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return kernel / cp.sum(kernel)
 
 
 def get_aper_kernel(radius, size=None):
+    logger.debug(
+        f'Iniciando función get_aper_kernel(radius={radius}, size={size})')
+    start_time = time.time()
     """
     Generate an aperture kernel.
 
@@ -110,14 +137,19 @@ def get_aper_kernel(radius, size=None):
     if size is None:
         size = 2 * radius + 1
     kernel = cp.zeros((size, size))
-    (y, x) = cp.indices(kernel.shape)
+    y, x = cp.indices(kernel.shape)
     mask = (x - (size - 1) / 2) ** 2 + (y - (size - 1) / 2) ** 2 <= radius ** 2
     kernel[mask] = 1
     area = cp.sum(kernel)
-    return (kernel, area)
+    logger.debug(
+        f'Función get_aper_kernel completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
+    return kernel, area
 
 
 def fill_image(image_shape):
+    logger.debug(f'Iniciando función fill_image(image_shape={image_shape})')
+    start_time = time.time()
     """
     Calculate the shape for zero-padding an image to the next power of 2.
 
@@ -131,13 +163,19 @@ def fill_image(image_shape):
     tuple of int
         Shape of the padded image.
     """
-    (h, w) = image_shape
+    h, w = image_shape
     new_height = 2 ** int(np.ceil(np.log2(h)))
     new_width = 2 ** int(np.ceil(np.log2(w)))
-    return (new_height, new_width)
+    logger.debug(
+        f'Función fill_image completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
+    return new_height, new_width
 
 
 def gen_apm_filter(lk, li=0, norm=True):
+    logger.debug(
+        f'Iniciando función gen_apm_filter(lk={lk}, li={li}, norm={norm})')
+    start_time = time.time()
     """
     Generate an aperture mask filter.
 
@@ -155,24 +193,35 @@ def gen_apm_filter(lk, li=0, norm=True):
     ndarray
         Aperture mask filter.
     """
-    k_dim = (2 * lk + 1, 2 * lk + 1)
+    k_dim = 2 * lk + 1, 2 * lk + 1
     indi = cp.indices(k_dim)
     fw2 = lk ** 2
     k_app = cp.zeros(k_dim)
-    struc = cp.where((lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2 < fw2)
+    struc = cp.where((lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2 <
+                     fw2)
     k_app[struc] = 1
+
     if li != 0:
-        struc = cp.where((lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2 < fw2 - li ** 2)
+        struc = cp.where((lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) **
+                         2 < fw2 - li ** 2)
         k_app[struc] = 0
     if norm:
         k_app = k_app / k_app.sum()
+    logger.debug(
+        f'Función gen_apm_filter completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return k_app
 
 
 def batch_aper_kernel(radius):
+    logger.debug(f'Iniciando función batch_aper_kernel(radius={radius})')
+    start_time = time.time()
     kernel = cp.zeros((2 * radius[-1] + 1, 2 * radius[-1] + 1))
     y, x = cp.indices(kernel.shape)
     mask = (x - radius) ** 2 + (y - radius) ** 2 <= radius ** 2
     kernel[mask] = 1
     area = cp.sum(kernel)
+    logger.debug(
+        f'Función batch_aper_kernel completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
+    )
     return kernel, area
