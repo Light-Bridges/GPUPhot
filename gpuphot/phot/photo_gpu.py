@@ -2,7 +2,7 @@ import gc
 import logging
 import signal
 import traceback
-from pathlib import Path
+# from pathlib import Path
 
 import astrometry
 import cupy as cp
@@ -16,7 +16,7 @@ from cupyx.scipy.ndimage import gaussian_filter, convolve, label, sum as nd_sum,
     median_filter
 from matplotlib import pyplot as plt
 from sklearn.linear_model import RANSACRegressor
-from tensorflow.keras.models import load_model
+# from tensorflow.keras.models import load_model
 
 from .background import get_local_background_fft
 from .catalog import cat_input_from_header, catalog_results, crossmatch_sources
@@ -50,19 +50,20 @@ def get_solver():  # TODO this function need set as parameter from function that
 
 
 def init_gpu():
-    print('Tensorflow version ' + tf.__version__)
+    logger.debug('Tensorflow version ' + tf.__version__)
     gpus = tf.config.list_physical_devices('GPU')
+    logger.debug('GPUs:', gpus)
     tf.config.set_logical_device_configuration(
         gpus[0],
         [tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
 
 
-def get_fwhm_model(model_path=Path(__file__).parent.parent):
-    name = f'{model_path}/fwhm/fwhm_3_2_mofatt_ns_mix_100_model'
-    if tf.__version__ == '2.4.1':
-        name = name + '_old'
-    model = load_model(name)
-    return model
+# def get_fwhm_model(model_path=Path(__file__).parent.parent):
+#     name = f'{model_path}/fwhm/fwhm_3_2_mofatt_ns_mix_100_model'
+#     if tf.__version__ == '2.4.1':
+#         name = name + '_old'
+#     model = load_model(name)
+#     return model
 
 
 #
