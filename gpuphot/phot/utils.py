@@ -1,13 +1,11 @@
 import logging
 import time
 
-logging.basicConfig(level=logging.DEBUG, format=
-'%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-import logging
 import cupy as cp
+
 from .convo import gen_apm_filter, convolve_fft
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 

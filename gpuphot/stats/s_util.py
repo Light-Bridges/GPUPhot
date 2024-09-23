@@ -1,13 +1,10 @@
+import gc
 import logging
 import time
 
-logging.basicConfig(level=logging.DEBUG, format=
-'%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-import gc
-import logging
 import cupy as cp
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 

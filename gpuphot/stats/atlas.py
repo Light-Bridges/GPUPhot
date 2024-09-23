@@ -1,20 +1,18 @@
+import gc
 import logging
 import time
 
-logging.basicConfig(level=logging.DEBUG, format=
-'%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-import gc
-import logging
 import cupy as cp
 import numpy as np
 from astroalign import find_transform
 from astropy.io import fits
 from cupyx.scipy.ndimage import shift
 from skimage.transform._warps_cy import _warp_fast
+
 from ..stats.reduction import center
 from ..stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 

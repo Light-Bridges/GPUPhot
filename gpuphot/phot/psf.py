@@ -1,9 +1,7 @@
 import logging
 import time
 
-logging.basicConfig(level=logging.DEBUG, format=
-'%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+
 import logging
 import cupy as cp
 import numpy as np
@@ -14,6 +12,7 @@ from sklearn.decomposition import PCA
 from .convo import gaussian_kernel, convolve_fft
 from .utils import decompose_into_tiles, recompose_from_percentiles, fill_nan_fft, calculate_tile_nanmean
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 

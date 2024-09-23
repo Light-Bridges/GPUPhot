@@ -1,10 +1,6 @@
 import logging
 import time
 
-logging.basicConfig(level=logging.DEBUG, format=
-'%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-import logging
 import numpy as np
 import pandas as pd
 from astropy import units as u
@@ -12,6 +8,7 @@ from astropy.coordinates import SkyCoord
 from astroquery.vizier import Vizier
 from scipy.spatial import KDTree
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 

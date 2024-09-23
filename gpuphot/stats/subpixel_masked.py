@@ -1,9 +1,6 @@
 import logging
 import time
 
-logging.basicConfig(level=logging.DEBUG, format=
-'%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 """
 Implementation of the masked normalized cross-correlation.
 Based on the following publication:
@@ -18,6 +15,8 @@ import cupy as cp
 from cupyx.scipy import fft as fftmodule
 from cupyx.scipy.fft import next_fast_len
 
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 

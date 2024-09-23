@@ -1,14 +1,14 @@
 import logging
 import time
 
-logging.basicConfig(level=logging.DEBUG, format=
-'%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+
 import cupy as cp
 from cupyx.scipy.ndimage import gaussian_filter, binary_erosion, binary_dilation
 from .convo import get_mean_std
 from .utils import decompose_into_tiles, calculate_tile_percentiles, recompose_from_percentiles, fill_nan_fft
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def get_local_background_fft(image, pxscale, qt=60, fill_aper=15, avg_aper=15, tile_px=300, ks=2, get_std=False):
     logger.debug(

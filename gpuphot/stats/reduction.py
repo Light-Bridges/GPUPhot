@@ -1,17 +1,15 @@
 import logging
 import time
 
-logging.basicConfig(level=logging.DEBUG, format=
-'%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-import logging
 import cupy as cp
 import numpy as np
 from astropy.io import fits
 from cupyx.scipy.ndimage import binary_erosion, shift, convolve
+
 from ..stats.s_util import free_gpu_mem
 from ..stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 

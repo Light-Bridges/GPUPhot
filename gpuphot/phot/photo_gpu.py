@@ -1,13 +1,10 @@
-import logging
 import time
-
-logging.basicConfig(level=logging.DEBUG, format=
-'%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 import gc
 import logging
 import signal
+import time
 import traceback
+
 import astrometry
 import cupy as cp
 import numpy as np
@@ -20,6 +17,7 @@ from cupyx.scipy.ndimage import gaussian_filter, convolve, label, sum as nd_sum,
     median_filter
 from matplotlib import pyplot as plt
 from sklearn.linear_model import RANSACRegressor
+
 from .background import get_local_background_fft
 from .catalog import cat_input_from_header, catalog_results, crossmatch_sources
 from .convo import fill_image, get_aper_kernel, convolve_fft, gen_apm_filter
@@ -29,6 +27,7 @@ from ..astrometry.utils import get_if_header_already_post_processed
 from ..stats.s_util import free_gpu_mem
 from ..utils.astro import plate_scale_px
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
