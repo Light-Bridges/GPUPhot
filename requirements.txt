@@ -10,7 +10,7 @@ astrometry~=3.0.0
 # gpuphot/gpuphot/stats/reduction.py: 6
 # gpuphot/tests/gpuphot/astrometry/utils/test_get_if_header_already_post_processed.py: 4
 # gpuphot/tests/gpuphot/phot/background/test_get_local_background_fft.py: 5
-# gpuphot/tests/gpuphot/phot/photo_gpu/test_photo_gpu.py: 9
+# gpuphot/tests/gpuphot/phot/photo_gpu/test_photo_gpu.py: 10
 # gpuphot/tests/gpuphot/phot/photo_gpu/test_process_image_new.py: 7
 astropy~=5.0.4
 # gpuphot/gpuphot/phot/catalog.py: 8
@@ -26,7 +26,7 @@ astroquery~=0.4.6
 # gpuphot/gpuphot/stats/subpixel.py: 12,14
 # gpuphot/gpuphot/stats/subpixel_masked.py: 14,15,16
 # gpuphot/tests/gpuphot/phot/background/test_get_local_background_fft.py: 4
-cupy-cuda112~=10.6.0
+cupy-cuda12x~=12.3.0
 # gpuphot/gpuphot/phot/psf.py: 9
 lmfit~=1.2.2
 # gpuphot/gpuphot/phot/photo_gpu.py: 18
@@ -38,7 +38,7 @@ matplotlib~=3.6.2
 # gpuphot/gpuphot/stats/atlas.py: 6
 # gpuphot/gpuphot/stats/reduction.py: 5
 # gpuphot/gpuphot/stats/subpixel.py: 13
-# gpuphot/tests/gpuphot/phot/photo_gpu/test_photo_gpu.py: 8
+# gpuphot/tests/gpuphot/phot/photo_gpu/test_photo_gpu.py: 9
 # gpuphot/tests/gpuphot/phot/photo_gpu/test_process_image_new.py: 6
 numpy~=1.23.5
 # gpuphot/gpuphot/phot/catalog.py: 5

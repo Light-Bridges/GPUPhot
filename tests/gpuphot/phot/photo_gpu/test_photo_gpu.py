@@ -2,15 +2,16 @@ import logging
 import os
 import time
 import traceback
+import unittest
 from pathlib import Path
 from unittest import TestCase
 
 import numpy as np
 from astropy.io import fits
 
-from gpuphot.phot.photo_gpu import get_detections, init_gpu
-from gpuphot.stats.s_util import free_gpu_mem
-from gpuphot.utils.astro import plate_scale_px
+from gpuphot.gpuphot.phot.photo_gpu import get_detections, init_gpu
+from gpuphot.gpuphot.stats.s_util import free_gpu_mem
+from gpuphot.gpuphot.utils.astro import plate_scale_px
 
 # from tensorflow.python.keras.models import load_model
 
@@ -82,3 +83,5 @@ class Test(TestCase):
                             print(f'Error processing {image_path}: {e}')
                             print('Traceback:')
                             traceback.print_exc()
+if __name__ == '__main__':
+    unittest.main()
