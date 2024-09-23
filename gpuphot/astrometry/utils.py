@@ -1,10 +1,10 @@
 import logging
 import time
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+logger = setup_logger(__name__)
 
-
+@hierarchical_debug(logger)
 def get_if_header_already_post_processed(header, postprocess):
     logger.debug(
         f'Iniciando función get_if_header_already_post_processed(header={header}, postprocess={postprocess})'

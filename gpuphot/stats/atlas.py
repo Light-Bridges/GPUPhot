@@ -12,10 +12,10 @@ from skimage.transform._warps_cy import _warp_fast
 from ..stats.reduction import center
 from ..stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+logger = setup_logger(__name__)
 
-
+@hierarchical_debug(logger)
 def dyn_avgstd(valuenew, nold, avgold, stdold):
     logger.debug(
         f'Iniciando función dyn_avgstd(valuenew={valuenew}, nold={nold}, avgold={avgold}, stdold={stdold})'
@@ -35,7 +35,7 @@ def dyn_avgstd(valuenew, nold, avgold, stdold):
     )
     return nnew, avgnew, stdnew
 
-
+@hierarchical_debug(logger)
 def reduction_atlas(cubes_path, size=2048, internal_shift=False):
     logger.debug(
         f'Iniciando función reduction_atlas(cubes_path={cubes_path}, size={size}, internal_shift={internal_shift})'
@@ -134,7 +134,7 @@ def reduction_atlas(cubes_path, size=2048, internal_shift=False):
     )
     return avgnew, nnew, heads, temp_header
 
-
+@hierarchical_debug(logger)
 def dyn_avg(valuenew, nold, avgold):
     logger.debug(
         f'Iniciando función dyn_avg(valuenew={valuenew}, nold={nold}, avgold={avgold})'
@@ -171,7 +171,7 @@ def dyn_avg(valuenew, nold, avgold):
         )
         return nnew, avgnew
 
-
+@hierarchical_debug(logger)
 def sum_dyn_avg(n1, avg1, n2, avg2):
     logger.debug(
         f'Iniciando función sum_dyn_avg(n1={n1}, avg1={avg1}, n2={n2}, avg2={avg2})'

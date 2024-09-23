@@ -15,7 +15,7 @@ from gpuphot.gpuphot.utils.astro import plate_scale_px
 
 # from tensorflow.python.keras.models import load_model
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class Test(TestCase):

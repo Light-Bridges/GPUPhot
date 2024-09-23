@@ -12,10 +12,10 @@ from sklearn.decomposition import PCA
 from .convo import gaussian_kernel, convolve_fft
 from .utils import decompose_into_tiles, recompose_from_percentiles, fill_nan_fft, calculate_tile_nanmean
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+logger = setup_logger(__name__)
 
-
+@hierarchical_debug(logger)
 def detect_isolated_stars(img, rms, pxscale, sat_lim=50000, min_snr=10,
                           dist_asec=20):
     logger.debug(
@@ -88,7 +88,7 @@ def detect_isolated_stars(img, rms, pxscale, sat_lim=50000, min_snr=10,
     )
     return coor_f
 
-
+@hierarchical_debug(logger)
 def create_star_dataset(img, coords, pxscale, N=3000, CR_filter=False,
                         CR_thres=30):
     logger.debug(
@@ -158,7 +158,7 @@ def create_star_dataset(img, coords, pxscale, N=3000, CR_filter=False,
     )
     return star_dataset[idx], coords[idx], scaling_dataset[idx]
 
-
+@hierarchical_debug(logger)
 def get_eigen_psfs(normed_star_dataset, n_components=5):
     logger.debug(
         f'Iniciando función get_eigen_psfs(normed_star_dataset={normed_star_dataset}, n_components={n_components})'
@@ -187,7 +187,7 @@ def get_eigen_psfs(normed_star_dataset, n_components=5):
     )
     return eigen_psfs
 
-
+@hierarchical_debug(logger)
 def project_all_stars_onto_eigenpsfs(normed_star_dataset, eigen_psfs):
     logger.debug(
         f'Iniciando función project_all_stars_onto_eigenpsfs(normed_star_dataset={normed_star_dataset}, eigen_psfs={eigen_psfs})'
@@ -221,7 +221,7 @@ def project_all_stars_onto_eigenpsfs(normed_star_dataset, eigen_psfs):
     )
     return coefficients_matrix
 
-
+@hierarchical_debug(logger)
 def create_coeff_map(img_shape, positions, coefficients, pxscale,
                      tile_section=None, smooth=False):
     logger.debug(
@@ -275,7 +275,7 @@ def create_coeff_map(img_shape, positions, coefficients, pxscale,
     )
     return coeff_map
 
-
+@hierarchical_debug(logger)
 def detect_sources_pca(img, rms, pxscale, eigen_psfs, coeff_map, min_snr=5):
     logger.debug(
         f'Iniciando función detect_sources_pca(img={img}, rms={rms}, pxscale={pxscale}, eigen_psfs={eigen_psfs}, coeff_map={coeff_map}, min_snr={min_snr})'
@@ -327,7 +327,7 @@ def detect_sources_pca(img, rms, pxscale, eigen_psfs, coeff_map, min_snr=5):
     )
     return coor, conv_ima_sigma
 
-
+@hierarchical_debug(logger)
 def detect_sources_kernel(img, rms, kernel, pxscale, min_snr=5):
     logger.debug(
         f'Iniciando función detect_sources_kernel(img={img}, rms={rms}, kernel={kernel}, pxscale={pxscale}, min_snr={min_snr})'
@@ -373,7 +373,7 @@ def detect_sources_kernel(img, rms, kernel, pxscale, min_snr=5):
     )
     return coor, conv_sigma
 
-
+@hierarchical_debug(logger)
 def recreate_normed_star(coeff_map, eigen_psfs, coords):
     logger.debug(
         f'Iniciando función recreate_normed_star(coeff_map={coeff_map}, eigen_psfs={eigen_psfs}, coords={coords})'
@@ -405,7 +405,7 @@ def recreate_normed_star(coeff_map, eigen_psfs, coords):
     )
     return kernel
 
-
+@hierarchical_debug(logger)
 def fit_moffat(star_data):
     logger.debug(f'Iniciando función fit_moffat(star_data={star_data})')
     start_time = time.time()
@@ -451,7 +451,7 @@ def fit_moffat(star_data):
     )
     return r, Z, result, fwhm, fwhm_err
 
-
+@hierarchical_debug(logger)
 def filter_centroids_kdtree(centroids, min_distance):
     logger.debug(
         f'Iniciando función filter_centroids_kdtree(centroids={centroids}, min_distance={min_distance})'
@@ -483,7 +483,7 @@ def filter_centroids_kdtree(centroids, min_distance):
     )
     return np.array(filtered)
 
-
+@hierarchical_debug(logger)
 def moffat(r, A=1.0, r0=0.0, B=1.0, R=1.0):
     logger.debug(
         f'Iniciando función moffat(r={r}, A={A}, r0={r0}, B={B}, R={R})')
@@ -516,7 +516,7 @@ def moffat(r, A=1.0, r0=0.0, B=1.0, R=1.0):
     )
     return A * (1 + ((r - r0) / R) ** 2) ** -B
 
-
+@hierarchical_debug(logger)
 def moffat_fwhm(R, B, R_err, B_err):
     logger.debug(
         f'Iniciando función moffat_fwhm(R={R}, B={B}, R_err={R_err}, B_err={B_err})'

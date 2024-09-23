@@ -7,9 +7,9 @@ from cupyx.scipy.ndimage import gaussian_filter, binary_erosion, binary_dilation
 from .convo import get_mean_std
 from .utils import decompose_into_tiles, calculate_tile_percentiles, recompose_from_percentiles, fill_nan_fft
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+logger = setup_logger(__name__)
+@hierarchical_debug(logger)
 def get_local_background_fft(image, pxscale, qt=60, fill_aper=15, avg_aper=15, tile_px=300, ks=2, get_std=False):
     logger.debug(
         f'Iniciando función get_local_background_fft(image={image}, pxscale={pxscale}, qt={qt}, fill_aper={fill_aper}, avg_aper={avg_aper}, tile_px={tile_px}, ks={ks}, get_std={get_std})'

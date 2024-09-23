@@ -9,10 +9,10 @@ from cupyx.scipy.ndimage import binary_erosion, shift, convolve
 from ..stats.s_util import free_gpu_mem
 from ..stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+logger = setup_logger(__name__)
 
-
+@hierarchical_debug(logger)
 def center(im, size):
     logger.debug(f'Iniciando función center(im={im}, size={size})')
     start_time = time.time()
@@ -40,7 +40,7 @@ def center(im, size):
     )
     return cp.asarray(im[c0:-c0, c1:-c1])
 
-
+@hierarchical_debug(logger)
 def register_shift(fc, uf=100, n=1000):
     logger.debug(f'Iniciando función register_shift(fc={fc}, uf={uf}, n={n})')
     start_time = time.time()
@@ -79,7 +79,7 @@ def register_shift(fc, uf=100, n=1000):
     )
     return fc1
 
-
+@hierarchical_debug(logger)
 def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False,
                     beta=False, tim=None):
     logger.debug(
@@ -169,7 +169,7 @@ def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False,
     )
     return center, sigma
 
-
+@hierarchical_debug(logger)
 def register_shift_frames(frames_list, upsample_factor=100, center_size=
 1000, shift_limit_pix=300):
     logger.debug(

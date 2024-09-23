@@ -16,10 +16,10 @@ from cupyx.scipy import fft as fftmodule
 from cupyx.scipy.fft import next_fast_len
 
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+logger = setup_logger(__name__)
 
-
+@hierarchical_debug(logger)
 def _masked_phase_cross_correlation(reference_image, moving_image,
                                     reference_mask, moving_mask=None, overlap_ratio=0.3):
     logger.debug(
@@ -91,7 +91,7 @@ def _masked_phase_cross_correlation(reference_image, moving_image,
     )
     return -shifts + size_mismatch / 2
 
-
+@hierarchical_debug(logger)
 def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
                            overlap_ratio=0.3):
     logger.debug(
@@ -228,7 +228,7 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
     )
     return out
 
-
+@hierarchical_debug(logger)
 def _flip(arr, axes=None):
     logger.debug(f'Iniciando función _flip(arr={arr}, axes={axes})')
     start_time = time.time()
@@ -259,7 +259,7 @@ def _flip(arr, axes=None):
     )
     return arr[tuple(reverse)]
 
-
+@hierarchical_debug(logger)
 def _centered(arr, newshape, axes):
     logger.debug(
         f'Iniciando función _centered(arr={arr}, newshape={newshape}, axes={axes})'

@@ -4,10 +4,10 @@ import time
 
 import cupy as cp
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+logger = setup_logger(__name__)
 
-
+@hierarchical_debug(logger)
 def free_gpu_mem():
     logger.debug(f'Iniciando función free_gpu_mem()')
     start_time = time.time()

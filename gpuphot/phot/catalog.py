@@ -8,10 +8,10 @@ from astropy.coordinates import SkyCoord
 from astroquery.vizier import Vizier
 from scipy.spatial import KDTree
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+logger = setup_logger(__name__)
 
-
+@hierarchical_debug(logger)
 def cat_input_from_header(header):
     logger.debug(f'Iniciando función cat_input_from_header(header={header})')
     start_time = time.time()
@@ -53,7 +53,7 @@ def cat_input_from_header(header):
     )
     return coocenter, FOV, filter, scale, inmodel
 
-
+@hierarchical_debug(logger)
 def catalog_results(coocenter, radius, filter, inmodel, maglimit=22):
     logger.debug(
         f'Iniciando función catalog_results(coocenter={coocenter}, radius={radius}, filter={filter}, inmodel={inmodel}, maglimit={maglimit})'
@@ -181,7 +181,7 @@ def catalog_results(coocenter, radius, filter, inmodel, maglimit=22):
     )
     return result, catalog, ref_filter
 
-
+@hierarchical_debug(logger)
 def crossmatch_sources(source_coords, ref_coords, thres_px=2):
     logger.debug(
         f'Iniciando función crossmatch_sources(source_coords={source_coords}, ref_coords={ref_coords}, thres_px={thres_px})'
@@ -218,7 +218,7 @@ def crossmatch_sources(source_coords, ref_coords, thres_px=2):
     )
     return source_coords_matched_idx, ref_coords_matched_idx
 
-
+@hierarchical_debug(logger)
 def __getVizier(catalog, coocenter, radii, maglimit, ref_filter):
     logger.debug(
         f'Iniciando función __getVizier(catalog={catalog}, coocenter={coocenter}, radii={radii}, maglimit={maglimit}, ref_filter={ref_filter})'

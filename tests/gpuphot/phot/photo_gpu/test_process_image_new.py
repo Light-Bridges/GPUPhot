@@ -6,16 +6,16 @@ import unittest
 import numpy as np
 from astropy.io import fits
 
+from gpuphot.logger.hierarchical_logging import setup_logger, hierarchical_debug
 from gpuphot.phot.photo_gpu import process_image_new
 from gpuphot.stats.s_util import free_gpu_mem
 from tests.gpuphot.utils import get_tests_data_path
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 # import tensorflow as tf
-
+@hierarchical_debug(logger)
 def timeout_handler(signum, frame):
     raise TimeoutError
 

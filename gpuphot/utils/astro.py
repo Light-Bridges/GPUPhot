@@ -1,10 +1,10 @@
 import logging
 import time
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+logger = setup_logger(__name__)
 
-
+@hierarchical_debug(logger)
 def plate_scale_px(microns, focal):
     logger.debug(
         f'Iniciando función plate_scale_px(microns={microns}, focal={focal})')
@@ -29,7 +29,7 @@ def plate_scale_px(microns, focal):
     )
     return plate_scale_mm(focal) * microns / 1000
 
-
+@hierarchical_debug(logger)
 def plate_scale_mm(focal):
     logger.debug(f'Iniciando función plate_scale_mm(focal={focal})')
     start_time = time.time()

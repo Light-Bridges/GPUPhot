@@ -5,10 +5,10 @@ import cupy as cp
 
 from .convo import gen_apm_filter, convolve_fft
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+logger = setup_logger(__name__)
 
-
+@hierarchical_debug(logger)
 def decompose_into_tiles(image, block_size):
     logger.debug(
         f'Iniciando función decompose_into_tiles(image={image}, block_size={block_size})'
@@ -44,7 +44,7 @@ def decompose_into_tiles(image, block_size):
     )
     return tiles
 
-
+@hierarchical_debug(logger)
 def calculate_tile_percentiles(tiles, qt=70):
     logger.debug(
         f'Iniciando función calculate_tile_percentiles(tiles={tiles}, qt={qt})'
@@ -70,7 +70,7 @@ def calculate_tile_percentiles(tiles, qt=70):
     )
     return cp.percentile(tiles, qt, axis=(1, 2))
 
-
+@hierarchical_debug(logger)
 def recompose_from_percentiles(percentiles, original_shape, block_size):
     logger.debug(
         f'Iniciando función recompose_from_percentiles(percentiles={percentiles}, original_shape={original_shape}, block_size={block_size})'
@@ -112,7 +112,7 @@ def recompose_from_percentiles(percentiles, original_shape, block_size):
     )
     return recomposed
 
-
+@hierarchical_debug(logger)
 def fill_nan_fft(image, lk, li=0, min_neighbors=5, pad=301):
     logger.debug(
         f'Iniciando función fill_nan_fft(image={image}, lk={lk}, li={li}, min_neighbors={min_neighbors}, pad={pad})'
@@ -155,7 +155,7 @@ def fill_nan_fft(image, lk, li=0, min_neighbors=5, pad=301):
     )
     return result
 
-
+@hierarchical_debug(logger)
 def calculate_tile_nanmean(tiles):
     logger.debug(f'Iniciando función calculate_tile_nanmean(tiles={tiles})')
     start_time = time.time()

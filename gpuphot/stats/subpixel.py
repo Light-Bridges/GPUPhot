@@ -1,8 +1,8 @@
 import logging
 import time
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+logger = setup_logger(__name__)
 """
 Port of Manuel Guizar's code from:
 http://www.mathworks.com/matlabcentral/fileexchange/18401-efficient-subpixel-image-registration-by-cross-correlation
@@ -14,9 +14,9 @@ import numpy as np
 from cupy.fft import fftn, ifftn, fftfreq
 from .subpixel_masked import _masked_phase_cross_correlation
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
-
+@hierarchical_debug(logger)
 def phase_cross_correlation(reference_image, moving_image, *,
                             upsample_factor=1, space='real', return_error=True, reference_mask=None,
                             moving_mask=None, overlap_ratio=0.3, normalization='phase'):
@@ -171,7 +171,7 @@ def phase_cross_correlation(reference_image, moving_image, *,
         )
         return shifts, 0, 0
 
-
+@hierarchical_debug(logger)
 def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
                    axis_offsets=None):
     logger.debug(
@@ -228,7 +228,7 @@ def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
     )
     return data
 
-
+@hierarchical_debug(logger)
 def _compute_error(cross_correlation_max, src_amp, target_amp):
     logger.debug(
         f'Iniciando función _compute_error(cross_correlation_max={cross_correlation_max}, src_amp={src_amp}, target_amp={target_amp})'
@@ -256,7 +256,7 @@ def _compute_error(cross_correlation_max, src_amp, target_amp):
     )
     return cp.sqrt(np.abs(error))
 
-
+@hierarchical_debug(logger)
 def _compute_phasediff(cross_correlation_max):
     logger.debug(
         f'Iniciando función _compute_phasediff(cross_correlation_max={cross_correlation_max})'

@@ -1,3 +1,4 @@
+from . import logger
 from . import astrometry
 from . import phot
 from . import stats

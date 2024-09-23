@@ -4,10 +4,10 @@ import time
 import cupy as cp
 import numpy as np
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+logger = setup_logger(__name__)
 
-
+@hierarchical_debug(logger)
 def convolve_fft(image, kernel):
     logger.debug(
         f'Iniciando función convolve_fft(image={image}, kernel={kernel})')
@@ -46,7 +46,7 @@ def convolve_fft(image, kernel):
     )
     return convolved
 
-
+@hierarchical_debug(logger)
 def get_mean_std(im_g, lk, std=True):
     logger.debug(
         f'Iniciando función get_mean_std(im_g={im_g}, lk={lk}, std={std})')
@@ -81,7 +81,7 @@ def get_mean_std(im_g, lk, std=True):
     )
     return fot_m, fot_m2
 
-
+@hierarchical_debug(logger)
 def gaussian_kernel(lk, sigma):
     logger.debug(f'Iniciando función gaussian_kernel(lk={lk}, sigma={sigma})')
     start_time = time.time()
@@ -111,7 +111,7 @@ def gaussian_kernel(lk, sigma):
     )
     return kernel / cp.sum(kernel)
 
-
+@hierarchical_debug(logger)
 def get_aper_kernel(radius, size=None):
     logger.debug(
         f'Iniciando función get_aper_kernel(radius={radius}, size={size})')
@@ -143,7 +143,7 @@ def get_aper_kernel(radius, size=None):
     )
     return kernel, area
 
-
+@hierarchical_debug(logger)
 def fill_image(image_shape):
     logger.debug(f'Iniciando función fill_image(image_shape={image_shape})')
     start_time = time.time()
@@ -168,7 +168,7 @@ def fill_image(image_shape):
     )
     return new_height, new_width
 
-
+@hierarchical_debug(logger)
 def gen_apm_filter(lk, li=0, norm=True):
     logger.debug(
         f'Iniciando función gen_apm_filter(lk={lk}, li={li}, norm={norm})')
@@ -209,7 +209,7 @@ def gen_apm_filter(lk, li=0, norm=True):
     )
     return k_app
 
-
+@hierarchical_debug(logger)
 def batch_aper_kernel(radius):
     logger.debug(f'Iniciando función batch_aper_kernel(radius={radius})')
     start_time = time.time()
