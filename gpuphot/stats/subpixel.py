@@ -20,10 +20,8 @@ logger = setup_logger(__name__)
 def phase_cross_correlation(reference_image, moving_image, *,
                             upsample_factor=1, space='real', return_error=True, reference_mask=None,
                             moving_mask=None, overlap_ratio=0.3, normalization='phase'):
-    logger.debug(
-        f'Iniciando función phase_cross_correlation(reference_image={reference_image}, moving_image={moving_image})'
-    )
-    start_time = time.time()
+
+
     """
     Efficient subpixel image translation registration by cross-correlation.
     This code gives the same precision as the FFT upsampled cross-correlation
@@ -86,15 +84,11 @@ def phase_cross_correlation(reference_image, moving_image, *,
     .. [6] D. Padfield. "Masked FFT registration". In Proc. Computer Vision and Pattern Recognition, pp. 2918-2925 (2010). :DOI:`10.1109/CVPR.2010.5540032`
     """
     if reference_mask is not None or moving_mask is not None:
-        logger.debug(
-            f'Función phase_cross_correlation completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-        )
+
         return _masked_phase_cross_correlation(reference_image,
                                                moving_image, reference_mask, moving_mask, overlap_ratio), 0, 0
     if reference_image.shape != moving_image.shape:
-        logger.debug(
-            f'Función phase_cross_correlation completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-        )
+
         raise ValueError('images must be same shape')
     if space.lower() == 'fourier':
         src_freq = reference_image
@@ -106,9 +100,7 @@ def phase_cross_correlation(reference_image, moving_image, *,
         target_freq = fftn(cp.asarray(imv))
         del (imr, imv)
     else:
-        logger.debug(
-            f'Función phase_cross_correlation completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-        )
+
         raise ValueError('space argument must be "real" of "fourier"')
     shape = src_freq.shape
     image_product = src_freq * target_freq.conj()
@@ -116,9 +108,7 @@ def phase_cross_correlation(reference_image, moving_image, *,
         eps = cp.finfo(image_product.real.dtype).eps
         image_product /= np.maximum(np.abs(image_product), 100 * eps)
     elif normalization is not None:
-        logger.debug(
-            f'Función phase_cross_correlation completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-        )
+
         raise ValueError('normalization must be either phase or None')
     cross_correlation = ifftn(image_product)
     maxima = cp.unravel_index(np.argmax(np.abs(cross_correlation)),
@@ -160,24 +150,18 @@ def phase_cross_correlation(reference_image, moving_image, *,
             raise ValueError(
                 'NaN values found, please remove NaNs from your input data or use the `reference_mask`/`moving_mask` keywords, eg: phase_cross_correlation(reference_image, moving_image, reference_mask=~np.isnan(reference_image), moving_mask=~np.isnan(moving_image))'
             )
-            logger.debug(
-                f'Función phase_cross_correlation completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-            )
+
         return shifts, _compute_error(CCmax, src_amp, target_amp
                                       ), _compute_phasediff(CCmax)
     else:
-        logger.debug(
-            f'Función phase_cross_correlation completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-        )
+
         return shifts, 0, 0
 
 @hierarchical_debug(logger)
 def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
                    axis_offsets=None):
-    logger.debug(
-        f'Iniciando función _upsampled_dft(data={data}, upsampled_region_size={upsampled_region_size}, upsample_factor={upsample_factor}, axis_offsets={axis_offsets})'
-    )
-    start_time = time.time()
+
+
     """
     Upsampled DFT by matrix multiplication.
     This code is intended to provide the same result as if the following
@@ -223,17 +207,13 @@ def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
         kernel = cp.exp(-im2pi * kernel)
         kernel = kernel.astype(data.dtype, copy=False)
         data = cp.tensordot(kernel, data, axes=(1, -1))
-    logger.debug(
-        f'Función _upsampled_dft completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return data
 
 @hierarchical_debug(logger)
 def _compute_error(cross_correlation_max, src_amp, target_amp):
-    logger.debug(
-        f'Iniciando función _compute_error(cross_correlation_max={cross_correlation_max}, src_amp={src_amp}, target_amp={target_amp})'
-    )
-    start_time = time.time()
+
+
     """
     Compute RMS error metric between ``src_image`` and ``target_image``.
     Parameters
@@ -251,17 +231,13 @@ def _compute_error(cross_correlation_max, src_amp, target_amp):
     """
     error = 1.0 - cross_correlation_max * cross_correlation_max.conj() / (
             src_amp * target_amp)
-    logger.debug(
-        f'Función _compute_error completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return cp.sqrt(np.abs(error))
 
 @hierarchical_debug(logger)
 def _compute_phasediff(cross_correlation_max):
-    logger.debug(
-        f'Iniciando función _compute_phasediff(cross_correlation_max={cross_correlation_max})'
-    )
-    start_time = time.time()
+
+
     """
     Compute global phase difference between the two images (should be zero if images are non-negative).
     Parameters
@@ -273,7 +249,5 @@ def _compute_phasediff(cross_correlation_max):
     phasediff : float
         The computed phase difference.
     """
-    logger.debug(
-        f'Función _compute_phasediff completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return cp.arctan2(cross_correlation_max.imag, cross_correlation_max.real)

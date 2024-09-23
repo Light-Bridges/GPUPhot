@@ -17,10 +17,8 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def dyn_avgstd(valuenew, nold, avgold, stdold):
-    logger.debug(
-        f'Iniciando función dyn_avgstd(valuenew={valuenew}, nold={nold}, avgold={avgold}, stdold={stdold})'
-    )
-    start_time = time.time()
+
+
     valuenew = cp.asarray(valuenew, dtype=np.double)
     nnew = nold + (valuenew != 0).astype(cp.int32)
     if cp.sum(nold) == 0:
@@ -30,17 +28,13 @@ def dyn_avgstd(valuenew, nold, avgold, stdold):
         avgnew = avgold + (valuenew - avgold) / nnew
         stdnew = np.sqrt(nold / nnew * stdold ** 2 + (valuenew - avgnew) *
                          (valuenew - avgold) / nnew)
-    logger.debug(
-        f'Función dyn_avgstd completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return nnew, avgnew, stdnew
 
 @hierarchical_debug(logger)
 def reduction_atlas(cubes_path, size=2048, internal_shift=False):
-    logger.debug(
-        f'Iniciando función reduction_atlas(cubes_path={cubes_path}, size={size}, internal_shift={internal_shift})'
-    )
-    start_time = time.time()
+
+
     """
     Perform reduction on a list of FITS image cubes to produce a combined image.
 
@@ -129,17 +123,13 @@ def reduction_atlas(cubes_path, size=2048, internal_shift=False):
     logger.info('Reduction finished')
     avgnew[avgnew < 0] = 0
     avgnew[avgnew > 2 ** 16] = 2 ** 16 - 1
-    logger.debug(
-        f'Función reduction_atlas completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return avgnew, nnew, heads, temp_header
 
 @hierarchical_debug(logger)
 def dyn_avg(valuenew, nold, avgold):
-    logger.debug(
-        f'Iniciando función dyn_avg(valuenew={valuenew}, nold={nold}, avgold={avgold})'
-    )
-    start_time = time.time()
+
+
     """
     Compute the dynamic average for image combination.
 
@@ -160,23 +150,17 @@ def dyn_avg(valuenew, nold, avgold):
     """
     nnew = nold + (valuenew != 0).astype(cp.int16)
     if cp.sum(nold) == 0:
-        logger.debug(
-            f'Función dyn_avg completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-        )
+
         return nnew, valuenew
     else:
         avgnew = avgold + (valuenew - avgold) / nnew
-        logger.debug(
-            f'Función dyn_avg completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-        )
+
         return nnew, avgnew
 
 @hierarchical_debug(logger)
 def sum_dyn_avg(n1, avg1, n2, avg2):
-    logger.debug(
-        f'Iniciando función sum_dyn_avg(n1={n1}, avg1={avg1}, n2={n2}, avg2={avg2})'
-    )
-    start_time = time.time()
+
+
     """
     Combine two sets of dynamic averages.
 
@@ -199,7 +183,5 @@ def sum_dyn_avg(n1, avg1, n2, avg2):
     """
     n_combined = n1 + n2
     avg_combined = (n1 * avg1 + n2 * avg2) / n_combined
-    logger.debug(
-        f'Función sum_dyn_avg completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return n_combined, avg_combined

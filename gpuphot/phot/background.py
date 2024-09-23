@@ -11,10 +11,8 @@ from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 logger = setup_logger(__name__)
 @hierarchical_debug(logger)
 def get_local_background_fft(image, pxscale, qt=60, fill_aper=15, avg_aper=15, tile_px=300, ks=2, get_std=False):
-    logger.debug(
-        f'Iniciando función get_local_background_fft(image={image}, pxscale={pxscale}, qt={qt}, fill_aper={fill_aper}, avg_aper={avg_aper}, tile_px={tile_px}, ks={ks}, get_std={get_std})'
-    )
-    start_time = time.time()
+
+
     '''
     Get local background using FFT-based convolution
 
@@ -75,9 +73,7 @@ def get_local_background_fft(image, pxscale, qt=60, fill_aper=15, avg_aper=15, t
 
     del img_filled
     mempool.free_all_blocks()
-    logger.debug(
-        f'Función get_local_background_fft completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return img_filled_m, img_filled_2
 
 

@@ -18,10 +18,8 @@ logger = setup_logger(__name__)
 @hierarchical_debug(logger)
 def detect_isolated_stars(img, rms, pxscale, sat_lim=50000, min_snr=10,
                           dist_asec=20):
-    logger.debug(
-        f'Iniciando función detect_isolated_stars(img={img}, rms={rms}, pxscale={pxscale}, sat_lim={sat_lim}, min_snr={min_snr}, dist_asec={dist_asec})'
-    )
-    start_time = time.time()
+
+
     """
     Detect isolated stars in an image.
 
@@ -83,18 +81,14 @@ def detect_isolated_stars(img, rms, pxscale, sat_lim=50000, min_snr=10,
     coor_f = cp.asarray(coor_f)[m]
     del coor, snr, peak, m
     mempool.free_all_blocks()
-    logger.debug(
-        f'Función detect_isolated_stars completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return coor_f
 
 @hierarchical_debug(logger)
 def create_star_dataset(img, coords, pxscale, N=3000, CR_filter=False,
                         CR_thres=30):
-    logger.debug(
-        f'Iniciando función create_star_dataset(img={img}, coords={coords}, pxscale={pxscale}, N={N}, CR_filter={CR_filter}, CR_thres={CR_thres})'
-    )
-    start_time = time.time()
+
+
     """
     Create a dataset of star images.
 
@@ -153,17 +147,13 @@ def create_star_dataset(img, coords, pxscale, N=3000, CR_filter=False,
     N = min(N, len(idx))
     idx = idx[cp.argsort(scaling_dataset[:, 3])[-N:]]
     del subima, peak_pos, peak, x_min, x_max, y_min, y_max, f, n
-    logger.debug(
-        f'Función create_star_dataset completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return star_dataset[idx], coords[idx], scaling_dataset[idx]
 
 @hierarchical_debug(logger)
 def get_eigen_psfs(normed_star_dataset, n_components=5):
-    logger.debug(
-        f'Iniciando función get_eigen_psfs(normed_star_dataset={normed_star_dataset}, n_components={n_components})'
-    )
-    start_time = time.time()
+
+
     """
     Calculate eigen PSFs using PCA.
 
@@ -182,17 +172,13 @@ def get_eigen_psfs(normed_star_dataset, n_components=5):
     pca = PCA(n_components=n_components)
     eigen_psfs = pca.components_.reshape(-1, normed_star_dataset.shape[1],
                                          normed_star_dataset.shape[2])
-    logger.debug(
-        f'Función get_eigen_psfs completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return eigen_psfs
 
 @hierarchical_debug(logger)
 def project_all_stars_onto_eigenpsfs(normed_star_dataset, eigen_psfs):
-    logger.debug(
-        f'Iniciando función project_all_stars_onto_eigenpsfs(normed_star_dataset={normed_star_dataset}, eigen_psfs={eigen_psfs})'
-    )
-    start_time = time.time()
+
+
     """
     Project all stars onto eigen PSFs.
 
@@ -216,18 +202,14 @@ def project_all_stars_onto_eigenpsfs(normed_star_dataset, eigen_psfs):
                                       ).T
     coefficients_matrix = cp.dot(stars_matrix, eigen_matrix)
     del stars_matrix, eigen_matrix, flattened_star_dim
-    logger.debug(
-        f'Función project_all_stars_onto_eigenpsfs completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return coefficients_matrix
 
 @hierarchical_debug(logger)
 def create_coeff_map(img_shape, positions, coefficients, pxscale,
                      tile_section=None, smooth=False):
-    logger.debug(
-        f'Iniciando función create_coeff_map(img_shape={img_shape}, positions={positions}, coefficients={coefficients}, pxscale={pxscale}, tile_section={tile_section}, smooth={smooth})'
-    )
-    start_time = time.time()
+
+
     """
     Create a coefficient map from image shape, positions, and coefficients.
 
@@ -270,17 +252,13 @@ def create_coeff_map(img_shape, positions, coefficients, pxscale,
         coeff_map[c, :, :] = recompose_from_percentiles(tiles.reshape(-1),
                                                         img_shape, block_size)
     del tiles
-    logger.debug(
-        f'Función create_coeff_map completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return coeff_map
 
 @hierarchical_debug(logger)
 def detect_sources_pca(img, rms, pxscale, eigen_psfs, coeff_map, min_snr=5):
-    logger.debug(
-        f'Iniciando función detect_sources_pca(img={img}, rms={rms}, pxscale={pxscale}, eigen_psfs={eigen_psfs}, coeff_map={coeff_map}, min_snr={min_snr})'
-    )
-    start_time = time.time()
+
+
     """
     Detect sources using PCA.
 
@@ -322,17 +300,13 @@ def detect_sources_pca(img, rms, pxscale, eigen_psfs, coeff_map, min_snr=5):
     coor = cp.asarray((x, y)).T
     del im1, lbs, ids, conv_ima_pca
     mempool.free_all_blocks()
-    logger.debug(
-        f'Función detect_sources_pca completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return coor, conv_ima_sigma
 
 @hierarchical_debug(logger)
 def detect_sources_kernel(img, rms, kernel, pxscale, min_snr=5):
-    logger.debug(
-        f'Iniciando función detect_sources_kernel(img={img}, rms={rms}, kernel={kernel}, pxscale={pxscale}, min_snr={min_snr})'
-    )
-    start_time = time.time()
+
+
     """
     Detect sources using a convolution kernel.
 
@@ -368,17 +342,12 @@ def detect_sources_kernel(img, rms, kernel, pxscale, min_snr=5):
     coor = cp.asarray((x, y)).T
     del im1, lbs, ids, conv_ima
     mempool.free_all_blocks()
-    logger.debug(
-        f'Función detect_sources_kernel completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return coor, conv_sigma
 
 @hierarchical_debug(logger)
 def recreate_normed_star(coeff_map, eigen_psfs, coords):
-    logger.debug(
-        f'Iniciando función recreate_normed_star(coeff_map={coeff_map}, eigen_psfs={eigen_psfs}, coords={coords})'
-    )
-    start_time = time.time()
+
     """
     Recreate a normalized star from coefficients and eigen PSFs.
 
@@ -400,15 +369,12 @@ def recreate_normed_star(coeff_map, eigen_psfs, coords):
     coeff = coeff_map[:, y, x]
     kernel = cp.dot(coeff, eigen_psfs.reshape((eigen_psfs.shape[0], -1)))
     kernel = kernel.reshape((eigen_psfs.shape[1], eigen_psfs.shape[2]))
-    logger.debug(
-        f'Función recreate_normed_star completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return kernel
 
 @hierarchical_debug(logger)
 def fit_moffat(star_data):
-    logger.debug(f'Iniciando función fit_moffat(star_data={star_data})')
-    start_time = time.time()
+
     """
     Fit a Moffat profile to star data.
 
@@ -446,17 +412,13 @@ def fit_moffat(star_data):
         fwhm, fwhm_err = moffat_fwhm(result.params['R'].value, result.
                                      params['B'].value, result.params['R'].stderr, result.params['B'
                                      ].stderr)
-    logger.debug(
-        f'Función fit_moffat completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return r, Z, result, fwhm, fwhm_err
 
 @hierarchical_debug(logger)
 def filter_centroids_kdtree(centroids, min_distance):
-    logger.debug(
-        f'Iniciando función filter_centroids_kdtree(centroids={centroids}, min_distance={min_distance})'
-    )
-    start_time = time.time()
+
+
     """
     Filter centroids based on a minimum distance using KDTree.
 
@@ -478,16 +440,13 @@ def filter_centroids_kdtree(centroids, min_distance):
         dist, _ = tree.query(centroid, k=2)
         if dist[1] >= min_distance:
             filtered.append(centroid)
-    logger.debug(
-        f'Función filter_centroids_kdtree completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return np.array(filtered)
 
 @hierarchical_debug(logger)
 def moffat(r, A=1.0, r0=0.0, B=1.0, R=1.0):
-    logger.debug(
-        f'Iniciando función moffat(r={r}, A={A}, r0={r0}, B={B}, R={R})')
-    start_time = time.time()
+
+
     """
     Moffat function.
 
@@ -511,17 +470,13 @@ def moffat(r, A=1.0, r0=0.0, B=1.0, R=1.0):
     ndarray
         Moffat function values.
     """
-    logger.debug(
-        f'Función moffat completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return A * (1 + ((r - r0) / R) ** 2) ** -B
 
 @hierarchical_debug(logger)
 def moffat_fwhm(R, B, R_err, B_err):
-    logger.debug(
-        f'Iniciando función moffat_fwhm(R={R}, B={B}, R_err={R_err}, B_err={B_err})'
-    )
-    start_time = time.time()
+
+
     """
     Calculate the full width at half maximum (FWHM) of a Moffat function.
 
@@ -545,7 +500,5 @@ def moffat_fwhm(R, B, R_err, B_err):
     FWHM_err = 2 * R_err * np.sqrt(2 ** (1 / B) - 1) + 2 * R * B_err * (np.
                                                                         log(2) * 2 ** (1 / B - 1)) / (
                        B ** 2 * np.sqrt(2 ** (1 / B) - 1))
-    logger.debug(
-        f'Función moffat_fwhm completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return FWHM, FWHM_err

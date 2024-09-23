@@ -22,10 +22,8 @@ logger = setup_logger(__name__)
 @hierarchical_debug(logger)
 def _masked_phase_cross_correlation(reference_image, moving_image,
                                     reference_mask, moving_mask=None, overlap_ratio=0.3):
-    logger.debug(
-        f'Iniciando función _masked_phase_cross_correlation(reference_image={reference_image}, moving_image={moving_image}, reference_mask={reference_mask}, moving_mask={moving_mask}, overlap_ratio={overlap_ratio})'
-    )
-    start_time = time.time()
+
+
     """
     Masked image translation registration by masked normalized cross-correlation.
 
@@ -86,18 +84,14 @@ def _masked_phase_cross_correlation(reference_image, moving_image,
     shifts = center - cp.array(reference_image.shape) + 1
     size_mismatch = cp.array(moving_image.shape) - cp.array(reference_image
                                                             .shape)
-    logger.debug(
-        f'Función _masked_phase_cross_correlation completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return -shifts + size_mismatch / 2
 
 @hierarchical_debug(logger)
 def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
                            overlap_ratio=0.3):
-    logger.debug(
-        f'Iniciando función cross_correlate_masked(arr1={arr1}, arr2={arr2}, m1={m1}, m2={m2}, mode={mode}, axes={axes}, overlap_ratio={overlap_ratio})'
-    )
-    start_time = time.time()
+
+
     """
     Masked normalized cross-correlation between arrays.
 
@@ -223,15 +217,12 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
     number_px_threshold = overlap_ratio * cp.max(number_overlap_masked_px,
                                                  axis=axes, keepdims=True)
     out[number_overlap_masked_px < number_px_threshold] = 0.0
-    logger.debug(
-        f'Función cross_correlate_masked completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return out
 
 @hierarchical_debug(logger)
 def _flip(arr, axes=None):
-    logger.debug(f'Iniciando función _flip(arr={arr}, axes={axes})')
-    start_time = time.time()
+
     """
     Reverse array over many axes. Generalization of arr[::-1] for many
     dimensions. If `axes` is `None`, flip along all axes.
@@ -254,17 +245,13 @@ def _flip(arr, axes=None):
         reverse = [slice(None, None, None)] * arr.ndim
         for axis in axes:
             reverse[axis] = slice(None, None, -1)
-    logger.debug(
-        f'Función _flip completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return arr[tuple(reverse)]
 
 @hierarchical_debug(logger)
 def _centered(arr, newshape, axes):
-    logger.debug(
-        f'Iniciando función _centered(arr={arr}, newshape={newshape}, axes={axes})'
-    )
-    start_time = time.time()
+
+
     """
     Return the center `newshape` portion of `arr`, leaving axes not
     in `axes` untouched.
@@ -290,7 +277,5 @@ def _centered(arr, newshape, axes):
         startind = (currshape[ax] - newshape[ax]) // 2
         endind = startind + newshape[ax]
         slices[ax] = slice(startind, endind)
-    logger.debug(
-        f'Función _centered completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return arr[tuple(slices)]

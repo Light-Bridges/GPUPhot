@@ -48,7 +48,7 @@ class Test(TestCase):
                         print(f'Processing {image_path}')
                         try:
                             print(f'Processing {image_path}')
-                            start_time = time.time()
+
 
                             model = self.get_fwhm_model()
 
@@ -78,7 +78,6 @@ class Test(TestCase):
                             # image_cp = cp.asarray(fits.getdata(image_path))
                             # resul = SP_filter_cupy(image_cp)
                             end_time = time.time()
-                            print(f'Elapsed time for {file}: {end_time - start_time:.2f} seconds')
                         except Exception as e:
                             print(f'Error processing {image_path}: {e}')
                             print('Traceback:')

@@ -13,8 +13,7 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def cat_input_from_header(header):
-    logger.debug(f'Iniciando función cat_input_from_header(header={header})')
-    start_time = time.time()
+
     """
     Extract catalog input parameters from FITS header.
 
@@ -48,17 +47,13 @@ def cat_input_from_header(header):
     FOV = np.sqrt(header['NAXIS1'] ** 2 + header['NAXIS2'] ** 2) * scale / 3600
     filter = header['FILTER']
     inmodel = header['INMODEL']
-    logger.debug(
-        f'Función cat_input_from_header completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return coocenter, FOV, filter, scale, inmodel
 
 @hierarchical_debug(logger)
 def catalog_results(coocenter, radius, filter, inmodel, maglimit=22):
-    logger.debug(
-        f'Iniciando función catalog_results(coocenter={coocenter}, radius={radius}, filter={filter}, inmodel={inmodel}, maglimit={maglimit})'
-    )
-    start_time = time.time()
+
+
     """
     Retrieve catalog results from Vizier based on input parameters.
 
@@ -176,17 +171,13 @@ def catalog_results(coocenter, radius, filter, inmodel, maglimit=22):
                                'MAG': vizier_results[ref_filter], 'MAGERR': vizier_results[
                 'e_' + ref_filter], 'SOLAR': solar_index})
         ref_filter = ref_filter[:-3]
-    logger.debug(
-        f'Función catalog_results completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return result, catalog, ref_filter
 
 @hierarchical_debug(logger)
 def crossmatch_sources(source_coords, ref_coords, thres_px=2):
-    logger.debug(
-        f'Iniciando función crossmatch_sources(source_coords={source_coords}, ref_coords={ref_coords}, thres_px={thres_px})'
-    )
-    start_time = time.time()
+
+
     """
     Cross-match source coordinates with reference coordinates.
 
@@ -213,17 +204,13 @@ def crossmatch_sources(source_coords, ref_coords, thres_px=2):
     mask = dist < thres_px
     source_coords_matched_idx = np.arange(len(source_coords))[mask]
     ref_coords_matched_idx = idx[mask]
-    logger.debug(
-        f'Función crossmatch_sources completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return source_coords_matched_idx, ref_coords_matched_idx
 
 @hierarchical_debug(logger)
 def __getVizier(catalog, coocenter, radii, maglimit, ref_filter):
-    logger.debug(
-        f'Iniciando función __getVizier(catalog={catalog}, coocenter={coocenter}, radii={radii}, maglimit={maglimit}, ref_filter={ref_filter})'
-    )
-    start_time = time.time()
+
+
     """
     Query the Vizier catalog for objects within a specified region.
 
@@ -250,7 +237,5 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter):
     vizier_results = Vizier(timeout=timeout, row_limit=-1).query_region(
         coocenter, radius=radii * u.deg, catalog=catalog, column_filters={
             ref_filter: '<%.1f ' % maglimit}, cache=True)
-    logger.debug(
-        f'Función __getVizier completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return vizier_results[0]

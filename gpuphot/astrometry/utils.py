@@ -6,10 +6,8 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def get_if_header_already_post_processed(header, postprocess):
-    logger.debug(
-        f'Iniciando función get_if_header_already_post_processed(header={header}, postprocess={postprocess})'
-    )
-    start_time = time.time()
+
+
     """
     Check if a FITS header contains a specific post-processing comment.
 
@@ -32,7 +30,5 @@ def get_if_header_already_post_processed(header, postprocess):
     for comment in header['COMMENT']:
         comments.append(comment.strip('   '))
     comments = set(comments)
-    logger.debug(
-        f'Función get_if_header_already_post_processed completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return postprocess in comments

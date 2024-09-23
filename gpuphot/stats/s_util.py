@@ -9,8 +9,7 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def free_gpu_mem():
-    logger.debug(f'Iniciando función free_gpu_mem()')
-    start_time = time.time()
+
     """
     Frees all allocated GPU memory blocks and triggers garbage collection.
 
@@ -39,6 +38,3 @@ def free_gpu_mem():
     mempool.free_all_blocks()
     pinned_mempool.free_all_blocks()
     gc.collect()
-    logger.debug(
-        f'Función free_gpu_mem completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )

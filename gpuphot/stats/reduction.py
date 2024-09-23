@@ -14,8 +14,7 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def center(im, size):
-    logger.debug(f'Iniciando función center(im={im}, size={size})')
-    start_time = time.time()
+
     """
     Center the image to the given size.
 
@@ -35,15 +34,12 @@ def center(im, size):
         c0 = int((im.shape[0] - size) / 2)
     if im.shape[1] > size:
         c1 = int((im.shape[1] - size) / 2)
-    logger.debug(
-        f'Función center completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return cp.asarray(im[c0:-c0, c1:-c1])
 
 @hierarchical_debug(logger)
 def register_shift(fc, uf=100, n=1000):
-    logger.debug(f'Iniciando función register_shift(fc={fc}, uf={uf}, n={n})')
-    start_time = time.time()
+
     """
     Register and shift image stack based on phase cross-correlation.
 
@@ -74,18 +70,14 @@ def register_shift(fc, uf=100, n=1000):
         fc1[i] = shift(cp.asarray(fc[i]), shift=(shifted[0], shifted[1]),
                        order=1, mode='constant').get()
         logger.debug(f'Detected subpixel offset (y, x): {shifted}')
-    logger.debug(
-        f'Función register_shift completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return fc1
 
 @hierarchical_debug(logger)
 def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False,
                     beta=False, tim=None):
-    logger.debug(
-        f'Iniciando función stack_sigmaclip(data={data}, it={it}, n={n}, master={master}, mbias={mbias}, alpha={alpha}, beta={beta}, tim={tim})'
-    )
-    start_time = time.time()
+
+
     """
     Stack images with sigma clipping.
 
@@ -164,18 +156,14 @@ def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False,
     sigma = sigma * f
     center[center != center] = im[center != center]
     del im
-    logger.debug(
-        f'Función stack_sigmaclip completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return center, sigma
 
 @hierarchical_debug(logger)
 def register_shift_frames(frames_list, upsample_factor=100, center_size=
 1000, shift_limit_pix=300):
-    logger.debug(
-        f'Iniciando función register_shift_frames(frames_list={frames_list}, upsample_factor={upsample_factor}, center_size={center_size}, shift_limit_pix={shift_limit_pix})'
-    )
-    start_time = time.time()
+
+
     fc0 = cp.asarray(fits.getdata(frames_list[0]), dtype=cp.float32)
     im0 = center(fc0, center_size)
     im0 = binary_erosion(im0 > im0.mean() + im0.std())
@@ -195,7 +183,5 @@ def register_shift_frames(frames_list, upsample_factor=100, center_size=
         print(f'Detected subpixel offset (y, x): {shifted}')
         fc[i, :] = shift(fc1, shift=(shifted[0], shifted[1]), order=1, mode
         ='constant')
-    logger.debug(
-        f'Función register_shift_frames completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return fc

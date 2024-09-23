@@ -6,9 +6,8 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def plate_scale_px(microns, focal):
-    logger.debug(
-        f'Iniciando función plate_scale_px(microns={microns}, focal={focal})')
-    start_time = time.time()
+
+
     """
     Calculate the plate scale in arcseconds per pixel.
 
@@ -24,15 +23,12 @@ def plate_scale_px(microns, focal):
     float
         Plate scale in arcseconds per pixel.
     """
-    logger.debug(
-        f'Función plate_scale_px completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return plate_scale_mm(focal) * microns / 1000
 
 @hierarchical_debug(logger)
 def plate_scale_mm(focal):
-    logger.debug(f'Iniciando función plate_scale_mm(focal={focal})')
-    start_time = time.time()
+
     """
     Calculate the plate scale in arcseconds per millimeter.
 
@@ -46,7 +42,5 @@ def plate_scale_mm(focal):
     float
         Plate scale in arcseconds per millimeter.
     """
-    logger.debug(
-        f'Función plate_scale_mm completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return 206265 / focal

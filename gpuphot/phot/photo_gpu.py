@@ -33,8 +33,7 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def get_solver():
-    logger.debug(f'Iniciando función get_solver()')
-    start_time = time.time()
+
     """
     Get the astrometry solver with index files.
 
@@ -51,30 +50,23 @@ def get_solver():
         cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6}) + astrometry.
                                series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10,
                                                                                       11}))
-    logger.debug(
-        f'Función get_solver completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return solver
 
 @hierarchical_debug(logger)
 def init_gpu():
-    logger.debug(f'Iniciando función init_gpu()')
-    start_time = time.time()
+
     logger.debug('Tensorflow version ' + tf.__version__)
     gpus = tf.config.list_physical_devices('GPU')
     logger.debug('GPUs:', gpus)
     tf.config.set_logical_device_configuration(gpus[0], [tf.config.
                                                LogicalDeviceConfiguration(memory_limit=1024)])
-    logger.debug(
-        f'Función init_gpu completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
 
 @hierarchical_debug(logger)
 def get_detections(model_mo, im, det=2, gain=1.024, rdnoise=2.3, scale=0.21):
-    logger.debug(
-        f'Iniciando función get_detections(model_mo={model_mo}, im={im}, det={det}, gain={gain}, rdnoise={rdnoise}, scale={scale})'
-    )
-    start_time = time.time()
+
+
     """
     Detect sources in an image using a model.
 
@@ -115,18 +107,14 @@ def get_detections(model_mo, im, det=2, gain=1.024, rdnoise=2.3, scale=0.21):
                                                                   )
     del im_g
     free_gpu_mem()
-    logger.debug(
-        f'Función get_detections completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return dfm, sky, rms, fw, efw, 2 * lk + 1
 
 @hierarchical_debug(logger)
 def daofind_gpu_fast(img, sky, rms, sdet, mode='g', fw=0, alpha=0, beta=0,
                      mem=cp.get_default_pinned_memory_pool()):
-    logger.debug(
-        f'Iniciando función daofind_gpu_fast(img={img}, sky={sky}, rms={rms}, sdet={sdet}, mode={mode}, fw={fw}, alpha={alpha}, beta={beta}, mem={mem})'
-    )
-    start_time = time.time()
+
+
     """
     Detect sources in an image using DAOFind algorithm on GPU.
 
@@ -197,15 +185,12 @@ def daofind_gpu_fast(img, sky, rms, sdet, mode='g', fw=0, alpha=0, beta=0,
     df = pd.DataFrame(res, columns=['xcentroid', 'ycentroid', 'peak',
                                     'flux_a', 'flux_p', 'npix', 'sks'])
     df = df[df.flux_a > 0]
-    logger.debug(
-        f'Función daofind_gpu_fast completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return df, lk
 
 @hierarchical_debug(logger)
 def gen_ap_filter(lk):
-    logger.debug(f'Iniciando función gen_ap_filter(lk={lk})')
-    start_time = time.time()
+
     """
     Generate an aperture filter.
 
@@ -226,16 +211,13 @@ def gen_ap_filter(lk):
     struc = cp.where((lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2 <
                      fw2)
     k_app[struc] = 1
-    logger.debug(
-        f'Función gen_ap_filter completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return k_app
 
 @hierarchical_debug(logger)
 def gen_moff_filter(alpha, beta):
-    logger.debug(
-        f'Iniciando función gen_moff_filter(alpha={alpha}, beta={beta})')
-    start_time = time.time()
+
+
     """
     Generate a Moffat filter.
 
@@ -262,16 +244,13 @@ def gen_moff_filter(alpha, beta):
     ksum2 = cp.sum(ker * ker)
     n = k_dim[0] ** 2
     k_app = (ker - ksum / n) / (ksum2 - ksum * ksum / n)
-    logger.debug(
-        f'Función gen_moff_filter completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return k_app, lk
 
 @hierarchical_debug(logger)
 def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool()):
-    logger.debug(
-        f'Iniciando función get_sky(im_g={im_g}, fw={fw}, qt={qt}, mem={mem})')
-    start_time = time.time()
+
+
     """
     Estimate the sky background and RMS noise.
 
@@ -306,18 +285,14 @@ def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool()):
     del (cut1, mask)
     fot_m = cov_nan(fot_m, 20)
     fot_m2 = cov_nan(fot_m2, 20)
-    logger.debug(
-        f'Función get_sky completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return fot_m, fot_m2, mm
 
 @hierarchical_debug(logger)
 def SP_filter_cupy(img, filter_size=3, high_threshold_factor=10,
                    low_threshold_factor=5, scaling_factor=1.4826):
-    logger.debug(
-        f'Iniciando función SP_filter_cupy(img={img}, filter_size={filter_size}, high_threshold_factor={high_threshold_factor}, low_threshold_factor={low_threshold_factor}, scaling_factor={scaling_factor})'
-    )
-    start_time = time.time()
+
+
     """
     Apply a median filter to remove salt-and-pepper noise.
 
@@ -347,16 +322,13 @@ def SP_filter_cupy(img, filter_size=3, high_threshold_factor=10,
                                                        low_threshold_factor * ms)
     img[mask] = med_filter[mask]
     del med_filter, dif, med, ms, mask
-    logger.debug(
-        f'Función SP_filter_cupy completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return img
 
 @hierarchical_debug(logger)
 def gen_moff_filter2(alpha, beta):
-    logger.debug(
-        f'Iniciando función gen_moff_filter2(alpha={alpha}, beta={beta})')
-    start_time = time.time()
+
+
     """
     Generate a Moffat filter with adjusted alpha.
 
@@ -382,18 +354,14 @@ def gen_moff_filter2(alpha, beta):
     ker = (1 + r2 / alpha ** 2) ** -beta
     ksum = cp.sum(ker)
     k_app = ker / ksum
-    logger.debug(
-        f'Función gen_moff_filter2 completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return k_app, lk
 
 @hierarchical_debug(logger)
 def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, tile_section=3000, color_range=0.3,
                       SP_filt=True, pca_method=True, border=50, CR_filt=False):
-    logger.debug(
-        f'Iniciando función process_image_new(imdata={imdata}, imheader={imheader}, center_factor={center_factor}, ks={ks}, astrom={astrom}, tile_section={tile_section}, color_range={color_range}, SP_filt={SP_filt}, pca_method={pca_method}, border={border}, CR_filt={CR_filt})'
-    )
-    start_time = time.time()
+
+
     """
     Process an astronomical image.
 
@@ -449,9 +417,7 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
                                     min_snr=10, dist_asec=10)
     sources = sources + border
     if len(sources) == 0:
-        logger.debug(
-            f'Función process_image_new completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-        )
+
         return None, imheader
     else:
         star_dataset, coord, scaling = create_star_dataset(img, sources,
@@ -620,18 +586,14 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
              dec, cat_x, cat_y, wcs, Y, X, RA, DEC, FLUX, FLUXERR)
         mempool.free_all_blocks()
         gc.collect()
-        logger.debug(
-            f'Función process_image_new completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-        )
+
         return df_phot, imheader, dic_calib
 
 @hierarchical_debug(logger)
 def perform_opt_photometry(img, back, conv_ima_sigma, source_coord,
                            isolated_coord, imheader, labels=None, center_factor=1):
-    logger.debug(
-        f'Iniciando función perform_opt_photometry(img={img}, back={back}, conv_ima_sigma={conv_ima_sigma}, source_coord={source_coord}, isolated_coord={isolated_coord}, imheader={imheader}, labels={labels}, center_factor={center_factor})'
-    )
-    start_time = time.time()
+
+
     """
     Perform optimal photometry on detected sources.
 
@@ -782,17 +744,13 @@ def perform_opt_photometry(img, back, conv_ima_sigma, source_coord,
     source_coord = source_coord[mask, :]
     mempool.free_all_blocks()
     gc.collect()
-    logger.debug(
-        f'Función perform_opt_photometry completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return opt_flux.get(), opt_noise.get(), source_coord.get(), pov0
 
 @hierarchical_debug(logger)
 def batch_aperture_photometry(img, back, positions, radii):
-    logger.debug(
-        f'Iniciando función batch_aperture_photometry(img={img}, back={back}, positions={positions}, radii={radii})'
-    )
-    start_time = time.time()
+
+
     """
     Perform aperture photometry in batch mode.
 
@@ -837,17 +795,13 @@ def batch_aperture_photometry(img, back, positions, radii):
     del convolved, kernel, back_c, img_c
     mempool.free_all_blocks()
     gc.collect()
-    logger.debug(
-        f'Función batch_aperture_photometry completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return flux, back_flux, area
 
 @hierarchical_debug(logger)
 def get_raw_photometry(imdata, imheader, aperture_rad_asec=None, astrom=
 True, SP_filt=True, ks=2):
-    logger.debug(
-        f'Iniciando función get_raw_photometry(imdata={imdata}, imheader={imheader}, aperture_rad_asec={aperture_rad_asec}, astrom={astrom}, SP_filt={SP_filt}, ks={ks})'
-    )
+
     """
     Get raw photometry for an astronomical image.
 
@@ -871,7 +825,7 @@ True, SP_filt=True, ks=2):
     pd.DataFrame
         Dataframe containing photometry results.
     """
-    start_time = time.time()
+
     logger.debug('Start photometry extraction')
     mempool = cp.get_default_memory_pool()
     img_cp = cp.asarray(imdata)
@@ -879,16 +833,12 @@ True, SP_filt=True, ks=2):
         'XBINNING']
     back, _ = get_local_background_fft(img_cp, scale, ks=ks)
     gc.collect()
-    logger.debug(
-        f'Background calculation completed in {time.time() - start_time:.2f} seconds'
-    )
+
     if SP_filt:
         img = SP_filter_cupy(img_cp - back)
     else:
         img = img_cp - back
-    logger.debug(
-        f'Salt-and-pepper filter applied in {time.time() - start_time:.2f} seconds'
-    )
+
     try:
         rdnoise = imheader['GAIN'] * imheader['BIASSTD'] * np.sqrt(imheader
                                                                    ['TOTIMA'])
@@ -896,8 +846,7 @@ True, SP_filt=True, ks=2):
         rdnoise = imheader['RDNOISE']
     rms = cp.sqrt(cp.abs(back) * imheader['GAIN'] * np.sqrt(imheader[
                                                                 'TOTIMA']) + rdnoise ** 2) / imheader['GAIN']
-    logger.debug(
-        f'RMS calculation completed in {time.time() - start_time:.2f} seconds')
+
     sources = detect_isolated_stars(img, rms, scale, sat_lim=imheader[
                                                                  'SATLEVEL'] * 0.8, min_snr=10, dist_asec=10)
     star_dataset, coord, scaling = create_star_dataset(img, sources, scale)
@@ -907,9 +856,7 @@ True, SP_filt=True, ks=2):
     psf = cp.mean(normed_star_dataset[sst, :, :], axis=0)
     sources = detect_sources_kernel(img, rms, psf, scale, min_snr=5)
     del star_dataset, coord, scaling, sst, psf
-    logger.debug(
-        f'Source detection completed in {time.time() - start_time:.2f} seconds'
-    )
+
     if aperture_rad_asec is None:
         aperture_rad_asec = 1
     aperture_rad = int(max(aperture_rad_asec / scale, 1))
@@ -929,9 +876,7 @@ True, SP_filt=True, ks=2):
     del img, img_cp, rms, sources, back
     mempool.free_all_blocks()
     gc.collect()
-    logger.debug(
-        f'Photometry extraction completed in {time.time() - start_time:.2f} seconds'
-    )
+
     if astrom:
         dfm = pd.DataFrame({'xcentroid': source_coord[:, 1], 'ycentroid':
             source_coord[:, 0], 'flux': source_flux})
@@ -951,20 +896,13 @@ True, SP_filt=True, ks=2):
     del X, Y, RA, DEC, FLUX, FLUXERR
     mempool.free_all_blocks()
     gc.collect()
-    logger.debug(
-        f'Astrometry and final data preparation completed in {time.time() - start_time:.2f} seconds'
-    )
-    logger.debug(
-        f'Función get_raw_photometry completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return df_phot
 
 @hierarchical_debug(logger)
 def aperture_photometry(img, positions, aper_rad):
-    logger.debug(
-        f'Iniciando función aperture_photometry(img={img}, positions={positions}, aper_rad={aper_rad})'
-    )
-    start_time = time.time()
+
+
     """
     Perform aperture photometry.
 
@@ -987,17 +925,13 @@ def aperture_photometry(img, positions, aper_rad):
     positions = cp.array(cp.round(positions)).astype(cp.int32)
     flux = conv_ima[positions[:, 0], positions[:, 1]]
     del conv_ima, kernel, positions
-    logger.debug(
-        f'Función aperture_photometry completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return flux, area
 
 @hierarchical_debug(logger)
 def get_fwhm_mof(model, img, step=50, ns=25, mins=3):
-    logger.debug(
-        f'Iniciando función get_fwhm_mof(model={model}, img={img}, step={step}, ns={ns}, mins={mins})'
-    )
-    start_time = time.time()
+
+
     """
     Get the full width at half maximum using Moffat model.
 
@@ -1023,15 +957,12 @@ def get_fwhm_mof(model, img, step=50, ns=25, mins=3):
     pred2 = model.predict(ims)
     alpha, beta, nstar, fwhm = pred_mof(pred2)
     fws = fwhm[nstar >= np.mean(nstar)]
-    logger.debug(
-        f'Función get_fwhm_mof completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return np.mean(fws), np.std(fws), np.mean(alpha), np.mean(beta)
 
 @hierarchical_debug(logger)
 def cov_nan(img, nc=10):
-    logger.debug(f'Iniciando función cov_nan(img={img}, nc={nc})')
-    start_time = time.time()
+
     """
     Fill NaN values in an image using convolution.
 
@@ -1055,17 +986,13 @@ def cov_nan(img, nc=10):
             img[delta * i:delta * (i + 1), delta * j:delta * (j + 1)] = ii
     img[cp.isnan(img)] = cp.nanmean(img)
     img[cp.isinf(img)] = cp.nanmean(img)
-    logger.debug(
-        f'Función cov_nan completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return img
 
 @hierarchical_debug(logger)
 def astrometrice2(dfm, head0, im_shape):
-    logger.debug(
-        f'Iniciando función astrometrice2(dfm={dfm}, head0={head0}, im_shape={im_shape})'
-    )
-    start_time = time.time()
+
+
     """
     Perform astrometry on an image.
 
@@ -1104,18 +1031,14 @@ def astrometrice2(dfm, head0, im_shape):
     except:
         pass
     signal.alarm(0)
-    logger.debug(
-        f'Función astrometrice2 completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return None
 
 @hierarchical_debug(logger)
 def get_zeropoint(df_catalog, flux, noise, coord, exptime, solar_filter=0.3,
                   dist_thres_px=3, N=50, plot=False):
-    logger.debug(
-        f'Iniciando función get_zeropoint(df_catalog={df_catalog}, flux={flux}, noise={noise}, coord={coord}, exptime={exptime}, solar_filter={solar_filter}, dist_thres_px={dist_thres_px}, N={N}, plot={plot})'
-    )
-    start_time = time.time()
+
+
     """
     Calculate the zeropoint for photometry.
 
@@ -1212,16 +1135,13 @@ def get_zeropoint(df_catalog, flux, noise, coord, exptime, solar_filter=0.3,
         ax.legend(frameon=False)
         ax.set_ylim(-0.5, 0.5)
         plt.show()
-    logger.debug(
-        f'Función get_zeropoint completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return zp, ezp, n, min_mag, max_mag
 
 @hierarchical_debug(logger)
 def delete_header_from(header, val):
-    logger.debug(
-        f'Iniciando función delete_header_from(header={header}, val={val})')
-    start_time = time.time()
+
+
     """
     Delete a section from the FITS header.
 
@@ -1242,15 +1162,12 @@ def delete_header_from(header, val):
             idx = i - 1
     for i in range(len(header) - idx):
         del header[idx]
-    logger.debug(
-        f'Función delete_header_from completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return header
 
 @hierarchical_debug(logger)
 def sample_im(img, nc=50, ns=100):
-    logger.debug(f'Iniciando función sample_im(img={img}, nc={nc}, ns={ns})')
-    start_time = time.time()
+
     """
     Sample an image.
 
@@ -1288,15 +1205,12 @@ def sample_im(img, nc=50, ns=100):
     iac2 = np.asarray(lim)
     icmax2 = np.asarray(cmax)
     iac2 = iac2.reshape(-1, 512, 512, 1)
-    logger.debug(
-        f'Función sample_im completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return iac2, icmax2
 
 @hierarchical_debug(logger)
 def pred_mof(pred):
-    logger.debug(f'Iniciando función pred_mof(pred={pred})')
-    start_time = time.time()
+
     """
     Predict Moffat parameters.
 
@@ -1314,15 +1228,12 @@ def pred_mof(pred):
     beta = pred[:, 0] * 0.4 + 4.565
     nstar = pred[:, 2] * 200
     fwhm = 2 * alpha * np.sqrt(2 ** (1 / beta) - 1)
-    logger.debug(
-        f'Función pred_mof completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return alpha, beta, nstar, fwhm
 
 @hierarchical_debug(logger)
 def handler(signum, frame):
-    logger.debug(f'Iniciando función handler(signum={signum}, frame={frame})')
-    start_time = time.time()
+
     """
     Timeout handler for astrometry.
 
@@ -1334,15 +1245,12 @@ def handler(signum, frame):
         Stack frame.
     """
     logger.error('Astrometrization timeout!')
-    logger.debug(
-        f'Función handler completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     raise Exception('end of time')
 
 @hierarchical_debug(logger)
 def sigma_clip(img, sclip):
-    logger.debug(f'Iniciando función sigma_clip(img={img}, sclip={sclip})')
-    start_time = time.time()
+
     img0 = img.copy()
     for i in range(5):
         imed = cp.nanmean(img0)
@@ -1350,15 +1258,12 @@ def sigma_clip(img, sclip):
         img0[img0 >= imed + sclip * rms] = cp.nan
         img0[img0 <= imed - sclip * rms] = cp.nan
     del img0
-    logger.debug(
-        f'Función sigma_clip completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return imed, rms
 
 @hierarchical_debug(logger)
 def gen_gauss_filter(fw):
-    logger.debug(f'Iniciando función gen_gauss_filter(fw={fw})')
-    start_time = time.time()
+
     sigma_r = fw / (2.0 * np.sqrt(2.0 * np.log(2.0)))
     sigma_r2 = sigma_r * sigma_r
     lk = np.ceil(sigma_r).astype(np.int16) * 4
@@ -1370,18 +1275,13 @@ def gen_gauss_filter(fw):
     ksum2 = cp.sum(ker * ker)
     n = k_dim[0] ** 2
     k_app = (ker - ksum / n) / (ksum2 - ksum * ksum / n)
-    logger.debug(
-        f'Función gen_gauss_filter completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return k_app, lk
 
 @hierarchical_debug(logger)
 def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
 =4, mincut=10, mem=cp.get_default_pinned_memory_pool()):
-    logger.debug(
-        f'Iniciando función detect_gpu(img={img}, sky={sky}, rms={rms}, sdet={sdet}, mode={mode}, fw={fw}, alpha={alpha}, beta={beta}, minpix={minpix}, mincut={mincut}, mem={mem})'
-    )
-    start_time = time.time()
+
     gf, lk = gen_gauss_filter(fw)
     g = convolve(img - sky, gf, origin=(0, 0))
     g1 = (g / rms > sdet).astype(cp.int32)
@@ -1415,31 +1315,24 @@ def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
                      ).transpose().reshape((-1, 5))
     df = pd.DataFrame(res, columns=['xcentroid', 'ycentroid', 'flux',
                                     'npix', 'elip'])
-    logger.debug(
-        f'Función detect_gpu completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return df, mask, mm
 
 @hierarchical_debug(logger)
 def get_peak_image(img, positions, aper_rad):
-    logger.debug(
-        f'Iniciando función get_peak_image(img={img}, positions={positions}, aper_rad={aper_rad})'
-    )
-    start_time = time.time()
+
+
     lk = 2 * aper_rad
     img_m = maximum_filter(img, size=lk)
     positions = cp.array(cp.round(positions)).astype(cp.int32)
     P = img_m[positions[:, 0], positions[:, 1]]
     del img_m, positions
-    logger.debug(
-        f'Función get_peak_image completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return P
 
 @hierarchical_debug(logger)
 def logodds_callback_100(logodds):
-    logger.debug(f'Iniciando función logodds_callback_100(logodds={logodds})')
-    start_time = time.time()
+
     """
     Callback function for astrometry.
 
@@ -1454,14 +1347,10 @@ def logodds_callback_100(logodds):
         Action to take (CONTINUE or STOP).
     """
     if (logodds[0] > 100.0) | (len(logodds) > 2):
-        logger.debug(
-            f'Función logodds_callback_100 completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-        )
+
         return astrometry.Action.STOP
     else:
-        logger.debug(
-            f'Función logodds_callback_100 completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-        )
+
         return astrometry.Action.CONTINUE
 
 
@@ -1478,13 +1367,11 @@ if __name__ == '__main__':
                     image_path = os.path.join(root, file)
                     try:
                         print(f'Processing {image_path}')
-                        start_time = time.time()
+
                         image_cp = cp.asarray(fits.getdata(image_path))
                         resul = SP_filter_cupy(image_cp)
                         end_time = time.time()
-                        print(
-                            f'Elapsed time for {file}: {end_time - start_time:.2f} seconds'
-                        )
+
                     except Exception as e:
                         print(f'Error processing {image_path}: {e}')
                         print('Traceback:')

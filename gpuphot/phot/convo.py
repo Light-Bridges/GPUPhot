@@ -9,9 +9,8 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def convolve_fft(image, kernel):
-    logger.debug(
-        f'Iniciando función convolve_fft(image={image}, kernel={kernel})')
-    start_time = time.time()
+
+
     """
     Perform convolution of an image with a kernel using FFT.
 
@@ -41,16 +40,13 @@ def convolve_fft(image, kernel):
     convolved = cp.fft.irfft2(F_convolved, s=new_image_shape)
     convolved = convolved[padding:padding + image_shape[0], padding:padding +
                                                                     image_shape[1]]
-    logger.debug(
-        f'Función convolve_fft completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return convolved
 
 @hierarchical_debug(logger)
 def get_mean_std(im_g, lk, std=True):
-    logger.debug(
-        f'Iniciando función get_mean_std(im_g={im_g}, lk={lk}, std={std})')
-    start_time = time.time()
+
+
     """
     Calculate the mean and standard deviation of an image using a Gaussian kernel.
 
@@ -76,15 +72,12 @@ def get_mean_std(im_g, lk, std=True):
     else:
         fot_m2 = None
     del k_app
-    logger.debug(
-        f'Función get_mean_std completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return fot_m, fot_m2
 
 @hierarchical_debug(logger)
 def gaussian_kernel(lk, sigma):
-    logger.debug(f'Iniciando función gaussian_kernel(lk={lk}, sigma={sigma})')
-    start_time = time.time()
+
     """
     Generate a Gaussian kernel.
 
@@ -106,16 +99,13 @@ def gaussian_kernel(lk, sigma):
     xx, yy = cp.meshgrid(x, y)
     kernel = cp.exp(-(xx ** 2 + yy ** 2) / (2 * sigma ** 2))
     del x, y, xx, yy
-    logger.debug(
-        f'Función gaussian_kernel completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return kernel / cp.sum(kernel)
 
 @hierarchical_debug(logger)
 def get_aper_kernel(radius, size=None):
-    logger.debug(
-        f'Iniciando función get_aper_kernel(radius={radius}, size={size})')
-    start_time = time.time()
+
+
     """
     Generate an aperture kernel.
 
@@ -138,15 +128,12 @@ def get_aper_kernel(radius, size=None):
     mask = (x - (size - 1) / 2) ** 2 + (y - (size - 1) / 2) ** 2 <= radius ** 2
     kernel[mask] = 1
     area = cp.sum(kernel)
-    logger.debug(
-        f'Función get_aper_kernel completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return kernel, area
 
 @hierarchical_debug(logger)
 def fill_image(image_shape):
-    logger.debug(f'Iniciando función fill_image(image_shape={image_shape})')
-    start_time = time.time()
+
     """
     Calculate the shape for zero-padding an image to the next power of 2.
 
@@ -163,16 +150,13 @@ def fill_image(image_shape):
     h, w = image_shape
     new_height = 2 ** int(np.ceil(np.log2(h)))
     new_width = 2 ** int(np.ceil(np.log2(w)))
-    logger.debug(
-        f'Función fill_image completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return new_height, new_width
 
 @hierarchical_debug(logger)
 def gen_apm_filter(lk, li=0, norm=True):
-    logger.debug(
-        f'Iniciando función gen_apm_filter(lk={lk}, li={li}, norm={norm})')
-    start_time = time.time()
+
+
     """
     Generate an aperture mask filter.
 
@@ -204,21 +188,16 @@ def gen_apm_filter(lk, li=0, norm=True):
         k_app[struc] = 0
     if norm:
         k_app = k_app / k_app.sum()
-    logger.debug(
-        f'Función gen_apm_filter completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return k_app
 
 @hierarchical_debug(logger)
 def batch_aper_kernel(radius):
-    logger.debug(f'Iniciando función batch_aper_kernel(radius={radius})')
-    start_time = time.time()
+
     kernel = cp.zeros((2 * radius[-1] + 1, 2 * radius[-1] + 1))
     y, x = cp.indices(kernel.shape)
     mask = (x - radius) ** 2 + (y - radius) ** 2 <= radius ** 2
     kernel[mask] = 1
     area = cp.sum(kernel)
-    logger.debug(
-        f'Función batch_aper_kernel completada. Tiempo transcurrido: {time.time() - start_time:.2f} segundos'
-    )
+
     return kernel, area
