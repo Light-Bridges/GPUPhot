@@ -3,7 +3,7 @@
 #
 # from astropy.io import fits
 #
-# from gpuphot.gpuphot.astrometry.utils import get_scale
+# from .....gpuphot.astrometry.utils import get_scale
 #
 #
 # class TestGetScale(unittest.TestCase):
