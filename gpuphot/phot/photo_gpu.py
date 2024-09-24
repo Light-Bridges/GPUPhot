@@ -1,6 +1,5 @@
-import time
 import gc
-import logging
+import gc
 import signal
 import time
 import traceback
@@ -18,22 +17,21 @@ from cupyx.scipy.ndimage import gaussian_filter, convolve, label, sum as nd_sum,
 from matplotlib import pyplot as plt
 from sklearn.linear_model import RANSACRegressor
 
-from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 from .background import get_local_background_fft
 from .catalog import cat_input_from_header, catalog_results, crossmatch_sources
 from .convo import fill_image, get_aper_kernel, convolve_fft, gen_apm_filter
 from .psf import detect_isolated_stars, create_star_dataset, get_eigen_psfs, project_all_stars_onto_eigenpsfs, \
     create_coeff_map, detect_sources_pca, recreate_normed_star, fit_moffat, detect_sources_kernel
 from ..astrometry.utils import get_if_header_already_post_processed
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 from ..stats.s_util import free_gpu_mem
 from ..utils.astro import plate_scale_px
 
-
 logger = setup_logger(__name__)
+
 
 @hierarchical_debug(logger)
 def get_solver():
-
     """
     Get the astrometry solver with index files.
 
@@ -53,9 +51,9 @@ def get_solver():
 
     return solver
 
+
 @hierarchical_debug(logger)
 def init_gpu():
-
     logger.debug('Tensorflow version ' + tf.__version__)
     gpus = tf.config.list_physical_devices('GPU')
     logger.debug('GPUs:', gpus)
@@ -65,8 +63,6 @@ def init_gpu():
 
 @hierarchical_debug(logger)
 def get_detections(model_mo, im, det=2, gain=1.024, rdnoise=2.3, scale=0.21):
-
-
     """
     Detect sources in an image using a model.
 
@@ -110,11 +106,10 @@ def get_detections(model_mo, im, det=2, gain=1.024, rdnoise=2.3, scale=0.21):
 
     return dfm, sky, rms, fw, efw, 2 * lk + 1
 
+
 @hierarchical_debug(logger)
 def daofind_gpu_fast(img, sky, rms, sdet, mode='g', fw=0, alpha=0, beta=0,
                      mem=cp.get_default_pinned_memory_pool()):
-
-
     """
     Detect sources in an image using DAOFind algorithm on GPU.
 
@@ -188,9 +183,9 @@ def daofind_gpu_fast(img, sky, rms, sdet, mode='g', fw=0, alpha=0, beta=0,
 
     return df, lk
 
+
 @hierarchical_debug(logger)
 def gen_ap_filter(lk):
-
     """
     Generate an aperture filter.
 
@@ -214,10 +209,9 @@ def gen_ap_filter(lk):
 
     return k_app
 
+
 @hierarchical_debug(logger)
 def gen_moff_filter(alpha, beta):
-
-
     """
     Generate a Moffat filter.
 
@@ -247,10 +241,9 @@ def gen_moff_filter(alpha, beta):
 
     return k_app, lk
 
+
 @hierarchical_debug(logger)
 def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool()):
-
-
     """
     Estimate the sky background and RMS noise.
 
@@ -288,11 +281,10 @@ def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool()):
 
     return fot_m, fot_m2, mm
 
+
 @hierarchical_debug(logger)
 def SP_filter_cupy(img, filter_size=3, high_threshold_factor=10,
                    low_threshold_factor=5, scaling_factor=1.4826):
-
-
     """
     Apply a median filter to remove salt-and-pepper noise.
 
@@ -325,10 +317,9 @@ def SP_filter_cupy(img, filter_size=3, high_threshold_factor=10,
 
     return img
 
+
 @hierarchical_debug(logger)
 def gen_moff_filter2(alpha, beta):
-
-
     """
     Generate a Moffat filter with adjusted alpha.
 
@@ -357,11 +348,10 @@ def gen_moff_filter2(alpha, beta):
 
     return k_app, lk
 
+
 @hierarchical_debug(logger)
 def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, tile_section=3000, color_range=0.3,
                       SP_filt=True, pca_method=True, border=50, CR_filt=False):
-
-
     """
     Process an astronomical image.
 
@@ -589,11 +579,10 @@ def process_image_new(imdata, imheader, center_factor=0.5, ks=2, astrom=False, t
 
         return df_phot, imheader, dic_calib
 
+
 @hierarchical_debug(logger)
 def perform_opt_photometry(img, back, conv_ima_sigma, source_coord,
                            isolated_coord, imheader, labels=None, center_factor=1):
-
-
     """
     Perform optimal photometry on detected sources.
 
@@ -747,10 +736,9 @@ def perform_opt_photometry(img, back, conv_ima_sigma, source_coord,
 
     return opt_flux.get(), opt_noise.get(), source_coord.get(), pov0
 
+
 @hierarchical_debug(logger)
 def batch_aperture_photometry(img, back, positions, radii):
-
-
     """
     Perform aperture photometry in batch mode.
 
@@ -798,10 +786,10 @@ def batch_aperture_photometry(img, back, positions, radii):
 
     return flux, back_flux, area
 
+
 @hierarchical_debug(logger)
 def get_raw_photometry(imdata, imheader, aperture_rad_asec=None, astrom=
 True, SP_filt=True, ks=2):
-
     """
     Get raw photometry for an astronomical image.
 
@@ -899,10 +887,9 @@ True, SP_filt=True, ks=2):
 
     return df_phot
 
+
 @hierarchical_debug(logger)
 def aperture_photometry(img, positions, aper_rad):
-
-
     """
     Perform aperture photometry.
 
@@ -928,10 +915,9 @@ def aperture_photometry(img, positions, aper_rad):
 
     return flux, area
 
+
 @hierarchical_debug(logger)
 def get_fwhm_mof(model, img, step=50, ns=25, mins=3):
-
-
     """
     Get the full width at half maximum using Moffat model.
 
@@ -960,9 +946,9 @@ def get_fwhm_mof(model, img, step=50, ns=25, mins=3):
 
     return np.mean(fws), np.std(fws), np.mean(alpha), np.mean(beta)
 
+
 @hierarchical_debug(logger)
 def cov_nan(img, nc=10):
-
     """
     Fill NaN values in an image using convolution.
 
@@ -989,10 +975,9 @@ def cov_nan(img, nc=10):
 
     return img
 
+
 @hierarchical_debug(logger)
 def astrometrice2(dfm, head0, im_shape):
-
-
     """
     Perform astrometry on an image.
 
@@ -1034,11 +1019,10 @@ def astrometrice2(dfm, head0, im_shape):
 
     return None
 
+
 @hierarchical_debug(logger)
 def get_zeropoint(df_catalog, flux, noise, coord, exptime, solar_filter=0.3,
                   dist_thres_px=3, N=50, plot=False):
-
-
     """
     Calculate the zeropoint for photometry.
 
@@ -1138,10 +1122,9 @@ def get_zeropoint(df_catalog, flux, noise, coord, exptime, solar_filter=0.3,
 
     return zp, ezp, n, min_mag, max_mag
 
+
 @hierarchical_debug(logger)
 def delete_header_from(header, val):
-
-
     """
     Delete a section from the FITS header.
 
@@ -1165,9 +1148,9 @@ def delete_header_from(header, val):
 
     return header
 
+
 @hierarchical_debug(logger)
 def sample_im(img, nc=50, ns=100):
-
     """
     Sample an image.
 
@@ -1208,9 +1191,9 @@ def sample_im(img, nc=50, ns=100):
 
     return iac2, icmax2
 
+
 @hierarchical_debug(logger)
 def pred_mof(pred):
-
     """
     Predict Moffat parameters.
 
@@ -1231,9 +1214,9 @@ def pred_mof(pred):
 
     return alpha, beta, nstar, fwhm
 
+
 @hierarchical_debug(logger)
 def handler(signum, frame):
-
     """
     Timeout handler for astrometry.
 
@@ -1248,9 +1231,9 @@ def handler(signum, frame):
 
     raise Exception('end of time')
 
+
 @hierarchical_debug(logger)
 def sigma_clip(img, sclip):
-
     img0 = img.copy()
     for i in range(5):
         imed = cp.nanmean(img0)
@@ -1261,9 +1244,9 @@ def sigma_clip(img, sclip):
 
     return imed, rms
 
+
 @hierarchical_debug(logger)
 def gen_gauss_filter(fw):
-
     sigma_r = fw / (2.0 * np.sqrt(2.0 * np.log(2.0)))
     sigma_r2 = sigma_r * sigma_r
     lk = np.ceil(sigma_r).astype(np.int16) * 4
@@ -1278,10 +1261,10 @@ def gen_gauss_filter(fw):
 
     return k_app, lk
 
+
 @hierarchical_debug(logger)
 def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
 =4, mincut=10, mem=cp.get_default_pinned_memory_pool()):
-
     gf, lk = gen_gauss_filter(fw)
     g = convolve(img - sky, gf, origin=(0, 0))
     g1 = (g / rms > sdet).astype(cp.int32)
@@ -1318,10 +1301,9 @@ def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
 
     return df, mask, mm
 
+
 @hierarchical_debug(logger)
 def get_peak_image(img, positions, aper_rad):
-
-
     lk = 2 * aper_rad
     img_m = maximum_filter(img, size=lk)
     positions = cp.array(cp.round(positions)).astype(cp.int32)
@@ -1330,9 +1312,9 @@ def get_peak_image(img, positions, aper_rad):
 
     return P
 
+
 @hierarchical_debug(logger)
 def logodds_callback_100(logodds):
-
     """
     Callback function for astrometry.
 

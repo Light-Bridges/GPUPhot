@@ -1,4 +1,3 @@
-import logging
 import os
 import signal
 import unittest
@@ -6,10 +5,9 @@ import unittest
 import numpy as np
 from astropy.io import fits
 
+from ...utils_tests import get_tests_data_path
 from .....gpuphot.logger.hierarchical_logging import setup_logger, hierarchical_debug
 from .....gpuphot.phot.photo_gpu import process_image_new
-
-from ...utils_tests import get_tests_data_path
 
 logger = setup_logger(__name__)
 

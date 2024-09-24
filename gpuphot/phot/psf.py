@@ -1,18 +1,14 @@
-import logging
-import time
-
-
-import logging
 import cupy as cp
 import numpy as np
 from cupyx.scipy.ndimage import minimum_filter, label, sum as nd_sum, laplace, gaussian_filter
 from lmfit import Model
 from scipy.spatial import KDTree
 from sklearn.decomposition import PCA
+
 from .convo import gaussian_kernel, convolve_fft
 from .utils import decompose_into_tiles, recompose_from_percentiles, fill_nan_fft, calculate_tile_nanmean
-
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+
 logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)

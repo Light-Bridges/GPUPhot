@@ -1,27 +1,22 @@
-import logging
-import time
-
-from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
-logger = setup_logger(__name__)
 """
 Port of Manuel Guizar's code from:
 http://www.mathworks.com/matlabcentral/fileexchange/18401-efficient-subpixel-image-registration-by-cross-correlation
 Cupyfication from skimage/registration/_phase_cross_correlation.py
 """
-import logging
 import cupy as cp
 import numpy as np
 from cupy.fft import fftn, ifftn, fftfreq
+
 from .subpixel_masked import _masked_phase_cross_correlation
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 
 logger = setup_logger(__name__)
+
 
 @hierarchical_debug(logger)
 def phase_cross_correlation(reference_image, moving_image, *,
                             upsample_factor=1, space='real', return_error=True, reference_mask=None,
                             moving_mask=None, overlap_ratio=0.3, normalization='phase'):
-
-
     """
     Efficient subpixel image translation registration by cross-correlation.
     This code gives the same precision as the FFT upsampled cross-correlation
@@ -84,11 +79,9 @@ def phase_cross_correlation(reference_image, moving_image, *,
     .. [6] D. Padfield. "Masked FFT registration". In Proc. Computer Vision and Pattern Recognition, pp. 2918-2925 (2010). :DOI:`10.1109/CVPR.2010.5540032`
     """
     if reference_mask is not None or moving_mask is not None:
-
         return _masked_phase_cross_correlation(reference_image,
                                                moving_image, reference_mask, moving_mask, overlap_ratio), 0, 0
     if reference_image.shape != moving_image.shape:
-
         raise ValueError('images must be same shape')
     if space.lower() == 'fourier':
         src_freq = reference_image
@@ -157,11 +150,10 @@ def phase_cross_correlation(reference_image, moving_image, *,
 
         return shifts, 0, 0
 
+
 @hierarchical_debug(logger)
 def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
                    axis_offsets=None):
-
-
     """
     Upsampled DFT by matrix multiplication.
     This code is intended to provide the same result as if the following
@@ -210,10 +202,9 @@ def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
 
     return data
 
+
 @hierarchical_debug(logger)
 def _compute_error(cross_correlation_max, src_amp, target_amp):
-
-
     """
     Compute RMS error metric between ``src_image`` and ``target_image``.
     Parameters
@@ -234,10 +225,9 @@ def _compute_error(cross_correlation_max, src_amp, target_amp):
 
     return cp.sqrt(np.abs(error))
 
+
 @hierarchical_debug(logger)
 def _compute_phasediff(cross_correlation_max):
-
-
     """
     Compute global phase difference between the two images (should be zero if images are non-negative).
     Parameters

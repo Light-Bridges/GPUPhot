@@ -1,6 +1,3 @@
-import logging
-import time
-
 import numpy as np
 import pandas as pd
 from astropy import units as u
@@ -9,6 +6,7 @@ from astroquery.vizier import Vizier
 from scipy.spatial import KDTree
 
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+
 logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)

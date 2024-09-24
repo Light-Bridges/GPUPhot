@@ -1,6 +1,3 @@
-import logging
-import time
-
 """
 Implementation of the masked normalized cross-correlation.
 Based on the following publication:
@@ -9,14 +6,14 @@ IEEE Transactions on Image Processing (2012)
 and the author's original MATLAB implementation, available on this website:
 http://www.dirkpadfield.com/
 """
-import logging
 from functools import partial
+
 import cupy as cp
 from cupyx.scipy import fft as fftmodule
 from cupyx.scipy.fft import next_fast_len
 
-
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+
 logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)

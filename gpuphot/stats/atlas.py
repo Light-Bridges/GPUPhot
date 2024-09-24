@@ -1,6 +1,4 @@
 import gc
-import logging
-import time
 
 import cupy as cp
 import numpy as np
@@ -9,10 +7,10 @@ from astropy.io import fits
 from cupyx.scipy.ndimage import shift
 from skimage.transform._warps_cy import _warp_fast
 
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 from ..stats.reduction import center
 from ..stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
 
-from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
