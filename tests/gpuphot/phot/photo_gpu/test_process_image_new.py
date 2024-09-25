@@ -1,22 +1,29 @@
 import os
 import signal
+# from ...utils_tests import get_tests_data_path
+# from gpuphot.logger.hierarchical_logging import setup_logger, hierarchical_debug
+# from gpuphot.phot.photo_gpu import process_image_new
+# from gpuphot.stats.s_util import free_gpu_mem
 import unittest
 
 import numpy as np
 from astropy.io import fits
 
-from ...utils_tests import get_tests_data_path
-from .....gpuphot.logger.hierarchical_logging import setup_logger, hierarchical_debug
-from .....gpuphot.phot.photo_gpu import process_image_new
-from .....gpuphot.stats.s_util import free_gpu_mem
+from gpuphot.logger.hierarchical_logging import hierarchical_debug, setup_logger
+from gpuphot.phot.photo_gpu import process_image_new
+from gpuphot.stats.s_util import free_gpu_mem
+from tests.gpuphot.utils_tests import get_tests_data_path
 
 logger = setup_logger(__name__)
 
 
-# import tensorflow as tf
+class TimeoutError(Exception):
+    pass
+
+
 @hierarchical_debug(logger)
 def timeout_handler(signum, frame):
-    raise TimeoutError
+    raise TimeoutError("El tiempo límite del test ha sido excedido.")
 
 
 class TestProcess_image_new(unittest.TestCase):
@@ -25,7 +32,7 @@ class TestProcess_image_new(unittest.TestCase):
                           SP_filt=True,
                           pca_method=True, CR_filt=False):
         signal.signal(signal.SIGALRM, timeout_handler)
-        timeout_duration = 240
+        timeout_duration = 10
         signal.alarm(timeout_duration)
 
         try:
@@ -33,8 +40,8 @@ class TestProcess_image_new(unittest.TestCase):
                                                   border=border, tile_section=tile_section, SP_filt=SP_filt,
                                                   pca_method=pca_method, CR_filt=CR_filt)
 
-        except TimeoutError:
-            print("Function call timed out")
+        except TimeoutError as e:
+            logger.error(e)
             df_phot = None
         finally:
             signal.alarm(0)
@@ -42,7 +49,7 @@ class TestProcess_image_new(unittest.TestCase):
         return df_phot, imheader
 
     def _task_caller(self, reduced_path):
-        print(f"Processing {reduced_path}")
+        logger.info(f"Processing {reduced_path}")
 
         im = fits.getdata(reduced_path).astype(np.float32)
         headers = fits.getheader(reduced_path)
@@ -73,9 +80,9 @@ class TestProcess_image_new(unittest.TestCase):
 
     def test_raw_1(self):
 
-        directory_path = os.path.join(get_tests_data_path(), 'red')
+        directory_path = os.path.join(get_tests_data_path())
 
-        print(f'Root folder: {directory_path}')
+        logger.info(f'Root folder: {directory_path}')
         for (root, dirs, files) in os.walk(directory_path):
             for file in files:
                 if file.endswith('.fits'):

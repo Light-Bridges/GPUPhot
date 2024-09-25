@@ -2,7 +2,7 @@
 # import unittest
 #
 # from astropy.io import fits
-# from .....gpuphot.astrometry.utils import get_ccw
+# from gpuphot.astrometry.utils import get_ccw
 #
 #
 # class TestGet_ccw(unittest.TestCase):

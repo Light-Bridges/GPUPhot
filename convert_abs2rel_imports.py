@@ -1,6 +1,10 @@
 import ast
 import os
 
+from gpuphot.logger.hierarchical_logging import hierarchical_debug, setup_logger
+
+logger = setup_logger(__name__)
+
 
 class ImportTransformer(ast.NodeTransformer):
     """
@@ -31,6 +35,7 @@ class ImportTransformer(ast.NodeTransformer):
         module_path = os.path.relpath(self.module_path, start=self.project_root)
         return os.path.splitext(module_path)[0].replace(os.path.sep, '.')
 
+
 @hierarchical_debug(logger)
 def transform_imports_in_file(file_path):
     """
@@ -42,6 +47,7 @@ def transform_imports_in_file(file_path):
     transformed_tree = transformer.visit(tree)
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(ast.unparse(transformed_tree))
+
 
 @hierarchical_debug(logger)
 def transform_imports_in_directory(directory, exclude_dirs=None):

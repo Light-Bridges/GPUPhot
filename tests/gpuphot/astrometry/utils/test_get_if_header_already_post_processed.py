@@ -3,7 +3,7 @@ import unittest
 
 from astropy.io import fits
 
-from .....gpuphot.astrometry.utils import get_if_header_already_post_processed
+from gpuphot.astrometry.utils import get_if_header_already_post_processed
 
 
 class TestGetIfHeaderAlreadyPostProcessed(unittest.TestCase):

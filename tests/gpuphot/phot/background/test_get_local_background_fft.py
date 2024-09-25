@@ -4,7 +4,7 @@ import unittest
 import cupy as cp
 from astropy.io import fits
 
-from .....gpuphot.phot.background import get_local_background_fft
+from gpuphot.phot.background import get_local_background_fft
 
 
 class TestGetLocalBackgroundFFT(unittest.TestCase):

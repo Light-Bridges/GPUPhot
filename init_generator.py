@@ -43,8 +43,8 @@ def create_init_files_with_imports(project_root):
 
         # Crear o sobrescribir el archivo __init__.py con el contenido generado
         print(f'Creando {init_file} con el contenido:\n{init_content}\n')
-        with open(init_file, 'w') as f:
-            f.write(init_content)
+        # with open(init_file, 'w') as f:
+        #     f.write(init_content)
 
 if __name__ == "__main__":
     # Obtén la ruta del directorio actual donde está ubicado el script
