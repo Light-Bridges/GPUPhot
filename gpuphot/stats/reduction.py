@@ -29,10 +29,14 @@ def center(im, size):
     """
     if im.shape[0] > size:
         c0 = int((im.shape[0] - size) / 2)
+    else:
+        c0 = 0
     if im.shape[1] > size:
         c1 = int((im.shape[1] - size) / 2)
+    else:
+        c1 = 0
+    return im[c0:-c0, c1:-c1]
 
-    return cp.asarray(im[c0:-c0, c1:-c1])
 
 @hierarchical_debug(logger)
 def register_shift(fc, uf=100, n=1000):
