@@ -10,8 +10,19 @@ def test_cupy():
             print(f"\nGPU {i}:")
             print(f"  Nombre: {device['name'].decode('utf-8')}")
             print(f"  Memoria total: {device['totalGlobalMem'] / (1024 ** 3):.2f} GB")
-            print(f"  Capacidad de cómputo: {device['computeCapabilityMajor']}.{device['computeCapabilityMinor']}")
-            print(f"  Núcleos CUDA: {device['multiProcessorCount'] * 64}")
+
+            # Manejo más seguro de las propiedades de capacidad de cómputo
+            compute_capability = device.get('computeCapability', 'No disponible')
+            if isinstance(compute_capability, tuple) and len(compute_capability) == 2:
+                print(f"  Capacidad de cómputo: {compute_capability[0]}.{compute_capability[1]}")
+            else:
+                print(f"  Capacidad de cómputo: {compute_capability}")
+
+            # Cálculo de núcleos CUDA si la información está disponible
+            if 'multiProcessorCount' in device:
+                print(f"  Núcleos CUDA: {device['multiProcessorCount'] * 64}")
+            else:
+                print("  Núcleos CUDA: Información no disponible")
 
         # Operación básica con cupy
         a = cp.array([1, 2, 3])
