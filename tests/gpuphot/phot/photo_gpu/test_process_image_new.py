@@ -1,18 +1,18 @@
 import os
 import signal
 # from ...utils_tests import get_tests_data_path
-# from gpuphot.logger.hierarchical_logging import setup_logger, hierarchical_debug
-# from gpuphot.phot.photo_gpu import process_image_new
-# from gpuphot.stats.s_util import free_gpu_mem
+# from .....gpuphot.logger.hierarchical_logging import setup_logger, hierarchical_debug
+# from .....gpuphot.phot.photo_gpu import process_image_new
+# from .....gpuphot.stats.s_util import free_gpu_mem
 import unittest
 
 import numpy as np
 from astropy.io import fits
 
-from gpuphot.logger.hierarchical_logging import hierarchical_debug, setup_logger
-from gpuphot.phot.photo_gpu import process_image_new
-from gpuphot.stats.s_util import free_gpu_mem
-from tests.gpuphot.utils_tests import get_tests_data_path
+from .....gpuphot.logger.hierarchical_logging import hierarchical_debug, setup_logger
+from .....gpuphot.phot.photo_gpu import process_image_new
+from .....gpuphot.stats.s_util import free_gpu_mem
+from .....tests.gpuphot.utils_tests import get_tests_data_path
 
 logger = setup_logger(__name__)
 

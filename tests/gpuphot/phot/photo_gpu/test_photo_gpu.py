@@ -8,10 +8,10 @@ from unittest import TestCase
 import numpy as np
 from astropy.io import fits
 
-from gpuphot.logger.hierarchical_logging import setup_logger
-from gpuphot.phot.photo_gpu import get_detections, init_gpu
-from gpuphot.stats.s_util import free_gpu_mem
-from gpuphot.utils.astro import plate_scale_px
+from .....gpuphot.logger.hierarchical_logging import setup_logger
+from .....gpuphot.phot.photo_gpu import get_detections, init_gpu
+from .....gpuphot.stats.s_util import free_gpu_mem
+from .....gpuphot.utils.astro import plate_scale_px
 
 # from tensorflow.python.keras.models import load_model
 
