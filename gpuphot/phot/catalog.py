@@ -171,26 +171,16 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def crossmatch_sources(source_coords, ref_coords, thres_px=2):
-    """
-    Cross-match source coordinates with reference coordinates.
+    """Cross-match source coordinates with reference coordinates.
 
-    Parameters
-    ----------
-    source_coords : ndarray
-        Coordinates of the sources.
-    ref_coords : ndarray
-        Coordinates of the reference catalog.
-    thres_px : float, optional
-        Threshold distance in pixels for matching, by default 2.
+    :param source_coords: Coordinates of the sources.
+    :type source_coords: ndarray
+    :param ref_coords: Coordinates of the reference catalog.
+    :type ref_coords: ndarray
+    :param thres_px: Threshold distance in pixels for matching, by default 2.
+    :type thres_px: float, optional
 
-    Returns
-    -------
-    tuple
-        (source_coords_matched_idx, ref_coords_matched_idx) where:
-        - source_coords_matched_idx : ndarray
-            Indices of matched source coordinates.
-        - ref_coords_matched_idx : ndarray
-            Indices of matched reference coordinates.
+    
     """
     tree = KDTree(ref_coords)
     dist, idx = tree.query(source_coords, k=1)

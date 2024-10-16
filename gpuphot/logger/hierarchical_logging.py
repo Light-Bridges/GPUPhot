@@ -24,13 +24,22 @@ class IndentFormatter(logging.Formatter):
         self.indent_levels = {}
 
     def format(self, record):
+        """
+
+        :param record: 
+
+        """
         thread_id = threading.get_ident()
         indent = self.indent_levels.get(thread_id, 0)
         record.indent = '  ' * indent
         return super().format(record)
 
 def format_arg(arg):
-    """Format function arguments for logging."""
+    """Format function arguments for logging.
+
+    :param arg: 
+
+    """
     if isinstance(arg, (np.ndarray, cp.ndarray)):
         return f"{type(arg).__name__}(shape={arg.shape}, dtype={arg.dtype})"
     elif isinstance(arg, (list, tuple)):
@@ -51,10 +60,25 @@ def format_arg(arg):
         return f"{arg!r}:{type(arg).__name__}"
 
 def hierarchical_debug(logger):
-    """Decorator for hierarchical debugging and exception handling."""
+    """Decorator for hierarchical debugging and exception handling.
+
+    :param logger: 
+
+    """
     def decorator(func):
+        """
+
+        :param func: 
+
+        """
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            """
+
+            :param *args: 
+            :param **kwargs: 
+
+            """
             thread_id = threading.get_ident()
             indent_levels = logger.handlers[0].formatter.indent_levels
             current_level = indent_levels.get(thread_id, 0)
@@ -102,7 +126,11 @@ def hierarchical_debug(logger):
     return decorator
 
 def setup_logstash_handler(logger):
-    """Set up Logstash handler if environment variables are set."""
+    """Set up Logstash handler if environment variables are set.
+
+    :param logger: 
+
+    """
     logstash_host = os.environ.get('LOGSTASH_HOST')
     logstash_port = os.environ.get('LOGSTASH_PORT', 5000)
 
@@ -123,7 +151,11 @@ def setup_logstash_handler(logger):
         logger.addHandler(logstash_handler)
 
 def setup_logger(name):
-    """Set up logger with custom formatter and Logstash handler."""
+    """Set up logger with custom formatter and Logstash handler.
+
+    :param name: 
+
+    """
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 
@@ -143,6 +175,12 @@ if __name__ == "__main__":
 
     @hierarchical_debug(logger)
     def example_function(a, b):
+        """
+
+        :param a: param b:
+        :param b: 
+
+        """
         return a / b
 
     try:

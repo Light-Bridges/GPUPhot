@@ -9,20 +9,14 @@ logger = setup_logger(__name__)
 def convolve_fft(image, kernel):
 
 
-    """
-    Perform convolution of an image with a kernel using FFT.
+    """Perform convolution of an image with a kernel using FFT.
 
-    Parameters
-    ----------
-    image : ndarray
-        Input image.
-    kernel : ndarray
-        Convolution kernel.
+    :param image: Input image.
+    :type image: ndarray
+    :param kernel: Convolution kernel.
+    :type kernel: ndarray
 
-    Returns
-    -------
-    ndarray
-        Convolved image.
+    
     """
     image_shape = image.shape
     kernel_shape = kernel.shape
@@ -45,22 +39,16 @@ def convolve_fft(image, kernel):
 def get_mean_std(im_g, lk, std=True):
 
 
-    """
-    Calculate the mean and standard deviation of an image using a Gaussian kernel.
+    """Calculate the mean and standard deviation of an image using a Gaussian kernel.
 
-    Parameters
-    ----------
-    im_g : ndarray
-        Input image.
-    lk : int
-        Kernel size.
-    std : bool, optional
-        If True, calculate the standard deviation, by default True.
+    :param im_g: Input image.
+    :type im_g: ndarray
+    :param lk: Kernel size.
+    :type lk: int
+    :param std: If True, calculate the standard deviation, by default True.
+    :type std: bool, optional
 
-    Returns
-    -------
-    tuple
-        (mean, std) where mean is the mean image and std is the standard deviation image.
+    
     """
     k_app = gen_apm_filter(lk)
     fot_m = convolve_fft(im_g, k_app)
@@ -76,20 +64,14 @@ def get_mean_std(im_g, lk, std=True):
 @hierarchical_debug(logger)
 def gaussian_kernel(lk, sigma):
 
-    """
-    Generate a Gaussian kernel.
+    """Generate a Gaussian kernel.
 
-    Parameters
-    ----------
-    lk : int
-        Kernel size.
-    sigma : float
-        Standard deviation of the Gaussian.
+    :param lk: Kernel size.
+    :type lk: int
+    :param sigma: Standard deviation of the Gaussian.
+    :type sigma: float
 
-    Returns
-    -------
-    ndarray
-        Gaussian kernel.
+    
     """
     k_dim = 2 * lk + 1, 2 * lk + 1
     x = cp.linspace(-lk, lk, k_dim[0])
@@ -104,20 +86,14 @@ def gaussian_kernel(lk, sigma):
 def get_aper_kernel(radius, size=None):
 
 
-    """
-    Generate an aperture kernel.
+    """Generate an aperture kernel.
 
-    Parameters
-    ----------
-    radius : int
-        Radius of the aperture.
-    size : int, optional
-        Size of the kernel, by default None.
+    :param radius: Radius of the aperture.
+    :type radius: int
+    :param size: Size of the kernel, by default None.
+    :type size: int, optional
 
-    Returns
-    -------
-    tuple
-        (kernel, area) where kernel is the aperture kernel and area is the area of the aperture.
+    
     """
     if size is None:
         size = 2 * radius + 1
@@ -132,18 +108,12 @@ def get_aper_kernel(radius, size=None):
 @hierarchical_debug(logger)
 def fill_image(image_shape):
 
-    """
-    Calculate the shape for zero-padding an image to the next power of 2.
+    """Calculate the shape for zero-padding an image to the next power of 2.
 
-    Parameters
-    ----------
-    image_shape : tuple of int
-        Shape of the input image.
+    :param image_shape: Shape of the input image.
+    :type image_shape: tuple of int
 
-    Returns
-    -------
-    tuple of int
-        Shape of the padded image.
+    
     """
     h, w = image_shape
     new_height = 2 ** int(np.ceil(np.log2(h)))
@@ -155,22 +125,16 @@ def fill_image(image_shape):
 def gen_apm_filter(lk, li=0, norm=True):
 
 
-    """
-    Generate an aperture mask filter.
+    """Generate an aperture mask filter.
 
-    Parameters
-    ----------
-    lk : int
-        Kernel size.
-    li : int, optional
-        Inner radius to exclude from the mask, by default 0.
-    norm : bool, optional
-        If True, normalize the kernel, by default True.
+    :param lk: Kernel size.
+    :type lk: int
+    :param li: Inner radius to exclude from the mask, by default 0.
+    :type li: int, optional
+    :param norm: If True, normalize the kernel, by default True.
+    :type norm: bool, optional
 
-    Returns
-    -------
-    ndarray
-        Aperture mask filter.
+    
     """
     k_dim = 2 * lk + 1, 2 * lk + 1
     indi = cp.indices(k_dim)
@@ -191,6 +155,11 @@ def gen_apm_filter(lk, li=0, norm=True):
 
 @hierarchical_debug(logger)
 def batch_aper_kernel(radius):
+    """
+
+    :param radius: 
+
+    """
 
     kernel = cp.zeros((2 * radius[-1] + 1, 2 * radius[-1] + 1))
     y, x = cp.indices(kernel.shape)

@@ -16,28 +16,22 @@ def detect_isolated_stars(img, rms, pxscale, sat_lim=50000, min_snr=10,
                           dist_asec=20):
 
 
-    """
-    Detect isolated stars in an image.
+    """Detect isolated stars in an image.
 
-    Parameters
-    ----------
-    img : ndarray
-        Input image.
-    rms : float
-        Root mean square noise level.
-    pxscale : float
-        Pixel scale in arcseconds per pixel.
-    sat_lim : int, optional
-        Saturation limit, by default 50000.
-    min_snr : float, optional
-        Minimum signal-to-noise ratio, by default 10.
-    dist_asec : float, optional
-        Minimum distance between stars in arcseconds, by default 20.
+    :param img: Input image.
+    :type img: ndarray
+    :param rms: Root mean square noise level.
+    :type rms: float
+    :param pxscale: Pixel scale in arcseconds per pixel.
+    :type pxscale: float
+    :param sat_lim: Saturation limit, by default 50000.
+    :type sat_lim: int, optional
+    :param min_snr: Minimum signal-to-noise ratio, by default 10.
+    :type min_snr: float, optional
+    :param dist_asec: Minimum distance between stars in arcseconds, by default 20.
+    :type dist_asec: float, optional
 
-    Returns
-    -------
-    ndarray
-        Coordinates of detected isolated stars.
+    
     """
     mempool = cp.get_default_memory_pool()
     dist_px = max(dist_asec / pxscale, 20)
@@ -85,29 +79,22 @@ def create_star_dataset(img, coords, pxscale, N=3000, CR_filter=False,
                         CR_thres=30):
 
 
-    """
-    Create a dataset of star images.
+    """Create a dataset of star images.
 
-    Parameters
-    ----------
-    img : ndarray
-        Input image.
-    coords : ndarray
-        Coordinates of stars.
-    pxscale : float
-        Pixel scale in arcseconds per pixel.
-    N : int, optional
-        Maximum number of stars to include in the dataset, by default 3000.
-    CR_filter : bool, optional
-        If True, apply cosmic ray filtering, by default False.
-    CR_thres : float, optional
-        Threshold for cosmic ray filtering, by default 30.
+    :param img: Input image.
+    :type img: ndarray
+    :param coords: Coordinates of stars.
+    :type coords: ndarray
+    :param pxscale: Pixel scale in arcseconds per pixel.
+    :type pxscale: float
+    :param N: Maximum number of stars to include in the dataset, by default 3000.
+    :type N: int, optional
+    :param CR_filter: If True, apply cosmic ray filtering, by default False.
+    :type CR_filter: bool, optional
+    :param CR_thres: Threshold for cosmic ray filtering, by default 30.
+    :type CR_thres: float, optional
 
-    Returns
-    -------
-    tuple
-        (star_dataset, coords, scaling_dataset) where star_dataset is the dataset of star images,
-        coords are the coordinates of the stars, and scaling_dataset contains scaling information.
+    
     """
     f = max(int(5 / pxscale), 6)
     n = max(int(1 / pxscale), 2)
@@ -150,20 +137,14 @@ def create_star_dataset(img, coords, pxscale, N=3000, CR_filter=False,
 def get_eigen_psfs(normed_star_dataset, n_components=5):
 
 
-    """
-    Calculate eigen PSFs using PCA.
+    """Calculate eigen PSFs using PCA.
 
-    Parameters
-    ----------
-    normed_star_dataset : ndarray
-        Normalized star dataset.
-    n_components : int, optional
-        Number of principal components, by default 5.
+    :param normed_star_dataset: Normalized star dataset.
+    :type normed_star_dataset: ndarray
+    :param n_components: Number of principal components, by default 5.
+    :type n_components: int, optional
 
-    Returns
-    -------
-    ndarray
-        Eigen PSFs.
+    
     """
     pca = PCA(n_components=n_components)
     eigen_psfs = pca.components_.reshape(-1, normed_star_dataset.shape[1],
@@ -175,20 +156,14 @@ def get_eigen_psfs(normed_star_dataset, n_components=5):
 def project_all_stars_onto_eigenpsfs(normed_star_dataset, eigen_psfs):
 
 
-    """
-    Project all stars onto eigen PSFs.
+    """Project all stars onto eigen PSFs.
 
-    Parameters
-    ----------
-    normed_star_dataset : ndarray
-        Normalized star dataset.
-    eigen_psfs : ndarray
-        Eigen PSFs.
+    :param normed_star_dataset: Normalized star dataset.
+    :type normed_star_dataset: ndarray
+    :param eigen_psfs: Eigen PSFs.
+    :type eigen_psfs: ndarray
 
-    Returns
-    -------
-    ndarray
-        Coefficients matrix.
+    
     """
     num_stars = normed_star_dataset.shape[0]
     flattened_star_dim = normed_star_dataset.shape[1
@@ -206,28 +181,22 @@ def create_coeff_map(img_shape, positions, coefficients, pxscale,
                      tile_section=None, smooth=False):
 
 
-    """
-    Create a coefficient map from image shape, positions, and coefficients.
+    """Create a coefficient map from image shape, positions, and coefficients.
 
-    Parameters
-    ----------
-    img_shape : tuple of int
-        Shape of the image.
-    positions : ndarray
-        Positions of the coefficients.
-    coefficients : ndarray
-        Coefficients for each position.
-    pxscale : float
-        Pixel scale in arcseconds per pixel.
-    tile_section : int, optional
-        Size of each tile section, by default None.
-    smooth : bool, optional
-        If True, apply Gaussian smoothing, by default False.
+    :param img_shape: Shape of the image.
+    :type img_shape: tuple of int
+    :param positions: Positions of the coefficients.
+    :type positions: ndarray
+    :param coefficients: Coefficients for each position.
+    :type coefficients: ndarray
+    :param pxscale: Pixel scale in arcseconds per pixel.
+    :type pxscale: float
+    :param tile_section: Size of each tile section, by default None.
+    :type tile_section: int, optional
+    :param smooth: If True, apply Gaussian smoothing, by default False.
+    :type smooth: bool, optional
 
-    Returns
-    -------
-    ndarray
-        Coefficient map.
+    
     """
     coeff_map = cp.nan * cp.ones((coefficients.shape[0], img_shape[0],
                                   img_shape[1]), dtype=cp.float32)
@@ -255,28 +224,22 @@ def create_coeff_map(img_shape, positions, coefficients, pxscale,
 def detect_sources_pca(img, rms, pxscale, eigen_psfs, coeff_map, min_snr=5):
 
 
-    """
-    Detect sources using PCA.
+    """Detect sources using PCA.
 
-    Parameters
-    ----------
-    img : ndarray
-        Input image.
-    rms : float
-        Root mean square noise level.
-    pxscale : float
-        Pixel scale in arcseconds per pixel.
-    eigen_psfs : ndarray
-        Eigen PSFs.
-    coeff_map : ndarray
-        Coefficient map.
-    min_snr : float, optional
-        Minimum signal-to-noise ratio, by default 5.
+    :param img: Input image.
+    :type img: ndarray
+    :param rms: Root mean square noise level.
+    :type rms: float
+    :param pxscale: Pixel scale in arcseconds per pixel.
+    :type pxscale: float
+    :param eigen_psfs: Eigen PSFs.
+    :type eigen_psfs: ndarray
+    :param coeff_map: Coefficient map.
+    :type coeff_map: ndarray
+    :param min_snr: Minimum signal-to-noise ratio, by default 5.
+    :type min_snr: float, optional
 
-    Returns
-    -------
-    tuple
-        (coordinates, conv_ima_sigma) where coordinates are the detected sources and conv_ima_sigma is the convolved image with PCA.
+    
     """
     mempool = cp.get_default_memory_pool()
     min_size = int(max(1 / pxscale, 2))
@@ -303,26 +266,20 @@ def detect_sources_pca(img, rms, pxscale, eigen_psfs, coeff_map, min_snr=5):
 def detect_sources_kernel(img, rms, kernel, pxscale, min_snr=5):
 
 
-    """
-    Detect sources using a convolution kernel.
+    """Detect sources using a convolution kernel.
 
-    Parameters
-    ----------
-    img : ndarray
-        Input image.
-    rms : float
-        Root mean square noise level.
-    kernel : ndarray
-        Convolution kernel.
-    pxscale : float
-        Pixel scale in arcseconds per pixel.
-    min_snr : float, optional
-        Minimum signal-to-noise ratio, by default 5.
+    :param img: Input image.
+    :type img: ndarray
+    :param rms: Root mean square noise level.
+    :type rms: float
+    :param kernel: Convolution kernel.
+    :type kernel: ndarray
+    :param pxscale: Pixel scale in arcseconds per pixel.
+    :type pxscale: float
+    :param min_snr: Minimum signal-to-noise ratio, by default 5.
+    :type min_snr: float, optional
 
-    Returns
-    -------
-    tuple
-        (coordinates, conv_sigma) where coordinates are the detected sources and conv_sigma is the convolved image.
+    
     """
     mempool = cp.get_default_memory_pool()
     min_size = int(max(1 / pxscale, 2))
@@ -344,22 +301,16 @@ def detect_sources_kernel(img, rms, kernel, pxscale, min_snr=5):
 @hierarchical_debug(logger)
 def recreate_normed_star(coeff_map, eigen_psfs, coords):
 
-    """
-    Recreate a normalized star from coefficients and eigen PSFs.
+    """Recreate a normalized star from coefficients and eigen PSFs.
 
-    Parameters
-    ----------
-    coeff_map : ndarray
-        Coefficient map.
-    eigen_psfs : ndarray
-        Eigen PSFs.
-    coords : tuple of int
-        Coordinates of the star.
+    :param coeff_map: Coefficient map.
+    :type coeff_map: ndarray
+    :param eigen_psfs: Eigen PSFs.
+    :type eigen_psfs: ndarray
+    :param coords: Coordinates of the star.
+    :type coords: tuple of int
 
-    Returns
-    -------
-    ndarray
-        Recreated star.
+    
     """
     x, y = coords
     coeff = coeff_map[:, y, x]
@@ -371,20 +322,12 @@ def recreate_normed_star(coeff_map, eigen_psfs, coords):
 @hierarchical_debug(logger)
 def fit_moffat(star_data):
 
-    """
-    Fit a Moffat profile to star data.
+    """Fit a Moffat profile to star data.
 
-    Parameters
-    ----------
-    star_data : ndarray
-        Image data of the star.
+    :param star_data: Image data of the star.
+    :type star_data: ndarray
 
-    Returns
-    -------
-    tuple
-        (r, Z, result, fwhm, fwhm_err) where r is the radial coordinate,
-        Z is the fitted Moffat profile, result is the fitting result,
-        fwhm is the full width at half maximum, and fwhm_err is the error in FWHM.
+    
     """
     ax, ay = np.meshgrid(np.arange(star_data.shape[1]), np.arange(star_data
                                                                   .shape[0]))
@@ -415,20 +358,14 @@ def fit_moffat(star_data):
 def filter_centroids_kdtree(centroids, min_distance):
 
 
-    """
-    Filter centroids based on a minimum distance using KDTree.
+    """Filter centroids based on a minimum distance using KDTree.
 
-    Parameters
-    ----------
-    centroids : ndarray
-        Array of centroids.
-    min_distance : float
-        Minimum distance between centroids.
+    :param centroids: Array of centroids.
+    :type centroids: ndarray
+    :param min_distance: Minimum distance between centroids.
+    :type min_distance: float
 
-    Returns
-    -------
-    ndarray
-        Filtered centroids.
+    
     """
     tree = KDTree(centroids)
     filtered = []
@@ -443,28 +380,22 @@ def filter_centroids_kdtree(centroids, min_distance):
 def moffat(r, A=1.0, r0=0.0, B=1.0, R=1.0):
 
 
-    """
-    Moffat function.
-
+    """Moffat function.
+    
     https://nbviewer.org/github/ysbach/AO_2017/blob/master/04_Ground_Based_Concept.ipynb#1.2.-Moffat
 
-    Parameters
-    ----------
-    r : ndarray
-        Radial coordinate.
-    A : float, optional
-        Amplitude, by default 1.
-    r0 : float, optional
-        Center, by default 0.
-    B : float, optional
-        Shape parameter, by default 1.
-    R : float, optional
-        Scale parameter, by default 1.
+    :param r: Radial coordinate.
+    :type r: ndarray
+    :param A: Amplitude, by default 1.
+    :type A: float, optional
+    :param r0: Center, by default 0.
+    :type r0: float, optional
+    :param B: Shape parameter, by default 1.
+    :type B: float, optional
+    :param R: Scale parameter, by default 1.
+    :type R: float, optional
 
-    Returns
-    -------
-    ndarray
-        Moffat function values.
+    
     """
 
     return A * (1 + ((r - r0) / R) ** 2) ** -B
@@ -473,24 +404,18 @@ def moffat(r, A=1.0, r0=0.0, B=1.0, R=1.0):
 def moffat_fwhm(R, B, R_err, B_err):
 
 
-    """
-    Calculate the full width at half maximum (FWHM) of a Moffat function.
+    """Calculate the full width at half maximum (FWHM) of a Moffat function.
 
-    Parameters
-    ----------
-    R : float
-        Scale parameter of the Moffat function.
-    B : float
-        Shape parameter of the Moffat function.
-    R_err : float
-        Error in the scale parameter.
-    B_err : float
-        Error in the shape parameter.
+    :param R: Scale parameter of the Moffat function.
+    :type R: float
+    :param B: Shape parameter of the Moffat function.
+    :type B: float
+    :param R_err: Error in the scale parameter.
+    :type R_err: float
+    :param B_err: Error in the shape parameter.
+    :type B_err: float
 
-    Returns
-    -------
-    tuple
-        (FWHM, FWHM_err) where FWHM is the full width at half maximum and FWHM_err is the error in FWHM.
+    
     """
     FWHM = 2 * R * np.sqrt(2 ** (1 / B) - 1)
     FWHM_err = 2 * R_err * np.sqrt(2 ** (1 / B) - 1) + 2 * R * B_err * (np.

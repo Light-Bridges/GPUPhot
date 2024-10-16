@@ -17,56 +17,48 @@ logger = setup_logger(__name__)
 def phase_cross_correlation(reference_image, moving_image, *,
                             upsample_factor=1, space='real', return_error=True, reference_mask=None,
                             moving_mask=None, overlap_ratio=0.3, normalization='phase'):
-    """
-    Efficient subpixel image translation registration by cross-correlation.
+    """Efficient subpixel image translation registration by cross-correlation.
     This code gives the same precision as the FFT upsampled cross-correlation
     in a fraction of the computation time and with reduced memory requirements.
     It obtains an initial estimate of the cross-correlation peak by an FFT and
     then refines the shift estimation by upsampling the DFT only in a small
     neighborhood of that estimate by means of a matrix-multiply DFT [1]_.
-    Parameters
-    ----------
-    reference_image : array
-        Reference image.
-    moving_image : array
-        Image to register. Must be same dimensionality as ``reference_image``.
-    upsample_factor : int, optional
-        Upsampling factor. Images will be registered to within ``1 / upsample_factor`` of a pixel.
+
+    :param reference_image: Reference image.
+    :type reference_image: array
+    :param moving_image: Image to register. Must be same dimensionality as ``reference_image``.
+    :type moving_image: array
+    :param upsample_factor: Upsampling factor. Images will be registered to within ``1 / upsample_factor`` of a pixel.
         Default is 1 (no upsampling). Not used if any of ``reference_mask`` or ``moving_mask`` is not None.
-    space : string, one of "real" or "fourier", optional
-        Defines how the algorithm interprets input data. "real" means data will be FFT'd to compute the correlation,
+    :type upsample_factor: int, optional
+    :param space: Defines how the algorithm interprets input data. "real" means data will be FFT'd to compute the correlation,
         while "fourier" data will bypass FFT of input data. Case insensitive. Not used if any of ``reference_mask``
-        or ``moving_mask`` is not None.
-    return_error : bool, optional
-        Returns error and phase difference if on, otherwise only shifts are returned.
-        Has no effect if any of ``reference_mask`` or ``moving_mask`` is not None. In this case only shifts are returned.
-    reference_mask : ndarray
-        Boolean mask for ``reference_image``. The mask should evaluate to ``True`` (or 1) on valid pixels.
-        ``reference_mask`` should have the same shape as ``reference_image``.
-    moving_mask : ndarray or None, optional
-        Boolean mask for ``moving_image``. The mask should evaluate to ``True`` (or 1) on valid pixels.
-        ``moving_mask`` should have the same shape as ``moving_image``. If ``None``, ``reference_mask`` will be used.
-    overlap_ratio : float, optional
-        Minimum allowed overlap ratio between images. The correlation for translations corresponding with an overlap
+        or ``moving_mask`` is not None. (Default value = 'real')
+    :type space: string, one of "real" or "fourier", optional
+    :param return_error: Returns error and phase difference if on, otherwise only shifts are returned.
+        Has no effect if any of ``reference_mask`` or ``moving_mask`` is not None. In this case only shifts are returned. (Default value = True)
+    :type return_error: bool, optional
+    :param reference_mask: Boolean mask for ``reference_image``. The mask should evaluate to ``True`` (or 1) on valid pixels.
+        ``reference_mask`` should have the same shape as ``reference_image``. (Default value = None)
+    :type reference_mask: ndarray
+    :param moving_mask: Boolean mask for ``moving_image``. The mask should evaluate to ``True`` (or 1) on valid pixels.
+        ``moving_mask`` should have the same shape as ``moving_image``. If ``None``, ``reference_mask`` will be used. (Default value = None)
+    :type moving_mask: ndarray or None, optional
+    :param overlap_ratio: Minimum allowed overlap ratio between images. The correlation for translations corresponding with an overlap
         ratio lower than this threshold will be ignored. A lower `overlap_ratio` leads to smaller maximum translation,
         while a higher `overlap_ratio` leads to greater robustness against spurious matches due to small overlap
-        between masked images. Used only if one of ``reference_mask`` or ``moving_mask`` is not None.
-    normalization : {"phase", None}
-        The type of normalization to apply to the cross-correlation. This parameter is unused when masks
-        (`reference_mask` and `moving_mask`) are supplied.
-    Returns
-    -------
-    shifts : ndarray
-        Shift vector (in pixels) required to register ``moving_image`` with ``reference_image``. Axis ordering is consistent with numpy (e.g. Z, Y, X)
-    error : float
-        Translation invariant normalized RMS error between ``reference_image`` and ``moving_image``.
-    phasediff : float
-        Global phase difference between the two images (should be zero if images are non-negative).
+        between masked images. Used only if one of ``reference_mask`` or ``moving_mask`` is not None. (Default value = 0.3)
+    :type overlap_ratio: float, optional
+    :param normalization: The type of normalization to apply to the cross-correlation. This parameter is unused when masks (Default value = 'phase')
+    :type normalization: {"phase", None}
+    :param *: 
+    :returns: shifts->     Shift vector (in pixels) required to register ``moving_image`` with ``reference_image``. Axis ordering is consistent with numpy (e.g. Z, Y, X)
+    :rtype: ndarray
+
     Notes
     -----
     The use of cross-correlation to estimate image translation has a long history dating back to at least [2]_. The "phase correlation" method (selected by ``normalization="phase"``) was first proposed in [3]_.
     Publications [1]_ and [2]_ use an unnormalized cross-correlation (``normalization=None``). Which form of normalization is better is application-dependent. For example, the phase correlation method works well in registering images under different illumination, but is not very robust to noise. In a high noise scenario, the unnormalized method may be preferable.
-    When masks are provided, a masked normalized cross-correlation algorithm is used [5]_, [6]_.
     References
     ----------
     .. [1] Manuel Guizar-Sicairos, Samuel T. Thurman, and James R. Fienup,
@@ -154,8 +146,7 @@ def phase_cross_correlation(reference_image, moving_image, *,
 @hierarchical_debug(logger)
 def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
                    axis_offsets=None):
-    """
-    Upsampled DFT by matrix multiplication.
+    """Upsampled DFT by matrix multiplication.
     This code is intended to provide the same result as if the following
     operations were performed:
         - Embed the array "data" in an array that is ``upsample_factor`` times
@@ -168,21 +159,18 @@ def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
     the need to zeropad. Much faster and memory efficient than the zero-padded
     FFT approach if ``upsampled_region_size`` is much smaller than
     ``data.size * upsample_factor``.
-    Parameters
-    ----------
-    data : array
-        The input data array (DFT of original data) to upsample.
-    upsampled_region_size : integer or tuple of integers, optional
-        The size of the region to be sampled.  If one integer is provided, it
+
+    :param data: The input data array (DFT of original data) to upsample.
+    :type data: array
+    :param upsampled_region_size: The size of the region to be sampled.  If one integer is provided, it
         is duplicated up to the dimensionality of ``data``.
-    upsample_factor : integer, optional
-        The upsampling factor.  Defaults to 1.
-    axis_offsets : tuple of integers, optional
-        The offsets of the region to be sampled.  Defaults to None (uses image center)
-    Returns
-    -------
-    output : ndarray
-        The upsampled DFT of the specified region.
+    :type upsampled_region_size: integer or tuple of integers, optional
+    :param upsample_factor: The upsampling factor.  Defaults to 1.
+    :type upsample_factor: integer, optional
+    :param axis_offsets:  (Default value = None)
+    :type axis_offsets: tuple of integers, optional
+
+    
     """
     upsampled_region_size = [upsampled_region_size] * data.ndim
     if axis_offsets is None:
@@ -205,20 +193,16 @@ def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
 
 @hierarchical_debug(logger)
 def _compute_error(cross_correlation_max, src_amp, target_amp):
-    """
-    Compute RMS error metric between ``src_image`` and ``target_image``.
-    Parameters
-    ----------
-    cross_correlation_max : complex
-        The complex value of the cross correlation at its maximum point.
-    src_amp : float
-        The normalized average image intensity of the source image.
-    target_amp : float
-        The normalized average image intensity of the target image.
-    Returns
-    -------
-    error : float
-        The computed RMS error.
+    """Compute RMS error metric between ``src_image`` and ``target_image``.
+
+    :param cross_correlation_max: The complex value of the cross correlation at its maximum point.
+    :type cross_correlation_max: complex
+    :param src_amp: The normalized average image intensity of the source image.
+    :type src_amp: float
+    :param target_amp: 
+    :type target_amp: float
+
+    
     """
     error = 1.0 - cross_correlation_max * cross_correlation_max.conj() / (
             src_amp * target_amp)
@@ -228,16 +212,12 @@ def _compute_error(cross_correlation_max, src_amp, target_amp):
 
 @hierarchical_debug(logger)
 def _compute_phasediff(cross_correlation_max):
-    """
-    Compute global phase difference between the two images (should be zero if images are non-negative).
-    Parameters
-    ----------
-    cross_correlation_max : complex
-        The complex value of the cross correlation at its maximum point.
-    Returns
-    -------
-    phasediff : float
-        The computed phase difference.
+    """Compute global phase difference between the two images (should be zero if images are non-negative).
+
+    :param cross_correlation_max: 
+    :type cross_correlation_max: complex
+
+    
     """
 
     return cp.arctan2(cross_correlation_max.imag, cross_correlation_max.real)

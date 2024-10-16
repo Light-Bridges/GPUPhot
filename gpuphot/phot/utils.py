@@ -9,20 +9,14 @@ logger = setup_logger(__name__)
 def decompose_into_tiles(image, block_size):
 
 
-    """
-    Decompose an image into smaller tiles of specified block size.
+    """Decompose an image into smaller tiles of specified block size.
 
-    Parameters
-    ----------
-    image : ndarray
-        The input image to be decomposed.
-    block_size : int
-        The size of each block (tile).
+    :param image: The input image to be decomposed.
+    :type image: ndarray
+    :param block_size: The size of each block (tile).
+    :type block_size: int
 
-    Returns
-    -------
-    ndarray
-        A stack of tiles extracted from the image.
+    
     """
     h, w = image.shape
     num_tiles_y = h // block_size
@@ -41,20 +35,14 @@ def decompose_into_tiles(image, block_size):
 def calculate_tile_percentiles(tiles, qt=70):
 
 
-    """
-    Calculate the percentiles of tiles along specified axes.
+    """Calculate the percentiles of tiles along specified axes.
 
-    Parameters
-    ----------
-    tiles : ndarray
-        Stack of image tiles.
-    qt : int, optional
-        Percentile to compute, by default 70.
+    :param tiles: Stack of image tiles.
+    :type tiles: ndarray
+    :param qt: Percentile to compute, by default 70.
+    :type qt: int, optional
 
-    Returns
-    -------
-    ndarray
-        Percentile values of the tiles.
+    
     """
 
     return cp.percentile(tiles, qt, axis=(1, 2))
@@ -63,22 +51,16 @@ def calculate_tile_percentiles(tiles, qt=70):
 def recompose_from_percentiles(percentiles, original_shape, block_size):
 
 
-    """
-    Recompose an image from its percentile values.
+    """Recompose an image from its percentile values.
 
-    Parameters
-    ----------
-    percentiles : ndarray
-        Percentile values of the tiles.
-    original_shape : tuple of int
-        Shape of the original image.
-    block_size : int
-        Size of each block (tile).
+    :param percentiles: Percentile values of the tiles.
+    :type percentiles: ndarray
+    :param original_shape: Shape of the original image.
+    :type original_shape: tuple of int
+    :param block_size: Size of each block (tile).
+    :type block_size: int
 
-    Returns
-    -------
-    ndarray
-        Reconstructed image from the percentiles.
+    
     """
     h, w = original_shape
     num_tiles_y = h // block_size
@@ -101,26 +83,20 @@ def recompose_from_percentiles(percentiles, original_shape, block_size):
 def fill_nan_fft(image, lk, li=0, min_neighbors=5, pad=301):
 
 
-    """
-    Fill NaN values in an image using FFT-based convolution with a specified filter.
+    """Fill NaN values in an image using FFT-based convolution with a specified filter.
 
-    Parameters
-    ----------
-    image : ndarray
-        Input image with NaN values.
-    lk : int
-        Kernel size for the filter.
-    li : int, optional
-        Additional parameter for the filter generation, by default 0.
-    min_neighbors : int, optional
-        Minimum number of valid neighbors required to replace a NaN value, by default 5.
-    pad : int, optional
-        Padding size for the convolution, by default 301.
+    :param image: Input image with NaN values.
+    :type image: ndarray
+    :param lk: Kernel size for the filter.
+    :type lk: int
+    :param li: Additional parameter for the filter generation, by default 0.
+    :type li: int, optional
+    :param min_neighbors: Minimum number of valid neighbors required to replace a NaN value, by default 5.
+    :type min_neighbors: int, optional
+    :param pad: Padding size for the convolution, by default 301.
+    :type pad: int, optional
 
-    Returns
-    -------
-    ndarray
-        Image with NaN values filled.
+    
     """
     k_app = gen_apm_filter(lk, li=li, norm=False)
     image = image.astype(cp.double)
@@ -139,18 +115,12 @@ def fill_nan_fft(image, lk, li=0, min_neighbors=5, pad=301):
 @hierarchical_debug(logger)
 def calculate_tile_nanmean(tiles):
 
-    """
-    Calculate the mean of tiles ignoring NaN values.
+    """Calculate the mean of tiles ignoring NaN values.
 
-    Parameters
-    ----------
-    tiles : ndarray
-        Stack of image tiles.
+    :param tiles: Stack of image tiles.
+    :type tiles: ndarray
 
-    Returns
-    -------
-    ndarray
-        Mean values of the tiles, ignoring NaN values.
+    
     """
 
     return cp.nanmean(tiles, axis=(1, 2))

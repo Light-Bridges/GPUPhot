@@ -43,6 +43,7 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def init_gpu():
+    """ """
     logger.debug('Tensorflow version ' + tf.__version__)
     gpus = tf.config.list_physical_devices('GPU')
     logger.debug('GPUs:', gpus)
@@ -52,28 +53,22 @@ def init_gpu():
 
 @hierarchical_debug(logger)
 def get_detections(model_mo, im, det=2, gain=1.024, rdnoise=2.3, scale=0.21):
-    """
-    Detect sources in an image using a model.
+    """Detect sources in an image using a model.
 
-    Parameters
-    ----------
-    model_mo : Model
-        Model to use for detection.
-    im : ndarray
-        Input image.
-    det : float, optional
-        Detection threshold, by default 2.
-    gain : float, optional
-        Gain value, by default 1.024.
-    rdnoise : float, optional
-        Read noise value, by default 2.3.
-    scale : float, optional
-        Pixel scale in arcsec/pixel, by default 0.21.
+    :param model_mo: Model to use for detection.
+    :type model_mo: Model
+    :param im: Input image.
+    :type im: ndarray
+    :param det: Detection threshold, by default 2.
+    :type det: float, optional
+    :param gain: Gain value, by default 1.024.
+    :type gain: float, optional
+    :param rdnoise: Read noise value, by default 2.3.
+    :type rdnoise: float, optional
+    :param scale: Pixel scale in arcsec/pixel, by default 0.21.
+    :type scale: float, optional
 
-    Returns
-    -------
-    tuple
-        Detected sources, sky, rms, FWHM, FWHM error, aperture size.
+    
     """
     fw, efw, alpha, beta = get_fwhm_mof(model_mo, im, step=50, ns=50)
     logger.debug('FWHM = ' + str(fw))
@@ -99,34 +94,28 @@ def get_detections(model_mo, im, det=2, gain=1.024, rdnoise=2.3, scale=0.21):
 @hierarchical_debug(logger)
 def daofind_gpu_fast(img, sky, rms, sdet, mode='g', fw=0, alpha=0, beta=0,
                      mem=cp.get_default_pinned_memory_pool()):
-    """
-    Detect sources in an image using DAOFind algorithm on GPU.
+    """Detect sources in an image using DAOFind algorithm on GPU.
 
-    Parameters
-    ----------
-    img : ndarray
-        Input image.
-    sky : ndarray
-        Sky background.
-    rms : ndarray
-        RMS noise.
-    sdet : float
-        Detection threshold.
-    mode : str, optional
-        Mode for detection ('g' for Gaussian, 'm' for Moffat), by default 'g'.
-    fw : float, optional
-        Full width at half maximum, by default 0.
-    alpha : float, optional
-        Alpha parameter for Moffat filter, by default 0.
-    beta : float, optional
-        Beta parameter for Moffat filter, by default 0.
-    mem : cupy.cuda.memory.PinnedMemoryPool, optional
-        Memory pool, by default cp.get_default_pinned_memory_pool().
+    :param img: Input image.
+    :type img: ndarray
+    :param sky: Sky background.
+    :type sky: ndarray
+    :param rms: RMS noise.
+    :type rms: ndarray
+    :param sdet: Detection threshold.
+    :type sdet: float
+    :param mode: Mode for detection ('g' for Gaussian, 'm' for Moffat), by default 'g'.
+    :type mode: str, optional
+    :param fw: Full width at half maximum, by default 0.
+    :type fw: float, optional
+    :param alpha: Alpha parameter for Moffat filter, by default 0.
+    :type alpha: float, optional
+    :param beta: Beta parameter for Moffat filter, by default 0.
+    :type beta: float, optional
+    :param mem: Memory pool, by default cp.get_default_pinned_memory_pool().
+    :type mem: cupy.cuda.memory.PinnedMemoryPool, optional
 
-    Returns
-    -------
-    tuple
-        Dataframe of detected sources and aperture size.
+    
     """
     thres = sdet * cp.mean(rms)
     sigma_r = fw / (2.0 * np.sqrt(2.0 * np.log(2.0)))
@@ -175,18 +164,12 @@ def daofind_gpu_fast(img, sky, rms, sdet, mode='g', fw=0, alpha=0, beta=0,
 
 @hierarchical_debug(logger)
 def gen_ap_filter(lk):
-    """
-    Generate an aperture filter.
+    """Generate an aperture filter.
 
-    Parameters
-    ----------
-    lk : int
-        Aperture radius.
+    :param lk: Aperture radius.
+    :type lk: int
 
-    Returns
-    -------
-    cupy.ndarray
-        Generated aperture filter.
+    
     """
     k_dim = 2 * lk + 1, 2 * lk + 1
     indi = cp.indices(k_dim)
@@ -201,20 +184,14 @@ def gen_ap_filter(lk):
 
 @hierarchical_debug(logger)
 def gen_moff_filter(alpha, beta):
-    """
-    Generate a Moffat filter.
+    """Generate a Moffat filter.
 
-    Parameters
-    ----------
-    alpha : float
-        Alpha parameter for Moffat filter.
-    beta : float
-        Beta parameter for Moffat filter.
+    :param alpha: Alpha parameter for Moffat filter.
+    :type alpha: float
+    :param beta: Beta parameter for Moffat filter.
+    :type beta: float
 
-    Returns
-    -------
-    tuple
-        Generated Moffat filter and aperture size.
+    
     """
     fw = alpha * (2 * np.sqrt(2 ** (1 / beta) - 1))
     sigma_r = fw / (2.0 * np.sqrt(2.0 * np.log(2.0)))
@@ -233,24 +210,18 @@ def gen_moff_filter(alpha, beta):
 
 @hierarchical_debug(logger)
 def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool()):
-    """
-    Estimate the sky background and RMS noise.
+    """Estimate the sky background and RMS noise.
 
-    Parameters
-    ----------
-    im_g : ndarray
-        Input image.
-    fw : float
-        Full width at half maximum.
-    qt : float, optional
-        Quantile for sky estimation, by default 90.
-    mem : cupy.cuda.memory.PinnedMemoryPool, optional
-        Memory pool, by default cp.get_default_memory_pool().
+    :param im_g: Input image.
+    :type im_g: ndarray
+    :param fw: Full width at half maximum.
+    :type fw: float
+    :param qt: Quantile for sky estimation, by default 90.
+    :type qt: float, optional
+    :param mem: Memory pool, by default cp.get_default_memory_pool().
+    :type mem: cupy.cuda.memory.PinnedMemoryPool, optional
 
-    Returns
-    -------
-    tuple
-        Estimated sky background, RMS noise, and memory used.
+    
     """
     sigma_r = fw / (2.0 * np.sqrt(2.0 * np.log(2.0)))
     lk = np.ceil(sigma_r).astype(np.int16) * 4
@@ -274,26 +245,20 @@ def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool()):
 @hierarchical_debug(logger)
 def SP_filter_cupy(img, filter_size=3, high_threshold_factor=10,
                    low_threshold_factor=5, scaling_factor=1.4826):
-    """
-    Apply a median filter to remove salt-and-pepper noise.
+    """Apply a median filter to remove salt-and-pepper noise.
 
-    Parameters
-    ----------
-    img : cupy.ndarray
-        Input image.
-    filter_size : int, optional
-        Size of the median filter (default is 3).
-    high_threshold_factor : float, optional
-        Factor to determine the high threshold for noise detection (default is 10).
-    low_threshold_factor : float, optional
-        Factor to determine the low threshold for noise detection (default is 5).
-    scaling_factor : float, optional
-        Scaling factor for estimating the standard deviation from MAD (default is 1.4826).
+    :param img: Input image.
+    :type img: cupy.ndarray
+    :param filter_size: Size of the median filter (default is 3).
+    :type filter_size: int, optional
+    :param high_threshold_factor: Factor to determine the high threshold for noise detection (default is 10).
+    :type high_threshold_factor: float, optional
+    :param low_threshold_factor: Factor to determine the low threshold for noise detection (default is 5).
+    :type low_threshold_factor: float, optional
+    :param scaling_factor: Scaling factor for estimating the standard deviation from MAD (default is 1.4826).
+    :type scaling_factor: float, optional
 
-    Returns
-    -------
-    cupy.ndarray
-        Filtered image.
+    
     """
     med_filter = median_filter(img, size=filter_size)
     dif = img - med_filter
@@ -309,20 +274,14 @@ def SP_filter_cupy(img, filter_size=3, high_threshold_factor=10,
 
 @hierarchical_debug(logger)
 def gen_moff_filter2(alpha, beta):
-    """
-    Generate a Moffat filter with adjusted alpha.
+    """Generate a Moffat filter with adjusted alpha.
 
-    Parameters
-    ----------
-    alpha : float
-        Alpha parameter for Moffat filter.
-    beta : float
-        Beta parameter for Moffat filter.
+    :param alpha: Alpha parameter for Moffat filter.
+    :type alpha: float
+    :param beta: Beta parameter for Moffat filter.
+    :type beta: float
 
-    Returns
-    -------
-    tuple
-        Generated Moffat filter and aperture size.
+    
     """
     alpha = alpha / 2
     fw = alpha * (2 * np.sqrt(2 ** (1 / beta) - 1))
@@ -729,24 +688,18 @@ def gen_moff_filter2(alpha, beta):
 
 @hierarchical_debug(logger)
 def batch_aperture_photometry(img, back, positions, radii):
-    """
-    Perform aperture photometry in batch mode.
+    """Perform aperture photometry in batch mode.
 
-    Parameters
-    ----------
-    img : ndarray
-        Image data.
-    back : ndarray
-        Background image.
-    positions : ndarray
-        Positions of sources.
-    radii : ndarray
-        Aperture radii.
+    :param img: Image data.
+    :type img: ndarray
+    :param back: Background image.
+    :type back: ndarray
+    :param positions: Positions of sources.
+    :type positions: ndarray
+    :param radii: Aperture radii.
+    :type radii: ndarray
 
-    Returns
-    -------
-    tuple
-        Flux, background flux, and area of apertures.
+    
     """
     mempool = cp.get_default_memory_pool()
     flux = cp.zeros((len(radii), len(positions)))
@@ -880,22 +833,16 @@ def batch_aperture_photometry(img, back, positions, radii):
 
 @hierarchical_debug(logger)
 def aperture_photometry(img, positions, aper_rad):
-    """
-    Perform aperture photometry.
+    """Perform aperture photometry.
 
-    Parameters
-    ----------
-    img : ndarray
-        Image data.
-    positions : ndarray
-        Positions of sources.
-    aper_rad : int
-        Aperture radius.
+    :param img: Image data.
+    :type img: ndarray
+    :param positions: Positions of sources.
+    :type positions: ndarray
+    :param aper_rad: Aperture radius.
+    :type aper_rad: int
 
-    Returns
-    -------
-    tuple
-        Flux and area of apertures.
+    
     """
     kernel, area = get_aper_kernel(aper_rad)
     conv_ima = convolve_fft(img, kernel)
@@ -908,26 +855,20 @@ def aperture_photometry(img, positions, aper_rad):
 
 @hierarchical_debug(logger)
 def get_fwhm_mof(model, img, step=50, ns=25, mins=3):
-    """
-    Get the full width at half maximum using Moffat model.
+    """Get the full width at half maximum using Moffat model.
 
-    Parameters
-    ----------
-    model : Model
-        Model to use for FWHM estimation.
-    img : ndarray
-        Image data.
-    step : int, optional
-        Step size for sampling, by default 50.
-    ns : int, optional
-        Number of samples, by default 25.
-    mins : int, optional
-        Minimum number of stars, by default 3.
+    :param model: Model to use for FWHM estimation.
+    :type model: Model
+    :param img: Image data.
+    :type img: ndarray
+    :param step: Step size for sampling, by default 50.
+    :type step: int, optional
+    :param ns: Number of samples, by default 25.
+    :type ns: int, optional
+    :param mins: Minimum number of stars, by default 3.
+    :type mins: int, optional
 
-    Returns
-    -------
-    tuple
-        Mean FWHM, standard deviation of FWHM, mean alpha, and mean beta.
+    
     """
     ims, cs = sample_im(img, step, ns)
     pred2 = model.predict(ims)
@@ -939,20 +880,14 @@ def get_fwhm_mof(model, img, step=50, ns=25, mins=3):
 
 @hierarchical_debug(logger)
 def cov_nan(img, nc=10):
-    """
-    Fill NaN values in an image using convolution.
+    """Fill NaN values in an image using convolution.
 
-    Parameters
-    ----------
-    img : ndarray
-        Input image.
-    nc : int, optional
-        Number of chunks, by default 10.
+    :param img: Input image.
+    :type img: ndarray
+    :param nc: Number of chunks, by default 10.
+    :type nc: int, optional
 
-    Returns
-    -------
-    ndarray
-        Image with NaN values filled.
+    
     """
     delta = np.round(img.shape[0] / nc).astype(int)
     for i in range(nc):
@@ -1014,34 +949,28 @@ def cov_nan(img, nc=10):
 @hierarchical_debug(logger)
 def get_zeropoint(df_catalog, flux, noise, coord, exptime, solar_filter=0.3,
                   dist_thres_px=3, N=50, plot=False):
-    """
-    Calculate the zeropoint for photometry.
+    """Calculate the zeropoint for photometry.
 
-    Parameters
-    ----------
-    df_catalog : pd.DataFrame
-        Catalog dataframe.
-    flux : ndarray
-        Flux values.
-    noise : ndarray
-        Noise values.
-    coord : ndarray
-        Coordinates of sources.
-    exptime : float
-        Exposure time.
-    solar_filter : float, optional
-        Solar filter, by default 0.3.
-    dist_thres_px : int, optional
-        Distance threshold in pixels, by default 3.
-    N : int, optional
-        Number of brightest stars to use, by default 50.
-    plot : bool, optional
-        Whether to plot the results, by default False.
+    :param df_catalog: Catalog dataframe.
+    :type df_catalog: pd.DataFrame
+    :param flux: Flux values.
+    :type flux: ndarray
+    :param noise: Noise values.
+    :type noise: ndarray
+    :param coord: Coordinates of sources.
+    :type coord: ndarray
+    :param exptime: Exposure time.
+    :type exptime: float
+    :param solar_filter: Solar filter, by default 0.3.
+    :type solar_filter: float, optional
+    :param dist_thres_px: Distance threshold in pixels, by default 3.
+    :type dist_thres_px: int, optional
+    :param N: Number of brightest stars to use, by default 50.
+    :type N: int, optional
+    :param plot: Whether to plot the results, by default False.
+    :type plot: bool, optional
 
-    Returns
-    -------
-    tuple
-        Zeropoint, error in zeropoint, number of stars, minimum magnitude, and maximum magnitude.
+    
     """
     cat_coords = np.array([df_catalog['Y'], df_catalog['X']]).T
     source_coords_matched_idx, ref_coords_matched_idx = crossmatch_sources(
@@ -1116,20 +1045,14 @@ def get_zeropoint(df_catalog, flux, noise, coord, exptime, solar_filter=0.3,
 
 @hierarchical_debug(logger)
 def delete_header_from(header, val):
-    """
-    Delete a section from the FITS header.
+    """Delete a section from the FITS header.
 
-    Parameters
-    ----------
-    header : dict
-        FITS header.
-    val : str
-        Value to delete.
+    :param header: FITS header.
+    :type header: dict
+    :param val: Value to delete.
+    :type val: str
 
-    Returns
-    -------
-    dict
-        Updated FITS header.
+    
     """
     for i, v in enumerate(header.values()):
         if val in str(v):
@@ -1142,22 +1065,16 @@ def delete_header_from(header, val):
 
 @hierarchical_debug(logger)
 def sample_im(img, nc=50, ns=100):
-    """
-    Sample an image.
+    """Sample an image.
 
-    Parameters
-    ----------
-    img : ndarray
-        Input image.
-    nc : int, optional
-        Number of chunks, by default 50.
-    ns : int, optional
-        Number of samples, by default 100.
+    :param img: Input image.
+    :type img: ndarray
+    :param nc: Number of chunks, by default 50.
+    :type nc: int, optional
+    :param ns: Number of samples, by default 100.
+    :type ns: int, optional
 
-    Returns
-    -------
-    tuple
-        Sampled images and scaling factors.
+    
     """
     delta = np.round((img.shape[0] - 512) / nc).astype(int)
     pi = 512 * 512
@@ -1185,18 +1102,12 @@ def sample_im(img, nc=50, ns=100):
 
 @hierarchical_debug(logger)
 def pred_mof(pred):
-    """
-    Predict Moffat parameters.
+    """Predict Moffat parameters.
 
-    Parameters
-    ----------
-    pred : ndarray
-        Predicted values.
+    :param pred: Predicted values.
+    :type pred: ndarray
 
-    Returns
-    -------
-    tuple
-        Alpha, beta, number of stars, and FWHM.
+    
     """
     alpha = pred[:, 1]
     beta = pred[:, 0] * 0.4 + 4.565
@@ -1225,6 +1136,12 @@ def pred_mof(pred):
 
 @hierarchical_debug(logger)
 def sigma_clip(img, sclip):
+    """
+
+    :param img: 
+    :param sclip: 
+
+    """
     img0 = img.copy()
     for i in range(5):
         imed = cp.nanmean(img0)
@@ -1238,6 +1155,11 @@ def sigma_clip(img, sclip):
 
 @hierarchical_debug(logger)
 def gen_gauss_filter(fw):
+    """
+
+    :param fw: 
+
+    """
     sigma_r = fw / (2.0 * np.sqrt(2.0 * np.log(2.0)))
     sigma_r2 = sigma_r * sigma_r
     lk = np.ceil(sigma_r).astype(np.int16) * 4
@@ -1256,6 +1178,21 @@ def gen_gauss_filter(fw):
 @hierarchical_debug(logger)
 def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
 =4, mincut=10, mem=cp.get_default_pinned_memory_pool()):
+    """
+
+    :param img: 
+    :param sky: 
+    :param rms: 
+    :param sdet: 
+    :param mode:  (Default value = 'g')
+    :param fw:  (Default value = 1)
+    :param alpha:  (Default value = 0)
+    :param beta:  (Default value = 0)
+    :param minpix:  (Default value = 4)
+    :param mincut:  (Default value = 10)
+    :param mem:  (Default value = cp.get_default_pinned_memory_pool())
+
+    """
     gf, lk = gen_gauss_filter(fw)
     g = convolve(img - sky, gf, origin=(0, 0))
     g1 = (g / rms > sdet).astype(cp.int32)
@@ -1295,6 +1232,13 @@ def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
 
 @hierarchical_debug(logger)
 def get_peak_image(img, positions, aper_rad):
+    """
+
+    :param img: 
+    :param positions: 
+    :param aper_rad: 
+
+    """
     lk = 2 * aper_rad
     img_m = maximum_filter(img, size=lk)
     positions = cp.array(cp.round(positions)).astype(cp.int32)

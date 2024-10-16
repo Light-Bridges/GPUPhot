@@ -10,33 +10,28 @@ logger = setup_logger(__name__)
 def get_local_background_fft(image, pxscale, qt=60, fill_aper=15, avg_aper=15, tile_px=300, ks=2, get_std=False):
 
 
-    '''
-    Get local background using FFT-based convolution
+    """Get local background using FFT-based convolution
 
-    Parameters
-    ----------
-    image : cupy.ndarray
-        Image to be processed
-    pxscale : float
-        Pixel scale in arcsec/pixel
-    qt : float
-        Percentile for local background
-    fill_aper : float
-        Aperture size for filling NaNs, in arcsec
-    avg_aper : float
-        Aperture size for calculating mean, in arcsec
-    tile_asec : float
-        Tile size for calculating local percentile, in arcsec
-    ks : float
-        Aperture size for dilation, in arcsec
-    get_std : bool
-        Whether to return standard deviation image
+    :param image: Image to be processed
+    :type image: cupy.ndarray
+    :param pxscale: Pixel scale in arcsec/pixel
+    :type pxscale: float
+    :param qt: Percentile for local background (Default value = 60)
+    :type qt: float
+    :param fill_aper: Aperture size for filling NaNs, in arcsec (Default value = 15)
+    :type fill_aper: float
+    :param avg_aper: Aperture size for calculating mean, in arcsec (Default value = 15)
+    :type avg_aper: float
+    :param tile_asec: Tile size for calculating local percentile, in arcsec
+    :type tile_asec: float
+    :param ks: Aperture size for dilation, in arcsec (Default value = 2)
+    :type ks: float
+    :param get_std: Whether to return standard deviation image (Default value = False)
+    :type get_std: bool
+    :param tile_px:  (Default value = 300)
+
     
-    Returns
-    -------
-    img_filled_m : cupy.ndarray
-        Image with local background subtracted
-    '''
+    """
     if type(image) != cp.ndarray: image = cp.array(image)
     mempool = cp.get_default_memory_pool()
 

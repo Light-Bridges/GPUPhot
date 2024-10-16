@@ -5,20 +5,14 @@ logger = setup_logger(__name__)
 def plate_scale_px(microns, focal):
 
 
-    """
-    Calculate the plate scale in arcseconds per pixel.
+    """Calculate the plate scale in arcseconds per pixel.
 
-    Parameters
-    ----------
-    microns : float
-        Pixel size in micrometers.
-    focal : float
-        Focal length in millimeters.
+    :param microns: Pixel size in micrometers.
+    :type microns: float
+    :param focal: Focal length in millimeters.
+    :type focal: float
 
-    Returns
-    -------
-    float
-        Plate scale in arcseconds per pixel.
+    
     """
 
     return plate_scale_mm(focal) * microns / 1000
@@ -26,18 +20,12 @@ def plate_scale_px(microns, focal):
 @hierarchical_debug(logger)
 def plate_scale_mm(focal):
 
-    """
-    Calculate the plate scale in arcseconds per millimeter.
+    """Calculate the plate scale in arcseconds per millimeter.
 
-    Parameters
-    ----------
-    focal : float
-        Focal length in millimeters.
+    :param focal: Focal length in millimeters.
+    :type focal: float
 
-    Returns
-    -------
-    float
-        Plate scale in arcseconds per millimeter.
+    
     """
 
     return 206265 / focal

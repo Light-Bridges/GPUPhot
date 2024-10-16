@@ -12,20 +12,14 @@ logger = setup_logger(__name__)
 @hierarchical_debug(logger)
 def center(im, size):
 
-    """
-    Center the image to the given size.
+    """Center the image to the given size.
 
-    Parameters
-    ----------
-    im : ndarray
-        Input image.
-    size : int
-        Desired size for centering.
+    :param im: Input image.
+    :type im: ndarray
+    :param size: Desired size for centering.
+    :type size: int
 
-    Returns
-    -------
-    ndarray
-        Centered image.
+    
     """
     if im.shape[0] > size:
         c0 = int((im.shape[0] - size) / 2)
@@ -41,22 +35,16 @@ def center(im, size):
 @hierarchical_debug(logger)
 def register_shift(fc, uf=100, n=1000):
 
-    """
-    Register and shift image stack based on phase cross-correlation.
+    """Register and shift image stack based on phase cross-correlation.
 
-    Parameters
-    ----------
-    fc : ndarray
-        Stack of images to be registered.
-    uf : int, optional
-        Upsample factor for subpixel precision, by default 100.
-    n : int, optional
-        Size for centering the images, by default 1000.
+    :param fc: Stack of images to be registered.
+    :type fc: ndarray
+    :param uf: Upsample factor for subpixel precision, by default 100.
+    :type uf: int, optional
+    :param n: Size for centering the images, by default 1000.
+    :type n: int, optional
 
-    Returns
-    -------
-    ndarray
-        Registered and shifted image stack.
+    
     """
     fc1 = fc.copy()
     im0 = center(fc[0], n)
@@ -79,32 +67,26 @@ def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False,
                     beta=False, tim=None):
 
 
-    """
-    Stack images with sigma clipping.
+    """Stack images with sigma clipping.
 
-    Parameters
-    ----------
-    data : ndarray
-        Stack of images to be processed.
-    it : int, optional
-        Number of iterations for sigma clipping, by default 5.
-    n : int, optional
-        Sigma clipping threshold, by default 3.
-    master : bool, optional
-        If True, use master bias subtraction, by default False.
-    mbias : ndarray, optional
-        Master bias image for subtraction, by default None.
-    alpha : float, optional
-        Parameter for Gaussian filter, by default False.
-    beta : float, optional
-        Parameter for Gaussian filter, by default False.
-    tim : ndarray, optional
-        Weights for time integration, by default None.
+    :param data: Stack of images to be processed.
+    :type data: ndarray
+    :param it: Number of iterations for sigma clipping, by default 5.
+    :type it: int, optional
+    :param n: Sigma clipping threshold, by default 3.
+    :type n: int, optional
+    :param master: If True, use master bias subtraction, by default False.
+    :type master: bool, optional
+    :param mbias: Master bias image for subtraction, by default None.
+    :type mbias: ndarray, optional
+    :param alpha: Parameter for Gaussian filter, by default False.
+    :type alpha: float, optional
+    :param beta: Parameter for Gaussian filter, by default False.
+    :type beta: float, optional
+    :param tim: Weights for time integration, by default None.
+    :type tim: ndarray, optional
 
-    Returns
-    -------
-    tuple
-        (center, sigma) where center is the sigma-clipped mean image and sigma is the standard deviation image.
+    
     """
     nim = data.shape[0]
     if nim < 3:
@@ -163,6 +145,14 @@ def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False,
 @hierarchical_debug(logger)
 def register_shift_frames(frames_list, upsample_factor=100, center_size=
 1000, shift_limit_pix=300):
+    """
+
+    :param frames_list: 
+    :param upsample_factor:  (Default value = 100)
+    :param center_size:  (Default value = 1000)
+    :param shift_limit_pix:  (Default value = 300)
+
+    """
 
 
     fc0 = cp.asarray(fits.getdata(frames_list[0]), dtype=cp.float32)
