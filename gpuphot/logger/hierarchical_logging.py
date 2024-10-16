@@ -17,28 +17,45 @@ try:
 except ImportError:
     pass
 
+
 class IndentFormatter(logging.Formatter):
     """Custom formatter to add indentation to log messages."""
+
     def __init__(self, fmt=None, datefmt=None):
+        """
+        Initialize the IndentFormatter.
+
+        :param fmt: Format string for the log message
+        :type fmt: str
+        :param datefmt: Format string for the date/time
+        :type datefmt: str
+        """
         super().__init__(fmt, datefmt)
         self.indent_levels = {}
 
     def format(self, record):
         """
+        Format the specified record as text.
 
-        :param record: 
-
+        :param record: A LogRecord instance
+        :type record: logging.LogRecord
+        :return: Formatted log record
+        :rtype: str
         """
         thread_id = threading.get_ident()
         indent = self.indent_levels.get(thread_id, 0)
         record.indent = '  ' * indent
         return super().format(record)
 
+
 def format_arg(arg):
-    """Format function arguments for logging.
+    """
+    Format function arguments for logging.
 
-    :param arg: 
-
+    :param arg: The argument to format
+    :type arg: Any
+    :return: Formatted string representation of the argument
+    :rtype: str
     """
     if isinstance(arg, (np.ndarray, cp.ndarray)):
         return f"{type(arg).__name__}(shape={arg.shape}, dtype={arg.dtype})"
@@ -59,25 +76,27 @@ def format_arg(arg):
     else:
         return f"{arg!r}:{type(arg).__name__}"
 
+
 def hierarchical_debug(logger):
-    """Decorator for hierarchical debugging and exception handling.
-
-    :param logger: 
-
     """
+    Decorator for hierarchical debugging and exception handling.
+
+    :param logger: Logger instance to use for logging
+    :type logger: logging.Logger
+    :return: Decorator function
+    :rtype: function
+    """
+
     def decorator(func):
-        """
-
-        :param func: 
-
-        """
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             """
+            Wrapper function that adds logging and exception handling.
 
-            :param *args: 
-            :param **kwargs: 
-
+            :param args: Positional arguments of the decorated function
+            :param kwargs: Keyword arguments of the decorated function
+            :return: Result of the decorated function
+            :raises: Any exception raised by the decorated function
             """
             thread_id = threading.get_ident()
             indent_levels = logger.handlers[0].formatter.indent_levels
@@ -123,13 +142,16 @@ def hierarchical_debug(logger):
                 indent_levels[thread_id] = max(0, current_level)
 
         return wrapper
+
     return decorator
 
+
 def setup_logstash_handler(logger):
-    """Set up Logstash handler if environment variables are set.
+    """
+    Set up Logstash handler if environment variables are set.
 
-    :param logger: 
-
+    :param logger: Logger instance to add the Logstash handler to
+    :type logger: logging.Logger
     """
     logstash_host = os.environ.get('LOGSTASH_HOST')
     logstash_port = os.environ.get('LOGSTASH_PORT', 5000)
@@ -150,11 +172,15 @@ def setup_logstash_handler(logger):
         logstash_handler.setFormatter(formatter)
         logger.addHandler(logstash_handler)
 
+
 def setup_logger(name):
-    """Set up logger with custom formatter and Logstash handler.
+    """
+    Set up logger with custom formatter and Logstash handler.
 
-    :param name: 
-
+    :param name: Name of the logger
+    :type name: str
+    :return: Configured logger instance
+    :rtype: logging.Logger
     """
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
@@ -169,19 +195,27 @@ def setup_logger(name):
 
     return logger
 
+
 # Example usage
 if __name__ == "__main__":
     logger = setup_logger(__name__)
 
+
     @hierarchical_debug(logger)
     def example_function(a, b):
         """
+        An example function to demonstrate the hierarchical_debug decorator.
 
-        :param a: param b:
-        :param b: 
-
+        :param a: First parameter
+        :type a: int
+        :param b: Second parameter
+        :type b: int
+        :return: Result of division a/b
+        :rtype: float
+        :raises ZeroDivisionError: If b is zero
         """
         return a / b
+
 
     try:
         example_function(10, 0)

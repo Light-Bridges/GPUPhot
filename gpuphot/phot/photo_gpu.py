@@ -8,13 +8,10 @@ import pandas as pd
 import tensorflow as tf
 from cupyx.scipy.ndimage import gaussian_filter, convolve, label, sum as nd_sum, mean as nd_mean, maximum_filter, \
     median_filter
-from matplotlib import pyplot as plt
-from sklearn.linear_model import RANSACRegressor
 
-from .catalog import crossmatch_sources
-from .convo import fill_image, get_aper_kernel, convolve_fft, gen_apm_filter
+from .conv import fill_image, get_aper_kernel, convolve_fft, gen_apm_filter
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
-from ..stats.s_util import free_gpu_mem
+from ..utils.gpu import free_gpu_mem
 
 logger = setup_logger(__name__)
 
@@ -945,122 +942,122 @@ def cov_nan(img, nc=10):
 #
 #     return None
 
+#
+# @hierarchical_debug(logger)
+# def get_zeropoint(df_catalog, flux, noise, coord, exptime, solar_filter=0.3,
+#                   dist_thres_px=3, N=50, plot=False):
+#     """Calculate the zeropoint for photometry.
+#
+#     :param df_catalog: Catalog dataframe.
+#     :type df_catalog: pd.DataFrame
+#     :param flux: Flux values.
+#     :type flux: ndarray
+#     :param noise: Noise values.
+#     :type noise: ndarray
+#     :param coord: Coordinates of sources.
+#     :type coord: ndarray
+#     :param exptime: Exposure time.
+#     :type exptime: float
+#     :param solar_filter: Solar filter, by default 0.3.
+#     :type solar_filter: float, optional
+#     :param dist_thres_px: Distance threshold in pixels, by default 3.
+#     :type dist_thres_px: int, optional
+#     :param N: Number of brightest stars to use, by default 50.
+#     :type N: int, optional
+#     :param plot: Whether to plot the results, by default False.
+#     :type plot: bool, optional
+#
+#
+#     """
+#     cat_coords = np.array([df_catalog['Y'], df_catalog['X']]).T
+#     source_coords_matched_idx, ref_coords_matched_idx = crossmatch_sources(
+#         coord, cat_coords, thres_px=dist_thres_px)
+#     solar_cat_filt = np.abs(df_catalog['SOLAR'])[ref_coords_matched_idx
+#                      ] < solar_filter
+#     source_coords_matched_idx = source_coords_matched_idx[solar_cat_filt]
+#     ref_coords_matched_idx = ref_coords_matched_idx[solar_cat_filt]
+#     det_mag = -2.5 * np.log10(flux[source_coords_matched_idx] / exptime)
+#     cat_mag = df_catalog['MAG'][ref_coords_matched_idx].to_numpy()
+#     inf_nan_mask = np.isfinite(cat_mag) & np.isfinite(det_mag) & ~np.isnan(
+#         cat_mag) & ~np.isnan(det_mag)
+#     cat_mag = cat_mag[inf_nan_mask]
+#     det_mag = det_mag[inf_nan_mask]
+#     snrs = (flux / noise)[source_coords_matched_idx][inf_nan_mask]
+#     m = np.argsort(snrs)
+#     brightest = m[-N:]
+#     bright_mask = np.zeros(len(cat_mag), dtype=bool)
+#     bright_mask[brightest] = True
+#     if len(cat_mag) <= 3:
+#         zp, ezp, n, min_mag, max_mag = 0, 0, 0, 0, 0
+#     else:
+#         y = cat_mag[bright_mask] - det_mag[bright_mask]
+#         mask = np.abs(y - np.nanmean(y)) < np.nanstd(y)
+#         if np.sum(mask) > 15:
+#             reg = RANSACRegressor(random_state=42, residual_threshold=0.05
+#                                   ).fit(det_mag[bright_mask].reshape([-1, 1])[mask], cat_mag[
+#                 bright_mask].reshape([-1, 1])[mask])
+#             inlier = reg.inlier_mask_
+#             if np.sum(inlier) > 10 and np.abs(np.mean(y[mask][inlier]) - np
+#                     .mean(y[mask])) < np.std(y[mask]):
+#                 zp = np.mean(y[mask][inlier])
+#                 n = np.sum(inlier)
+#                 ezp = np.std(y[mask][inlier]) / np.sqrt(n)
+#                 min_mag = np.min(cat_mag[bright_mask][mask][inlier])
+#                 max_mag = np.max(cat_mag[bright_mask][mask][inlier])
+#             else:
+#                 zp = np.mean(y[mask])
+#                 n = np.sum(mask)
+#                 ezp = np.std(y[mask]) / np.sqrt(n)
+#                 min_mag = np.min(cat_mag[bright_mask][mask])
+#                 max_mag = np.max(cat_mag[bright_mask][mask])
+#         else:
+#             zp = np.mean(y[mask])
+#             n = np.sum(mask)
+#             ezp = np.std(y[mask]) / np.sqrt(n)
+#             min_mag = np.min(cat_mag[bright_mask][mask])
+#             max_mag = np.max(cat_mag[bright_mask][mask])
+#     if plot:
+#         plt.figure(figsize=(8, 8))
+#         ax = plt.subplot(111)
+#         ax.plot(cat_mag, cat_mag - det_mag - zp, 'k.', alpha=0.6)
+#         if np.sum(mask) > 15:
+#             ax.plot(cat_mag[bright_mask][mask], cat_mag[bright_mask][mask] -
+#                     det_mag[bright_mask][mask] - zp, 'b.', alpha=0.1)
+#             ax.plot(cat_mag[bright_mask][mask][inlier], cat_mag[bright_mask
+#             ][mask][inlier] - det_mag[bright_mask][mask][inlier] - zp,
+#                     'r.', label='zp = {:.3f} +/- {:.3f} (n={})'.format(zp, ezp,
+#                                                                        n), alpha=0.5)
+#         else:
+#             ax.plot(cat_mag[bright_mask][mask], cat_mag[bright_mask][mask] -
+#                     det_mag[bright_mask][mask] - zp, 'r.', label=
+#                     'zp = {:.3f} +/- {:.3f} (n={})'.format(zp, ezp, n), alpha=0.5)
+#         ax.set_xlabel('catalog magnitude')
+#         ax.set_ylabel('error magnitude')
+#         ax.legend(frameon=False)
+#         ax.set_ylim(-0.5, 0.5)
+#         plt.show()
+#
+#     return zp, ezp, n, min_mag, max_mag
 
-@hierarchical_debug(logger)
-def get_zeropoint(df_catalog, flux, noise, coord, exptime, solar_filter=0.3,
-                  dist_thres_px=3, N=50, plot=False):
-    """Calculate the zeropoint for photometry.
 
-    :param df_catalog: Catalog dataframe.
-    :type df_catalog: pd.DataFrame
-    :param flux: Flux values.
-    :type flux: ndarray
-    :param noise: Noise values.
-    :type noise: ndarray
-    :param coord: Coordinates of sources.
-    :type coord: ndarray
-    :param exptime: Exposure time.
-    :type exptime: float
-    :param solar_filter: Solar filter, by default 0.3.
-    :type solar_filter: float, optional
-    :param dist_thres_px: Distance threshold in pixels, by default 3.
-    :type dist_thres_px: int, optional
-    :param N: Number of brightest stars to use, by default 50.
-    :type N: int, optional
-    :param plot: Whether to plot the results, by default False.
-    :type plot: bool, optional
-
-    
-    """
-    cat_coords = np.array([df_catalog['Y'], df_catalog['X']]).T
-    source_coords_matched_idx, ref_coords_matched_idx = crossmatch_sources(
-        coord, cat_coords, thres_px=dist_thres_px)
-    solar_cat_filt = np.abs(df_catalog['SOLAR'])[ref_coords_matched_idx
-                     ] < solar_filter
-    source_coords_matched_idx = source_coords_matched_idx[solar_cat_filt]
-    ref_coords_matched_idx = ref_coords_matched_idx[solar_cat_filt]
-    det_mag = -2.5 * np.log10(flux[source_coords_matched_idx] / exptime)
-    cat_mag = df_catalog['MAG'][ref_coords_matched_idx].to_numpy()
-    inf_nan_mask = np.isfinite(cat_mag) & np.isfinite(det_mag) & ~np.isnan(
-        cat_mag) & ~np.isnan(det_mag)
-    cat_mag = cat_mag[inf_nan_mask]
-    det_mag = det_mag[inf_nan_mask]
-    snrs = (flux / noise)[source_coords_matched_idx][inf_nan_mask]
-    m = np.argsort(snrs)
-    brightest = m[-N:]
-    bright_mask = np.zeros(len(cat_mag), dtype=bool)
-    bright_mask[brightest] = True
-    if len(cat_mag) <= 3:
-        zp, ezp, n, min_mag, max_mag = 0, 0, 0, 0, 0
-    else:
-        y = cat_mag[bright_mask] - det_mag[bright_mask]
-        mask = np.abs(y - np.nanmean(y)) < np.nanstd(y)
-        if np.sum(mask) > 15:
-            reg = RANSACRegressor(random_state=42, residual_threshold=0.05
-                                  ).fit(det_mag[bright_mask].reshape([-1, 1])[mask], cat_mag[
-                bright_mask].reshape([-1, 1])[mask])
-            inlier = reg.inlier_mask_
-            if np.sum(inlier) > 10 and np.abs(np.mean(y[mask][inlier]) - np
-                    .mean(y[mask])) < np.std(y[mask]):
-                zp = np.mean(y[mask][inlier])
-                n = np.sum(inlier)
-                ezp = np.std(y[mask][inlier]) / np.sqrt(n)
-                min_mag = np.min(cat_mag[bright_mask][mask][inlier])
-                max_mag = np.max(cat_mag[bright_mask][mask][inlier])
-            else:
-                zp = np.mean(y[mask])
-                n = np.sum(mask)
-                ezp = np.std(y[mask]) / np.sqrt(n)
-                min_mag = np.min(cat_mag[bright_mask][mask])
-                max_mag = np.max(cat_mag[bright_mask][mask])
-        else:
-            zp = np.mean(y[mask])
-            n = np.sum(mask)
-            ezp = np.std(y[mask]) / np.sqrt(n)
-            min_mag = np.min(cat_mag[bright_mask][mask])
-            max_mag = np.max(cat_mag[bright_mask][mask])
-    if plot:
-        plt.figure(figsize=(8, 8))
-        ax = plt.subplot(111)
-        ax.plot(cat_mag, cat_mag - det_mag - zp, 'k.', alpha=0.6)
-        if np.sum(mask) > 15:
-            ax.plot(cat_mag[bright_mask][mask], cat_mag[bright_mask][mask] -
-                    det_mag[bright_mask][mask] - zp, 'b.', alpha=0.1)
-            ax.plot(cat_mag[bright_mask][mask][inlier], cat_mag[bright_mask
-            ][mask][inlier] - det_mag[bright_mask][mask][inlier] - zp,
-                    'r.', label='zp = {:.3f} +/- {:.3f} (n={})'.format(zp, ezp,
-                                                                       n), alpha=0.5)
-        else:
-            ax.plot(cat_mag[bright_mask][mask], cat_mag[bright_mask][mask] -
-                    det_mag[bright_mask][mask] - zp, 'r.', label=
-                    'zp = {:.3f} +/- {:.3f} (n={})'.format(zp, ezp, n), alpha=0.5)
-        ax.set_xlabel('catalog magnitude')
-        ax.set_ylabel('error magnitude')
-        ax.legend(frameon=False)
-        ax.set_ylim(-0.5, 0.5)
-        plt.show()
-
-    return zp, ezp, n, min_mag, max_mag
-
-
-@hierarchical_debug(logger)
-def delete_header_from(header, val):
-    """Delete a section from the FITS header.
-
-    :param header: FITS header.
-    :type header: dict
-    :param val: Value to delete.
-    :type val: str
-
-    
-    """
-    for i, v in enumerate(header.values()):
-        if val in str(v):
-            idx = i - 1
-    for i in range(len(header) - idx):
-        del header[idx]
-
-    return header
+# @hierarchical_debug(logger)
+# def delete_header_from(header, val):
+#     """Delete a section from the FITS header.
+#
+#     :param header: FITS header.
+#     :type header: dict
+#     :param val: Value to delete.
+#     :type val: str
+#
+#
+#     """
+#     for i, v in enumerate(header.values()):
+#         if val in str(v):
+#             idx = i - 1
+#     for i in range(len(header) - idx):
+#         del header[idx]
+#
+#     return header
 
 
 @hierarchical_debug(logger)

@@ -4,14 +4,14 @@ from astropy.io import fits
 from cupyx.scipy.ndimage import binary_erosion, shift, convolve
 
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
-from ..stats.s_util import free_gpu_mem
+from ..utils.gpu import free_gpu_mem
 from ..stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
 
 logger = setup_logger(__name__)
 
+
 @hierarchical_debug(logger)
 def center(im, size):
-
     """Center the image to the given size.
 
     :param im: Input image.
@@ -34,7 +34,6 @@ def center(im, size):
 
 @hierarchical_debug(logger)
 def register_shift(fc, uf=100, n=1000):
-
     """Register and shift image stack based on phase cross-correlation.
 
     :param fc: Stack of images to be registered.
@@ -62,11 +61,10 @@ def register_shift(fc, uf=100, n=1000):
 
     return fc1
 
+
 @hierarchical_debug(logger)
 def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False,
                     beta=False, tim=None):
-
-
     """Stack images with sigma clipping.
 
     :param data: Stack of images to be processed.
@@ -142,6 +140,7 @@ def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False,
 
     return center, sigma
 
+
 @hierarchical_debug(logger)
 def register_shift_frames(frames_list, upsample_factor=100, center_size=
 1000, shift_limit_pix=300):
@@ -153,7 +152,6 @@ def register_shift_frames(frames_list, upsample_factor=100, center_size=
     :param shift_limit_pix:  (Default value = 300)
 
     """
-
 
     fc0 = cp.asarray(fits.getdata(frames_list[0]), dtype=cp.float32)
     im0 = center(fc0, center_size)
@@ -171,7 +169,7 @@ def register_shift_frames(frames_list, upsample_factor=100, center_size=
         if (np.abs(shifted[0]) > shift_limit_pix) | np.abs(shifted[1] >
                                                            shift_limit_pix):
             shifted = 0, 0
-        print(f'Detected subpixel offset (y, x): {shifted}')
+        logger.warning(f'Detected subpixel offset (y, x): {shifted}')
         fc[i, :] = shift(fc1, shift=(shifted[0], shifted[1]), order=1, mode
         ='constant')
 

@@ -1,3 +1,3 @@
-from . import astro
+from . import gpu
 
-__all__ = ['astro']
+__all__ = ['gpu']

@@ -16,11 +16,10 @@ from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 
 logger = setup_logger(__name__)
 
+
 @hierarchical_debug(logger)
 def _masked_phase_cross_correlation(reference_image, moving_image,
                                     reference_mask, moving_mask=None, overlap_ratio=0.3):
-
-
     """Masked image translation registration by masked normalized cross-correlation.
 
     :param reference_image: Reference image.
@@ -78,11 +77,10 @@ def _masked_phase_cross_correlation(reference_image, moving_image,
 
     return -shifts + size_mismatch / 2
 
+
 @hierarchical_debug(logger)
 def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
                            overlap_ratio=0.3):
-
-
     """Masked normalized cross-correlation between arrays.
 
     :param arr1: First array.
@@ -207,9 +205,9 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
 
     return out
 
+
 @hierarchical_debug(logger)
 def _flip(arr, axes=None):
-
     """Reverse array over many axes. Generalization of arr[::-1] for many
     dimensions. If `axes` is `None`, flip along all axes.
 
@@ -229,10 +227,9 @@ def _flip(arr, axes=None):
 
     return arr[tuple(reverse)]
 
+
 @hierarchical_debug(logger)
 def _centered(arr, newshape, axes):
-
-
     """Return the center `newshape` portion of `arr`, leaving axes not
     in `axes` untouched.
 

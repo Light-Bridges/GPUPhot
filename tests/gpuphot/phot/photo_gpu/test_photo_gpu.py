@@ -10,8 +10,7 @@ from astropy.io import fits
 
 from .....gpuphot.logger.hierarchical_logging import setup_logger
 from .....gpuphot.phot.photo_gpu import get_detections, init_gpu
-from .....gpuphot.stats.s_util import free_gpu_mem
-from .....gpuphot.utils.astro import plate_scale_px
+from gpuphot.gpuphot.utils.gpu import free_gpu_mem
 
 # from tensorflow.python.keras.models import load_model
 
@@ -19,6 +18,32 @@ logger = setup_logger(__name__)
 
 
 class Test(TestCase):
+    @staticmethod
+    def plate_scale_px(microns, focal):
+        """Calculate the plate scale in arcseconds per pixel.
+
+        :param microns: Pixel size in micrometers.
+        :type microns: float
+        :param focal: Focal length in millimeters.
+        :type focal: float
+
+
+        """
+
+        return Test.plate_scale_mm(focal) * microns / 1000
+
+    @staticmethod
+    def plate_scale_mm(focal):
+        """Calculate the plate scale in arcseconds per millimeter.
+
+        :param focal: Focal length in millimeters.
+        :type focal: float
+
+
+        """
+
+        return 206265 / focal
+
     def get_fwhm_model(model_path=Path(__file__).parent.parent):
         import tensorflow as tf
         from tensorflow.python.keras.models import load_model
@@ -49,7 +74,6 @@ class Test(TestCase):
                         try:
                             print(f'Processing {image_path}')
 
-
                             model = self.get_fwhm_model()
 
                             init_gpu()
@@ -62,7 +86,7 @@ class Test(TestCase):
                             # Apply photometry
                             gain = headers['GAIN']
                             rnois = headers['RDNOISE']
-                            scale = np.round(plate_scale_px(headers['PXSIZE'], headers['FOCALEN']), 3)
+                            scale = np.round(Test.plate_scale_px(headers['PXSIZE'], headers['FOCALEN']), 3)
                             # scale = head['SCALEORI']
 
                             dfm, sky, rms, fw, efw, ap = get_detections(model, im, det=3, gain=gain, rdnoise=rnois,
@@ -82,5 +106,7 @@ class Test(TestCase):
                             print(f'Error processing {image_path}: {e}')
                             print('Traceback:')
                             traceback.print_exc()
+
+
 if __name__ == '__main__':
     unittest.main()

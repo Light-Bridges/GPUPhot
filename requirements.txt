@@ -3,7 +3,6 @@
 astropy~=5.0.4
 cupy-cuda12x~=12.3.0
 lmfit~=1.2.2
-matplotlib~=3.6.2
 numpy~=1.23.5
 pandas~=1.4.2
 python-logstash-async~=2.5.0
