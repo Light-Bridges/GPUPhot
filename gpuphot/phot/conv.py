@@ -78,7 +78,7 @@ def get_aper_kernel(radius: int, size: int = None) -> tuple:
     :param size: Size of the kernel. Default is 2*radius+1.
     :return: A circular kernel and the area of the kernel.
     """
-    if size == None:
+    if size is None:
         size = 2 * radius + 1
     kernel = cp.zeros((size, size))
     y, x = cp.indices(kernel.shape)

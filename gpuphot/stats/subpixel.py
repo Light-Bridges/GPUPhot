@@ -1,6 +1,6 @@
 """
 Port of Manuel Guizar's code from:
-http://www.mathworks.com/matlabcentral/fileexchange/18401-efficient-subpixel-image-registration-by-cross-correlation
+https://www.mathworks.com/matlabcentral/fileexchange/18401-efficient-subpixel-image-registration-by-cross-correlation
 Cupyfication from skimage/registration/_phase_cross_correlation.py
 """
 import cupy as cp
@@ -57,18 +57,37 @@ def phase_cross_correlation(reference_image, moving_image, *,
 
     Notes
     -----
-    The use of cross-correlation to estimate image translation has a long history dating back to at least [2]_. The "phase correlation" method (selected by ``normalization="phase"``) was first proposed in [3]_.
-    Publications [1]_ and [2]_ use an unnormalized cross-correlation (``normalization=None``). Which form of normalization is better is application-dependent. For example, the phase correlation method works well in registering images under different illumination, but is not very robust to noise. In a high noise scenario, the unnormalized method may be preferable.
+    The use of cross-correlation to estimate image translation has a long
+    history dating back to at least [2]_. The "phase correlation"
+    method (selected by ``normalization="phase"``) was first proposed in [3]_.
+    Publications [1]_ and [2]_ use an unnormalized cross-correlation
+    (``normalization=None``). Which form of normalization is better is
+    application-dependent. For example, the phase correlation method works
+    well in registering images under different illumination, but is not very
+    robust to noise. In a high noise scenario, the unnormalized method may be
+    preferable.
+    When masks are provided, a masked normalized cross-correlation algorithm is
+    used [5]_, [6]_.
     References
     ----------
     .. [1] Manuel Guizar-Sicairos, Samuel T. Thurman, and James R. Fienup,
            "Efficient subpixel image registration algorithms,"
            Optics Letters 33, 156-158 (2008). :DOI:`10.1364/OL.33.000156`
-    .. [2] P. Anuta, Spatial registration of multispectral and multitemporal digital imagery using fast Fourier transform techniques, IEEE Trans. Geosci. Electron., vol. 8, no. 4, pp. 353–368, Oct. 1970. :DOI:`10.1109/TGE.1970.271435`.
-    .. [3] C. D. Kuglin D. C. Hines. The phase correlation image alignment method, Proceeding of IEEE International Conference on Cybernetics and Society, pp. 163-165, New York, NY, USA, 1975, pp. 163–165.
-    .. [4] James R. Fienup, "Invariant error metrics for image reconstruction" Optics Letters 36, 8352-8357 (1997). :DOI:`10.1364/AO.36.008352`
-    .. [5] Dirk Padfield. Masked Object Registration in the Fourier Domain. IEEE Transactions on Image Processing, vol. 21(5), pp. 2706-2718 (2012). :DOI:`10.1109/TIP.2011.2181402`
-    .. [6] D. Padfield. "Masked FFT registration". In Proc. Computer Vision and Pattern Recognition, pp. 2918-2925 (2010). :DOI:`10.1109/CVPR.2010.5540032`
+    .. [2] P. Anuta, Spatial registration of multispectral and multitemporal
+           digital imagery using fast Fourier transform techniques, IEEE Trans.
+           Geosci. Electron., vol. 8, no. 4, pp. 353–368, Oct. 1970.
+           :DOI:`10.1109/TGE.1970.271435`.
+    .. [3] C. D. Kuglin D. C. Hines. The phase correlation image alignment
+           method, Proceeding of IEEE International Conference on Cybernetics
+           and Society, pp. 163-165, New York, NY, USA, 1975, pp. 163–165.
+    .. [4] James R. Fienup, "Invariant error metrics for image reconstruction"
+           Optics Letters 36, 8352-8357 (1997). :DOI:`10.1364/AO.36.008352`
+    .. [5] Dirk Padfield. Masked Object Registration in the Fourier Domain.
+           IEEE Transactions on Image Processing, vol. 21(5),
+           pp. 2706-2718 (2012). :DOI:`10.1109/TIP.2011.2181402`
+    .. [6] D. Padfield. "Masked FFT registration". In Proc. Computer Vision and
+           Pattern Recognition, pp. 2918-2925 (2010).
+           :DOI:`10.1109/CVPR.2010.5540032`
     """
     if reference_mask is not None or moving_mask is not None:
         return _masked_phase_cross_correlation(reference_image,
