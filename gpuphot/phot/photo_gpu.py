@@ -5,7 +5,7 @@ import traceback
 import cupy as cp
 import numpy as np
 import pandas as pd
-import tensorflow as tf
+# import tensorflow as tf
 from cupyx.scipy.ndimage import gaussian_filter, convolve, label, sum as nd_sum, mean as nd_mean, maximum_filter, \
     median_filter
 
@@ -40,12 +40,36 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def init_gpu():
-    """ """
-    logger.debug('Tensorflow version ' + tf.__version__)
-    gpus = tf.config.list_physical_devices('GPU')
-    logger.debug('GPUs:', gpus)
-    tf.config.set_logical_device_configuration(gpus[0], [tf.config.
-                                               LogicalDeviceConfiguration(memory_limit=1024)])
+    """Inicializa y registra información de la GPU usando CuPy"""
+
+    # Versión de CuPy
+    logger.debug('CuPy version ' + cp.__version__)
+
+    # Información de la GPU
+    num_gpus = cp.cuda.runtime.getDeviceCount()
+    logger.debug(f'Number of GPUs: {num_gpus}')
+
+    for i in range(num_gpus):
+        gpu_props = cp.cuda.runtime.getDeviceProperties(i)
+        logger.debug(f'GPU {i}: {gpu_props["name"]}')
+        logger.debug(f'  Total memory: {gpu_props["totalGlobalMem"] / (1024 ** 3):.2f} GB')
+
+
+    # pool = cp.cuda.MemoryPool(cp.cuda.malloc_managed)
+    # cp.cuda.set_allocator(pool.malloc)
+    #
+    # # Limitar el pool a 1024 MB (1 GB)
+    # pool.set_limit(size=1024 * 1024 * 1024)  # 1 GB en bytes
+    #
+    # logger.debug(f'GPU memory pool limited to 1 GB')
+
+# def init_gpu():
+#     """ """
+#     logger.debug('Tensorflow version ' + tf.__version__)
+#     gpus = tf.config.list_physical_devices('GPU')
+#     logger.debug('GPUs:', gpus)
+#     tf.config.set_logical_device_configuration(gpus[0], [tf.config.
+#                                                LogicalDeviceConfiguration(memory_limit=1024)])
 
 
 @hierarchical_debug(logger)
