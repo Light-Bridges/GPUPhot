@@ -10,12 +10,13 @@ import cupy as cp
 import numpy as np
 from astropy.io.fits import Header
 from dotenv import load_dotenv
-from elasticsearch import Elasticsearch
 
 # Try to import Logstash handlers, but don't fail if not available
 try:
     from logstash_async.handler import AsynchronousLogstashHandler
     from logstash_async.formatter import LogstashFormatter
+
+    from elasticsearch import Elasticsearch
 except ImportError:
     pass
 
