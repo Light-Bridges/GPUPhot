@@ -9,4 +9,5 @@ python-logstash-async~=2.5.0
 scikit-learn~=1.2.0
 scipy~=1.9.3
 setuptools~=75.1.0
+python-dotenv==1.0.1
 #tensorflow[and-cuda]~=2.8.4

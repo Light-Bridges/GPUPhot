@@ -9,6 +9,8 @@ import traceback
 import cupy as cp
 import numpy as np
 from astropy.io.fits import Header
+from dotenv import load_dotenv
+from elasticsearch import Elasticsearch
 
 # Try to import Logstash handlers, but don't fail if not available
 try:
@@ -16,6 +18,10 @@ try:
     from logstash_async.formatter import LogstashFormatter
 except ImportError:
     pass
+
+load_dotenv()
+
+INDEX_NAME = "gpuphot"
 
 
 class IndentFormatter(logging.Formatter):
@@ -44,7 +50,7 @@ class IndentFormatter(logging.Formatter):
         """
         thread_id = threading.get_ident()
         indent = self.indent_levels.get(thread_id, 0)
-        record.indent = '  ' * indent
+        record.indent = ' ' * indent
         return super().format(record)
 
 
@@ -153,24 +159,72 @@ def setup_logstash_handler(logger):
     :param logger: Logger instance to add the Logstash handler to
     :type logger: logging.Logger
     """
-    logstash_host = os.environ.get('LOGSTASH_HOST')
-    logstash_port = os.environ.get('LOGSTASH_PORT', 5000)
+    logstash_host = os.environ.get('LOGSTASH_HOST', 'localhost')
+    logstash_port = int(os.environ.get('LOGSTASH_PORT', 5000))
 
-    if logstash_host and logstash_port:
-        logstash_handler = AsynchronousLogstashHandler(
-            logstash_host,
-            int(logstash_port),
-            database_path=None,
-            transport='logstash_async.transport.TcpTransport',
-            level=logging.DEBUG
-        )
-        formatter = LogstashFormatter(
-            message_type='gpuphot',
-            extra_prefix='extra',
-            extra={"index_name": "gpuphot"}
-        )
-        logstash_handler.setFormatter(formatter)
-        logger.addHandler(logstash_handler)
+    if os.environ.get('LOGSTASH_LOGGING', 'True').lower() == 'true':
+        try:
+            formatter = LogstashFormatter(
+                message_type=INDEX_NAME,
+                extra_prefix='extra',
+                extra={
+                    "index_name": INDEX_NAME,
+                    "environment": os.environ.get('ENVIRONMENT', 'production')
+                }
+            )
+
+            logstash_handler = AsynchronousLogstashHandler(
+                host=logstash_host,
+                port=logstash_port,
+                database_path=None,
+                transport='logstash_async.transport.TcpTransport',
+                ssl_enable=False,
+                ssl_verify=False,
+                keyfile=None,
+                certfile=None,
+                ca_certs=None,
+                formatter=formatter,
+                level=logging.DEBUG
+            )
+
+            logger.addHandler(logstash_handler)
+            logger.debug(f"Logstash handler configured successfully for {logstash_host}:{logstash_port}")
+
+            # Configurar Elasticsearch si está habilitado en las variables de entorno
+            setup_elasticsearch(logger)
+
+        except Exception as e:
+            logger.error(f"Failed to set up Logstash handler: {str(e)}")
+    else:
+        logger.info("Logstash logging is disabled")
+
+
+def setup_elasticsearch(logger):
+    es_enabled = os.getenv('ELASTICSEARCH_ENABLED', 'False').lower() == 'true'
+    if es_enabled:
+        try:
+            es_host = os.environ.get('ELASTICSEARCH_HOST', 'localhost')
+            es_port = int(os.environ.get('ELASTICSEARCH_PORT', 9200))
+            es_user = os.environ.get('ELASTICSEARCH_USER')
+            es_password = os.environ.get('ELASTICSEARCH_PASSWORD')
+
+            es_client = Elasticsearch(
+                f"{es_host}:{es_port}",
+                http_auth=(es_user, es_password) if es_user and es_password else None
+            )
+
+            # Aquí puedes añadir lógica para crear o verificar el índice INDEX_NAME
+            # Por ejemplo:
+            if not es_client.indices.exists(index="gpuphot"):
+                es_client.indices.create(index="gpuphot")
+                logger.debug(f"Created {INDEX_NAME} index in Elasticsearch")
+            else:
+                logger.debug(f"{INDEX_NAME} index already exists in Elasticsearch")
+
+        except Exception as e:
+            logger.error(f"Failed to set up Elasticsearch: {str(e)}")
+    else:
+        logger.info("Elasticsearch integration is disabled")
 
 
 def setup_logger(name):
@@ -183,7 +237,11 @@ def setup_logger(name):
     :rtype: logging.Logger
     """
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+
+    if os.getenv('DEBUG', '').lower() == 'true':
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     handler = logging.StreamHandler()
     formatter = IndentFormatter('%(asctime)s - %(levelname)s - %(indent)s%(message)s')
