@@ -1,11 +1,17 @@
+import atexit
 import functools
 import inspect
+import json
 import logging
 import os
+import platform
+import sys
 import threading
 import time
 import traceback
+from datetime import datetime
 
+import GPUtil
 import cupy as cp
 import numpy as np
 from astropy.io.fits import Header
@@ -15,55 +21,58 @@ from dotenv import load_dotenv
 try:
     from logstash_async.handler import AsynchronousLogstashHandler
     from logstash_async.formatter import LogstashFormatter
-
-    from elasticsearch import Elasticsearch
+    # from elasticsearch import Elasticsearch
 except ImportError:
     pass
 
 load_dotenv()
 
-INDEX_NAME = "gpuphot"
+
+# INDEX_NAME = "gpuphot"
 
 
 class IndentFormatter(logging.Formatter):
     """Custom formatter to add indentation to log messages."""
 
     def __init__(self, fmt=None, datefmt=None):
-        """
-        Initialize the IndentFormatter.
-
-        :param fmt: Format string for the log message
-        :type fmt: str
-        :param datefmt: Format string for the date/time
-        :type datefmt: str
-        """
         super().__init__(fmt, datefmt)
         self.indent_levels = {}
 
     def format(self, record):
-        """
-        Format the specified record as text.
-
-        :param record: A LogRecord instance
-        :type record: logging.LogRecord
-        :return: Formatted log record
-        :rtype: str
-        """
         thread_id = threading.get_ident()
         indent = self.indent_levels.get(thread_id, 0)
         record.indent = ' ' * indent
         return super().format(record)
 
 
-def format_arg(arg):
-    """
-    Format function arguments for logging.
+class NotifyingHandler(logging.Handler):
+    def __init__(self, callback):
+        super().__init__()
+        self.callback = callback
 
-    :param arg: The argument to format
-    :type arg: Any
-    :return: Formatted string representation of the argument
-    :rtype: str
-    """
+    def emit(self, record):
+        log_entry = {
+            'message': record.getMessage(),
+            'level': record.levelname,
+            'timestamp': datetime.fromtimestamp(record.created).isoformat(),
+            'logger_name': record.name
+        }
+        if hasattr(record, 'event'):
+            log_entry['event'] = record.event
+        if hasattr(record, 'function_name'):
+            log_entry['function_name'] = record.function_name
+        if hasattr(record, 'arguments'):
+            log_entry['arguments'] = record.arguments
+        if hasattr(record, 'execution_time'):
+            log_entry['execution_time'] = record.execution_time
+        if hasattr(record, 'exception'):
+            log_entry['exception'] = record.exception
+        if hasattr(record, 'traceback'):
+            log_entry['traceback'] = record.traceback
+        self.callback(log_entry)
+
+
+def format_arg(arg):
     if isinstance(arg, (np.ndarray, cp.ndarray)):
         return f"{type(arg).__name__}(shape={arg.shape}, dtype={arg.dtype})"
     elif isinstance(arg, (list, tuple)):
@@ -84,68 +93,130 @@ def format_arg(arg):
         return f"{arg!r}:{type(arg).__name__}"
 
 
-def hierarchical_debug(logger):
-    """
-    Decorator for hierarchical debugging and exception handling.
+class SystemInfo:
+    _instance = None
 
-    :param logger: Logger instance to use for logging
-    :type logger: logging.Logger
-    :return: Decorator function
-    :rtype: function
-    """
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    def __init__(self):
+        # Recopilar información del sistema
+        self.system_info = {
+            'cupy_version': cp.__version__,
+            'os': platform.system(),
+            'os_version': platform.version(),
+            'kernel_version': platform.release(),
+            'python_version': sys.version,
+            'architecture': platform.architecture(),
+            'processor': platform.processor(),
+            'gpu': self.get_gpu_info()
+        }
+
+    def get_gpu_info(self):
+        # Obtener información de las GPUs usando GPUtil
+        gpus = GPUtil.getGPUs()
+        if gpus:
+            return [{
+                'id': gpu.id,
+                'name': gpu.name,
+                'driver_version': gpu.driver,
+                'memory_total': gpu.memoryTotal,
+                'memory_free': gpu.memoryFree,
+                'memory_used': gpu.memoryUsed,
+                'temperature': gpu.temperature,
+                'load': gpu.load,
+            } for gpu in gpus]
+        else:
+            return "No GPU detected"
+
+    def refresh_gpu_info(self):
+        # Método para actualizar solo la información de la GPU
+        self.system_info['gpu'] = self.get_gpu_info()
+
+
+def hierarchical_debug(logger_name):
+    logger = SingletonLogger.get_logger(logger_name)
+    system_info_instance = SystemInfo.get_instance()
 
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            """
-            Wrapper function that adds logging and exception handling.
-
-            :param args: Positional arguments of the decorated function
-            :param kwargs: Keyword arguments of the decorated function
-            :return: Result of the decorated function
-            :raises: Any exception raised by the decorated function
-            """
             thread_id = threading.get_ident()
             indent_levels = logger.handlers[0].formatter.indent_levels
             current_level = indent_levels.get(thread_id, 0)
-
             indent_levels[thread_id] = current_level + 1
 
-            # Format function arguments for logging
+            # Format function arguments
             sig = inspect.signature(func)
             bound_args = sig.bind(*args, **kwargs)
-            arg_info = []
-
-            for param_name, param in sig.parameters.items():
-                if param_name in bound_args.arguments:
-                    arg = bound_args.arguments[param_name]
-                    arg_info.append(f"{param_name}={format_arg(arg)}")
-                elif param.default is not param.empty:
-                    arg_info.append(f"{param_name}={format_arg(param.default)}")
-                else:
-                    arg_info.append(f"{param_name}")
-
+            arg_info = [f"{param_name}={format_arg(arg)}" for param_name, arg in bound_args.arguments.items()]
             arg_str = ", ".join(arg_info)
-            logger.debug(f'Starting function {func.__name__}({arg_str})')
 
+            # Create a separate logger for critical events that always goes to Logstash.
+            critical_logger = logging.getLogger("critical_logger")
+            critical_logger.setLevel(logging.DEBUG)  # Ensure this logger captures all levels.
+
+            # Add the Logstash handler to the critical logger if it doesn't exist.
+            if not critical_logger.handlers:
+                setup_logstash_handler(critical_logger)
+
+                # Configure the critical logger's log callback
+                def critical_log_callback(log_entry):
+                    if os.getenv('DEBUG', 'False').lower() == 'true':
+                        print(f"Log crítico guardado: {json.dumps(log_entry, indent=2)}")
+
+                notifying_handler_critical = NotifyingHandler(critical_log_callback)
+                notifying_handler_critical.setLevel(logging.DEBUG)  # Or the preferred level.
+                critical_logger.addHandler(notifying_handler_critical)
+
+            end_time = None
+            function_success = True
             start_time = time.time()
             try:
+                logger.debug(f'Starting function {func.__name__}', extra={
+                    'function_name': func.__name__,
+                    'arguments': arg_str,
+                    'event': 'function_start'
+                })
                 result = func(*args, **kwargs)
                 return result
             except Exception as e:
-                tb = traceback.format_exc()
-                logger.error(f"Exception in {func.__name__}: {str(e)}\n{tb}",
-                             extra={
-                                 'exception': str(e),
-                                 'traceback': tb,
-                                 'function': func.__name__
-                             })
-                raise
-            finally:
                 end_time = time.time()
+                function_success = False
+                tb = traceback.format_exc()
+
+                system_info_instance.refresh_gpu_info()
+                # Always log exceptions to Logstash regardless of user-defined log level.
+                critical_logger.error(f"Exception in {func.__name__}", extra={
+                    'function_name': func.__name__,
+                    'arguments': arg_str,
+                    'exception': str(e),
+                    'traceback': tb,
+                    'event': 'function_exception',
+                    'system_info': system_info_instance.system_info  # Include system information
+                })
+                raise  # Re-raise the exception after logging it.
+            finally:
+                if not end_time:
+                    end_time = time.time()
                 execution_time = end_time - start_time
-                logger.debug(
-                    f'Finishing function {func.__name__} - Execution time: {execution_time:.6f} seconds')
+
+                critical_logger.debug(f'Finishing function {func.__name__}', extra={
+                    'function_name': func.__name__,
+                    'arguments': arg_str,
+                    'execution_time': execution_time,
+                    'event': 'function_end',
+                    'success': function_success,
+                    'system_info': system_info_instance.system_info  # Include system information
+                })
+
+                # Esperar a que se guarden los logs críticos en Logstash antes de continuar.
+                if isinstance(critical_logger.handlers[0], AsynchronousLogstashHandler):
+                    critical_logger.handlers[0].flush()  # Asegúrate de que se envíen los logs.
+
                 indent_levels[thread_id] = max(0, current_level)
 
         return wrapper
@@ -154,25 +225,27 @@ def hierarchical_debug(logger):
 
 
 def setup_logstash_handler(logger):
-    """
-    Set up Logstash handler if environment variables are set.
-
-    :param logger: Logger instance to add the Logstash handler to
-    :type logger: logging.Logger
-    """
     logstash_host = os.environ.get('LOGSTASH_HOST', 'localhost')
     logstash_port = int(os.environ.get('LOGSTASH_PORT', 5000))
 
     if os.environ.get('LOGSTASH_LOGGING', 'True').lower() == 'true':
         try:
             formatter = LogstashFormatter(
-                message_type=INDEX_NAME,
                 extra_prefix='extra',
                 extra={
-                    "index_name": INDEX_NAME,
-                    "environment": os.environ.get('ENVIRONMENT', 'production')
+                    "environment": os.environ.get('ENVIRONMENT', 'production'),
+                    "application": "gpuphot"
                 }
             )
+            #
+            # class DebugAsynchronousLogstashHandler(AsynchronousLogstashHandler):
+            #     def emit(self, record):
+            #         if self.formatter:
+            #             formatted_message = self.formatter.format(record)
+            #             print(f"Enviando log a Logstash: {formatted_message}")
+            #         else:
+            #             print(f"Enviando log a Logstash (sin formateador): {record.getMessage()}")
+            #         super().emit(record)
 
             logstash_handler = AsynchronousLogstashHandler(
                 host=logstash_host,
@@ -184,75 +257,78 @@ def setup_logstash_handler(logger):
                 keyfile=None,
                 certfile=None,
                 ca_certs=None,
-                formatter=formatter,
                 level=logging.DEBUG
             )
 
+            # Asignar el formateador al manejador
+            logstash_handler.setFormatter(formatter)
+
             logger.addHandler(logstash_handler)
-            logger.debug(f"Logstash handler configured successfully for {logstash_host}:{logstash_port}")
+            # logger.debug(f"Logstash handler configured successfully for {logstash_host}:{logstash_port}")
 
-            # Configurar Elasticsearch si está habilitado en las variables de entorno
-            setup_elasticsearch(logger)
+            # # Setup Elasticsearch if enabled in environment variables.
+            # setup_elasticsearch(logger)
 
+            return logstash_handler
         except Exception as e:
             logger.error(f"Failed to set up Logstash handler: {str(e)}")
     else:
-        logger.info("Logstash logging is disabled")
+        logger.debug("Logstash logging is disabled")
+
+    return None
 
 
-def setup_elasticsearch(logger):
-    es_enabled = os.getenv('ELASTICSEARCH_ENABLED', 'False').lower() == 'true'
-    if es_enabled:
-        try:
-            es_host = os.environ.get('ELASTICSEARCH_HOST', 'localhost')
-            es_port = int(os.environ.get('ELASTICSEARCH_PORT', 9200))
-            es_user = os.environ.get('ELASTICSEARCH_USER')
-            es_password = os.environ.get('ELASTICSEARCH_PASSWORD')
+class SingletonLogger:
+    _instance = None
+    _lock = threading.Lock()
+    _initialized = False
 
-            es_client = Elasticsearch(
-                f"{es_host}:{es_port}",
-                http_auth=(es_user, es_password) if es_user and es_password else None
-            )
+    @classmethod
+    def get_logger(cls, name):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = cls._setup_logger(name)
+        return cls._instance
 
-            # Aquí puedes añadir lógica para crear o verificar el índice INDEX_NAME
-            # Por ejemplo:
-            if not es_client.indices.exists(index="gpuphot"):
-                es_client.indices.create(index="gpuphot")
-                logger.debug(f"Created {INDEX_NAME} index in Elasticsearch")
-            else:
-                logger.debug(f"{INDEX_NAME} index already exists in Elasticsearch")
+    @classmethod
+    def _setup_logger(cls, name):
+        logger = logging.getLogger(name)
 
-        except Exception as e:
-            logger.error(f"Failed to set up Elasticsearch: {str(e)}")
-    else:
-        logger.info("Elasticsearch integration is disabled")
+        if cls._initialized:
+            return logger
+
+        # Set the logging level based on the environment variable.
+        if os.getenv('LOG_LEVEL', '').upper() == 'DEBUG':
+            logger.setLevel(logging.DEBUG)
+        else:
+            logger.setLevel(logging.ERROR)  # Default to ERROR level.
+
+        # Configure StreamHandler.
+        handler = logging.StreamHandler()
+        formatter = IndentFormatter('%(asctime)s - %(levelname)s - %(indent)s%(message)s')
+        handler.setFormatter(formatter)
+
+        # Clear existing handlers and add new one.
+        logger.handlers.clear()
+        logger.addHandler(handler)
+
+        # Setup Logstash handler.
+        setup_logstash_handler(logger)
+
+        def shutdown_logger(timeout=5):
+            for handler in logger.handlers:
+                handler.close()
+                logger.removeHandler(handler)
+
+        atexit.register(shutdown_logger)
+
+        cls._initialized = True
+        return logger
 
 
 def setup_logger(name):
-    """
-    Set up logger with custom formatter and Logstash handler.
-
-    :param name: Name of the logger
-    :type name: str
-    :return: Configured logger instance
-    :rtype: logging.Logger
-    """
-    logger = logging.getLogger(name)
-
-    if os.getenv('DEBUG', '').lower() == 'true':
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.INFO)
-
-    handler = logging.StreamHandler()
-    formatter = IndentFormatter('%(asctime)s - %(levelname)s - %(indent)s%(message)s')
-    handler.setFormatter(formatter)
-
-    logger.handlers = [handler]
-
-    setup_logstash_handler(logger)
-
-    return logger
+    return SingletonLogger.get_logger(name)
 
 
 # Example usage
@@ -264,14 +340,13 @@ if __name__ == "__main__":
     def example_function(a, b):
         """
         An example function to demonstrate the hierarchical_debug decorator.
-
         :param a: First parameter
         :type a: int
         :param b: Second parameter
         :type b: int
         :return: Result of division a/b
         :rtype: float
-        :raises ZeroDivisionError: If b is zero
+        :raises ZeroDivisionError: If b is zero.
         """
         return a / b
 
@@ -280,3 +355,5 @@ if __name__ == "__main__":
         example_function(10, 0)
     except Exception as e:
         print(f"Caught an exception: {e}")
+
+    example_function(100, 1)
