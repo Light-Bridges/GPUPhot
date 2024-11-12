@@ -28,7 +28,7 @@ except ImportError:
 load_dotenv()
 
 
-# INDEX_NAME = "gpuphot"
+LOGGER_NAME = "gpuphot"
 
 
 class IndentFormatter(logging.Formatter):
@@ -156,7 +156,7 @@ def hierarchical_debug(logger_name):
             arg_str = ", ".join(arg_info)
 
             # Create a separate logger for critical events that always goes to Logstash.
-            critical_logger = logging.getLogger("critical_logger")
+            critical_logger = logging.getLogger(LOGGER_NAME)
             critical_logger.setLevel(logging.DEBUG)  # Ensure this logger captures all levels.
 
             # Add the Logstash handler to the critical logger if it doesn't exist.
