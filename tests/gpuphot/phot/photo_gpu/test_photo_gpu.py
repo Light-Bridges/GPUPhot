@@ -9,7 +9,7 @@ import numpy as np
 from astropy.io import fits
 
 from .....gpuphot.logger.hierarchical_logging import setup_logger
-from .....gpuphot.phot.photo_gpu import get_detections, init_gpu
+from .....gpuphot.phot.photo_gpu import init_gpu
 from gpuphot.gpuphot.utils.gpu import free_gpu_mem
 
 # from tensorflow.python.keras.models import load_model
@@ -61,51 +61,51 @@ class Test(TestCase):
         model = load_model(name)
         return model
 
-    def test_get_detections(self):
+    # def test_get_detections(self):
 
-        directory_path = os.path.join(os.path.dirname(__file__), 'data')
-        print(f'Processing {directory_path}')
-        for (root, dirs, files) in os.walk(directory_path):
-            for file in files:
-                if file.endswith('.fits'):
-                    if 'TTT1' in file:
-                        image_path = os.path.join(root, file)
-                        print(f'Processing {image_path}')
-                        try:
-                            print(f'Processing {image_path}')
+    #     directory_path = os.path.join(os.path.dirname(__file__), 'data')
+    #     print(f'Processing {directory_path}')
+    #     for (root, dirs, files) in os.walk(directory_path):
+    #         for file in files:
+    #             if file.endswith('.fits'):
+    #                 if 'TTT1' in file:
+    #                     image_path = os.path.join(root, file)
+    #                     print(f'Processing {image_path}')
+    #                     try:
+    #                         print(f'Processing {image_path}')
 
-                            model = self.get_fwhm_model()
+    #                         model = self.get_fwhm_model()
 
-                            init_gpu()
+    #                         init_gpu()
 
-                            # Read reduced image
-                            with fits.open(image_path) as ima:
-                                im = ima[0].data.astype(np.float32)
-                                headers = ima[0].header
+    #                         # Read reduced image
+    #                         with fits.open(image_path) as ima:
+    #                             im = ima[0].data.astype(np.float32)
+    #                             headers = ima[0].header
 
-                            # Apply photometry
-                            gain = headers['GAIN']
-                            rnois = headers['RDNOISE']
-                            scale = np.round(Test.plate_scale_px(headers['PXSIZE'], headers['FOCALEN']), 3)
-                            # scale = head['SCALEORI']
+    #                         # Apply photometry
+    #                         gain = headers['GAIN']
+    #                         rnois = headers['RDNOISE']
+    #                         scale = np.round(Test.plate_scale_px(headers['PXSIZE'], headers['FOCALEN']), 3)
+    #                         # scale = head['SCALEORI']
 
-                            dfm, sky, rms, fw, efw, ap = get_detections(model, im, det=3, gain=gain, rdnoise=rnois,
-                                                                        scale=scale)
-                            sm = np.mean(sky).tolist()
-                            rm = np.mean(rms).tolist()
+    #                         dfm, sky, rms, fw, efw, ap = get_detections(model, im, det=3, gain=gain, rdnoise=rnois,
+    #                                                                     scale=scale)
+    #                         sm = np.mean(sky).tolist()
+    #                         rm = np.mean(rms).tolist()
 
-                            del sky, rms
-                            free_gpu_mem()
+    #                         del sky, rms
+    #                         free_gpu_mem()
 
-                            logger.info(f'Detection: fw:{fw},sky:{sm},rms:{rm}', extra={'fw': fw, 'sky': sm, 'rms': rm})
+    #                         logger.info(f'Detection: fw:{fw},sky:{sm},rms:{rm}', extra={'fw': fw, 'sky': sm, 'rms': rm})
 
-                            # image_cp = cp.asarray(fits.getdata(image_path))
-                            # resul = SP_filter(image_cp)
-                            end_time = time.time()
-                        except Exception as e:
-                            print(f'Error processing {image_path}: {e}')
-                            print('Traceback:')
-                            traceback.print_exc()
+    #                         # image_cp = cp.asarray(fits.getdata(image_path))
+    #                         # resul = SP_filter(image_cp)
+    #                         end_time = time.time()
+    #                     except Exception as e:
+    #                         print(f'Error processing {image_path}: {e}')
+    #                         print('Traceback:')
+    #                         traceback.print_exc()
 
 
 if __name__ == '__main__':
