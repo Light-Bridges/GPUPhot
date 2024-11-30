@@ -1,10 +1,9 @@
 import cupy as cp
 import numpy as np
 from astropy.io import fits
-from cupyx.scipy.ndimage import binary_erosion, shift, convolve
+from cupyx.scipy.ndimage import binary_erosion, shift
 
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
-from ..utils.gpu import free_gpu_mem
 from ..stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
 
 logger = setup_logger(__name__)
@@ -63,8 +62,7 @@ def register_shift(fc, uf=100, n=1000):
 
 
 @hierarchical_debug(logger)
-def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False,
-                    beta=False, tim=None):
+def stack_sigmaclip(data, it=5, n=3):
     """Stack images with sigma clipping.
 
     :param data: Stack of images to be processed.
@@ -73,72 +71,48 @@ def stack_sigmaclip(data, it=5, n=3, master=False, mbias=None, alpha=False,
     :type it: int, optional
     :param n: Sigma clipping threshold, by default 3.
     :type n: int, optional
-    :param master: If True, use master bias subtraction, by default False.
-    :type master: bool, optional
-    :param mbias: Master bias image for subtraction, by default None.
-    :type mbias: ndarray, optional
-    :param alpha: Parameter for Gaussian filter, by default False.
-    :type alpha: float, optional
-    :param beta: Parameter for Gaussian filter, by default False.
-    :type beta: float, optional
-    :param tim: Weights for time integration, by default None.
-    :type tim: ndarray, optional
 
     
     """
     nim = data.shape[0]
     if nim < 3:
         return cp.asarray(data.mean(axis=0)), None
-    if tim is None:
-        w = cp.ones(nim, dtype=cp.float32)
-        f = 1.0
-    else:
-        w = cp.asarray(tim) / np.sum(tim)
-        f = nim
     delta0 = -1
-    iplus = cp.zeros_like(data[0], dtype=cp.float32) + 10000000000.0
-    iminu = cp.zeros_like(data[0], dtype=cp.float32) - 10000000000.0
-    if alpha:
-        from ..phot.photo_gpu import gen_moff_filter2
-        gf, lk = gen_moff_filter2(alpha, beta)
-    for iit in range(it):
-        center = cp.zeros_like(data[0], dtype=cp.float32)
-        sigma = cp.zeros_like(data[0], dtype=cp.float32)
-        mask = cp.zeros_like(data[0], dtype=cp.float32)
+    iplus = cp.zeros_like(im0, dtype=cp.float32)+1.e10
+    iminu = cp.zeros_like(im0, dtype=cp.float32)-1.e10
+    avg = cp.zeros_like(im0, dtype=cp.float32)
+    std = cp.zeros_like(im0, dtype=cp.float32)
+    for j in range(it):
+        center = cp.zeros_like(im0, dtype=cp.double)
+        sigma = cp.zeros_like(im0, dtype=cp.double)
+        mask = cp.zeros_like(im0, dtype=cp.float32)
         delta = 0
+
         for i in range(data.shape[0]):
-            im = cp.asarray(data[i, :], dtype=cp.float32)
-            if master:
-                im = im - cp.asarray(mbias, dtype=cp.float32)
-                im = im / cp.mean(im)
-            if alpha:
-                im = convolve(im, gf, origin=(0, 0))
-            mk = im >= iminu
-            mk = mk * (im <= iplus)
+
+            im = data[i, :]
+
+            mk = (im >= iminu)
+            mk = mk*(im <= iplus)
             im = im * mk
-            center = center + im * w[i]
-            sigma = sigma + im * im * w[i]
+            center = center + im
+            sigma = sigma + im*im
             delta = delta + cp.sum(mk == 0)
-            mask = mask + mk * w[i]
-        center = center / mask
-        sigma = sigma / mask
-        sigma = sigma - center * center
-        sigma[sigma < 1.0] = 1.0
-        sigma = cp.sqrt(sigma)
+            mask = mask + mk
+
+        center = center/mask
+        sigma = sigma/mask
+        sigma = cp.sqrt(sigma-center*center)
         if delta == delta0:
             break
         delta0 = delta
         iplus = center + n * sigma
         iminu = center - n * sigma
-        logger.debug('it=', iit, 'masked ', delta)
-    del (iplus, iminu, mask)
-    free_gpu_mem()
-    center = center * f
-    sigma = sigma * f
-    center[center != center] = im[center != center]
-    del im
-
-    return center, sigma
+        avg[mask >=3] = center[mask >=3]
+        std[mask >=3] = sigma[mask >=3]
+        
+    del iplus, iminu, im0, delta0, mask, delta, center, sigma
+    return avg, std
 
 
 @hierarchical_debug(logger)

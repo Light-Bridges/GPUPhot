@@ -15,7 +15,7 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def phase_cross_correlation(reference_image, moving_image, *,
-                            upsample_factor=1, space='real', return_error=True, reference_mask=None,
+                            upsample_factor=100, space='real', return_error=True, reference_mask=None,
                             moving_mask=None, overlap_ratio=0.3, normalization='phase'):
     """Efficient subpixel image translation registration by cross-correlation.
     This code gives the same precision as the FFT upsampled cross-correlation

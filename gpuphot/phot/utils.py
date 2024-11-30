@@ -33,9 +33,11 @@ def calculate_tile_percentiles(tiles: cp.ndarray, qt: float = 70) -> cp.ndarray:
     :param qt: Percentile to be calculated.
     :return: An array containing the percentiles for each tile.
     """
+    tiles = tiles[~cp.isnan(tiles).any(axis=(1, 2))]
     return cp.percentile(tiles, qt, axis=(1, 2))
 
 
+@hierarchical_debug(logger)
 def calculate_tile_nanmean(tiles: cp.ndarray) -> cp.ndarray:
     """Calculates the mean of an array of tiles.
 
@@ -43,6 +45,21 @@ def calculate_tile_nanmean(tiles: cp.ndarray) -> cp.ndarray:
     :return: An array containing the mean for each tile.
     """
     return cp.nanmean(tiles, axis=(1, 2))
+
+
+@hierarchical_debug(logger)
+def calculate_tile_nanmean_sigclip(tiles: cp.ndarray, nsigma: float = 2) -> cp.ndarray:
+    """Calculates the mean of an array of tiles.
+
+    :param tiles: Array of tiles.
+    :param nsigma: Number of sigmas to be clipped.
+    :return: A tuple containing the mean and standard deviation of the tiles.
+    """
+    m = cp.nanmean(tiles, axis=(1, 2))
+    s = cp.nanstd(tiles, axis=(1, 2))
+    mask = cp.abs(tiles - m[:, None, None]) < nsigma * s[:, None, None]
+    tiles[~mask] = cp.nan
+    return cp.nanmean(tiles, axis=(1, 2)), cp.nanstd(tiles, axis=(1, 2))
 
 
 @hierarchical_debug(logger)

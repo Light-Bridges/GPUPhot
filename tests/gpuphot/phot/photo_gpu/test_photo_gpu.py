@@ -100,7 +100,7 @@ class Test(TestCase):
                             logger.info(f'Detection: fw:{fw},sky:{sm},rms:{rm}', extra={'fw': fw, 'sky': sm, 'rms': rm})
 
                             # image_cp = cp.asarray(fits.getdata(image_path))
-                            # resul = SP_filter_cupy(image_cp)
+                            # resul = SP_filter(image_cp)
                             end_time = time.time()
                         except Exception as e:
                             print(f'Error processing {image_path}: {e}')

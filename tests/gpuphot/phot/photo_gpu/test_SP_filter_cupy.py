@@ -1,9 +1,9 @@
 import unittest
 
 
-class TestSP_filter_cupy(unittest.TestCase):
+class TestSP_filter(unittest.TestCase):
 
-    def test_SP_filter_cupy_example1(self):
+    def test_SP_filter_example1(self):
         self.assertTrue(False)
 
 

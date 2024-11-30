@@ -7,7 +7,7 @@ logger = setup_logger(__name__)
 
 
 @hierarchical_debug(logger)
-def convolve_fft(image: cp.ndarray, kernel: cp.ndarray) -> cp.ndarray:
+def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, do_pad: bool = True) -> cp.ndarray:
     """Convolve an image with a kernel using FFT.
 
     :param image: Image array to be processed.
@@ -17,24 +17,21 @@ def convolve_fft(image: cp.ndarray, kernel: cp.ndarray) -> cp.ndarray:
     image_shape = image.shape
     kernel_shape = kernel.shape
     padding = int((kernel_shape[0] - 1) / 2)
-    new_image_shape = fill_image((image_shape[0] + 2 * padding, image_shape
-    [1] + 2 * padding))
-    padded_image = cp.pad(image, ((padding, padding), (padding, padding)))
-    padded_kernel = cp.pad(kernel, ((0, new_image_shape[0] - kernel_shape[0
-    ]), (0, new_image_shape[1] - kernel_shape[1])))
-    F_image = cp.fft.rfft2(padded_image, s=new_image_shape)
-    F_kernel = cp.fft.rfft2(padded_kernel, s=new_image_shape)
-    F_convolved = F_image * F_kernel
+    if do_pad: image = cp.pad(image, pad_width=padding, mode='reflect')      # esto está provocando un aumento terrible de memoria
+    new_image_shape = image.shape
+    F_image = cp.fft.rfft2(image, s=new_image_shape)
+    F_kernel = cp.fft.rfft2(kernel, s=new_image_shape)
+    F_kernel = cp.conj(F_kernel)
+    convolved = F_image * F_kernel
+    convolved = cp.fft.irfft2(convolved, s=new_image_shape)
+    convolved = cp.roll(convolved, shift=[padding, padding], axis=[0, 1])
+    if do_pad: convolved = convolved[padding:padding+image_shape[0], padding:padding+image_shape[1]]
     del F_image, F_kernel
-    convolved = cp.fft.irfft2(F_convolved, s=new_image_shape)
-    convolved = convolved[padding:padding + image_shape[0], padding:padding +
-                                                                    image_shape[1]]
-
     return convolved
 
 
 @hierarchical_debug(logger)
-def get_mean_std(im_g: cp.ndarray, lk: int, std: bool = True) -> tuple:
+def get_mean_std(im_g: cp.ndarray, lk: int, std: bool = True, do_pad: bool = True) -> tuple:
     """Calculates the mean and standard deviation of an image using FFT convolution.
 
     :param im_g: Image array to be processed.
@@ -42,10 +39,11 @@ def get_mean_std(im_g: cp.ndarray, lk: int, std: bool = True) -> tuple:
     :param std: Whether to calculate the standard deviation.
     :return: A tuple containing the mean and standard deviation of the image.
     """
+    im_g = cp.asarray(im_g, dtype=cp.float64)
     k_app = gen_apm_filter(lk)
-    fot_m = convolve_fft(im_g, k_app)
+    fot_m = convolve_fft(im_g, k_app, do_pad=do_pad)
     if std:
-        fot_m2 = convolve_fft(im_g * im_g, k_app)
+        fot_m2 = convolve_fft(im_g * im_g, k_app, do_pad=do_pad)
         fot_m2 = cp.sqrt(fot_m2 - fot_m * fot_m)
     else:
         fot_m2 = None
@@ -119,10 +117,11 @@ def gen_apm_filter(lk: int, li: int = 0, norm: bool = True) -> cp.ndarray:
 
     # if li is not 0, it creates a circle with radius li and sets the values inside to 0
     if li != 0:
-        struc = cp.where(((lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2) < (fw2 - li ** 2))
-        k_app[struc] = 0
+        struc_inner = cp.where(((lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2) < (li ** 2))
+        k_app[struc_inner] = 0
     if norm: k_app = k_app / k_app.sum()
-    return (k_app)
+    k_app = k_app[1:-1, 1:-1].astype(cp.int8)
+    return k_app
 
 
 @hierarchical_debug(logger)
@@ -143,7 +142,7 @@ def batch_aper_kernel(radius):
 
 
 @hierarchical_debug(logger)
-def fill_nan_fft(image: cp.ndarray, lk: int, li: int = 0, min_neighbors: int = 5, pad=301) -> cp.ndarray:
+def fill_nan_fft(image: cp.ndarray, lk: int, li: int = 0, min_neighbors: int = 5, do_pad: bool = True) -> cp.ndarray:
     """Fills NaN values in an image using FFT convolution.
 
     :param image: Image array to be processed.
@@ -155,12 +154,11 @@ def fill_nan_fft(image: cp.ndarray, lk: int, li: int = 0, min_neighbors: int = 5
     k_app = gen_apm_filter(lk, li=li, norm=False)
     image = image.astype(cp.double)
     not_nan_mask = (~cp.isnan(image)).astype(cp.double)
-    valid_neighbors = convolve_fft(not_nan_mask, k_app)
+    valid_neighbors = convolve_fft(not_nan_mask, k_app, do_pad=do_pad)
     del not_nan_mask
     image_zeroed = cp.where(cp.isnan(image), 0, image)
-    neighbor_sum = convolve_fft(image_zeroed, k_app)
+    neighbor_sum = convolve_fft(image_zeroed, k_app, do_pad=do_pad)
     del image_zeroed
-    # fill the NaN values with the local mean
     result = cp.where((valid_neighbors >= min_neighbors) & (cp.isnan(image)), neighbor_sum / valid_neighbors, image)
     del valid_neighbors
     return result
