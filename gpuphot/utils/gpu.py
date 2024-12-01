@@ -3,7 +3,6 @@ import gc
 import cupy as cp
 
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
-from ..phot.photo_gpu import logger
 
 logger = setup_logger(__name__)
 
