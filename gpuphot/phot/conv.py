@@ -116,15 +116,15 @@ def gen_apm_filter(lk: int, li: int = 0, norm: bool = True, **kwargs) -> cp.ndar
     indi = cp.indices(k_dim)
     fw2 = lk ** 2
     k_app = cp.zeros(k_dim)
-    struc = cp.where(((lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2) < fw2)
+    dist_sq = (lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2
+    struc = cp.where(dist_sq <= fw2)
     k_app[struc] = 1
 
     # if li is not 0, it creates a circle with radius li and sets the values inside to 0
     if li != 0:
-        struc_inner = cp.where(((lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2) < (li ** 2))
+        struc_inner = cp.where(dist_sq < (li ** 2))
         k_app[struc_inner] = 0
-    if norm: k_app = k_app / k_app.sum()
-    k_app = k_app[1:-1, 1:-1].astype(cp.int8)
+    if norm and k_app.sum() != 0: k_app = k_app / k_app.sum()
     return k_app
 
 
