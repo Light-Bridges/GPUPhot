@@ -7,7 +7,7 @@ logger = setup_logger(__name__)
 
 
 @hierarchical_debug(logger)
-def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, do_pad: bool = True) -> cp.ndarray:
+def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, **kwargs) -> cp.ndarray:
     """Convolve an image with a kernel using FFT.
 
     :param image: Image array to be processed.
@@ -17,7 +17,11 @@ def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, do_pad: bool = True) -> 
     image_shape = image.shape
     kernel_shape = kernel.shape
     padding = int((kernel_shape[0] - 1) / 2)
-    if do_pad: image = cp.pad(image, pad_width=padding, mode='reflect')      # esto está provocando un aumento terrible de memoria
+
+    do_pad = kwargs.get('do_pad', True)
+
+    if do_pad: image = cp.pad(image, pad_width=padding,
+                              mode='reflect')  # esto está provocando un aumento terrible de memoria
     new_image_shape = image.shape
     F_image = cp.fft.rfft2(image, s=new_image_shape)
     F_kernel = cp.fft.rfft2(kernel, s=new_image_shape)
@@ -25,13 +29,13 @@ def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, do_pad: bool = True) -> 
     convolved = F_image * F_kernel
     convolved = cp.fft.irfft2(convolved, s=new_image_shape)
     convolved = cp.roll(convolved, shift=[padding, padding], axis=[0, 1])
-    if do_pad: convolved = convolved[padding:padding+image_shape[0], padding:padding+image_shape[1]]
+    if do_pad: convolved = convolved[padding:padding + image_shape[0], padding:padding + image_shape[1]]
     del F_image, F_kernel
     return convolved
 
 
 @hierarchical_debug(logger)
-def get_mean_std(im_g: cp.ndarray, lk: int, std: bool = True, do_pad: bool = True) -> tuple:
+def get_mean_std(im_g: cp.ndarray, lk: int, std: bool = True, **kwargs) -> tuple:
     """Calculates the mean and standard deviation of an image using FFT convolution.
 
     :param im_g: Image array to be processed.
@@ -41,9 +45,9 @@ def get_mean_std(im_g: cp.ndarray, lk: int, std: bool = True, do_pad: bool = Tru
     """
     im_g = cp.asarray(im_g, dtype=cp.float64)
     k_app = gen_apm_filter(lk)
-    fot_m = convolve_fft(im_g, k_app, do_pad=do_pad)
+    fot_m = convolve_fft(im_g, k_app, **kwargs)
     if std:
-        fot_m2 = convolve_fft(im_g * im_g, k_app, do_pad=do_pad)
+        fot_m2 = convolve_fft(im_g * im_g, k_app, **kwargs)
         fot_m2 = cp.sqrt(fot_m2 - fot_m * fot_m)
     else:
         fot_m2 = None
@@ -52,7 +56,7 @@ def get_mean_std(im_g: cp.ndarray, lk: int, std: bool = True, do_pad: bool = Tru
 
 
 @hierarchical_debug(logger)
-def gaussian_kernel(lk: int, sigma: int) -> cp.ndarray:
+def gaussian_kernel(lk: int, sigma: int, **kwargs) -> cp.ndarray:
     """Generates a 2D Gaussian kernel.
 
     :param lk: Length of the kernel.
@@ -69,7 +73,7 @@ def gaussian_kernel(lk: int, sigma: int) -> cp.ndarray:
 
 
 @hierarchical_debug(logger)
-def get_aper_kernel(radius: int, size: int = None) -> tuple:
+def get_aper_kernel(radius: int, size: int = None, **kwargs) -> tuple:
     """Generates a circular kernel for aperture photometry.
 
     :param radius: Radius of the circular kernel.
@@ -87,7 +91,7 @@ def get_aper_kernel(radius: int, size: int = None) -> tuple:
 
 
 @hierarchical_debug(logger)
-def fill_image(image_shape: tuple) -> tuple:
+def fill_image(image_shape: tuple, **kwargs) -> tuple:
     """Calculates the new image shape rounding up to the next power of 2.
 
     :param image_shape: Original image shape.
@@ -100,7 +104,7 @@ def fill_image(image_shape: tuple) -> tuple:
 
 
 @hierarchical_debug(logger)
-def gen_apm_filter(lk: int, li: int = 0, norm: bool = True) -> cp.ndarray:
+def gen_apm_filter(lk: int, li: int = 0, norm: bool = True, **kwargs) -> cp.ndarray:
     """Generates an aperture filter for the detection of sources in an image.
 
     :param lk: Length of the kernel.
@@ -125,7 +129,7 @@ def gen_apm_filter(lk: int, li: int = 0, norm: bool = True) -> cp.ndarray:
 
 
 @hierarchical_debug(logger)
-def batch_aper_kernel(radius):
+def batch_aper_kernel(radius, **kwargs):
     """
 
     :param radius: 
@@ -142,7 +146,7 @@ def batch_aper_kernel(radius):
 
 
 @hierarchical_debug(logger)
-def fill_nan_fft(image: cp.ndarray, lk: int, li: int = 0, min_neighbors: int = 5, do_pad: bool = True) -> cp.ndarray:
+def fill_nan_fft(image: cp.ndarray, lk: int, li: int = 0, min_neighbors: int = 5, **kwargs) -> cp.ndarray:
     """Fills NaN values in an image using FFT convolution.
 
     :param image: Image array to be processed.
@@ -154,10 +158,10 @@ def fill_nan_fft(image: cp.ndarray, lk: int, li: int = 0, min_neighbors: int = 5
     k_app = gen_apm_filter(lk, li=li, norm=False)
     image = image.astype(cp.double)
     not_nan_mask = (~cp.isnan(image)).astype(cp.double)
-    valid_neighbors = convolve_fft(not_nan_mask, k_app, do_pad=do_pad)
+    valid_neighbors = convolve_fft(not_nan_mask, k_app, **kwargs)
     del not_nan_mask
     image_zeroed = cp.where(cp.isnan(image), 0, image)
-    neighbor_sum = convolve_fft(image_zeroed, k_app, do_pad=do_pad)
+    neighbor_sum = convolve_fft(image_zeroed, k_app, **kwargs)
     del image_zeroed
     result = cp.where((valid_neighbors >= min_neighbors) & (cp.isnan(image)), neighbor_sum / valid_neighbors, image)
     del valid_neighbors

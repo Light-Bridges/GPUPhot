@@ -78,6 +78,9 @@ def stack_sigmaclip(data, it=5, n=3):
     if nim < 3:
         return cp.asarray(data.mean(axis=0)), None
     delta0 = -1
+
+    im0 = data[0]
+
     iplus = cp.zeros_like(im0, dtype=cp.float32)+1.e10
     iminu = cp.zeros_like(im0, dtype=cp.float32)-1.e10
     avg = cp.zeros_like(im0, dtype=cp.float32)

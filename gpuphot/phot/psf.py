@@ -10,6 +10,8 @@ from .utils import calculate_tile_nanmean_sigclip, decompose_into_tiles, recompo
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 
 logger = setup_logger(__name__)
+
+@hierarchical_debug(logger)
 def find_local_max(image: cp.ndarray, min_distance: int, threshold_abs: float) -> cp.ndarray:
     """Calculate local maxima in an image.
 
@@ -23,6 +25,7 @@ def find_local_max(image: cp.ndarray, min_distance: int, threshold_abs: float) -
     peaks = cp.logical_and(max_mask, threshold_mask)
     return cp.argwhere(peaks)
 
+@hierarchical_debug(logger)
 def find_local_centroid(image: cp.ndarray, peaks: cp.ndarray, window_size: int = 5) -> cp.ndarray:
     """Calculate centroids of detected peaks in an image.
     
@@ -33,7 +36,7 @@ def find_local_centroid(image: cp.ndarray, peaks: cp.ndarray, window_size: int =
     """
 
     if window_size % 2 == 0: window_size += 1
-    
+
     # Create offset indices for the neighborhood
     half_size = window_size // 2
     y_indices = cp.arange(-half_size, half_size + 1)
@@ -42,28 +45,28 @@ def find_local_centroid(image: cp.ndarray, peaks: cp.ndarray, window_size: int =
     x_offsets = peaks[:, 1, None, None] + x_indices[None, None, :]
     y_offsets = cp.clip(y_offsets, 0, image.shape[0] - 1)
     x_offsets = cp.clip(x_offsets, 0, image.shape[1] - 1)
-    
+
     # Extract neighborhoods using advanced indexing
     neighborhoods = image[y_offsets, x_offsets]
     y_coords, x_coords = cp.meshgrid(y_indices, x_indices, indexing='ij')
-    
+
     # Calculate moments to find the centroid
     total_intensity = cp.sum(neighborhoods, axis=(1, 2))
     total_intensity = cp.where(total_intensity == 0, 1, total_intensity)  # Avoid division by zero
     y_centroid_offset = cp.sum(y_coords[None, :, :] * neighborhoods, axis=(1, 2)) / total_intensity
     x_centroid_offset = cp.sum(x_coords[None, :, :] * neighborhoods, axis=(1, 2)) / total_intensity
-    
+
     # Calculate absolute positions of the centroids
     y_centroid = peaks[:, 0] + y_centroid_offset
     x_centroid = peaks[:, 1] + x_centroid_offset
-    
+
     return cp.stack((y_centroid, x_centroid), axis=1)
 
-@hierarchical_debug(logger)
+
 
 @hierarchical_debug(logger)
 def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_lim: int = 50000, min_snr: float = 10,
-                          dist_asec: float = 20, sort: bool = True) -> cp.array:
+                          dist_asec: float = 20, sort: bool = True, **kwargs) -> cp.array:
     """Detects isolated stars in an image using a fft convolution kernel.
         The stars are detected by convolving the image with a Gaussian kernel and filtered by a minimum signal-to-noise ratio.
 
@@ -82,14 +85,14 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
     border = 2 * dist_px
     kernel = gaussian_kernel(int(np.max((5 * 2 + 1, 10 / pxscale))), 2)
     kernel = (kernel - cp.mean(kernel)) / cp.std(kernel)
-    conv_ima = convolve_fft(img, kernel)
+    conv_ima = convolve_fft(img, kernel,**kwargs)
     conv_sigma = conv_ima / rms / cp.sqrt(kernel.shape[0] * kernel.shape[1])
     del kernel, conv_ima
     conv_sigma[:border, :] = 0
     conv_sigma[-border:, :] = 0
     conv_sigma[:, :border] = 0
     conv_sigma[:, -border:] = 0
-    coor_f = find_local_max(conv_sigma, min_distance=int(3/pxscale), threshold_abs=min_snr)
+    coor_f = find_local_max(conv_sigma, min_distance=int(3 / pxscale), threshold_abs=min_snr)
     dist = get_centroids_distance_kdtree(coor_f.get())
     dist_mask = dist > dist_px
     coor_f = coor_f[dist_mask]
@@ -102,7 +105,7 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
     if cp.sum(m) == 0:
         logger.warning('No stars found')
     coor_f = cp.asarray(coor_f)[m]
-    coor_f = find_local_centroid(conv_sigma, coor_f, np.round(np.max((dist_px/3, 5))).astype(int))
+    coor_f = find_local_centroid(conv_sigma, coor_f, np.round(np.max((dist_px / 3, 5))).astype(int))
     if sort:
         sort_metric = snr[m].get() + dist[m.get()]
         idx = cp.argsort(np.max(sort_metric) - sort_metric)
@@ -111,7 +114,6 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
     mempool.free_all_blocks()
 
     return coor_f
-
 
 
 @hierarchical_debug(logger)
@@ -218,7 +220,7 @@ def create_coeff_map(img_shape: tuple, positions: cp.array, coefficients: cp.arr
 
     for c in range(coefficients.shape[0]):
         tiles = decompose_into_tiles(coeff_map[c, :, :], block_size)
-        tiles,_ = calculate_tile_nanmean_sigclip(tiles)
+        tiles, _ = calculate_tile_nanmean_sigclip(tiles)
         tiles = tiles.reshape((img_shape[0] // block_size, img_shape[1] // block_size))
         while cp.sum(cp.isnan(tiles)) > 0:
             tiles = fill_nan_fft(tiles, 2, 0, min_neighbors=2)
@@ -232,8 +234,6 @@ def create_coeff_map(img_shape: tuple, positions: cp.array, coefficients: cp.arr
 @hierarchical_debug(logger)
 def calculate_kernel_area(img_shape: tuple, psf: cp.ndarray, coeff_map: cp.ndarray = None,
                           eigen_psfs: cp.ndarray = None):
-
-
     """
     Calculate the area of the kernel.
 
@@ -256,7 +256,7 @@ def calculate_kernel_area(img_shape: tuple, psf: cp.ndarray, coeff_map: cp.ndarr
     A = cp.zeros(img_shape, dtype=cp.float32)
     A += cp.sum(psf * psf)
     if coeff_map is not None and eigen_psfs is not None:
-        A += cp.sum(coeff_map**2 * cp.sum(eigen_psfs**2, axis=(1, 2))[:, cp.newaxis, cp.newaxis], axis=0)
+        A += cp.sum(coeff_map ** 2 * cp.sum(eigen_psfs ** 2, axis=(1, 2))[:, cp.newaxis, cp.newaxis], axis=0)
         k = coeff_map.shape[0]
         for i in range(k):
             for j in range(i + 1, k):
@@ -267,9 +267,7 @@ def calculate_kernel_area(img_shape: tuple, psf: cp.ndarray, coeff_map: cp.ndarr
 @hierarchical_debug(logger)
 def detect_sources_psf(img: cp.ndarray, rms: cp.ndarray, fwhm: float, psf: cp.array,
                        eigen_psfs: cp.ndarray = None, coeff_map: cp.ndarray = None,
-                       min_snr: int = 5) -> cp.ndarray:
-
-
+                       min_snr: int = 5, **kwargs) -> cp.ndarray:
     """
     Detect sources using PCA.
 
@@ -297,14 +295,14 @@ def detect_sources_psf(img: cp.ndarray, rms: cp.ndarray, fwhm: float, psf: cp.ar
     """
     mempool = cp.get_default_memory_pool()
     flipped_psf = cp.flip(psf, (0, 1))
-    conv_ima_pca = convolve_fft(img, flipped_psf)
+    conv_ima_pca = convolve_fft(img, flipped_psf,**kwargs)
     if coeff_map is not None and eigen_psfs is not None:
         for e in range(eigen_psfs.shape[0]):
             flipped_psf = cp.flip(eigen_psfs[e], (0, 1))
-            conv_ima_pca += convolve_fft(img, flipped_psf) * coeff_map[e, :, :]
+            conv_ima_pca += convolve_fft(img, flipped_psf,**kwargs) * coeff_map[e, :, :]
     A = calculate_kernel_area(img.shape, psf, coeff_map, eigen_psfs)
     conv_ima_sigma = conv_ima_pca / rms / cp.sqrt(A)
-    coor = find_local_max(conv_ima_sigma, min_distance=int(np.ceil(2*fwhm)), threshold_abs=min_snr)
+    coor = find_local_max(conv_ima_sigma, min_distance=int(np.ceil(2 * fwhm)), threshold_abs=min_snr)
     coor = find_local_centroid(conv_ima_sigma, coor, np.round(np.max((fwhm, 5))).astype(int))
     del flipped_psf, conv_ima_pca, A
     mempool.free_all_blocks()
@@ -326,8 +324,10 @@ def recreate_normed_star(coeff_map: cp.ndarray, eigen_psfs: cp.array, coords: cp
     kernel = kernel.reshape((eigen_psfs.shape[1], eigen_psfs.shape[2]))
     return kernel
 
+
 @hierarchical_debug(logger)
-def recreate_normed_star_vectorized(coeff_map: cp.ndarray, eigen_psfs: cp.array, xs: cp.array, ys: cp.array) -> cp.ndarray:
+def recreate_normed_star_vectorized(coeff_map: cp.ndarray, eigen_psfs: cp.array, xs: cp.array, ys: cp.array,
+                                    **kwargs) -> cp.ndarray:
     """Recreates a set of normalized stars from the coefficient map.
 
     :param coeff_map: Coefficient map.
@@ -344,8 +344,10 @@ def recreate_normed_star_vectorized(coeff_map: cp.ndarray, eigen_psfs: cp.array,
     del coeffs, reshaped_eigen_psfs
     return kernels
 
+
 @hierarchical_debug(logger)
-def recreate_normed_stars_batch(coeff_map: cp.ndarray, eigen_psfs: cp.ndarray, coords: cp.ndarray) -> cp.ndarray:
+def recreate_normed_stars_batch(coeff_map: cp.ndarray, eigen_psfs: cp.ndarray, coords: cp.ndarray,
+                                **kwargs) -> cp.ndarray:
     """Recreates normalized stars for a batch of coordinates.
 
     :param coeff_map: Coefficient map of shape (num_coeffs, height, width).
@@ -354,9 +356,9 @@ def recreate_normed_stars_batch(coeff_map: cp.ndarray, eigen_psfs: cp.ndarray, c
     :return: Array of recreated normalized stars of shape (num_points, psf_height, psf_width).
     """
     xs, ys = coords[:, 0], coords[:, 1]
-    coeffs = coeff_map[:, ys, xs]  
-    eigen_psfs_reshaped = eigen_psfs.reshape(eigen_psfs.shape[0], -1) 
-    kernels = cp.dot(coeffs.T, eigen_psfs_reshaped)  
+    coeffs = coeff_map[:, ys, xs]
+    eigen_psfs_reshaped = eigen_psfs.reshape(eigen_psfs.shape[0], -1)
+    kernels = cp.dot(coeffs.T, eigen_psfs_reshaped)
     kernels = kernels.reshape(coords.shape[0], eigen_psfs.shape[1], eigen_psfs.shape[2])
     return kernels
 

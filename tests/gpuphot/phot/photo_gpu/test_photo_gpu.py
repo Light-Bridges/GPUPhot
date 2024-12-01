@@ -1,16 +1,9 @@
 import os
-import time
-import traceback
 import unittest
 from pathlib import Path
 from unittest import TestCase
 
-import numpy as np
-from astropy.io import fits
-
 from .....gpuphot.logger.hierarchical_logging import setup_logger
-from .....gpuphot.phot.photo_gpu import init_gpu
-from gpuphot.gpuphot.utils.gpu import free_gpu_mem
 
 # from tensorflow.python.keras.models import load_model
 

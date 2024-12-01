@@ -11,7 +11,7 @@ logger = setup_logger(__name__)
 @hierarchical_debug(logger)
 def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper: int = 100,
                              avg_aper: int = 20, tile_shape: int = 500, ks: int = 2,
-                             get_std: bool = False, do_pad: bool = True) -> tuple:
+                             get_std: bool = False, **kwargs) -> tuple:
     """Obtains the local background using FFT-based convolution.
 
     :param image: Image array to be processed.
@@ -28,7 +28,7 @@ def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper:
     mempool = cp.get_default_memory_pool()
 
     image_cp_conv = gaussian_filter(image, sigma=2)
-    _, img_std_conv = get_mean_std(image_cp_conv, max(int(1 / pxscale + 1), 3), do_pad=do_pad)
+    _, img_std_conv = get_mean_std(image_cp_conv, max(int(1 / pxscale + 1), 3), **kwargs)
     del image_cp_conv
     mempool.free_all_blocks()
 
@@ -51,9 +51,10 @@ def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper:
     lk = max(int(fill_aper / pxscale + 1), 5)
     li = int(lk / 1.8 + 1)
     while cp.sum(cp.isnan(img_filled)) > 0:
-        img_filled = fill_nan_fft(img_filled, lk, li, min_neighbors=5, do_pad=do_pad)
+        img_filled = fill_nan_fft(img_filled, lk, li, min_neighbors=5, **kwargs)
 
-    img_filled_m, img_filled_2 = get_mean_std(img_filled, max(int(avg_aper / pxscale + 1), 3), std = get_std, do_pad=do_pad)
+    img_filled_m, img_filled_2 = get_mean_std(img_filled, max(int(avg_aper / pxscale + 1), 3), std=get_std,
+                                              **kwargs)
 
     del img_filled
     mempool.free_all_blocks()

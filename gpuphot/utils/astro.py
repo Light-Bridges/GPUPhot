@@ -1,20 +1,22 @@
+import os
+import signal
+from datetime import datetime
 
+import astrometry
+import ephem
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
-import astrometry
-import signal
-from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
-from .catalog import crossmatch_sources
-import matplotlib.pyplot as plt
-from sklearn.linear_model import RANSACRegressor
-import ephem
-from datetime import datetime
-import os
 from astropy.wcs import WCS
+from sklearn.linear_model import RANSACRegressor
+
+from .catalog import crossmatch_sources
+from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 
 logger = setup_logger(__name__)
+
 
 @hierarchical_debug(logger)
 def get_solver():
@@ -41,27 +43,30 @@ def get_solver():
 @hierarchical_debug(logger)
 def get_astrometry_params(h_wcs, image_shape):
     w = WCS(h_wcs)
-    ra, dec = w.all_pix2world(image_shape[1]//2, image_shape[0]//2, 1)
-    cd11=float(h_wcs['CD1_1'][0])
-    cd12=float(h_wcs['CD1_2'][0])
-    scale = np.sqrt(cd11**2+cd12**2)*3600
+    ra, dec = w.all_pix2world(image_shape[1] // 2, image_shape[0] // 2, 1)
+    cd11 = float(h_wcs['CD1_1'][0])
+    cd12 = float(h_wcs['CD1_2'][0])
+    scale = np.sqrt(cd11 ** 2 + cd12 ** 2) * 3600
     coocenter = SkyCoord(ra=ra, dec=dec, unit=(u.deg, u.deg), frame='icrs')
     npx = max(image_shape)
-    FOV = 2*np.sqrt(2*((scale * npx / 3600)**2))
+    FOV = 2 * np.sqrt(2 * ((scale * npx / 3600) ** 2))
     return coocenter, FOV, scale
 
 
 @hierarchical_debug(logger)
 def logodds_callback_100(logodds):
-    #print(logodds)
-    if (logodds[0] > 100.0) | (len(logodds)>2):
+    # print(logodds)
+    if (logodds[0] > 100.0) | (len(logodds) > 2):
         return astrometry.Action.STOP
     else:
         return astrometry.Action.CONTINUE
+
+
 @hierarchical_debug(logger)
 def handler(signum, frame):
     print("Astrometrization timeout!")
     raise Exception("end of time")
+
 
 @hierarchical_debug(logger)
 def astrometrice2(df: pd.DataFrame, scale: float,
@@ -88,20 +93,19 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     signal.signal(signal.SIGALRM, handler)
     signal.alarm(60)
 
-       
     try:
         solution = get_solver().solve(
             stars_xs=df['xcentroid'],
             stars_ys=df['ycentroid'],
             size_hint=astrometry.SizeHint(
-                lower_arcsec_per_pixel = scale * 0.8,
-                upper_arcsec_per_pixel = scale * 1.2)
-                ,
+                lower_arcsec_per_pixel=scale * 0.8,
+                upper_arcsec_per_pixel=scale * 1.2)
+            ,
             position_hint=astrometry.PositionHint(
                 ra_deg=central_ra,
                 dec_deg=central_dec,
-                radius_deg=0.5,)
-                ,
+                radius_deg=0.5, )
+            ,
             solution_parameters=astrometry.SolutionParameters(
                 logodds_callback=logodds_callback_100,
                 sip_order=sip_order)
@@ -117,7 +121,8 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     return h_wcs
 
 
-def get_zeropoint(df_catalog, df_sources, exptime, center_factor = 0.5,
+@hierarchical_debug(logger)
+def get_zeropoint(df_catalog, df_sources, exptime, center_factor=0.5,
                   solar_filter=0.5, dist_thres_px=3, min_mag=14, max_mag=17,
                   plot=False):
     """Calculate the zeropoint for photometry.
@@ -144,9 +149,10 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_factor = 0.5,
 
     """
     source_coords_matched_idx, ref_coords_matched_idx = crossmatch_sources(df_sources[['RA', 'DEC']].values,
-                                                                            df_catalog[['RA', 'DEC']].values, thres_px=dist_thres_px)
+                                                                           df_catalog[['RA', 'DEC']].values,
+                                                                           thres_px=dist_thres_px)
     solar_cat_filt = np.abs(df_catalog['SOLAR'])[ref_coords_matched_idx
-                        ] < solar_filter
+                     ] < solar_filter
     source_coords_matched_idx = source_coords_matched_idx[solar_cat_filt]
     ref_coords_matched_idx = ref_coords_matched_idx[solar_cat_filt]
     det_mag = -2.5 * np.log10(df_sources.flux[source_coords_matched_idx].values / exptime)
@@ -163,9 +169,9 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_factor = 0.5,
     ymin = int(df_sources['ycentroid'].max() * 0.5 * (1 - cf))
     ymax = int(df_sources['ycentroid'].max() * 0.5 * (1 + cf))
     bright_mask = bright_mask & (df_sources['xcentroid'][source_coords_matched_idx].values > ymin) & \
-                    (df_sources['xcentroid'][source_coords_matched_idx].values < ymax) & \
-                    (df_sources['ycentroid'][source_coords_matched_idx].values > xmin) & \
-                    (df_sources['ycentroid'][source_coords_matched_idx].values < xmax)
+                  (df_sources['xcentroid'][source_coords_matched_idx].values < ymax) & \
+                  (df_sources['ycentroid'][source_coords_matched_idx].values > xmin) & \
+                  (df_sources['ycentroid'][source_coords_matched_idx].values < xmax)
 
     if len(cat_mag) <= 3:
         zp, ezp, n, min_mag, max_mag = 0, 0, 0, 0, 0
@@ -202,8 +208,8 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_factor = 0.5,
               'CATNSTAR': n,
               'ZPMINMAG': np.round(min_mag, 2),
               'ZPMAXMAG': np.round(max_mag, 2),
-              'BVMIN': np.round(0.65 - solar_filter/2, 2),
-              'BVMAX': np.round(0.65 + solar_filter/2, 2),
+              'BVMIN': np.round(0.65 - solar_filter / 2, 2),
+              'BVMAX': np.round(0.65 + solar_filter / 2, 2),
               }
 
     if plot:
@@ -229,7 +235,9 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_factor = 0.5,
 
     return params, source_coords_matched_idx, ref_coords_matched_idx
 
-def get_target_snr(dfm: pd.DataFrame, target_ra: float, target_dec: float, dist_thres_px = 3) -> float:
+
+@hierarchical_debug(logger)
+def get_target_snr(dfm: pd.DataFrame, target_ra: float, target_dec: float, dist_thres_px=3) -> float:
     """
     Get the SNR of the target.
 
@@ -242,11 +250,14 @@ def get_target_snr(dfm: pd.DataFrame, target_ra: float, target_dec: float, dist_
     _, idx = crossmatch_sources([[target_ra, target_dec]],
                                 dfm[['RA', 'DEC']].values,
                                 thres_px=dist_thres_px)
-    if idx.size > 0: target_snr = dfm.snr[idx[0]]
-    else: target_snr = 0
+    if idx.size > 0:
+        target_snr = dfm.snr[idx[0]]
+    else:
+        target_snr = 0
     return target_snr
 
 
+@hierarchical_debug(logger)
 def get_maglim(mag: np.ndarray, snr: np.ndarray, snr_lim: float) -> float:
     """
     Get the limiting magnitude.
@@ -265,15 +276,15 @@ def get_maglim(mag: np.ndarray, snr: np.ndarray, snr_lim: float) -> float:
         x = np.linspace(12, 24, 100)
         fitted_snr = np.polyval(p, x)
         maglim = x[np.argmin(np.abs(fitted_snr - np.log10(snr_lim)))]
-    return np.round(maglim,2)
+    return np.round(maglim, 2)
 
 
+@hierarchical_debug(logger)
 def radec_to_moon_sun(ra, dec, site_latitude, site_longitude, site_elevation, date_obs):
-
     observer = ephem.Observer()
     observer.lat = np.radians(site_latitude)
-    observer.lon = np.radians(site_longitude) 
-    observer.elevation = site_elevation 
+    observer.lon = np.radians(site_longitude)
+    observer.elevation = site_elevation
     observer.date = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S.%f')
     target = ephem.FixedBody()
     target._ra = np.radians(ra)
@@ -293,8 +304,12 @@ def radec_to_moon_sun(ra, dec, site_latitude, site_longitude, site_elevation, da
     sun_alt = np.degrees(sun.alt)
     sun_az = np.degrees(sun.az)
 
-    return round(moon_alt, 2), round(moon_az, 2), round(distance_to_moon, 2), round(moon_phase, 3), round(sun_alt, 2), round(sun_az, 2)
+    return round(moon_alt, 2), round(moon_az, 2), round(distance_to_moon, 2), round(moon_phase, 3), round(sun_alt,
+                                                                                                          2), round(
+        sun_az, 2)
 
+
+@hierarchical_debug(logger)
 def radec_to_altaz(RA, DEC, SITELAT, SITELON, SITEELEV, Date):
     coords_deg = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg')
     Observatory = EarthLocation(lat=SITELAT * u.deg, lon=SITELON * u.deg, height=SITEELEV * u.m)
@@ -304,40 +319,51 @@ def radec_to_altaz(RA, DEC, SITELAT, SITELON, SITEELEV, Date):
     zen = coords_altaz.zen
     return round(coords_altaz.az.deg, 6), round(coords_altaz.alt.deg, 6), round(airmass, 6), round(zen.deg, 6)
 
+
+@hierarchical_debug(logger)
 def radec_to_gal(RA, DEC):
     coords_gal = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg').galactic
     return round(coords_gal.l.deg, 6), round(coords_gal.b.deg, 6)
 
+
+@hierarchical_debug(logger)
 def radec_to_ecl(RA, DEC):
     coords_gal = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg').barycentricmeanecliptic
     return round(coords_gal.lon.deg, 6), round(coords_gal.lat.deg, 6)
 
+
+@hierarchical_debug(logger)
 def get_ccw(hwcs):
-    cd11=hwcs['CD1_1']
-    cd12=hwcs['CD1_2']
-    cd21=hwcs['CD2_1']
-    cd22=hwcs['CD2_2']
-    det = cd11 * cd22-cd12 * cd21
+    cd11 = hwcs['CD1_1']
+    cd12 = hwcs['CD1_2']
+    cd21 = hwcs['CD2_1']
+    cd22 = hwcs['CD2_2']
+    det = cd11 * cd22 - cd12 * cd21
     if det >= 0:
         parity = 1.
     else:
         parity = -1.
-    T = parity  * cd11 + cd22
-    A = parity  * cd21 - cd12
+    T = parity * cd11 + cd22
+    A = parity * cd21 - cd12
     return -np.degrees(np.arctan2(A, T))
 
+
+@hierarchical_debug(logger)
 def get_scale(hwcs):
-    cd11=hwcs['CD1_1']
-    cd12=hwcs['CD1_2']
-    cd21=hwcs['CD2_1']
-    cd22=hwcs['CD2_2']
-    return np.sqrt(cd11**2+cd12**2)*3600
+    cd11 = hwcs['CD1_1']
+    cd12 = hwcs['CD1_2']
+    cd21 = hwcs['CD2_1']
+    cd22 = hwcs['CD2_2']
+    return np.sqrt(cd11 ** 2 + cd12 ** 2) * 3600
 
 
+@hierarchical_debug(logger)
 def plate_scale_px(microns, focal):
     # pixel size in microns
     return plate_scale_mm(focal) * microns / 1000  # arcsec/px
 
+
+@hierarchical_debug(logger)
 def plate_scale_mm(focal):
     # focal length in mm
     return 206265 / focal  # arcsec/mm
