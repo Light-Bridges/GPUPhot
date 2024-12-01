@@ -312,6 +312,7 @@ def process_image(imdata, imheader, header_descriptions, **kwargs):
     # Update default parameters with any provided in kwargs
     params = {**default_params, **kwargs}
 
+
     # Call calibrate_image with updated parameters
     dfm, h_wcs, dic_calib = calibrate_image(
         imdata, inmodel, filter,
