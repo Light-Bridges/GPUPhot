@@ -312,21 +312,22 @@ def process_image(imdata, imheader, header_descriptions, **kwargs):
     # Update default parameters with any provided in kwargs
     params = {**default_params, **kwargs}
 
+
     # Call calibrate_image with updated parameters
     dfm, h_wcs, dic_calib = calibrate_image(
         imdata, inmodel, filter,
         scale, gain, rdnoise, exptime, satlevel,
         target_ra, target_dec, n_images=n_images,
-        SP_filt=params['SP_filt'],
-        CR_filt=params['CR_filt'],
-        border=params['border'],
-        center_factor=params['center_factor'],
-        pca_method=params['pca_method'],
-        tile_section=params['tile_section'],
-        max_stars_ref=params['max_stars_ref'],
-        min_snr=params['min_snr'],
-        color_range=params['color_range'],
-        tile_section_psf=params['tile_section_psf'],
+        # SP_filt=params['SP_filt'],
+        # CR_filt=params['CR_filt'],
+        # border=params['border'],
+        # center_factor=params['center_factor'],
+        # pca_method=params['pca_method'],
+        # tile_section=params['tile_section'],
+        # max_stars_ref=params['max_stars_ref'],
+        # min_snr=params['min_snr'],
+        # color_range=params['color_range'],
+        # tile_section_psf=params['tile_section_psf'],
         **params
     )
 
