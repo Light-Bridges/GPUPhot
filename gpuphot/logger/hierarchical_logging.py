@@ -165,7 +165,7 @@ def hierarchical_debug(logger_name):
 
                 # Configure the critical logger's log callback
                 def critical_log_callback(log_entry):
-                    if os.getenv('DEBUG', 'False').lower() == 'true':
+                    if os.getenv('GPUPHOT_DEBUG', 'False').lower() == 'true':
                         print(f"Log crítico guardado: {json.dumps(log_entry, indent=2)}")
 
                 notifying_handler_critical = NotifyingHandler(critical_log_callback)
@@ -233,7 +233,7 @@ def setup_logstash_handler(logger):
             formatter = LogstashFormatter(
                 extra_prefix='extra',
                 extra={
-                    "environment": os.environ.get('ENVIRONMENT', 'production'),
+                    "environment": os.environ.get('GPUPHOT_ENVIRONMENT', 'production'),
                     "application": "gpuphot"
                 }
             )
@@ -299,7 +299,7 @@ class SingletonLogger:
             return logger
 
         # Set the logging level based on the environment variable.
-        if os.getenv('LOG_LEVEL', '').upper() == 'DEBUG':
+        if os.getenv('GPUPHOT_LOG_LEVEL', '').upper() == 'DEBUG':
             logger.setLevel(logging.DEBUG)
         else:
             logger.setLevel(logging.ERROR)  # Default to ERROR level.

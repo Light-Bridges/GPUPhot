@@ -1,0 +1,28 @@
+{
+  "header_keywords": {
+    // Keyword for exposure time in the image header
+    "exposure_time": "EXPTIME",
+    // Keyword for filter used in the image header
+    "filter": "FILTER"
+  },
+  "camera_specs": {
+    // Size of each pixel in microns
+    "pixel_size": 15,
+    // Camera gain in electrons per ADU
+    "gain": 1.0
+  },
+  "processing_params": {
+    // Size of image tiles for processing (in pixels)
+    "tile_section": 1000,
+    // Factor to determine the central region of interest
+    "center_factor": 0.7,
+    // Flag to enable/disable Spatial Filter
+    "SP_filt": false,
+    // Flag to enable/disable Principal Component Analysis method
+    "pca_method": false,
+    // Flag to enable/disable Cosmic Ray filtering
+    "CR_filt": false,
+    // Size of the border to exclude from processing (in pixels)
+    "border": 50
+  }
+}
