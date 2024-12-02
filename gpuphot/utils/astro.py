@@ -170,10 +170,10 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None,
         ymax = np.ceil(df_sources['ycentroid'].max())
     else:
         xmin, xmax, ymin, ymax = center_lims
-    bright_mask = bright_mask & (df_sources['xcentroid'][source_coords_matched_idx].values >= xmin) & \
-                  (df_sources['xcentroid'][source_coords_matched_idx].values <= xmax) & \
-                  (df_sources['ycentroid'][source_coords_matched_idx].values >= ymin) & \
-                  (df_sources['ycentroid'][source_coords_matched_idx].values <= ymax)
+    bright_mask = bright_mask & (df_sources['xcentroid'][source_coords_matched_idx][inf_nan_mask].values >= xmin) & \
+                  (df_sources['xcentroid'][source_coords_matched_idx][inf_nan_mask].values <= xmax) & \
+                  (df_sources['ycentroid'][source_coords_matched_idx][inf_nan_mask].values >= ymin) & \
+                  (df_sources['ycentroid'][source_coords_matched_idx][inf_nan_mask].values <= ymax)
 
     if len(cat_mag[bright_mask]) <= 3:
         zp, ezp, n, min_mag, max_mag = 0, 0, 0, 0, 0
