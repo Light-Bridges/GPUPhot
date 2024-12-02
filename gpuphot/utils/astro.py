@@ -122,8 +122,8 @@ def astrometrice2(df: pd.DataFrame, scale: float,
 
 
 @hierarchical_debug(logger)
-def get_zeropoint(df_catalog, df_sources, exptime, center_factor=0.5,
-                  solar_filter=0.5, dist_thres_px=3, min_mag=14, max_mag=17,
+def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None,
+                  solar_filter=0.5, dist_thres_px=3, min_mag=14, max_mag=18,
                   plot=False):
     """Calculate the zeropoint for photometry.
 
@@ -163,17 +163,19 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_factor=0.5,
     det_mag = det_mag[inf_nan_mask]
     bright_mask = (cat_mag > min_mag) & (cat_mag < max_mag)
 
-    cf = np.min((center_factor, 1))
-    xmin = int(df_sources['xcentroid'].max() * 0.5 * (1 - cf))
-    xmax = int(df_sources['xcentroid'].max() * 0.5 * (1 + cf))
-    ymin = int(df_sources['ycentroid'].max() * 0.5 * (1 - cf))
-    ymax = int(df_sources['ycentroid'].max() * 0.5 * (1 + cf))
-    bright_mask = bright_mask & (df_sources['xcentroid'][source_coords_matched_idx].values > ymin) & \
-                  (df_sources['xcentroid'][source_coords_matched_idx].values < ymax) & \
-                  (df_sources['ycentroid'][source_coords_matched_idx].values > xmin) & \
-                  (df_sources['ycentroid'][source_coords_matched_idx].values < xmax)
+    if center_lims is None:
+        xmin = np.floor(df_sources['xcentroid'].min())
+        xmax = np.ceil(df_sources['xcentroid'].max())
+        ymin = np.floor(df_sources['ycentroid'].min())
+        ymax = np.ceil(df_sources['ycentroid'].max())
+    else:
+        xmin, xmax, ymin, ymax = center_lims
+    bright_mask = bright_mask & (df_sources['xcentroid'][source_coords_matched_idx].values >= xmin) & \
+                  (df_sources['xcentroid'][source_coords_matched_idx].values <= xmax) & \
+                  (df_sources['ycentroid'][source_coords_matched_idx].values >= ymin) & \
+                  (df_sources['ycentroid'][source_coords_matched_idx].values <= ymax)
 
-    if len(cat_mag) <= 3:
+    if len(cat_mag[bright_mask]) <= 3:
         zp, ezp, n, min_mag, max_mag = 0, 0, 0, 0, 0
     else:
         y = cat_mag[bright_mask] - det_mag[bright_mask]
