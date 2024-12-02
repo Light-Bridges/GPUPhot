@@ -43,16 +43,16 @@ def init_gpu(**kwargs) -> None:
 
     # def init_gpu():
     #     """ """
-    try:
-        # Intentar liberar toda la memoria posible
-        import tensorflow as tf
-        logger.debug('Tensorflow version ' + tf.__version__)
-        gpus = tf.config.list_physical_devices('GPU')
-        logger.debug('GPUs:', gpus)
-
-        memory_limit = kwargs.get('memory_limit', 1024)
-
-        tf.config.set_logical_device_configuration(gpus[0], [tf.config.
-                                                   LogicalDeviceConfiguration(memory_limit=memory_limit)])
-    except Exception:
-        pass
+    # try:
+    #     # Intentar liberar toda la memoria posible
+    #     import tensorflow as tf
+    #     logger.debug('Tensorflow version ' + tf.__version__)
+    #     gpus = tf.config.list_physical_devices('GPU')
+    #     logger.debug('GPUs:', gpus)
+    #
+    #     memory_limit = kwargs.get('memory_limit', 1024)
+    #
+    #     tf.config.set_logical_device_configuration(gpus[0], [tf.config.
+    #                                                LogicalDeviceConfiguration(memory_limit=memory_limit)])
+    # except Exception:
+    #     pass

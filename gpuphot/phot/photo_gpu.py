@@ -303,8 +303,8 @@ def process_image(imdata, imheader, header_descriptions, **kwargs):
         'pca_method': True,
         'tile_section': 1000,
         'max_stars_ref': 15,
-        'min_snr': 5,
-        'color_range': 0.3,
+        # 'min_snr': 5,
+        'color_range': 0.8,
         'tile_section_psf': 2500,
         'do_pad': True
     }
@@ -676,7 +676,7 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
         ra, dec = w.all_pix2world(dfm.xcentroid.values, dfm.ycentroid.values, 1)
         dfm.loc[:, 'RA'] = ra
         dfm.loc[:, 'DEC'] = dec
-        photo_dict, dfm_idx, catalog_idx = get_zeropoint(result, dfm, exptime, center_factor=center_factor,
+        photo_dict, dfm_idx, catalog_idx = get_zeropoint(result, dfm, exptime, center_lims=(xmin, xmax, ymin, ymax),
                                                          solar_filter=color_range, dist_thres_px=fwhm * scale / 3600)
         dic_calib.update(photo_dict)
 
