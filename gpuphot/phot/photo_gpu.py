@@ -548,7 +548,7 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
     img_cp = cp.asarray(imdata)
 
     # Get background
-    back, _ = get_local_background_fft(img_cp, scale, tile_shape=tile_section, get_std=False, **kwargs)
+    back, _ = get_local_background_fft(img_cp, scale, get_std=False, **kwargs)
     rms = cp.sqrt(back * gain + rdnoise ** 2) / gain / cp.sqrt(n_images)
     xmin = int(imdata.shape[1] * 0.5 * (1 - 0.3))
     xmax = int(imdata.shape[1] * 0.5 * (1 + 0.3))
@@ -676,9 +676,14 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
         ra, dec = w.all_pix2world(dfm.xcentroid.values, dfm.ycentroid.values, 1)
         dfm.loc[:, 'RA'] = ra
         dfm.loc[:, 'DEC'] = dec
-        photo_dict, dfm_idx, catalog_idx = get_zeropoint(result, dfm, exptime, center_lims=(xmin, xmax, ymin, ymax),
-                                                         solar_filter=color_range, dist_thres_px=fwhm * scale / 3600)
+        photo_dict = get_zeropoint(result, dfm, exptime, center_lims=(xmin, xmax, ymin, ymax),
+                                                            solar_filter=color_range, dist_thres_px= 1.5 * fwhm * scale / 3600)
         dic_calib.update(photo_dict)
+
+        # Check catalog coincidence
+        dfm_idx, catalog_idx = crossmatch_sources(dfm[['RA', 'DEC']].values,
+                                                result[['RA', 'DEC']].values,
+                                                thres_px = 1.5 * fwhm * scale / 3600)
 
         # Add astrometric errors to dfm
         dfm.loc[dfm_idx, 'RAERR'] = dfm.loc[dfm_idx, 'RA'].values - result.loc[catalog_idx, 'RA'].values

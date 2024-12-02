@@ -7,7 +7,7 @@ logger = setup_logger(__name__)
 
 
 @hierarchical_debug(logger)
-def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, **kwargs) -> cp.ndarray:
+def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, do_pad: bool = True, **kwargs) -> cp.ndarray:
     """Convolve an image with a kernel using FFT.
 
     :param image: Image array to be processed.

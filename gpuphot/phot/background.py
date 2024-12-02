@@ -10,7 +10,7 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper: int = 100,
-                             avg_aper: int = 20, tile_shape: int = 500, ks: int = 2,
+                             avg_aper: int = 20, tile_section: int = 500, ks: int = 2,
                              get_std: bool = False, **kwargs) -> tuple:
     """Obtains the local background using FFT-based convolution.
 
@@ -19,7 +19,7 @@ def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper:
     :param qt: Percentile for local background.
     :param fill_aper: Aperture size for filling NaNs, in arcsec.
     :param avg_aper: Aperture size for calculating the mean, in arcsec.
-    :param tile_shape: Tile size for calculating the local percentile, in pixels.
+    :param tile_section: Tile size for calculating the local percentile, in pixels.
     :param ks: Aperture size for dilation, in arcsec.
     :param get_std: Whether to return standard deviation image.
     :return: A tuple containing the local background of an image and the standard deviation.
@@ -32,9 +32,9 @@ def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper:
     del image_cp_conv
     mempool.free_all_blocks()
 
-    tiles = decompose_into_tiles(img_std_conv, tile_shape)
+    tiles = decompose_into_tiles(img_std_conv, tile_section)
     percentiles = calculate_tile_percentiles(tiles, qt=qt)
-    per = recompose_from_percentiles(percentiles, image.shape, tile_shape)
+    per = recompose_from_percentiles(percentiles, image.shape, tile_section)
     del tiles, percentiles
     mempool.free_all_blocks()
 

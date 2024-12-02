@@ -148,13 +148,11 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None,
 
 
     """
+    solar_cat_filt = np.abs(df_catalog['SOLAR']) < solar_filter
     source_coords_matched_idx, ref_coords_matched_idx = crossmatch_sources(df_sources[['RA', 'DEC']].values,
-                                                                           df_catalog[['RA', 'DEC']].values,
+                                                                           df_catalog[['RA', 'DEC']].values[solar_cat_filt],
                                                                            thres_px=dist_thres_px)
-    solar_cat_filt = np.abs(df_catalog['SOLAR'])[ref_coords_matched_idx
-                     ] < solar_filter
-    source_coords_matched_idx = source_coords_matched_idx[solar_cat_filt]
-    ref_coords_matched_idx = ref_coords_matched_idx[solar_cat_filt]
+
     det_mag = -2.5 * np.log10(df_sources.flux[source_coords_matched_idx].values / exptime)
     cat_mag = df_catalog['MAG'][ref_coords_matched_idx].to_numpy()
     inf_nan_mask = np.isfinite(cat_mag) & np.isfinite(det_mag) & ~np.isnan(
@@ -235,7 +233,7 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None,
         ax.set_ylim(-1.5, 1.5)
         plt.show()
 
-    return params, source_coords_matched_idx, ref_coords_matched_idx
+    return params
 
 
 @hierarchical_debug(logger)

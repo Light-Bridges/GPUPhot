@@ -66,7 +66,7 @@ def find_local_centroid(image: cp.ndarray, peaks: cp.ndarray, window_size: int =
 
 @hierarchical_debug(logger)
 def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_lim: int = 50000, min_snr: float = 10,
-                          dist_asec: float = 20, sort: bool = True, **kwargs) -> cp.array:
+                          dist_asec: float = 10, sort: bool = True) -> cp.array:
     """Detects isolated stars in an image using a fft convolution kernel.
         The stars are detected by convolving the image with a Gaussian kernel and filtered by a minimum signal-to-noise ratio.
 
@@ -85,7 +85,7 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
     border = 2 * dist_px
     kernel = gaussian_kernel(int(np.max((5 * 2 + 1, 10 / pxscale))), 2)
     kernel = (kernel - cp.mean(kernel)) / cp.std(kernel)
-    conv_ima = convolve_fft(img, kernel,**kwargs)
+    conv_ima = convolve_fft(img, kernel)
     conv_sigma = conv_ima / rms / cp.sqrt(kernel.shape[0] * kernel.shape[1])
     del kernel, conv_ima
     conv_sigma[:border, :] = 0
@@ -295,11 +295,11 @@ def detect_sources_psf(img: cp.ndarray, rms: cp.ndarray, fwhm: float, psf: cp.ar
     """
     mempool = cp.get_default_memory_pool()
     flipped_psf = cp.flip(psf, (0, 1))
-    conv_ima_pca = convolve_fft(img, flipped_psf,**kwargs)
+    conv_ima_pca = convolve_fft(img, flipped_psf)
     if coeff_map is not None and eigen_psfs is not None:
         for e in range(eigen_psfs.shape[0]):
             flipped_psf = cp.flip(eigen_psfs[e], (0, 1))
-            conv_ima_pca += convolve_fft(img, flipped_psf,**kwargs) * coeff_map[e, :, :]
+            conv_ima_pca += convolve_fft(img, flipped_psf) * coeff_map[e, :, :]
     A = calculate_kernel_area(img.shape, psf, coeff_map, eigen_psfs)
     conv_ima_sigma = conv_ima_pca / rms / cp.sqrt(A)
     coor = find_local_max(conv_ima_sigma, min_distance=int(np.ceil(2 * fwhm)), threshold_abs=min_snr)
