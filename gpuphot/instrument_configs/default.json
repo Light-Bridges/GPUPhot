@@ -59,6 +59,12 @@
     // Flag to enable/disable Cosmic Ray filtering
     "CR_filt": false,
     // Size of the border to exclude from processing (in pixels)
-    "border": 50
+    "border": 50,
+    // Flag to enable/disable astrometric correction
+    "astrom": true,
+    // Size of image tiles for PSF calculation (in pixels)
+    "tile_section_psf": 2500,
+    // Flag to enable/disable image padding
+    "do_pad": false
   }
 }
