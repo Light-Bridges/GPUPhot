@@ -18,8 +18,6 @@ def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, do_pad: bool = True, **k
     kernel_shape = kernel.shape
     padding = int((kernel_shape[0] - 1) / 2)
 
-    do_pad = kwargs.get('do_pad', True)
-
     if do_pad: image = cp.pad(image, pad_width=padding,
                               mode='reflect')  # esto está provocando un aumento terrible de memoria
     new_image_shape = image.shape
