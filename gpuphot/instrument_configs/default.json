@@ -1,9 +1,45 @@
 {
   "header_keywords": {
     // Keyword for exposure time in the image header
-    "exposure_time": "EXPTIME",
+    "exposure_time": "EXPT1",
     // Keyword for filter used in the image header
-    "filter": "FILTER"
+    "filter": "FILTER",
+    // Keyword for total number of images
+    "n_images": "TOTIMA",
+    // Keyword for read-out noise
+    "rdnoise": "RDNOISE",
+    // Keyword for saturation level
+    "satlevel": "SATLEVEL",
+    // Keyword for target right ascension
+    "target_ra": "POINTRA",
+    // Keyword for target declination
+    "target_dec": "POINTDEC",
+    // Keyword for site elevation
+    "site_elevation": "SITEELEV",
+    // Keyword for site latitude
+    "site_latitude": "SITELAT",
+    // Keyword for site longitude
+    "site_longitude": "SITELONG",
+    // Keyword for observation date
+    "date_obs": "DATE-OBS",
+    // Keyword for input model
+    "inmodel": "INMODEL",
+    // Keyword for pixel size
+    "pxsize": "PXSIZE",
+    // Keyword for camera gain
+    "gain": "GAIN",
+    // Keyword for image width
+    "naxis1": "NAXIS1",
+    // Keyword for image height
+    "naxis2": "NAXIS2",
+    // Keyword for focal length
+    "focalen": "FOCALEN",
+    // Keyword for X-axis binning
+    "xbinning": "XBINNING",
+    // Keyword for bias standard deviation
+    "biasstd": "BIASSTD",
+    // Alternative keyword for site altitude
+    "sitealt": "SITEALT"
   },
   "camera_specs": {
     // Size of each pixel in microns

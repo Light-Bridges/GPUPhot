@@ -1,4 +1,5 @@
 from .instrument_config_parser import InstrumentConfigParser
+from .phot.photo_gpu import process_image
 
 
 class ImageProcessor:
@@ -6,19 +7,26 @@ class ImageProcessor:
         config_parser = InstrumentConfigParser()
         self.config = config_parser.get_config(instrument_name)
         self.processing_params = self.config['processing_params']
+        self.camera_params = self.config['camera_specs']
+        self.header_translator = self.config['header_translator']
 
-    def process_image(self, imdata, imheader, **kwargs):
-        # Use the values from the instrument configuration, but allow overriding with kwargs
+    def process_image(self, imdata, imheader, header_descriptions, **kwargs):
+        # Traduce el header a las keywords estándar
+        translated_header = self.header_translator.translate_header(imheader)
+
+        # Combina los parámetros de procesamiento con los kwargs
         params = {**self.processing_params, **kwargs}
 
-        # Here would go the rest of your image processing logic
-        # ...
-        df_phot = None # Fixme
+        # Llama a la función process_image con el header traducido
+        dfm, processed_header = process_image(imdata, translated_header, header_descriptions, **params)
 
-        return df_phot, imheader
+        # Traduce el header procesado de vuelta a las keywords originales del usuario
+        original_header = self.header_translator.translate_back_header(processed_header)
+
+        return dfm, original_header
 
     def get_header_info(self, header):
-        return {key: header[value] for key, value in self.config['header_keywords'].items()}
+        return self.header_translator.translate_header(header)
 
 
 # Function to create the processor
@@ -27,5 +35,5 @@ def create_processor(instrument_name):
 
 
 # # Usage:
-# processor = create_processor("iKon936")
-# df_phot, imheader = processor.process_image(imdata, imheader, astrom=astrom)
+processor = create_processor("iKon936")
+df_phot, imheader = processor.process_image(None, None, None)
