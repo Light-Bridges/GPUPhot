@@ -18,6 +18,13 @@ class ImageProcessor:
         self.processing_params = self.config['processing_params']
         self.camera_params = self.config['camera_specs']
         self.header_translator = self.config['header_translator']
+        logger.debug(f"Image processor initialized for {instrument_name}",
+                     extra={
+                         'instrument_name': instrument_name,
+                         'processing_params': self.processing_params,
+                         'camera_params': self.camera_params,
+                         'header_translator': self.header_translator}
+                     )
 
     @hierarchical_debug(logger)
     def process_image(self, imdata, imheader, header_descriptions, **kwargs):
@@ -69,6 +76,5 @@ if __name__ == '__main__':
     from astropy.io.fits import Header
 
     print(test.get_header_info(Header()))
-    from .instrument_config_parser import InstrumentConfigParser
 
     InstrumentConfigParser().generate_config_file('test')
