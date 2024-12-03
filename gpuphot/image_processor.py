@@ -31,7 +31,6 @@ class ImageProcessor:
         """
         # Traduce el header a las keywords estándar
         translated_header = self.header_translator.translate_header(imheader)
-        print(translated_header)
 
         # Combina los parámetros de procesamiento con los kwargs
         params = {**self.processing_params, **kwargs}
@@ -41,7 +40,7 @@ class ImageProcessor:
 
         # Traduce el header procesado de vuelta a las keywords originales del usuario
         original_header = self.header_translator.translate_back_header(processed_header)
-        print(original_header)
+
         return dfm, original_header
 
     def get_header_info(self, header):
