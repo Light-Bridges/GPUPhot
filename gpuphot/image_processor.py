@@ -18,13 +18,19 @@ class ImageProcessor:
         self.processing_params = self.config['processing_params']
         self.camera_params = self.config['camera_specs']
         self.header_translator = self.config['header_translator']
-        logger.debug(f"Image processor initialized for {instrument_name}",
-                     extra={
-                         'instrument_name': instrument_name,
-                         'processing_params': self.processing_params,
-                         'camera_params': self.camera_params,
-                         'header_translator': self.header_translator}
-                     )
+
+        try:
+
+            extra = {
+                'instrument_name': instrument_name,
+                'processing_params': self.processing_params,
+                'camera_params': self.camera_params,
+                'header_keywords': self.config['header_keywords']
+            }
+
+            logger.debug(f"Image processor initialized for: {extra}", extra=extra)
+        except Exception:
+            pass
 
     @hierarchical_debug(logger)
     def process_image(self, imdata, imheader, header_descriptions, **kwargs):
