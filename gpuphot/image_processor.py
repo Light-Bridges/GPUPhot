@@ -6,8 +6,14 @@ logger = setup_logger(__name__)
 
 
 class ImageProcessor:
-    def __init__(self, instrument_name):
-        config_parser = InstrumentConfigParser()
+    def __init__(self, instrument_name, config_dir=None):
+        """Initializes the image processor with configuration for a specific instrument.
+
+        :param instrument_name: Name of the instrument for which to configure the processor.
+        :param config_dir: Directory where configuration files are located (optional).
+                           If not provided, the default directory will be used.
+        """
+        config_parser = InstrumentConfigParser(config_dir)
         self.config = config_parser.get_config(instrument_name)
         self.processing_params = self.config['processing_params']
         self.camera_params = self.config['camera_specs']
@@ -15,6 +21,14 @@ class ImageProcessor:
 
     @hierarchical_debug(logger)
     def process_image(self, imdata, imheader, header_descriptions, **kwargs):
+        """Processes an image using the specified parameters and translates headers.
+
+        :param imdata: The image data to be processed.
+        :param imheader: The original FITS header associated with the image.
+        :param header_descriptions: Descriptions of the header keywords.
+        :param kwargs: Additional parameters for processing that override default settings.
+        :return: A tuple containing the data frame of processed results and the translated original header.
+        """
         # Traduce el header a las keywords estándar
         translated_header = self.header_translator.translate_header(imheader)
         print(translated_header)
@@ -31,11 +45,31 @@ class ImageProcessor:
         return dfm, original_header
 
     def get_header_info(self, header):
+        """Retrieves translated header information.
+
+        :param header: The FITS header to be translated.
+        :return: The translated header with standard keywords.
+        """
         return self.header_translator.translate_header(header)
 
 
 # Function to create the processor
-def create_processor(instrument_name):
-    return ImageProcessor(instrument_name)
+def create_processor(instrument_name, config_dir=None):
+    """Creates an instance of ImageProcessor for a specified instrument.
+
+    :param instrument_name: Name of the instrument for which to create a processor.
+    :param config_dir: Directory where configuration files are located (optional).
+                       If not provided, the default directory will be used.
+    :return: An instance of ImageProcessor configured for the specified instrument.
+    """
+    return ImageProcessor(instrument_name, config_dir)
 
 
+if __name__ == '__main__':
+    test = create_processor('test')
+    from astropy.io.fits import Header
+
+    print(test.get_header_info(Header()))
+    from .instrument_config_parser import InstrumentConfigParser
+
+    InstrumentConfigParser().generate_config_file('test')

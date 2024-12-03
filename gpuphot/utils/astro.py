@@ -32,10 +32,11 @@ def get_solver():
         cache = '/data/astrometry_cache'
     else:
         cache = '/mnt/data/astrometry_cache'
-    solver = astrometry.Solver(astrometry.series_5200.index_files(
-        cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6}) + astrometry.
-                               series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10,
-                                                                                      11, 12, 13}))
+
+    solver = (astrometry.Solver(
+        astrometry.series_5200.index_files(cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6} ) +
+        astrometry.series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10, 11, 12, 13}))
+    )
 
     return solver
 
@@ -153,7 +154,7 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None,
                                                                            thres_px=dist_thres_px)
 
     solar_cat_filt = np.abs(df_catalog['SOLAR'])[ref_coords_matched_idx
-                        ] < solar_filter
+                     ] < solar_filter
     source_coords_matched_idx = source_coords_matched_idx[solar_cat_filt]
     ref_coords_matched_idx = ref_coords_matched_idx[solar_cat_filt]
     det_mag = -2.5 * np.log10(df_sources.flux[source_coords_matched_idx].values / exptime)

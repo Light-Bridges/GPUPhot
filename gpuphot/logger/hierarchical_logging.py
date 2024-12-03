@@ -1,7 +1,6 @@
 import atexit
 import functools
 import inspect
-import json
 import logging
 import os
 import platform
@@ -26,7 +25,6 @@ except ImportError:
     pass
 
 load_dotenv()
-
 
 LOGGER_NAME = "gpuphot"
 
@@ -159,18 +157,12 @@ def hierarchical_debug(logger_name):
             critical_logger = logging.getLogger(LOGGER_NAME)
             critical_logger.setLevel(logging.DEBUG)  # Ensure this logger captures all levels.
 
-            # Add the Logstash handler to the critical logger if it doesn't exist.
-            if not critical_logger.handlers:
-                setup_logstash_handler(critical_logger)
+            # Clear existing handlers to avoid showing logs on the console
+            if critical_logger.handlers:
+                critical_logger.handlers.clear()
 
-                # Configure the critical logger's log callback
-                def critical_log_callback(log_entry):
-                    if os.getenv('GPUPHOT_DEBUG', 'False').lower() == 'true':
-                        print(f"Log crítico guardado: {json.dumps(log_entry, indent=2)}")
-
-                notifying_handler_critical = NotifyingHandler(critical_log_callback)
-                notifying_handler_critical.setLevel(logging.DEBUG)  # Or the preferred level.
-                critical_logger.addHandler(notifying_handler_critical)
+            # Add the Logstash handler to the critical logger
+            setup_logstash_handler(critical_logger)
 
             end_time = None
             function_success = True
@@ -213,9 +205,11 @@ def hierarchical_debug(logger_name):
                     'system_info': system_info_instance.system_info  # Include system information
                 })
 
-                # Esperar a que se guarden los logs críticos en Logstash antes de continuar.
-                if isinstance(critical_logger.handlers[0], AsynchronousLogstashHandler):
-                    critical_logger.handlers[0].flush()  # Asegúrate de que se envíen los logs.
+                try:
+                    if isinstance(critical_logger.handlers[0], AsynchronousLogstashHandler):
+                        critical_logger.handlers[0].flush()  # Asegúrate de que se envíen los logs.
+                except Exception as e:
+                    logger.debug(f"Error al enviar logs: {str(e)}")
 
                 indent_levels[thread_id] = max(0, current_level)
 
@@ -301,6 +295,8 @@ class SingletonLogger:
         # Set the logging level based on the environment variable.
         if os.getenv('GPUPHOT_LOG_LEVEL', '').upper() == 'DEBUG':
             logger.setLevel(logging.DEBUG)
+        elif os.getenv('GPUPHOT_LOG_LEVEL', '').upper() == 'INFO':
+            logger.setLevel(logging.INFO)
         else:
             logger.setLevel(logging.ERROR)  # Default to ERROR level.
 
@@ -336,6 +332,7 @@ if __name__ == "__main__":
     logger = setup_logger(__name__)
 
 
+
     @hierarchical_debug(logger)
     def example_function(a, b):
         """
@@ -357,3 +354,6 @@ if __name__ == "__main__":
         print(f"Caught an exception: {e}")
 
     example_function(100, 1)
+    logger.debug("Finished running example function")
+
+

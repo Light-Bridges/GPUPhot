@@ -7,6 +7,7 @@ from astropy.io.fits import Header
 
 from .logger.hierarchical_logging import setup_logger
 
+warnings.simplefilter("once", UserWarning)
 logger = setup_logger(__name__)
 
 
@@ -35,18 +36,36 @@ class DefaultConfig:
     }
 
     DEFAULT_CAMERA_SPECS = {
-        "pixel_size": 15,
-        "gain": 1.0
+        "exposure_time": None,
+        "filter": None,
+        "n_images": None,
+        "rdnoise": None,
+        "satlevel": None,
+        "target_ra": None,
+        "target_dec": None,
+        "site_elevation": None,
+        "site_latitude": None,
+        "site_longitude": None,
+        "date_obs": None,
+        "inmodel": None,
+        "pxsize": None,
+        "gain": None,
+        "naxis1": None,
+        "naxis2": None,
+        "focalen": None,
+        "xbinning": None,
+        "biasstd": None,
+        "sitealt": None,
     }
 
     DEFAULT_PROCESSING_PARAMS = {
-        'SP_filt': True,
+        'SP_filt': False,
         'CR_filt': False,
         'border': 50,
         'center_factor': 0.7,
-        'pca_method': True,
+        'pca_method': False,
         'tile_section': 1000,
-        'astrom': True,
+        'astrom': False,
         'tile_section_psf': 2500,
         'do_pad': False,
     }
@@ -54,18 +73,35 @@ class DefaultConfig:
 
 class HeaderTranslator:
     def __init__(self, header_keywords):
+        """Initializes the header translator.
+
+        :param header_keywords: Dictionary mapping custom header keys to internal keys.
+        """
         self.translations = header_keywords
         self.default_translations = DefaultConfig.DEFAULT_HEADER_KEYWORDS
         self.reverse_translations = {v: k for k, v in self.translations.items()}
+        self.warned_keys = set()
 
     def get_keyword(self, key):
+        """Retrieves the internal key corresponding to an external key.
+
+        :param key: External key for which to obtain the internal key.
+        :return: Corresponding internal key or the external key if not found.
+        """
         return self.translations.get(key, self.default_translations.get(key, key))
 
     def translate_header(self, header):
+        """Translates a FITS header using defined translations.
+
+        :param header: FITS header to translate (type astropy.io.fits.header.Header).
+        :return: Translated header with internal keys.
+        :raises TypeError: If the header is not of the correct type.
+        """
         if not isinstance(header, Header):
             raise TypeError("Input header must be an astropy.io.fits.header.Header object")
 
         translated = Header()
+
         for key, value in header.items():
             internal_key = self.reverse_translations.get(key)
             if internal_key:
@@ -77,11 +113,26 @@ class HeaderTranslator:
         for internal_key, default_key in self.default_translations.items():
             user_key = self.translations.get(internal_key, default_key)
             if user_key not in header:
-                warnings.warn(f"Variable '{user_key}' not found in header. This may cause issues.", UserWarning)
+                # Obtener el valor por defecto
+                default_value = DefaultConfig.DEFAULT_CAMERA_SPECS.get(internal_key)
+                if default_value is not None:
+                    translated[default_key] = default_value
+                    logger.debug(f"Added missing keyword '{default_key}' with default value '{default_value}'.")
+                else:
+                    # Enviar advertencia si no hay valor por defecto y no se ha advertido antes
+                    if internal_key not in self.warned_keys:
+                        warnings.warn(f"No default value found in camera specs for '{internal_key}'.", UserWarning)
+                        self.warned_keys.add(internal_key)  # Añadir la clave al conjunto de advertencias
 
         return translated
 
     def translate_back_header(self, header):
+        """Translates a FITS header back to its original form.
+
+        :param header: Translated FITS header (type astropy.io.fits.header.Header).
+        :return: Original header with external keys.
+        :raises TypeError: If the header is not of the correct type.
+        """
         if not isinstance(header, Header):
             raise TypeError("Input header must be an astropy.io.fits.header.Header object")
 
@@ -99,6 +150,11 @@ class HeaderTranslator:
 
 class InstrumentConfigParser:
     def __init__(self, config_dir=None):
+        """Initializes the instrument configuration parser.
+
+        :param config_dir: Directory where configuration files are located (optional).
+                           If not provided, the default directory will be used.
+        """
         self.config_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                        'instrument_configs') if not config_dir else config_dir
         self.base_config = {
@@ -108,6 +164,11 @@ class InstrumentConfigParser:
         }
 
     def _load_json_config(self, file_name):
+        """Loads a JSON configuration file.
+
+        :param file_name: Name of the JSON file to load.
+        :return: Dictionary with loaded configuration or an empty dictionary on error.
+        """
         file_path = os.path.join(self.config_dir, file_name)
         try:
             with open(file_path, 'r') as file:
@@ -119,6 +180,12 @@ class InstrumentConfigParser:
             return {}
 
     def get_config(self, instrument_name):
+        """Obtains configuration for a specific instrument.
+
+        :param instrument_name: Name of the instrument for which to obtain configuration.
+                                If 'default', default values will be used.
+        :return: Dictionary with instrument configuration and header translator.
+        """
         # Paso 1: Comenzar con la configuración base de DefaultConfig
         config = self.base_config.copy()
 
@@ -143,6 +210,12 @@ class InstrumentConfigParser:
         return config
 
     def generate_config_file(self, instrument_name):
+        """Generates a JSON configuration file for an instrument.
+
+        :param instrument_name: Name of the instrument for which to generate the configuration file.
+                               The file will be saved in the configuration directory.
+                               If it already exists, it will be overwritten.
+        """
         file_path = os.path.join(self.config_dir, f"{instrument_name}.json")
         config_data = self.base_config.copy()
 
@@ -156,4 +229,5 @@ class InstrumentConfigParser:
         logger.debug(f"Configuration file generated: {file_path}")
 
     def generate_default_config(self):
+        """Generates a default JSON configuration file."""
         self.generate_config_file('default')
