@@ -574,6 +574,10 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
                                     scale, sat_lim=satlevel * 0.8, **kwargs)
     sources = sources + border
 
+    if len(sources) < 5:
+        logger.error('Less than 5 isolated stars detected')
+        raise
+
     star_dataset, coord, scaling = create_star_dataset(img, sources, scale)
     center_factor = np.min((center_factor, 1))
     xmin = int(imdata.shape[1] * 0.5 * (1 - center_factor))
