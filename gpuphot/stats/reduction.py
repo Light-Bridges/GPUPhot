@@ -9,7 +9,6 @@ from ..stats.subpixel import phase_cross_correlation as phase_cross_correlation_
 logger = setup_logger(__name__)
 
 
-@hierarchical_debug(logger)
 def center(im, size):
     """Center the image to the given size.
 
@@ -81,8 +80,8 @@ def stack_sigmaclip(data, it=5, n=3):
 
     im0 = data[0]
 
-    iplus = cp.zeros_like(im0, dtype=cp.float32)+1.e10
-    iminu = cp.zeros_like(im0, dtype=cp.float32)-1.e10
+    iplus = cp.zeros_like(im0, dtype=cp.float32) + 1.e10
+    iminu = cp.zeros_like(im0, dtype=cp.float32) - 1.e10
     avg = cp.zeros_like(im0, dtype=cp.float32)
     std = cp.zeros_like(im0, dtype=cp.float32)
     for j in range(it):
@@ -92,28 +91,27 @@ def stack_sigmaclip(data, it=5, n=3):
         delta = 0
 
         for i in range(data.shape[0]):
-
             im = data[i, :]
 
             mk = (im >= iminu)
-            mk = mk*(im <= iplus)
+            mk = mk * (im <= iplus)
             im = im * mk
             center = center + im
-            sigma = sigma + im*im
+            sigma = sigma + im * im
             delta = delta + cp.sum(mk == 0)
             mask = mask + mk
 
-        center = center/mask
-        sigma = sigma/mask
-        sigma = cp.sqrt(sigma-center*center)
+        center = center / mask
+        sigma = sigma / mask
+        sigma = cp.sqrt(sigma - center * center)
         if delta == delta0:
             break
         delta0 = delta
         iplus = center + n * sigma
         iminu = center - n * sigma
-        avg[mask >=3] = center[mask >=3]
-        std[mask >=3] = sigma[mask >=3]
-        
+        avg[mask >= 3] = center[mask >= 3]
+        std[mask >= 3] = sigma[mask >= 3]
+
     del iplus, iminu, im0, delta0, mask, delta, center, sigma
     return avg, std
 

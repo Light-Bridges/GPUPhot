@@ -229,7 +229,6 @@ def _compute_error(cross_correlation_max, src_amp, target_amp):
     return cp.sqrt(np.abs(error))
 
 
-@hierarchical_debug(logger)
 def _compute_phasediff(cross_correlation_max):
     """Compute global phase difference between the two images (should be zero if images are non-negative).
 

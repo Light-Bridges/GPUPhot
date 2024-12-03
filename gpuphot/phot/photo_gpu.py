@@ -208,6 +208,7 @@ def gen_moff_filter2(alpha, beta, **kwargs):
 
     return k_app, lk
 
+
 @hierarchical_debug(logger)
 def calculate_aperture_corrections(image_shape: tuple, block_size: int, coeff_map: cp.ndarray, eigen_psfs: cp.ndarray,
                                    psf: cp.ndarray, radii: np.ndarray, **kwargs):
@@ -250,7 +251,7 @@ def calculate_aperture_corrections(image_shape: tuple, block_size: int, coeff_ma
 
     return aperture_corrections, tile_centers
 
-@hierarchical_debug(logger)
+
 def find_aperture_corrections(sources: cp.ndarray, corrections: np.ndarray, tile_centers: np.ndarray,
                               opt_rad_idx: np.array = None, **kwargs) -> cp.ndarray:
     """Find the aperture correction for each source.
@@ -311,7 +312,6 @@ def process_image(imdata, imheader, header_descriptions, **kwargs):
 
     # Update default parameters with any provided in kwargs
     params = {**default_params, **kwargs}
-
 
     # Call calibrate_image with updated parameters
     dfm, h_wcs, dic_calib = calibrate_image(
@@ -677,13 +677,13 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
         dfm.loc[:, 'RA'] = ra
         dfm.loc[:, 'DEC'] = dec
         photo_dict = get_zeropoint(result, dfm, exptime, center_lims=(xmin, xmax, ymin, ymax),
-                                                            solar_filter=color_range, dist_thres_px= 1.5 * fwhm * scale / 3600)
+                                   solar_filter=color_range, dist_thres_px=1.5 * fwhm * scale / 3600)
         dic_calib.update(photo_dict)
 
         # Check catalog coincidence
         dfm_idx, catalog_idx = crossmatch_sources(dfm[['RA', 'DEC']].values,
-                                                result[['RA', 'DEC']].values,
-                                                thres_px = 1.5 * fwhm * scale / 3600)
+                                                  result[['RA', 'DEC']].values,
+                                                  thres_px=1.5 * fwhm * scale / 3600)
 
         # Add astrometric errors to dfm
         dfm.loc[dfm_idx, 'RAERR'] = dfm.loc[dfm_idx, 'RA'].values - result.loc[catalog_idx, 'RA'].values

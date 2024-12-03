@@ -36,7 +36,6 @@ class ImportTransformer(ast.NodeTransformer):
         return os.path.splitext(module_path)[0].replace(os.path.sep, '.')
 
 
-@hierarchical_debug(logger)
 def transform_imports_in_file(file_path):
     """
     Transforma las importaciones absolutas a importaciones relativas en un archivo Python dado.
@@ -49,7 +48,6 @@ def transform_imports_in_file(file_path):
         file.write(ast.unparse(transformed_tree))
 
 
-@hierarchical_debug(logger)
 def transform_imports_in_directory(directory, exclude_dirs=None):
     """
     Transforma las importaciones absolutas a importaciones relativas en todos los archivos Python dentro de un directorio.

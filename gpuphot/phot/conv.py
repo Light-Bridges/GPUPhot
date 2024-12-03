@@ -70,7 +70,6 @@ def gaussian_kernel(lk: int, sigma: int, **kwargs) -> cp.ndarray:
     return kernel / cp.sum(kernel)
 
 
-@hierarchical_debug(logger)
 def get_aper_kernel(radius: int, size: int = None, **kwargs) -> tuple:
     """Generates a circular kernel for aperture photometry.
 
@@ -88,7 +87,6 @@ def get_aper_kernel(radius: int, size: int = None, **kwargs) -> tuple:
     return kernel, area
 
 
-@hierarchical_debug(logger)
 def fill_image(image_shape: tuple, **kwargs) -> tuple:
     """Calculates the new image shape rounding up to the next power of 2.
 

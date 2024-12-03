@@ -2,12 +2,11 @@ import gc
 
 import cupy as cp
 
-from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
 
-@hierarchical_debug(logger)
 def free_gpu_mem() -> None:
     """Liberates GPU memory by freeing all memory blocks allocated by the default memory pool."""
     mempool = cp.get_default_memory_pool()
@@ -17,7 +16,6 @@ def free_gpu_mem() -> None:
     gc.collect()
 
 
-@hierarchical_debug(logger)
 def init_gpu(**kwargs) -> None:
     """Inicializa y registra información de la GPU usando CuPy"""
 

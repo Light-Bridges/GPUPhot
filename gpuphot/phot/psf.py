@@ -309,7 +309,6 @@ def detect_sources_psf(img: cp.ndarray, rms: cp.ndarray, fwhm: float, psf: cp.ar
     return coor, conv_ima_sigma
 
 
-@hierarchical_debug(logger)
 def recreate_normed_star(coeff_map: cp.ndarray, eigen_psfs: cp.array, coords: cp.array) -> cp.ndarray:
     """Recreates a normalized star from the coefficient map.
 
@@ -345,7 +344,6 @@ def recreate_normed_star_vectorized(coeff_map: cp.ndarray, eigen_psfs: cp.array,
     return kernels
 
 
-@hierarchical_debug(logger)
 def recreate_normed_stars_batch(coeff_map: cp.ndarray, eigen_psfs: cp.ndarray, coords: cp.ndarray,
                                 **kwargs) -> cp.ndarray:
     """Recreates normalized stars for a batch of coordinates.
@@ -406,7 +404,6 @@ def fit_moffat(star_data: np.ndarray) -> tuple:
     return r, Z, result, fwhm, fwhm_err
 
 
-@hierarchical_debug(logger)
 def filter_centroids_kdtree(centroids: np.array, min_distance: float) -> np.array:
     """ Filters centroids using a KDTree.
 
@@ -432,7 +429,6 @@ def get_centroids_distance_kdtree(centroids: np.array):
     return dist[:, 1]
 
 
-@hierarchical_debug(logger)
 def moffat(r: np.array, A: float = 1., r0: float = 0., B: float = 1., R: float = 1.) -> np.array:
     """ Moffat profile function.
     https://nbviewer.org/github/ysbach/AO_2017/blob/master/04_Ground_Based_Concept.ipynb#1.2.-Moffat
@@ -447,7 +443,6 @@ def moffat(r: np.array, A: float = 1., r0: float = 0., B: float = 1., R: float =
     return A * (1 + ((r - r0) / R) ** 2) ** (-B)
 
 
-@hierarchical_debug(logger)
 def moffat_fwhm(R: float, B: float, R_err: float, B_err: float) -> tuple:
     """Calculates the FWHM of a Moffat profile.
 

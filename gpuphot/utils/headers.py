@@ -1,15 +1,16 @@
+from datetime import datetime
 
-from .astro import get_scale, get_ccw, radec_to_altaz, radec_to_ecl, radec_to_gal, radec_to_moon_sun
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
-from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
-from datetime import datetime
+
+from .astro import get_scale, get_ccw, radec_to_altaz, radec_to_ecl, radec_to_gal, radec_to_moon_sun
+from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
-@hierarchical_debug(logger)
+
 def delete_header_from(header, val):
     """Delete a section from the FITS header.
 
@@ -27,7 +28,7 @@ def delete_header_from(header, val):
 
     return header
 
-@hierarchical_debug(logger)
+
 def get_if_header_already_post_processed(header, postprocess):
     comments = list()
     for comment in header["COMMENT"]:
@@ -35,19 +36,20 @@ def get_if_header_already_post_processed(header, postprocess):
     comments = set(comments)
     return postprocess in comments
 
-@hierarchical_debug(logger)
+
 def deg_to_hms(RA, DEC):
     coords_deg = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg')
     ra_hms = '%02d:%02d:%.6f' % coords_deg.ra.hms
-    if DEC > 0: dec_dms = '%02d:%02d:%02.6f' % coords_deg.dec.dms
+    if DEC > 0:
+        dec_dms = '%02d:%02d:%02.6f' % coords_deg.dec.dms
     else:
         coords_deg = SkyCoord(RA * u.deg, -1 * DEC * u.deg, frame='icrs', unit='deg')
         dec_dms = '-%02d:%02d:%02.6f' % coords_deg.dec.dms
     return ra_hms, dec_dms
 
-@hierarchical_debug(logger)
-def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude, site_elevation, date_obs, header_descriptions):
 
+def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude, site_elevation, date_obs,
+                                  header_descriptions):
     astro_exists = get_if_header_already_post_processed(imheader, "ASTROMETRY")
     if astro_exists: imheader = delete_header_from(imheader, 'ASTROMETRY')
 
@@ -57,22 +59,22 @@ def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude
     imheader.insert('COMINIT', ('COMMENT', '***************************'))
 
     for v in h_wcs: imheader[v] = h_wcs[v]
-        
+
     w = WCS(h_wcs)
     ra, dec = w.wcs_pix2world(imheader['NAXIS1'] // 2, imheader['NAXIS2'] // 2, 1)
     ra = ra.tolist()
     dec = dec.tolist()
 
     ra_hms, dec_dms = deg_to_hms(ra, dec)
-    az, alt, airmass, zd = radec_to_altaz (ra, dec, site_latitude, site_longitude, site_elevation, date_obs)
+    az, alt, airmass, zd = radec_to_altaz(ra, dec, site_latitude, site_longitude, site_elevation, date_obs)
     moon_alt, moon_az, distance_to_moon, moon_phase, sun_alt, sun_az = radec_to_moon_sun(
         ra, dec, site_latitude, site_longitude, site_elevation, date_obs)
     longal, latgal = radec_to_gal(ra, dec)
     lonecl, latecl = radec_to_ecl(ra, dec)
-    scale = np.round(get_scale(imheader),3)
-    ccw = np.round(get_ccw(imheader),1)
-    fovx = np.round(imheader['NAXIS1']*scale/60,2)
-    fovy = np.round(imheader['NAXIS2']*scale/60,2)
+    scale = np.round(get_scale(imheader), 3)
+    ccw = np.round(get_ccw(imheader), 1)
+    fovx = np.round(imheader['NAXIS1'] * scale / 60, 2)
+    fovy = np.round(imheader['NAXIS2'] * scale / 60, 2)
 
     imheader.insert('COMINIT', ('RA', ra, header_descriptions['RA']))
     imheader.insert('COMINIT', ('DEC', dec, header_descriptions['DEC']))
@@ -100,13 +102,14 @@ def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude
 
     return imheader
 
-@hierarchical_debug(logger)
-def update_header_with_photometry(imheader, dic_calib, header_descriptions):
 
+def update_header_with_photometry(imheader, dic_calib, header_descriptions):
     phot_exists = get_if_header_already_post_processed(imheader, "PHOTOMETRY")
     if phot_exists: imheader = delete_header_from(imheader, 'PHOTOMETRY')
-    try: del imheader['FWHM']
-    except: pass
+    try:
+        del imheader['FWHM']
+    except:
+        pass
 
     imheader['COMINIT'] = 'e'
     imheader.insert('COMINIT', ('COMMENT', '***************************'))

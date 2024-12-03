@@ -8,7 +8,6 @@ from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 
 logger = setup_logger(__name__)
 
-@hierarchical_debug(logger)
 def crossmatch_sources(source_coords, ref_coords, thres_px=2):
     tree = KDTree(ref_coords)
     dist, idx = tree.query(source_coords, k=1)

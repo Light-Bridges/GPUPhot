@@ -34,14 +34,13 @@ def get_solver():
         cache = '/mnt/data/astrometry_cache'
 
     solver = (astrometry.Solver(
-        astrometry.series_5200.index_files(cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6} ) +
+        astrometry.series_5200.index_files(cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6}) +
         astrometry.series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10, 11, 12, 13}))
     )
 
     return solver
 
 
-@hierarchical_debug(logger)
 def get_astrometry_params(h_wcs, image_shape):
     w = WCS(h_wcs)
     ra, dec = w.all_pix2world(image_shape[1] // 2, image_shape[0] // 2, 1)
@@ -54,7 +53,6 @@ def get_astrometry_params(h_wcs, image_shape):
     return coocenter, FOV, scale
 
 
-@hierarchical_debug(logger)
 def logodds_callback_100(logodds):
     # print(logodds)
     if (logodds[0] > 100.0) | (len(logodds) > 2):
@@ -63,7 +61,6 @@ def logodds_callback_100(logodds):
         return astrometry.Action.CONTINUE
 
 
-@hierarchical_debug(logger)
 def handler(signum, frame):
     print("Astrometrization timeout!")
     raise Exception("end of time")
@@ -122,7 +119,6 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     return h_wcs
 
 
-@hierarchical_debug(logger)
 def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None,
                   solar_filter=0.5, dist_thres_px=3, min_mag=14, max_mag=18,
                   plot=False):
@@ -240,7 +236,6 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None,
     return params
 
 
-@hierarchical_debug(logger)
 def get_target_snr(dfm: pd.DataFrame, target_ra: float, target_dec: float, dist_thres_px=3) -> float:
     """
     Get the SNR of the target.
@@ -261,7 +256,6 @@ def get_target_snr(dfm: pd.DataFrame, target_ra: float, target_dec: float, dist_
     return target_snr
 
 
-@hierarchical_debug(logger)
 def get_maglim(mag: np.ndarray, snr: np.ndarray, snr_lim: float) -> float:
     """
     Get the limiting magnitude.
@@ -283,7 +277,6 @@ def get_maglim(mag: np.ndarray, snr: np.ndarray, snr_lim: float) -> float:
     return np.round(maglim, 2)
 
 
-@hierarchical_debug(logger)
 def radec_to_moon_sun(ra, dec, site_latitude, site_longitude, site_elevation, date_obs):
     observer = ephem.Observer()
     observer.lat = np.radians(site_latitude)
@@ -313,7 +306,6 @@ def radec_to_moon_sun(ra, dec, site_latitude, site_longitude, site_elevation, da
         sun_az, 2)
 
 
-@hierarchical_debug(logger)
 def radec_to_altaz(RA, DEC, SITELAT, SITELON, SITEELEV, Date):
     coords_deg = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg')
     Observatory = EarthLocation(lat=SITELAT * u.deg, lon=SITELON * u.deg, height=SITEELEV * u.m)
@@ -324,19 +316,16 @@ def radec_to_altaz(RA, DEC, SITELAT, SITELON, SITEELEV, Date):
     return round(coords_altaz.az.deg, 6), round(coords_altaz.alt.deg, 6), round(airmass, 6), round(zen.deg, 6)
 
 
-@hierarchical_debug(logger)
 def radec_to_gal(RA, DEC):
     coords_gal = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg').galactic
     return round(coords_gal.l.deg, 6), round(coords_gal.b.deg, 6)
 
 
-@hierarchical_debug(logger)
 def radec_to_ecl(RA, DEC):
     coords_gal = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg').barycentricmeanecliptic
     return round(coords_gal.lon.deg, 6), round(coords_gal.lat.deg, 6)
 
 
-@hierarchical_debug(logger)
 def get_ccw(hwcs):
     cd11 = hwcs['CD1_1']
     cd12 = hwcs['CD1_2']
@@ -352,7 +341,6 @@ def get_ccw(hwcs):
     return -np.degrees(np.arctan2(A, T))
 
 
-@hierarchical_debug(logger)
 def get_scale(hwcs):
     cd11 = hwcs['CD1_1']
     cd12 = hwcs['CD1_2']
@@ -361,13 +349,11 @@ def get_scale(hwcs):
     return np.sqrt(cd11 ** 2 + cd12 ** 2) * 3600
 
 
-@hierarchical_debug(logger)
 def plate_scale_px(microns, focal):
     # pixel size in microns
     return plate_scale_mm(focal) * microns / 1000  # arcsec/px
 
 
-@hierarchical_debug(logger)
 def plate_scale_mm(focal):
     # focal length in mm
     return 206265 / focal  # arcsec/mm

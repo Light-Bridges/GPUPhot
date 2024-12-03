@@ -5,7 +5,6 @@ from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 logger = setup_logger(__name__)
 
 
-@hierarchical_debug(logger)
 def decompose_into_tiles(image: cp.ndarray, block_size: int) -> cp.ndarray:
     """Decomposes an image into tiles of a specific size.
 
@@ -62,7 +61,6 @@ def calculate_tile_nanmean_sigclip(tiles: cp.ndarray, nsigma: float = 2) -> cp.n
     return cp.nanmean(tiles, axis=(1, 2)), cp.nanstd(tiles, axis=(1, 2))
 
 
-@hierarchical_debug(logger)
 def recompose_from_percentiles(percentiles: cp.ndarray, original_shape: tuple, block_size: int) -> cp.ndarray:
     """Recomposes an image from its percentiles.
 

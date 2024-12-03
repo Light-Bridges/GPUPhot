@@ -4,7 +4,6 @@ from ...gpuphot.logger.hierarchical_logging import setup_logger, hierarchical_de
 
 logger = setup_logger(__name__)
 
-@hierarchical_debug(logger)
 def get_tests_data_path():
     """
     Get the path to the test data directory.
