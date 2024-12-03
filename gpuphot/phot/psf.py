@@ -222,8 +222,12 @@ def create_coeff_map(img_shape: tuple, positions: cp.array, coefficients: cp.arr
         tiles = decompose_into_tiles(coeff_map[c, :, :], block_size)
         tiles, _ = calculate_tile_nanmean_sigclip(tiles)
         tiles = tiles.reshape((img_shape[0] // block_size, img_shape[1] // block_size))
-        while cp.sum(cp.isnan(tiles)) > 0:
-            tiles = fill_nan_fft(tiles, 2, 0, min_neighbors=2)
+        s = cp.sum(cp.isnan(tiles))
+        lk = 2
+        while s > 0:
+            tiles = fill_nan_fft(tiles, lk, 0, min_neighbors=2)
+            if cp.sum(cp.isnan(tiles)) == s: lk += 1
+            s = cp.sum(cp.isnan(tiles))
 
         coeff_map[c, :, :] = recompose_from_percentiles(tiles.reshape(-1), img_shape, block_size)
 
