@@ -22,7 +22,7 @@ def crossmatch_sources(source_coords, ref_coords, thres_px=2):
 def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                 vizier_timeout=60, vizier_row_limit=-1,
                 vizier_cache=True, custom_vizier_search_func=None,
-                expected_columns=None):
+                expected_columns=None, **kwargs):
     """
     Retrieves astronomical data from the Vizier catalog based on specified parameters.
 
