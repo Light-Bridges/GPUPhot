@@ -1,12 +1,13 @@
-
 import numpy as np
 import pandas as pd
 from astropy import units as u
 from astroquery.vizier import Vizier
 from scipy.spatial import KDTree
+
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 
 logger = setup_logger(__name__)
+
 
 def crossmatch_sources(source_coords, ref_coords, thres_px=2):
     tree = KDTree(ref_coords)
@@ -16,70 +17,143 @@ def crossmatch_sources(source_coords, ref_coords, thres_px=2):
     ref_coords_matched_idx = idx[mask]
     return source_coords_matched_idx, ref_coords_matched_idx
 
+
 @hierarchical_debug(logger)
-def __getVizier(catalog, coocenter, radii, maglimit, ref_filter):
-    Vizier.ROW_LIMIT = -1
-    timeout = 60
-    vizier_results = Vizier(timeout=timeout, row_limit=-1) \
-        .query_region(coocenter, radius=radii*u.deg, catalog=catalog, column_filters={ref_filter: '<%.1f ' % maglimit} , cache=True)
+def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
+                vizier_timeout=60, vizier_row_limit=-1,
+                vizier_cache=True, custom_vizier_search_func=None,
+                expected_columns=None):
+    """
+    Retrieves astronomical data from the Vizier catalog based on specified parameters.
+
+    This function queries the Vizier catalog for objects in a defined region and applies
+    filters to the results based on magnitude limits. It also allows for the use of a
+    custom search function if provided.
+
+    :param catalog: The name of the Vizier catalog to query.
+    :param coocenter: The coordinates (center) around which to search for objects.
+    :param radii: The radius within which to search for objects (in degrees).
+    :param maglimit: The magnitude limit for filtering results.
+    :param ref_filter: The reference filter used for magnitude filtering.
+    :param vizier_timeout: Timeout duration for the query (default is 60 seconds).
+    :param vizier_row_limit: Maximum number of rows to return from the query (default is -1, which means no limit).
+    :param vizier_cache: Boolean flag to enable or disable caching of results (default is True).
+    :param custom_vizier_search_func: Optional custom function for querying the Vizier catalog.
+                                       This function must accept the following parameters:
+                                       - catalog: The name of the Vizier catalog to query.
+                                       - coocenter: The coordinates around which to search.
+                                       - radii: The search radius in degrees.
+                                       - maglimit: The magnitude limit for filtering results.
+                                       - ref_filter: The reference filter used for magnitude filtering.
+                                       - expected_columns: List of expected column names in the results.
+
+    :return: A DataFrame containing the results of the query, filtered by the specified parameters.
+    """
+    if custom_vizier_search_func is not None:
+        return custom_vizier_search_func(catalog, coocenter, radii, maglimit, ref_filter, expected_columns)
+
+    Vizier.ROW_LIMIT = vizier_row_limit
+    timeout = vizier_timeout
+    vizier_results = Vizier(timeout=timeout, row_limit=vizier_row_limit) \
+        .query_region(coocenter, radius=radii * u.deg, catalog=catalog,
+                      column_filters={ref_filter: '<%.1f ' % maglimit}, cache=vizier_cache)
+
     return vizier_results[0]
 
-@hierarchical_debug(logger)
-def catalog_results(coocenter, radius, filter, inmodel, maglimit=23):
 
+@hierarchical_debug(logger)
+def catalog_results(coocenter, radius, filter, inmodel, maglimit=23, **kwargs):
+    """
+    Processes astronomical data to calculate magnitudes and other parameters
+    for stars based on various filters and models.
+
+    This function retrieves data from different catalogs depending on the specified
+    filter and calculates magnitudes, errors, and solar indices for stars. It uses
+    the __getVizier function to fetch necessary data and applies specific calculations
+    based on the input parameters.
+
+    :param coocenter: The coordinates (center) around which to search for objects.
+    :param radius: The radius within which to search for objects (in degrees).
+    :param filter: The specific filter type used to determine which catalog to query.
+    :param inmodel: The model used for calculating magnitudes, affecting coefficients applied.
+    :param maglimit: The magnitude limit for filtering results (default is 23).
+    :param kwargs: Additional keyword arguments passed to __getVizier, including luminosity coefficients.
+
+    :return: A tuple containing:
+        - result: A DataFrame with calculated magnitudes and associated parameters.
+        - catalog: The name of the catalog used in the query.
+        - ref_filter: The reference filter used in calculations.
+    """
     if coocenter.dec.deg < -30:
-        catalog='II/379' # SkyMapper Southern Sky Survey. DR4 : II/379
+        catalog = 'II/379'  # SkyMapper Southern Sky Survey. DR4 : II/379
         ref_filter = 'gPSF'
-        vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter)
+        expected_columns = ['SMSS', 'RAICRS', 'DEICRS', 'gPSF', 'rPSF']  # Columnas para SkyMapper
+        vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
+                                     expected_columns=expected_columns, **kwargs)
         color = vizier_results['gPSF'] - vizier_results['rPSF']
         B = vizier_results['gPSF'] + 0.194 + 0.561 * color
         V = vizier_results['gPSF'] - 0.017 - 0.508 * color
         solar_index = B - V - 0.65
 
-        if filter == 'SDSSg': ref_filter = 'gPSF'
-        elif filter == 'SDSSr': ref_filter = 'rPSF'
-        elif filter == 'SDSSi': ref_filter = 'iPSF'
-        elif filter == 'SDSSzs': ref_filter = 'zPSF'
-        elif filter == 'SDSSu': ref_filter = 'uPSF'
-
+        if filter == 'SDSSg':
+            ref_filter = 'gPSF'
+        elif filter == 'SDSSr':
+            ref_filter = 'rPSF'
+        elif filter == 'SDSSi':
+            ref_filter = 'iPSF'
+        elif filter == 'SDSSzs':
+            ref_filter = 'zPSF'
+        elif filter == 'SDSSu':
+            ref_filter = 'uPSF'
 
         result = pd.DataFrame({'ID': vizier_results['SMSS'],
                                'RA': vizier_results['RAICRS'],
                                'DEC': vizier_results['DEICRS'],
                                'MAG': vizier_results[ref_filter],
-                               'MAGERR': vizier_results[ref_filter]*0,
+                               'MAGERR': vizier_results[ref_filter] * 0,
                                'SOLAR': solar_index})
         ref_filter = ref_filter[:-3]
 
-    elif filter=='Open' or filter=='OPEN':
-        catalog='I/355/gaiadr3' # Gaia DR3 Part 1. Main source : I/355
+    elif filter == 'Open' or filter == 'OPEN':
+        catalog = 'I/355/gaiadr3'  # Gaia DR3 Part 1. Main source : I/355
         ref_filter = 'BPmag'
-        vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter)
-        solar_index = 0.01760 - 0.003226 + (0.3833+0.00686) * vizier_results['BP-RP'] + (-0.1345+0.1732) * vizier_results['BP-RP']**2 - 0.36
-        magerr = -2.5 * np.log10 (vizier_results['F'+ref_filter[:2]] / (vizier_results['F'+ref_filter[:2]] + vizier_results['e_F'+ref_filter[:2]]))
+        expected_columns = ['Source', 'RAJ2000', 'DEJ2000', 'BP-RP', f'F{ref_filter[:2]}',
+                            f'e_F{ref_filter[:2]}']  # Columnas para Gaia DR3
+        vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
+                                     expected_columns=expected_columns, **kwargs)
+        solar_index = 0.01760 - 0.003226 + (0.3833 + 0.00686) * vizier_results['BP-RP'] + (-0.1345 + 0.1732) * \
+                      vizier_results['BP-RP'] ** 2 - 0.36
+        magerr = -2.5 * np.log10(vizier_results['F' + ref_filter[:2]] / (
+                vizier_results['F' + ref_filter[:2]] + vizier_results['e_F' + ref_filter[:2]]))
         result = pd.DataFrame({'ID': vizier_results['Source'],
-                                'RA': vizier_results['RAJ2000'],
-                                'DEC': vizier_results['DEJ2000'],
-                                'MAG': vizier_results[ref_filter],
-                                'MAGERR': magerr,
-                                'SOLAR': solar_index})
+                               'RA': vizier_results['RAJ2000'],
+                               'DEC': vizier_results['DEJ2000'],
+                               'MAG': vizier_results[ref_filter],
+                               'MAGERR': magerr,
+                               'SOLAR': solar_index})
         ref_filter = ref_filter[:-3]
 
     elif filter == 'SDSSu':
-        catalog='I/353/gsc242'
+        catalog = 'I/353/gsc242'
         ref_filter = 'umag'
-        vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter)
+        expected_columns = ['GSC2', 'RA_ICRS', 'DE_ICRS', ref_filter]  # Columnas para GSC2
+        vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
+                                     expected_columns=expected_columns, **kwargs)
         result = pd.DataFrame({'ID': vizier_results['GSC2'],
                                'RA': vizier_results['RA_ICRS'],
                                'DEC': vizier_results['DE_ICRS'],
                                'MAG': vizier_results[ref_filter],
-                               'MAGERR': np.zeros(len(vizier_results['RA_ICRS'])), # uncertainty unknown
-                               'SOLAR': np.zeros(len(vizier_results['RA_ICRS']))}) # for u filter no solar colors are applied
+                               'MAGERR': np.zeros(len(vizier_results['RA_ICRS'])),  # uncertainty unknown
+                               'SOLAR': np.zeros(
+                                   len(vizier_results['RA_ICRS']))})  # for u filter no solar colors are applied
 
     elif filter == 'Lum' or filter == 'w':
-        catalog='II/349/ps1' # The Pan-STARRS release 1 (PS1) Survey - DR1 : II/349
+        catalog = 'II/349/ps1'  # The Pan-STARRS release 1 (PS1) Survey - DR1 : II/349
         ref_filter = 'gmag'
-        vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter)
+        expected_columns = ['objID', 'RAJ2000', 'DEJ2000', 'gmag', 'rmag', f'e_{ref_filter}',
+                            f'e_rmag']  # Columnas para Pan-STARRS
+        vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
+                                     expected_columns=expected_columns, **kwargs)
         color = vizier_results['gmag'] - vizier_results['rmag']
         # B = vizier_results['gmag'] + 0.213 + 0.587 * color
         # V = vizier_results['rmag'] + 0.006 + 0.474 * color
@@ -88,6 +162,14 @@ def catalog_results(coocenter, radius, filter, inmodel, maglimit=23):
         V = vizier_results['gmag'] - 0.017 - 0.508 * color
         solar_index = B - V - 0.65
 
+        lum_gmag_coeff = kwargs.get('lum_gmag_coeff', 0.5)
+        lum_rmag_coeff = kwargs.get('lum_rmag_coeff', 0.5)
+
+        mag = lum_gmag_coeff * vizier_results['gmag'] + lum_rmag_coeff * vizier_results['rmag']
+        magerr = lum_gmag_coeff * vizier_results['e_gmag'] + lum_rmag_coeff * vizier_results['e_rmag']
+        ref_filter = f'{lum_gmag_coeff}*g+{lum_rmag_coeff}*r'
+
+        # TODO: Delete it
         if inmodel == 'iKon936':
             mag = 0.46872 * vizier_results['gmag'] + 0.53127 * vizier_results['rmag']
             magerr = 0.46872 * vizier_results['e_gmag'] + 0.53127 * vizier_results['e_rmag']
@@ -108,11 +190,14 @@ def catalog_results(coocenter, radius, filter, inmodel, maglimit=23):
                                'MAG': mag,
                                'MAGERR': magerr,
                                'SOLAR': solar_index})
-        
+
     else:
-        catalog='II/349/ps1' # The Pan-STARRS release 1 (PS1) Survey - DR1 : II/349
+        catalog = 'II/349/ps1'  # The Pan-STARRS release 1 (PS1) Survey - DR1 : II/349
         ref_filter = 'gmag'
-        vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter)
+        expected_columns = ['objID', 'RAJ2000', 'DEJ2000', ref_filter,
+                            f'e_{ref_filter}']  # Columnas por defecto para Pan-STARRS
+        vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
+                                     expected_columns=expected_columns, **kwargs)
         color = vizier_results['gmag'] - vizier_results['rmag']
         # B = vizier_results['gmag'] + 0.213 + 0.587 * color
         # V = vizier_results['rmag'] + 0.006 + 0.474 * color
@@ -121,10 +206,14 @@ def catalog_results(coocenter, radius, filter, inmodel, maglimit=23):
         V = vizier_results['gmag'] - 0.017 - 0.508 * color
         solar_index = B - V - 0.65
 
-        if filter == 'SDSSg': ref_filter = 'gmag'
-        elif filter == 'SDSSr': ref_filter = 'rmag'
-        elif filter == 'SDSSi': ref_filter = 'imag'
-        elif filter == 'SDSSzs': ref_filter = 'zmag'
+        if filter == 'SDSSg':
+            ref_filter = 'gmag'
+        elif filter == 'SDSSr':
+            ref_filter = 'rmag'
+        elif filter == 'SDSSi':
+            ref_filter = 'imag'
+        elif filter == 'SDSSzs':
+            ref_filter = 'zmag'
 
         # añadir Johnson
 
@@ -132,7 +221,7 @@ def catalog_results(coocenter, radius, filter, inmodel, maglimit=23):
                                'RA': vizier_results['RAJ2000'],
                                'DEC': vizier_results['DEJ2000'],
                                'MAG': vizier_results[ref_filter],
-                               'MAGERR': vizier_results['e_'+ref_filter],
+                               'MAGERR': vizier_results['e_' + ref_filter],
                                'SOLAR': solar_index})
         ref_filter = ref_filter[:-3]
 

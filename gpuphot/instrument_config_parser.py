@@ -68,6 +68,8 @@ class DefaultConfig:
         'astrom': False,
         'tile_section_psf': 2500,
         'do_pad': False,
+        'lum_gmag_coeff': 0.5,
+        'lum_rmag_coeff': 0.5,
     }
 
 

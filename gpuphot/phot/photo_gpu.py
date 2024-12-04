@@ -672,7 +672,7 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
         # Photometrize
         coocenter, FOV, scale = get_astrometry_params(h_wcs, imdata.shape)
         result, catalog, ref_filter = catalog_results(coocenter, FOV / 2,
-                                                      filter, inmodel, maglimit=23)
+                                                      filter, inmodel, maglimit=23, **kwargs)
         dic_calib['CATALOG'] = catalog
         dic_calib['CATBAND'] = ref_filter
 

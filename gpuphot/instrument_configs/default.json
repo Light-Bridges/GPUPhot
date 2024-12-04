@@ -116,6 +116,10 @@
   	// Size of image tiles for PSF calculation (in pixels)
   	"tile_section_psf": 2500,
   	// Flag to enable/disable image padding
-  	"do_pad": false
+  	"do_pad": false,
+    // Coefficient for g magnitude in luminosity calculation
+    "lum_gmag_coeff": 0.5,
+    // Coefficient for r magnitude in luminosity calculation
+    "lum_rmag_coeff": 0.5
   }
 }
