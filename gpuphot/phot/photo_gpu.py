@@ -587,13 +587,15 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
 
     # Find reference psf
     unit_star_dataset = star_dataset.astype(cp.double) / scaling[:, 3][:, None, None]
+    center_mask = (coord[:, 0] > xmin) & (coord[:, 0] < xmax) & (coord[:, 1] > ymin) & (coord[:, 1] < ymax)
     unit_star_dataset_stds = cp.std(unit_star_dataset, axis=(1, 2))
     mask_star_dataset = unit_star_dataset_stds < cp.percentile(cp.std(unit_star_dataset, axis=(1, 2)), 95.4)
-    unit_star_dataset = unit_star_dataset[mask_star_dataset]
+    star_dataset_ref = unit_star_dataset[center_mask & mask_star_dataset][:max_stars_ref, :, :]
     coord = coord[mask_star_dataset]
-    star_dataset_ref = unit_star_dataset[
-                       (coord[:, 0] > xmin) & (coord[:, 0] < xmax) & (coord[:, 1] > ymin) & (coord[:, 1] < ymax), :]
-    star_dataset_ref = star_dataset_ref[:max_stars_ref]
+    if star_dataset_ref.shape[0] < 5:
+        logger.error('Less than 5 isolated stars detected. Image may be too crowded or too noisy')
+        raise ValueError('Less than 5 isolated stars detected. Image may be too crowded or too noisy')
+    
     psf, _ = stack_sigmaclip(star_dataset_ref, n=2)
     psf = psf / cp.sum(psf)
     try:
@@ -604,10 +606,11 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
         logger.warning('Error fitting Moffat to reference PSF')
     dic_calib['FWHM'] = fwhm
     eigen_psfs, coeff_map = None, None
+    fwhm = max(fwhm, 2)
 
     if pca_method:
         # Create psf deviations dataset
-        unit_star_dataset_dev = unit_star_dataset - psf
+        unit_star_dataset_dev = unit_star_dataset[mask_star_dataset] - psf
         unit_star_dataset_dev_norm = (unit_star_dataset_dev - cp.mean(unit_star_dataset_dev, axis=(1, 2))[:, None,
                                                               None]) / cp.std(unit_star_dataset_dev, axis=(1, 2))[:,
                                                                        None, None]
@@ -638,13 +641,8 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
                 fwhm_l = 0
             dic_calib[fwhm_lab[point]] = fwhm_l
 
-    if fwhm == 0:
-        fw = 3
-    else:
-        fw = fwhm
-
     # Detect sources
-    sources, conv_ima_sigma = detect_sources_psf(img, rms, fw, psf, eigen_psfs, coeff_map, min_snr=min_snr, **kwargs)
+    sources, conv_ima_sigma = detect_sources_psf(img, rms, fwhm, psf, eigen_psfs, coeff_map, min_snr=min_snr, **kwargs)
     sources = sources[(sources[:, 0] > border) & (sources[:, 0] < img.shape[0] - border) & (sources[:, 1] > border) & (
             sources[:, 1] < img.shape[1] - border)]
 
@@ -681,7 +679,7 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
         dfm.loc[:, 'RA'] = ra
         dfm.loc[:, 'DEC'] = dec
         photo_dict = get_zeropoint(result, dfm, exptime, center_lims=(xmin, xmax, ymin, ymax),
-                                   solar_filter=color_range, dist_thres_px=1.5 * fwhm * scale / 3600)
+                                   solar_filter=color_range, dist_thres_px = 1.5 * fwhm * scale / 3600)
         dic_calib.update(photo_dict)
 
         # Check catalog coincidence
@@ -710,7 +708,7 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
         # Calculate target SNR
         try:
             if target_ra and target_dec:
-                target_snr = get_target_snr(dfm, target_ra, target_dec)
+                target_snr = get_target_snr(dfm, target_ra, target_dec, dist_thres_px = 1.5 * fwhm)
             else:
                 target_snr = 0
         except Exception as e:

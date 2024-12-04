@@ -105,7 +105,7 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
     if cp.sum(m) == 0:
         logger.warning('No stars found')
     coor_f = cp.asarray(coor_f)[m]
-    coor_f = find_local_centroid(conv_sigma, coor_f, np.round(np.max((dist_px / 3, 5))).astype(int))
+    coor_f = find_local_centroid(conv_sigma, coor_f, int(3 / pxscale))
     if sort:
         sort_metric = snr[m].get() + dist[m.get()]
         idx = cp.argsort(np.max(sort_metric) - sort_metric)
@@ -157,8 +157,8 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
         scaling_dataset[i, 3] = cp.sum(subima)
     N = min(N, len(idx))
     idx = idx[:N]
-    del subima, peak_pos, peak, x_min, x_max, y_min, y_max, f, n
-
+    try: del subima, peak_pos, peak, x_min, x_max, y_min, y_max, f, n
+    except Exception as e: logger.error(e)
     return star_dataset[idx], coords[idx], scaling_dataset[idx]
 
 
