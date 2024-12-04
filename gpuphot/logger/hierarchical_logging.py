@@ -71,24 +71,39 @@ class NotifyingHandler(logging.Handler):
 
 
 def format_arg(arg):
-    if isinstance(arg, (np.ndarray, cp.ndarray)):
-        return f"{type(arg).__name__}(shape={arg.shape}, dtype={arg.dtype})"
-    elif isinstance(arg, (list, tuple)):
-        if len(arg) > 3:
-            return f"{type(arg).__name__}(len={len(arg)}, [{arg[0]!r}, ..., {arg[-1]!r}])"
+    try:
+        if isinstance(arg, (np.ndarray, cp.ndarray)):
+            return f"{type(arg).__name__}(shape={arg.shape}, dtype={arg.dtype})"
+        elif isinstance(arg, (list, tuple)):
+            if len(arg) > 3:
+                return f"{type(arg).__name__}(len={len(arg)}, [{arg[0]!r}, ..., {arg[-1]!r}])"
+            else:
+                return f"{arg!r}"
+        elif isinstance(arg, Header):
+            header_dict = {}
+            for card in arg.cards:
+                key = card.keyword
+                value = card.value
+                if key not in ['COMMENT', 'HISTORY']:
+                    if key in header_dict:
+                        if isinstance(header_dict[key], list):
+                            header_dict[key].append(value)
+                        else:
+                            header_dict[key] = [header_dict[key], value]
+                    else:
+                        header_dict[key] = value
+
+            for key, value in header_dict.items():
+                if isinstance(value, list):
+                    header_dict[key] = np.array(value)
+
+            return f"Header({header_dict}), total: {len(header_dict)})"
+        elif hasattr(arg, 'shape') and hasattr(arg, 'dtype'):
+            return f"{type(arg).__name__}(shape={arg.shape}, dtype={arg.dtype})"
         else:
-            return f"{arg!r}"
-    elif isinstance(arg, Header):
-        keys = list(arg.keys())
-        if len(keys) > 5:
-            key_summary = f"{keys[:3]} ... {keys[-2:]} (total: {len(keys)})"
-        else:
-            key_summary = keys
-        return f"Header(keys={key_summary})"
-    elif hasattr(arg, 'shape') and hasattr(arg, 'dtype'):
-        return f"{type(arg).__name__}(shape={arg.shape}, dtype={arg.dtype})"
-    else:
-        return f"{arg!r}:{type(arg).__name__}"
+            return f"{arg!r}:{type(arg).__name__}"
+    except Exception:
+        return f"{str(arg)!r}:{type(arg).__name__}"
 
 
 class SystemInfo:
@@ -332,7 +347,6 @@ if __name__ == "__main__":
     logger = setup_logger(__name__)
 
 
-
     @hierarchical_debug(logger)
     def example_function(a, b):
         """
@@ -355,5 +369,3 @@ if __name__ == "__main__":
 
     example_function(100, 1)
     logger.debug("Finished running example function")
-
-
