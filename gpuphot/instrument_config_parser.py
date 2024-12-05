@@ -102,29 +102,21 @@ class HeaderTranslator:
         if not isinstance(header, Header):
             raise TypeError("Input header must be an astropy.io.fits.header.Header object")
 
-        translated = Header()
-
-        for key, value in header.items():
-            internal_key = self.reverse_translations.get(key)
-            if internal_key:
-                default_key = self.default_translations[internal_key]
-                translated[default_key] = value
-            else:
-                translated[key] = value
+        translated = header.copy()
 
         for internal_key, default_key in self.default_translations.items():
             user_key = self.translations.get(internal_key, default_key)
-            if user_key not in header:
-                # Obtener el valor por defecto
+            if user_key in header:
+                value = header[user_key]
+                translated[default_key] = value
+            else:
                 default_value = DefaultConfig.DEFAULT_CAMERA_SPECS.get(internal_key)
                 if default_value is not None:
-                    translated[default_key] = default_value
+                    translated.setdefault(default_key, default_value)
                     logger.debug(f"Added missing keyword '{default_key}' with default value '{default_value}'.")
-                else:
-                    # Enviar advertencia si no hay valor por defecto y no se ha advertido antes
-                    if internal_key not in self.warned_keys:
-                        warnings.warn(f"No default value found in camera specs for '{internal_key}'.", UserWarning)
-                        self.warned_keys.add(internal_key)  # Añadir la clave al conjunto de advertencias
+                elif internal_key not in self.warned_keys:
+                    warnings.warn(f"No default value found in camera specs for '{internal_key}'.", UserWarning)
+                    self.warned_keys.add(internal_key)
 
         return translated
 
@@ -138,15 +130,17 @@ class HeaderTranslator:
         if not isinstance(header, Header):
             raise TypeError("Input header must be an astropy.io.fits.header.Header object")
 
-        original = Header()
-        for key, value in header.items():
-            for internal_key, default_key in self.default_translations.items():
-                if key == default_key:
-                    user_key = self.translations[internal_key]
-                    original[user_key] = value
-                    break
-            else:
-                original[key] = value
+        original = header.copy()
+
+        for internal_key, default_key in self.default_translations.items():
+            if default_key in header:
+                user_key = self.translations.get(internal_key, default_key)
+                if user_key != default_key:
+                    if user_key not in original:
+                        original[user_key] = header[default_key]
+                    if default_key != user_key:
+                        del original[default_key]
+
         return original
 
 
