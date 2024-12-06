@@ -14,6 +14,7 @@ from sklearn.linear_model import RANSACRegressor
 
 from .catalog import crossmatch_sources
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+from ..stats.reduction import weighted_mean_std
 
 logger = setup_logger(__name__)
 
@@ -35,7 +36,7 @@ def get_solver():
 
     solver = (astrometry.Solver(
         astrometry.series_5200.index_files(cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6}) +
-        astrometry.series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10, 11, 12, 13}))
+        astrometry.series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10, 11}))
     )
 
     return solver
@@ -119,7 +120,7 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     return h_wcs
 
 
-def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None,
+def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=50,
                   solar_filter=0.5, dist_thres_px=3, min_mag=14, max_mag=18,
                   plot=False):
     """Calculate the zeropoint for photometry.
@@ -159,6 +160,7 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None,
         cat_mag) & ~np.isnan(det_mag)
     cat_mag = cat_mag[inf_nan_mask]
     det_mag = det_mag[inf_nan_mask]
+    det_emag = 1.0857 / df_sources['snr'][source_coords_matched_idx][inf_nan_mask].values
     bright_mask = (cat_mag > min_mag) & (cat_mag < max_mag)
 
     if center_lims is None:
@@ -168,6 +170,7 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None,
         ymax = np.ceil(df_sources['ycentroid'].max())
     else:
         xmin, xmax, ymin, ymax = center_lims
+
     bright_mask = bright_mask & (df_sources['xcentroid'][source_coords_matched_idx][inf_nan_mask].values >= xmin) & \
                   (df_sources['xcentroid'][source_coords_matched_idx][inf_nan_mask].values <= xmax) & \
                   (df_sources['ycentroid'][source_coords_matched_idx][inf_nan_mask].values >= ymin) & \
@@ -177,29 +180,36 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None,
         zp, ezp, n, min_mag, max_mag = 0, 0, 0, 0, 0
     else:
         y = cat_mag[bright_mask] - det_mag[bright_mask]
-        x = cat_mag[bright_mask]
-        mask = np.abs(y - np.nanmean(y)) < np.nanstd(y)
+        yer = np.sqrt(det_emag[bright_mask]**2 + (y/cat_mag[bright_mask])**2)
+        mask = np.abs(y - np.nanmedian(y)) < 2*np.nanstd(y)
         if np.sum(mask) > 15:
             reg = RANSACRegressor(random_state=42, residual_threshold=0.05).fit(
-                x[mask].reshape(-1, 1), y[mask].reshape(-1, 1))
+                det_mag[bright_mask][mask].reshape(-1, 1), cat_mag[bright_mask][mask].reshape(-1, 1))
             inlier = reg.inlier_mask_
+
             if np.sum(inlier) > 10 and np.abs(np.mean(y[mask][inlier]) - np
                     .mean(y[mask])) < np.std(y[mask]):
-                zp = np.mean(y[mask][inlier])
+                zp, ezp = weighted_mean_std(y[mask][inlier], yer[mask][inlier])
+                # zp = np.mean(y[mask][inlier])
                 n = np.sum(inlier)
-                ezp = np.std(y[mask][inlier]) / np.sqrt(n)
+                ezp /= np.sqrt(n)
+                # ezp = np.std(y[mask][inlier]) / np.sqrt(n)
                 min_mag = np.min(cat_mag[bright_mask][mask][inlier])
                 max_mag = np.max(cat_mag[bright_mask][mask][inlier])
             else:
-                zp = np.mean(y[mask])
+                zp, ezp = weighted_mean_std(y[mask], yer[mask])
+                # zp = np.mean(y[mask])
                 n = np.sum(mask)
-                ezp = np.std(y[mask]) / np.sqrt(n)
+                ezp /= np.sqrt(n)
+                # ezp = np.std(y[mask]) / np.sqrt(n)
                 min_mag = np.min(cat_mag[bright_mask][mask])
                 max_mag = np.max(cat_mag[bright_mask][mask])
         else:
-            zp = np.mean(y[mask])
+            zp, ezp = weighted_mean_std(y[mask], yer[mask])
+            # zp = np.mean(y[mask])
             n = np.sum(mask)
-            ezp = np.std(y[mask]) / np.sqrt(n)
+            ezp /= np.sqrt(n)
+            # ezp = np.std(y[mask]) / np.sqrt(n)
             min_mag = np.min(cat_mag[bright_mask][mask])
             max_mag = np.max(cat_mag[bright_mask][mask])
 

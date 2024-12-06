@@ -103,7 +103,8 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
     if cp.sum(m) == 0:
         m = (snr > 3) & (peak < sat_lim)
     if cp.sum(m) == 0:
-        logger.warning('No stars found')
+        logger.error('Less than 5 isolated stars detected. Image may be too crowded or too noisy')
+        raise ValueError('Less than 5 isolated stars detected. Image may be too crowded or too noisy')
     coor_f = cp.asarray(coor_f)[m]
     coor_f = find_local_centroid(conv_sigma, coor_f, int(3 / pxscale))
     if sort:

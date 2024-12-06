@@ -149,3 +149,10 @@ def register_shift_frames(frames_list, upsample_factor=100, center_size=
         ='constant')
 
     return fc
+
+@hierarchical_debug(logger)
+def weighted_mean_std(data, errors):
+    weights = 1 / errors**2
+    weighted_mean = np.sum(weights * data) / np.sum(weights)
+    weighted_std = np.sqrt(np.sum(weights * (data - weighted_mean)**2) / np.sum(weights))
+    return weighted_mean, weighted_std
