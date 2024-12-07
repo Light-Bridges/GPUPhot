@@ -1,0 +1,63 @@
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  gpuphot_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    environment:
+      - INSTRUMENT_NAME=${INSTRUMENT_NAME:-default}
+      - INSTRUMENT_CONFIG_PATH=${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}
+      - IMAGE_BASE_PATH=${IMAGE_BASE_PATH:-~/gpuphot_images}
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/app/config
+      - ${IMAGE_BASE_PATH:-~/gpuphot_images}:/home/jovyan/images
+    depends_on:
+      - redis
+    command: [ "celery", "-A", "gpuphot_worker.worker_app", "worker", "-c", "${CELERY_CONCURRENCY:-1}", "-n", "gpuphot-worker", "--soft-time-limit", "240", "--time-limit", "300" ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+
+  lab:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: lab
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - INSTRUMENT_NAME=${INSTRUMENT_NAME:-default}
+      - INSTRUMENT_CONFIG_PATH=${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}
+      - IMAGE_BASE_PATH=${IMAGE_BASE_PATH:-~/gpuphot_images}
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/app/config
+      - ${IMAGE_BASE_PATH:-~/gpuphot_images}:/home/jovyan/images
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+
+  flower:
+    image: mher/flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - gpuphot_worker
