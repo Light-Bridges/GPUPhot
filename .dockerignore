@@ -1,0 +1,10 @@
+# Ignorar todo
+**/*
+
+# Permitir solo los archivos específicos
+!requirements.txt
+!requirements-worker.txt
+
+# Permitir solo los directorios específicos
+!gpuphot/
+!gpuphot_worker/

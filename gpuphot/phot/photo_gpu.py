@@ -272,7 +272,7 @@ def find_aperture_corrections(sources: cp.ndarray, corrections: np.ndarray, tile
 
 
 @hierarchical_debug(logger)
-def process_image(imdata, imheader, header_descriptions, **kwargs):
+def process_image(imdata, imheader, header_descriptions = None, **kwargs):
     # parameters from header
     scale = plate_scale_px(imheader['PXSIZE'], imheader['FOCALEN']) * imheader['XBINNING']
     n_images = imheader['TOTIMA']

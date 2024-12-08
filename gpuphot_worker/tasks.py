@@ -4,10 +4,9 @@ from glob import glob
 import numpy as np
 from astropy.io import fits
 from celery import shared_task
-from celery.exceptions import Ignore
 
 from gpuphot.image_processor import create_processor
-from gpuphot.logger.hierarchical_logging import setup_logger, hierarchical_debug
+from gpuphot.logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -27,7 +26,6 @@ def get_processor(instrument_name=None):
     return create_processor(instrument_name, config_base_path)
 
 
-@hierarchical_debug(logger)
 @shared_task
 def process_directory_task(path=None, filename=None, instrument_name=None):
     """
@@ -92,7 +90,6 @@ def process_directory_task(path=None, filename=None, instrument_name=None):
     return {'task_ids': results}
 
 
-@hierarchical_debug(logger)
 @shared_task(bind=True)  # Usar bind=True para acceder a self
 def process_image_task(self, image_path, instrument_name=None):
     """
@@ -133,7 +130,6 @@ def process_image_task(self, image_path, instrument_name=None):
             with fits.open(file_path) as hdul:
                 imdata = hdul[0].data
                 imheader = hdul[0].header
-                header_descriptions = {k: v for k, v in hdul[0].header.cards}
         elif file_path.endswith('.npy'):
             imdata = np.load(file_path)
             header_file = file_path.rsplit('.', 1)[0] + '.txt'
@@ -141,26 +137,25 @@ def process_image_task(self, image_path, instrument_name=None):
                 with open(header_file, 'r') as f:
                     header_content = f.read()
                 imheader = fits.Header.fromstring(header_content)
-                header_descriptions = {k: v for k, v in imheader.cards}
             else:
                 imheader = fits.Header()
-                header_descriptions = {}
 
-        dfm, original_header = processor.process_image(imdata, imheader, header_descriptions)
+        dfm, original_header = processor.process_image(imdata, imheader)
         return {
             'file': image_path,
             'dfm': dfm,
             'header': dict(original_header)
         }
     except Exception as e:
-        logger.error(f"Error processing file {file_path}: {str(e)}")
+        error_message = f"Error processing file {image_path}: {str(e)}"
+        logger.error(error_message)
 
         result = {
             'file': image_path,
-            'error': str(e),
+            'error': error_message,
             'status': 'failed'
         }
 
         self.update_state(state='FAILURE', meta=result)
 
-        raise Ignore()
+        raise Exception(error_message)

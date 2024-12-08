@@ -33,7 +33,7 @@ class ImageProcessor:
             pass
 
     @hierarchical_debug(logger)
-    def process_image(self, imdata, imheader, header_descriptions, **kwargs):
+    def process_image(self, imdata, imheader, header_descriptions = None, **kwargs):
         """Processes an image using the specified parameters and translates headers.
 
         :param imdata: The image data to be processed.
