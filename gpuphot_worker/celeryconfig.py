@@ -1,4 +1,4 @@
-# Celery Configuration
+# Celery Configuration for gpuphot
 # You can set these values in your .env file and reference them in docker-compose.yml
 # for the gpuphot_worker service using environment variables
 
@@ -19,66 +19,29 @@
 # CELERY_TIMEZONE = 'UTC'
 
 # Task routing
-# CELERY_TASK_ROUTES = {'tasks.email': {'queue': 'email'}}
-
-# Task execution settings
-# CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
-# CELERY_TASK_SOFT_TIME_LIMIT = 15 * 60  # 15 minutes
-
-# Worker settings
-# CELERYD_MAX_TASKS_PER_CHILD = 100
-# CELERYD_PREFETCH_MULTIPLIER = 4
-
-# Beat settings (for periodic tasks)
-# CELERYBEAT_SCHEDULE = {
-#     'add-every-30-seconds': {
-#         'task': 'tasks.add',
-#         'schedule': 30.0,
-#         'args': (16, 16)
-#     },
+# CELERY_TASK_ROUTES = {
+#     'tasks.process_image': {'queue': 'image_processing'},
+#     'tasks.calibrate_image': {'queue': 'calibration'}
 # }
 
-# Logging
-# CELERYD_LOG_FORMAT = '[%(asctime)s: %(levelname)s/%(processName)s] %(message)s'
-
-# Celery Configuration
-# You can set these values in your .env file and reference them in docker-compose.yml
-# for the gpuphot_worker service using environment variables
-
-# Broker settings
-# CELERY_BROKER_URL = 'redis://redis:6379/0'
-# CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
-
-# Task serialization format
-# CELERY_TASK_SERIALIZER = 'json'
-
-# Result serialization format
-# CELERY_RESULT_SERIALIZER = 'json'
-
-# List of accepted content types
-# CELERY_ACCEPT_CONTENT = ['json']
-
-# Time zone settings
-# CELERY_TIMEZONE = 'UTC'
-
-# Task routing
-# CELERY_TASK_ROUTES = {'tasks.email': {'queue': 'email'}}
-
 # Task execution settings
-# CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
-# CELERY_TASK_SOFT_TIME_LIMIT = 15 * 60  # 15 minutes
+# CELERY_TASK_TIME_LIMIT = 3600  # 1 hour
+# CELERY_TASK_SOFT_TIME_LIMIT = 1800  # 30 minutes
 
 # Worker settings
-# CELERYD_MAX_TASKS_PER_CHILD = 100
-# CELERYD_PREFETCH_MULTIPLIER = 4
+# CELERYD_MAX_TASKS_PER_CHILD = 10
+# CELERYD_PREFETCH_MULTIPLIER = 1
 
 # Beat settings (for periodic tasks)
 # CELERYBEAT_SCHEDULE = {
-#     'add-every-30-seconds': {
-#         'task': 'tasks.add',
-#         'schedule': 30.0,
-#         'args': (16, 16)
+#     'daily-dark-frame-calibration': {
+#         'task': 'tasks.calibrate_dark_frames',
+#         'schedule': crontab(hour=2, minute=0),  # Run at 2:00 AM every day
 #     },
+#     'hourly-image-processing': {
+#         'task': 'tasks.process_new_images',
+#         'schedule': crontab(minute=0),  # Run every hour
+#     }
 # }
 
 # Logging
@@ -104,7 +67,7 @@
 # the config key name in lowercase. The value must be valid YAML or JSON.
 #
 # Example:
-# export NEW_CELERY_broker_transport_options='{"visibility_timeout": 36000}'
+# export NEW_CELERY_task_routes='{"tasks.process_large_image": {"queue": "high_memory"}}'
 #
-# Remember to set CELERY_CONFIG_MODULE=new_celery_config.as_module in your
-# environment to enable Celery to read these custom environment variables.
+# Remember to set CELERY_CONFIG_MODULE=celeryconfig in your
+# environment to enable Celery to read these configurations.

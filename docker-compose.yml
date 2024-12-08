@@ -11,12 +11,12 @@ services:
       target: worker
     environment:
       - INSTRUMENT_NAME=${INSTRUMENT_NAME:-default}
-      - INSTRUMENT_CONFIG_PATH=${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}
-      - IMAGE_BASE_PATH=${IMAGE_BASE_PATH:-~/gpuphot_images}
+      - INSTRUMENT_CONFIG_BASE_PATH=/gpuphot/instrument_configs
+      - IMAGE_BASE_PATH=/data/images
       - CELERY_BROKER_URL=redis://redis:6379/0
     volumes:
-      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/app/config
-      - ${IMAGE_BASE_PATH:-~/gpuphot_images}:/home/jovyan/images
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/gpuphot/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
     depends_on:
       - redis
     command: [ "celery", "-A", "gpuphot_worker.worker_app", "worker", "-c", "${CELERY_CONCURRENCY:-1}", "-n", "gpuphot-worker", "--soft-time-limit", "240", "--time-limit", "300"]
