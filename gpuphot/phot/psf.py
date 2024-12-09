@@ -11,6 +11,7 @@ from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 
 logger = setup_logger(__name__)
 
+
 @hierarchical_debug(logger)
 def find_local_max(image: cp.ndarray, min_distance: int, threshold_abs: float) -> cp.ndarray:
     """Calculate local maxima in an image.
@@ -24,6 +25,7 @@ def find_local_max(image: cp.ndarray, min_distance: int, threshold_abs: float) -
     threshold_mask = image > threshold_abs
     peaks = cp.logical_and(max_mask, threshold_mask)
     return cp.argwhere(peaks)
+
 
 @hierarchical_debug(logger)
 def find_local_centroid(image: cp.ndarray, peaks: cp.ndarray, window_size: int = 5) -> cp.ndarray:
@@ -61,7 +63,6 @@ def find_local_centroid(image: cp.ndarray, peaks: cp.ndarray, window_size: int =
     x_centroid = peaks[:, 1] + x_centroid_offset
 
     return cp.stack((y_centroid, x_centroid), axis=1)
-
 
 
 @hierarchical_debug(logger)
@@ -158,8 +159,10 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
         scaling_dataset[i, 3] = cp.sum(subima)
     N = min(N, len(idx))
     idx = idx[:N]
-    try: del subima, peak_pos, peak, x_min, x_max, y_min, y_max, f, n
-    except Exception as e: logger.error(e)
+    try:
+        del subima, peak_pos, peak, x_min, x_max, y_min, y_max, f, n
+    except Exception as e:
+        logger.error(e)
     return star_dataset[idx], coords[idx], scaling_dataset[idx]
 
 
@@ -257,6 +260,8 @@ def calculate_kernel_area(img_shape: tuple, psf: cp.ndarray, coeff_map: cp.ndarr
     ndarray
         Map of the kernel area.
     """
+
+    eigen_psfs = eigen_psfs.astype(cp.float32)
 
     A = cp.zeros(img_shape, dtype=cp.float32)
     A += cp.sum(psf * psf)
