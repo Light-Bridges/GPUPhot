@@ -15,9 +15,11 @@ services:
       - IMAGE_BASE_PATH=/data/images
       - CELERY_BROKER_URL=redis://redis:6379/0
       - GPU_ID=${GPU_ID:-0}
+      - GPUPHOT_GPU_ID=${GPUPHOT_GPU_ID:-0}
     volumes:
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/gpuphot/instrument_configs:z
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-astrometry_cache}:/data/astrometry_cache:z
     depends_on:
       - redis
     command: [ "celery", "-A", "gpuphot_worker.worker_app", "worker", "-c", "${CELERY_CONCURRENCY:-1}", "-n", "gpuphot-worker-${GPU_ID:-0}", "--soft-time-limit", "240", "--time-limit", "300" ]
@@ -42,10 +44,12 @@ services:
       - INSTRUMENT_CONFIG_BASE_PATH=/home/jovyan/instrument_configs
       - IMAGE_BASE_PATH=/home/jovyan/images
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - GPUPHOT_GPU_ID=${GPUPHOT_GPU_ID:-0}
     volumes:
       - ./notebooks:/home/jovyan/work:z
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/home/jovyan/instrument_configs:z
       - ${IMAGE_PATH:-~/gpuphot_images}:/home/jovyan/images:z
+      - ${ASTROMETRY_CACHE_PATH:-astrometry_cache}:/data/astrometry_cache:z
     deploy:
       resources:
         reservations:
@@ -76,3 +80,7 @@ services:
             - driver: nvidia
               count: all
               capabilities: [ gpu ]
+
+volumes:
+    astrometry_cache:
+      driver: local
