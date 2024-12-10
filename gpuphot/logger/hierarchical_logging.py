@@ -177,8 +177,6 @@ def hierarchical_debug(logger_name):
                 critical_logger.handlers.clear()
             setup_logstash_handler(critical_logger)
 
-            end_time = None
-            function_success = True
             start_time = time.time()
             try:
                 logger.debug(f'Starting function {func.__name__}', extra={
@@ -188,13 +186,22 @@ def hierarchical_debug(logger_name):
                 })
                 result = func(*args, **kwargs)
                 return_info = format_arg(result)
+
+                # Log successful completion
+                execution_time = time.time() - start_time
+                critical_logger.debug(f'Finishing function {func.__name__}', extra={
+                    'function_name': func.__name__,
+                    'arguments': arg_str,
+                    'execution_time': execution_time,
+                    'event': 'function_end',
+                    'success': True,
+                    'return_value': return_info,
+                    'system_info': system_info_instance.system_info
+                })
+
                 return result
             except Exception as e:
-                end_time = time.time()
-                function_success = False
                 tb = traceback.format_exc()
-                return_info = None
-
                 system_info_instance.refresh_gpu_info()
                 critical_logger.error(f"Exception in {func.__name__}", extra={
                     'function_name': func.__name__,
@@ -202,25 +209,11 @@ def hierarchical_debug(logger_name):
                     'exception': str(e),
                     'traceback': tb,
                     'event': 'function_exception',
-                    'system_info': system_info_instance.system_info  # Include system information
+                    'execution_time': time.time() - start_time,
+                    'system_info': system_info_instance.system_info
                 })
                 raise  # Re-raise the exception after logging it.
             finally:
-                if not end_time:
-                    end_time = time.time()
-                execution_time = end_time - start_time
-
-                critical_logger.debug(f'Finishing function {func.__name__}', extra={
-                    'function_name': func.__name__,
-                    'arguments': arg_str,
-                    'execution_time': execution_time,
-                    'event': 'function_end',
-                    'success': function_success,
-                    'return_value': return_info,
-                    'system_info': system_info_instance.system_info  # Include system information
-                })
-                print(return_info)
-
                 try:
                     if isinstance(critical_logger.handlers[0], AsynchronousLogstashHandler):
                         critical_logger.handlers[0].flush()  # Asegúrate de que se envíen los logs.
