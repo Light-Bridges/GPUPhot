@@ -56,7 +56,7 @@ def get_solver():
     astrometry.Solver
         Configured astrometry solver instance.
     """
-    return SingletonSolver()
+    return SingletonSolver().solver
     # if os.path.exists('/data'):
     #     cache = '/data/astrometry_cache'
     # else:
