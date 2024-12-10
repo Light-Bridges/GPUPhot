@@ -14,19 +14,20 @@ services:
       - INSTRUMENT_CONFIG_BASE_PATH=/gpuphot/instrument_configs
       - IMAGE_BASE_PATH=/data/images
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - GPU_ID=${GPU_ID:-0}
     volumes:
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/gpuphot/instrument_configs:z
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
     depends_on:
       - redis
-    command: [ "celery", "-A", "gpuphot_worker.worker_app", "worker", "-c", "${CELERY_CONCURRENCY:-1}", "-n", "gpuphot-worker", "--soft-time-limit", "240", "--time-limit", "300"]
+    command: [ "celery", "-A", "gpuphot_worker.worker_app", "worker", "-c", "${CELERY_CONCURRENCY:-1}", "-n", "gpuphot-worker-${GPU_ID:-0}", "--soft-time-limit", "240", "--time-limit", "300" ]
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: all
-              capabilities: [ gpu ]
+              device_ids: ["${GPU_ID:-0}"]
+              capabilities: [gpu]
 
   lab:
     build:
@@ -54,12 +55,24 @@ services:
               capabilities: [ gpu ]
 
   flower:
-    image: mher/flower
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND= redis://redis:6379/0
       - FLOWER_PORT=5555
     ports:
       - "5555:5555"
     depends_on:
       - redis
       - gpuphot_worker
+    command: [ "celery", "-A", "gpuphot_worker.worker_app", "flower" ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]

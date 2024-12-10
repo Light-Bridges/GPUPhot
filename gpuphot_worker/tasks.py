@@ -67,6 +67,7 @@ def process_directory_task(path=None, filename=None, instrument_name=None):
     base_path = os.environ.get('IMAGE_BASE_PATH', '/app/images')
 
     if path:
+        path = path.lstrip('/')
         search_path = os.path.join(base_path, path)
     else:
         search_path = base_path
