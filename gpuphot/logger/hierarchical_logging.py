@@ -175,8 +175,6 @@ def hierarchical_debug(logger_name):
             # Clear existing handlers to avoid showing logs on the console
             if critical_logger.handlers:
                 critical_logger.handlers.clear()
-
-            # Add the Logstash handler to the critical logger
             setup_logstash_handler(critical_logger)
 
             end_time = None
@@ -189,14 +187,15 @@ def hierarchical_debug(logger_name):
                     'event': 'function_start'
                 })
                 result = func(*args, **kwargs)
+                return_info = format_arg(result)
                 return result
             except Exception as e:
                 end_time = time.time()
                 function_success = False
                 tb = traceback.format_exc()
+                return_info = None
 
                 system_info_instance.refresh_gpu_info()
-                # Always log exceptions to Logstash regardless of user-defined log level.
                 critical_logger.error(f"Exception in {func.__name__}", extra={
                     'function_name': func.__name__,
                     'arguments': arg_str,
@@ -217,8 +216,10 @@ def hierarchical_debug(logger_name):
                     'execution_time': execution_time,
                     'event': 'function_end',
                     'success': function_success,
+                    'return_value': return_info,
                     'system_info': system_info_instance.system_info  # Include system information
                 })
+                print(return_info)
 
                 try:
                     if isinstance(critical_logger.handlers[0], AsynchronousLogstashHandler):
