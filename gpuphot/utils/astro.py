@@ -18,6 +18,33 @@ from ..stats.reduction import weighted_mean_std
 
 logger = setup_logger(__name__)
 
+import threading
+
+class SingletonSolver:
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    logger.debug("Creando nueva instancia del solver")
+                    cls._instance = super().__new__(cls)
+                    cls._instance.initialize_solver()
+        return cls._instance
+
+    def initialize_solver(self):
+        if os.path.exists('/data'):
+            cache = '/data/astrometry_cache'
+        else:
+            cache = '/mnt/data/astrometry_cache'
+
+
+
+        self.solver = astrometry.Solver(
+            astrometry.series_5200.index_files(cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6}) +
+            astrometry.series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10, 11})
+        )
 
 @hierarchical_debug(logger)
 def get_solver():
@@ -29,17 +56,18 @@ def get_solver():
     astrometry.Solver
         Configured astrometry solver instance.
     """
-    if os.path.exists('/data'):
-        cache = '/data/astrometry_cache'
-    else:
-        cache = '/mnt/data/astrometry_cache'
-
-    solver = (astrometry.Solver(
-        astrometry.series_5200.index_files(cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6}) +
-        astrometry.series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10, 11}))
-    )
-
-    return solver
+    return SingletonSolver().solver
+    # if os.path.exists('/data'):
+    #     cache = '/data/astrometry_cache'
+    # else:
+    #     cache = '/mnt/data/astrometry_cache'
+    #
+    # solver = (astrometry.Solver(
+    #     astrometry.series_5200.index_files(cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6}) +
+    #     astrometry.series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10, 11}))
+    # )
+    #
+    # return solver
 
 
 def get_astrometry_params(h_wcs, image_shape):

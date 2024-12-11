@@ -1,0 +1,86 @@
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  gpuphot_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    environment:
+      - INSTRUMENT_NAME=${INSTRUMENT_NAME:-default}
+      - INSTRUMENT_CONFIG_BASE_PATH=/gpuphot/instrument_configs
+      - IMAGE_BASE_PATH=/data/images
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - GPU_ID=${GPU_ID:-0}
+      - GPUPHOT_GPU_ID=${GPUPHOT_GPU_ID:-0}
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/gpuphot/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-astrometry_cache}:/data/astrometry_cache:z
+    depends_on:
+      - redis
+    command: [ "celery", "-A", "gpuphot_worker.worker_app", "worker", "-c", "${CELERY_CONCURRENCY:-1}", "-n", "gpuphot-worker-${GPU_ID:-0}", "--soft-time-limit", "240", "--time-limit", "300" ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${GPU_ID:-0}"]
+              capabilities: [gpu]
+
+  lab:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: lab
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - INSTRUMENT_NAME=${INSTRUMENT_NAME:-default}
+      - INSTRUMENT_CONFIG_BASE_PATH=/home/jovyan/instrument_configs
+      - IMAGE_BASE_PATH=/home/jovyan/images
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - GPUPHOT_GPU_ID=${GPUPHOT_GPU_ID:-0}
+    volumes:
+      - ./notebooks:/home/jovyan/work:z
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/home/jovyan/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/home/jovyan/images:z
+      - ${ASTROMETRY_CACHE_PATH:-astrometry_cache}:/data/astrometry_cache:z
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND= redis://redis:6379/0
+      - FLOWER_PORT=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - gpuphot_worker
+    command: [ "celery", "-A", "gpuphot_worker.worker_app", "flower" ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+
+volumes:
+    astrometry_cache:
+      driver: local
