@@ -110,9 +110,31 @@ def astrometrice2(df: pd.DataFrame, scale: float,
                 sip_order=sip_order)
         )
         nmatches = len(solution.matches)
-        logger.debug(nmatches)
-        h_wcs = solution.best_match().wcs_fields
-
+        logger.debug(f'Total matches: {nmatches}')
+        if nmatches > 0:
+            h_wcs = solution.best_match().wcs_fields
+        else:
+            logger.warning('No matches found. Trying without position hint.')
+            solution = get_solver().solve(
+                stars_xs=df['xcentroid'],
+                stars_ys=df['ycentroid'],
+                size_hint=astrometry.SizeHint(
+                    lower_arcsec_per_pixel=scale * 0.8,
+                    upper_arcsec_per_pixel=scale * 1.2)
+                ,
+                position_hint=None
+                ,
+                solution_parameters=astrometry.SolutionParameters(
+                    logodds_callback=logodds_callback_100,
+                    sip_order=sip_order)
+            )
+            nmatches = len(solution.matches)
+            logger.debug(f'Total matches: {nmatches}')
+            if nmatches > 0:
+                h_wcs = solution.best_match().wcs_fields
+            else:
+                h_wcs = {}
+                logger.warning('No matches found.')
     except Exception as e:
         logger.error(e)
         h_wcs = {}

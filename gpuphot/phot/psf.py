@@ -324,7 +324,7 @@ def recreate_normed_star(coeff_map: cp.ndarray, eigen_psfs: cp.array, coords: cp
 
     :param coeff_map: Coefficient map.
     :param eigen_psfs: Array containing the eigen PSFs.
-    :param coords: Tuple containing the coordinates of the star.
+    :param coords: Tuple containing the coordinates of the star (x,y).
     :return: The recreated normalized star.
     """
     x, y = coords
