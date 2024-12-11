@@ -261,7 +261,8 @@ def calculate_kernel_area(img_shape: tuple, psf: cp.ndarray, coeff_map: cp.ndarr
         Map of the kernel area.
     """
 
-    eigen_psfs = eigen_psfs.astype(cp.float32)
+    if eigen_psfs is not None:
+        eigen_psfs = eigen_psfs.astype(cp.float32)
 
     A = cp.zeros(img_shape, dtype=cp.float32)
     A += cp.sum(psf * psf)
