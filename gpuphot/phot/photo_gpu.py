@@ -332,7 +332,7 @@ def process_image(imdata, imheader, header_descriptions = None, **kwargs):
         'tile_section': 1000,
         'max_stars_ref': 15,
         # 'min_snr': 5,
-        'color_range': 0.8,
+        'color_range': 0.6,
         'tile_section_psf': 3000,
         'do_pad': True,
         'min_conv_snr': 300,
@@ -372,7 +372,7 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
                            source_coord: cp.ndarray, isolated_coord: cp.ndarray,
                            tile_section_psf: int, star_dataset: cp.ndarray, fwhm: float,
                            gain: float, rdnoise: float, n_images: int = 1, center_factor: float = 1.0,
-                           min_conv_snr: float = 300.0, **kwargs):
+                           min_conv_snr: float = 300.0):
     """
     Optimizes the aperture photometry process to find the best radii for signal-to-noise ratio (SNR) for each star.
 
@@ -461,10 +461,11 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
     source_opt_rad = np.round(
         np.fmax(np.fmin((10 ** (pov[0] * np.log10(conv_snr.get()) + pov[1])), max_radii), min_radii)).astype(int)
     source_opt_rad_idx = np.searchsorted(radii, source_opt_rad, side='right') - 1
+
     opt_aperture_corrections = np.array(aperture_corrections)[np.arange(source_coord.shape[0]), source_opt_rad_idx]
     opt_aperture_correction_errors = np.array(aperture_correction_errors)[np.arange(source_coord.shape[0]), source_opt_rad_idx]
-
     opt_flux = np.array(source_flux[source_opt_rad_idx, np.arange(source_coord.shape[0])].get())
+
     mask = opt_flux > 0
     opt_flux = opt_flux[mask]
     opt_aper_corr = np.array(opt_aperture_corrections)[mask]
@@ -491,7 +492,7 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
         extra_info[f'RAD{snr}'] = int(source_opt_rad[mask][ref_idx])
         extra_info[f'CORR{snr}'] = round(opt_aperture_corrections[mask][ref_idx], 3)
 
-    return opt_flux, opt_total_noise, opt_coords, extra_info
+    return opt_signal, opt_total_noise, opt_coords, extra_info
 
 
 @hierarchical_debug(logger)
@@ -570,7 +571,7 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
                     exptime: float, satlevel: float, target_ra: float, target_dec: float = None, n_images: int = 1,
                     SP_filt: bool = True, CR_filt: bool = False, border: int = 10, center_factor: float = 0.7,
                     pca_method: bool = True, tile_section: int = 1000, max_stars_ref: int = 15, min_snr: int = 5,
-                    color_range: float = 0.3, tile_section_psf: int = 2500, **kwargs):
+                    color_range: float = 0.6, tile_section_psf: int = 2500, **kwargs):
     """
     Calibrate an image.
 

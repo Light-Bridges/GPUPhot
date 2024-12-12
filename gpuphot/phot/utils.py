@@ -56,7 +56,7 @@ def calculate_tile_nanmean_sigclip(tiles: cp.ndarray, nsigma: float = 2) -> cp.n
     """
     m = cp.nanmedian(tiles, axis=(1, 2))
     s = cp.nanstd(tiles, axis=(1, 2))
-    mask = cp.abs(tiles - m[:, None, None]) < nsigma * s[:, None, None]
+    mask = (cp.abs(tiles - m[:, None, None]) < nsigma * s[:, None, None]) | (s[:, None, None] == 0)
     tiles[~mask] = cp.nan
     return cp.nanmean(tiles, axis=(1, 2)), cp.nanstd(tiles, axis=(1, 2))
 

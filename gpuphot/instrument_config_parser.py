@@ -64,12 +64,13 @@ class DefaultConfig:
         'border': 50,
         'center_factor': 0.7,
         'pca_method': False,
-        'tile_section': 1000,
-        'astrom': False,
+        'tile_section': 300,
+        'astrom': True,
         'tile_section_psf': 3000,
-        'do_pad': False,
+        'do_pad': True,
         'lum_gmag_coeff': 0.5,
         'lum_rmag_coeff': 0.5,
+        'color_range': 0.6,
     }
 
 
