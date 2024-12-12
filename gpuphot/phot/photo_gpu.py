@@ -705,7 +705,7 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
     # Perform optimized photometry
     optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry(img_cp-back, back, conv_ima_sigma, sources,
                                                                                      coord, tile_section_psf, star_dataset[mask_star_dataset],
-                                                                                     fwhm, gain, n_images, rdnoise, **kwargs)
+                                                                                     fwhm, gain, n_images, rdnoise)
     dic_calib.update(extra_info)
 
     dfm = pd.DataFrame({'xcentroid': optimal_coords[:, 1],
