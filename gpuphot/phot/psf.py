@@ -4,6 +4,8 @@ from cupyx.scipy.ndimage import maximum_filter
 from lmfit import Model
 from scipy.spatial import KDTree
 from sklearn.decomposition import PCA
+from sklearn.cluster import AgglomerativeClustering
+from scipy.spatial.distance import cdist
 
 from .conv import gaussian_kernel, convolve_fft, fill_nan_fft
 from .utils import calculate_tile_nanmean_sigclip, decompose_into_tiles, recompose_from_percentiles
@@ -164,6 +166,53 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
     except Exception as e:
         logger.error(e)
     return star_dataset[idx], coords[idx], scaling_dataset[idx]
+
+
+@hierarchical_debug(logger)
+def group_star_dataset(coords: np.ndarray, avg_group_size: int = 10, min_group_size: int = 5) -> np.ndarray:
+    """
+    Groups a set of star coordinates into clusters, ensuring no group has fewer stars than min_group_size.
+
+    :param coords: Coordinates of the stars (n_stars, n_features).
+    :param avg_group_size: Desired average group size.
+    :param min_group_size: Minimum allowed size for a group.
+    :return: Array of labels indicating the cluster each star belongs to.
+    """
+
+    # create clusters
+    avg_group_size = max(min_group_size, avg_group_size)
+    n_stars = len(coords)
+    num_clusters = max(1, n_stars // avg_group_size)
+    clustering = AgglomerativeClustering(n_clusters=num_clusters)
+    labels = clustering.fit_predict(coords)
+    groups = {i: coords[labels == i] for i in np.unique(labels)}
+
+    # ensure minimum group size
+    valid_groups = {}
+    small_groups = []
+    
+    for group_id, stars in groups.items():
+        if len(stars) >= min_group_size:
+            valid_groups[group_id] = stars
+        else:
+            small_groups.append(stars)
+
+    for small_group in small_groups:
+        for star in small_group:
+            valid_group_ids = list(valid_groups.keys())
+            valid_centroids = np.array([np.mean(valid_groups[gid], axis=0) for gid in valid_group_ids])
+            distances = cdist([star], valid_centroids)
+            closest_group_id = valid_group_ids[np.argmin(distances)]
+
+            valid_groups[closest_group_id] = np.vstack([valid_groups[closest_group_id], star])
+
+    final_labels = np.zeros(n_stars, dtype=int) - 1
+    for group_id, stars in valid_groups.items():
+        for star in stars:
+            index = np.where((coords == star).all(axis=1))[0][0]
+            final_labels[index] = group_id
+
+    return final_labels
 
 
 @hierarchical_debug(logger)

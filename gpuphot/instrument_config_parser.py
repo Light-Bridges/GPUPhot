@@ -66,7 +66,7 @@ class DefaultConfig:
         'pca_method': False,
         'tile_section': 1000,
         'astrom': False,
-        'tile_section_psf': 2500,
+        'tile_section_psf': 3000,
         'do_pad': False,
         'lum_gmag_coeff': 0.5,
         'lum_rmag_coeff': 0.5,

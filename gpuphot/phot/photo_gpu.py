@@ -12,7 +12,7 @@ from cupyx.scipy.ndimage import convolve, label, sum as nd_sum, mean as nd_mean,
 
 from .conv import fill_image, fill_nan_fft, get_aper_kernel, convolve_fft, gen_apm_filter
 from .psf import create_coeff_map, create_star_dataset, detect_isolated_stars, detect_sources_psf, fit_moffat, \
-    get_eigen_psfs, project_all_stars_onto_eigenpsfs, recreate_normed_star, recreate_normed_stars_batch
+    get_eigen_psfs, group_star_dataset, project_all_stars_onto_eigenpsfs, recreate_normed_star, recreate_normed_stars_batch
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 from ..phot.background import get_local_background_fft
 from ..stats.reduction import stack_sigmaclip
@@ -210,8 +210,51 @@ def gen_moff_filter2(alpha, beta, **kwargs):
 
 
 @hierarchical_debug(logger)
-def calculate_aperture_corrections(image_shape: tuple, block_size: int, coeff_map: cp.ndarray, eigen_psfs: cp.ndarray,
-                                   psf: cp.ndarray, radii: np.ndarray, **kwargs):
+def calculate_aperture_corrections(corr: np.ndarray) -> cp.ndarray:
+    """
+    Calculates aperture corrections for all stars in an optimized way.
+
+    :param star_dataset_ref: Reference star dataset.
+    :param radii: Aperture radii.
+    :return: Aperture corrections and errors.
+    """
+
+    # correct ouliers
+    corr /= np.nanmax(corr, axis=1).reshape(-1, 1)
+    corr_fa = np.nanmedian(corr, axis=0)
+    corr_e = np.nanstd(corr, axis=0)
+    cmask = np.abs(corr - corr_fa) > corr_e
+    corr[cmask] = np.nan
+    corr_fact = np.nanmean(corr, axis=0)
+    corr_err = np.nanstd(corr, axis=0)
+    return corr_fact, corr_err
+
+
+@hierarchical_debug(logger)
+def find_aperture_corrections(sources: cp.ndarray, corrections: np.ndarray, correction_errors: np.ndarray,
+                              cluster_centers: np.ndarray,
+                              opt_rad_idx: np.array = None, **kwargs) -> cp.ndarray:
+    """Find the aperture correction for each source.
+
+    :param sources: Array of source coordinates.
+    :param corrections: Array of aperture corrections.
+    :param tile_centers: Array of tile centers.
+    :param opt_rad_idx: Array of optimal radii indices.
+    :return: Array of aperture corrections for each source.
+    """
+    _, tile_idx = crossmatch_sources(sources.get(), cluster_centers, thres_px=int(cp.max(sources)))
+    if opt_rad_idx is None:
+        aperture_corrections = corrections[tile_idx, :]
+        aperture_correction_errors = correction_errors[tile_idx, :]
+    else:
+        aperture_corrections = corrections[tile_idx, opt_rad_idx]
+        aperture_correction_errors = correction_errors[tile_idx, opt_rad_idx]
+    return aperture_corrections, aperture_correction_errors
+
+
+@hierarchical_debug(logger)
+def create_aperture_corrections_map(image_shape: tuple, block_size: int, unit_star_dataset: cp.ndarray,
+                                    coords: cp.ndarray, radii: np.ndarray, **kwargs):
     """
     Calculates aperture corrections for all stars in an optimized way.
 
@@ -223,52 +266,36 @@ def calculate_aperture_corrections(image_shape: tuple, block_size: int, coeff_ma
     :param radii: Radii for aperture photometry.
     :return: Dictionary mapping each star to its aperture correction.
     """
-    h, w = image_shape
-    num_tiles_y = h // block_size
-    num_tiles_x = w // block_size
-    if num_tiles_y == 0 or num_tiles_x == 0 or coeff_map is None or eigen_psfs is None:
-        tile_centers = np.array([[h // 2, w // 2]])
-        tile_psfs = cp.array([cp.zeros_like(psf)])
-    else:
-        # Calculate tile centers
-        tile_centers = []
-        for i in range(num_tiles_y):
-            for j in range(num_tiles_x):
-                center_y = i * block_size + block_size // 2
-                center_x = j * block_size + block_size // 2
-                tile_centers.append((center_y, center_x))
-        tile_centers = np.array(tile_centers)
-        tile_psfs = recreate_normed_stars_batch(coeff_map, eigen_psfs, tile_centers)
+    # calculate aperture photometry curves
+    positions = cp.array([[unit_star_dataset.shape[1] // 2, unit_star_dataset.shape[2] // 2]])
+    aperture_curves, _, _ = batch_aperture_photometry(unit_star_dataset, None, positions, radii)
+    aperture_curves = aperture_curves[:,:,0].get()
 
-    # Perform aperture photometry for all tile PSFs
+    # cluster stars
+    avg_group_size = int(len(coords) / (np.prod(image_shape) / block_size**2))
+    labels = group_star_dataset(coords, avg_group_size=avg_group_size, min_group_size=5)
+
+    unique_labels = np.unique(labels)
+    cluster_centers = []
     aperture_corrections = []
-    for i, psf_l in enumerate(tile_psfs):
-        psf_combined = psf + psf_l
-        positions = cp.array([[psf_combined.shape[0] // 2, psf_combined.shape[1] // 2]])
-        aper_corr, _, _ = batch_aperture_photometry(psf_combined, psf_combined, positions, radii)
+    aperture_correction_errors = []
+    for label in unique_labels:
+        cluster_points = coords[labels == label]
+        cluster_aperture_curves= aperture_curves[labels == label]
+
+        aper_corr, aperr_corr_err = calculate_aperture_corrections(cluster_aperture_curves)
         aperture_corrections.append(aper_corr)
-    aperture_corrections = cp.array(aperture_corrections)[:, :, 0].get()
+        aperture_correction_errors.append(aperr_corr_err)
+        cluster_centers.append(np.mean(cluster_points, axis=0))
 
-    return aperture_corrections, tile_centers
 
+    # calculate aperture corrections
+    aperture_corrections = np.array(aperture_corrections)
+    aperture_correction_errors = np.array(aperture_correction_errors)
+    cluster_centers = np.array(cluster_centers)
 
-def find_aperture_corrections(sources: cp.ndarray, corrections: np.ndarray, tile_centers: np.ndarray,
-                              opt_rad_idx: np.array = None, **kwargs) -> cp.ndarray:
-    """Find the aperture correction for each source.
+    return aperture_corrections, aperture_correction_errors, cluster_centers
 
-    :param sources: Array of source coordinates.
-    :param corrections: Array of aperture corrections.
-    :param tile_centers: Array of tile centers.
-    :param opt_rad_idx: Array of optimal radii indices.
-    :return: Array of aperture corrections for each source.
-    """
-
-    _, tile_idx = crossmatch_sources(sources.get(), tile_centers, thres_px=int(cp.max(sources)))
-    if opt_rad_idx is None:
-        aperture_corrections = corrections[tile_idx, :]
-    else:
-        aperture_corrections = corrections[tile_idx, opt_rad_idx]
-    return aperture_corrections
 
 
 @hierarchical_debug(logger)
@@ -306,8 +333,9 @@ def process_image(imdata, imheader, header_descriptions = None, **kwargs):
         'max_stars_ref': 15,
         # 'min_snr': 5,
         'color_range': 0.8,
-        'tile_section_psf': 2500,
-        'do_pad': True
+        'tile_section_psf': 3000,
+        'do_pad': True,
+        'min_conv_snr': 300,
     }
 
     # Update default parameters with any provided in kwargs
@@ -342,9 +370,9 @@ def process_image(imdata, imheader, header_descriptions = None, **kwargs):
 @hierarchical_debug(logger)
 def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp.ndarray,
                            source_coord: cp.ndarray, isolated_coord: cp.ndarray,
-                           tile_section_psf: int, coeff_map: cp.ndarray, eigen_psfs: cp.ndarray, psf: cp.ndarray,
-                           fwhm: float, gain: float, rdnoise: float, n_images: int = 1, center_factor: float = 1.0,
-                           **kwargs):
+                           tile_section_psf: int, star_dataset: cp.ndarray, fwhm: float,
+                           gain: float, rdnoise: float, n_images: int = 1, center_factor: float = 1.0,
+                           min_conv_snr: float = 300.0, **kwargs):
     """
     Optimizes the aperture photometry process to find the best radii for signal-to-noise ratio (SNR) for each star.
 
@@ -362,6 +390,7 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
     :param rdnoise: Read noise value of the detector.
     :param n_images: Number of images.
     :param center_factor: Fraction defining the central region for selecting isolated stars (default is 1.0).
+    :param min_conv_snr: Minimum convolutional SNR for selecting isolated stars (default is 300.0).
     :return: Tuple containing the optimized fluxes, noise and fitting parameters.
     """
     # Memory pool
@@ -375,7 +404,7 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
     ymax = int(img.shape[0] * 0.5 * (1 + center_factor))
 
     center_mask = (isolated_coord[:, 0] > ymin) & (isolated_coord[:, 0] < ymax) & \
-                  (isolated_coord[:, 1] > xmin) & (isolated_coord[:, 1] < xmax)
+                    (isolated_coord[:, 1] > xmin) & (isolated_coord[:, 1] < xmax)
     _, source_coords_matched_idx = crossmatch_sources(
         isolated_coord[center_mask].get(), source_coord.get(), thres_px=3
     )
@@ -383,89 +412,86 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
     # Obtain convolutional SNR
     conv_snr = conv_ima_sigma[
         cp.round(source_coord[:, 0]).astype(cp.int32), cp.round(source_coord[:, 1]).astype(cp.int32)]
+    conv_snr_isol = conv_ima_sigma[
+        cp.round(isolated_coord[:, 0]).astype(cp.int32), cp.round(isolated_coord[:, 1]).astype(cp.int32)]
+    conv_snr_mask = conv_snr_isol > min_conv_snr
 
     # In case PSF is position-invariant
-    if coeff_map is None or eigen_psfs is None or len(source_coords_matched_idx) < 10:
-        # Obtain radii range
-        max_radii = int(np.ceil(2.5 * fwhm))
-        min_radii = int(np.ceil(1 * fwhm))
-        radii = np.arange(min_radii, max_radii, 1)
+    # if coeff_map is None or eigen_psfs is None or len(source_coords_matched_idx) < 10:
+    #     tile_section_psf = int(1.1 * max(img.shape))
 
-        source_flux, back_flux, area = batch_aperture_photometry(img, back, cp.round(source_coord).astype(cp.int32),
-                                                                 radii)
+    max_radii = int(np.ceil(7 * fwhm) + 1)
+    min_radii = int(np.ceil(.75 * fwhm))
+    radii = np.arange(min_radii, max_radii, 1)
 
-        center_isolated_flux = source_flux[:, source_coords_matched_idx].get()
-        center_isolated_back_flux = cp.abs(back_flux[:, source_coords_matched_idx]).get()
-        center_isolated_noise = np.sqrt(center_isolated_flux * gain + area.reshape(-1,
-                                                                                   1).get() * rdnoise ** 2 + center_isolated_back_flux * gain) / gain / np.sqrt(
-            n_images)
+    # Find aperture corrections
+    conv_snr_mask = conv_snr_isol > min_conv_snr
+    corrections, correction_errors, cluster_centers = create_aperture_corrections_map(img.shape, tile_section_psf, star_dataset[conv_snr_mask],
+                                                                                    isolated_coord[conv_snr_mask].get(), radii)
+    aperture_corrections, aperture_correction_errors = find_aperture_corrections(source_coord, corrections, correction_errors, cluster_centers)
 
-        # Find optimal aperture radius
-        source_opt_rad_idx = int(np.argmax(np.sum(center_isolated_flux / center_isolated_noise, axis=1))) * np.ones(
-            len(conv_snr), dtype=int)
-        source_opt_rad = radii[source_opt_rad_idx]
-        opt_aperture_corrections = np.ones(len(conv_snr))
+    # Get batch photometry
+    source_flux, back_flux, area = batch_aperture_photometry(
+        img, back, cp.round(source_coord).astype(cp.int32), radii
+    )
 
-    else:
-        # Obtain radii range
-        max_radii = int(np.ceil(5 * fwhm) + 1)
-        min_radii = int(np.ceil(0.5 * fwhm))
-        radii = np.arange(min_radii, max_radii, 1)
+    # Calculate photometric parameteres
+    center_isolated_flux = np.array(source_flux[:, source_coords_matched_idx].get())
+    center_isolated_aper_corr = np.array(aperture_corrections[source_coords_matched_idx].T)
+    center_isolated_aper_corr_err = np.array(aperture_correction_errors[source_coords_matched_idx].T)
 
-        # Find aperture corrections
-        corrections, tile_centers = calculate_aperture_corrections(
-            img.shape, tile_section_psf, coeff_map, eigen_psfs, psf, radii
-        )
-        aperture_corrections = find_aperture_corrections(source_coord, corrections, tile_centers)
+    center_isolated_signal = center_isolated_flux / center_isolated_aper_corr
 
-        # Get batch photometry
-        source_flux, back_flux, area = batch_aperture_photometry(
-            img, back, cp.round(source_coord).astype(cp.int32), radii
-        )
+    center_isolated_back_noise_sq = np.abs(back_flux[:, source_coords_matched_idx]).get() * gain
+    center_isolated_read_noise_sq = area.get().reshape(-1, 1) * rdnoise ** 2
+    center_isolated_source_noise_sq = center_isolated_flux * gain / center_isolated_aper_corr ** 2 
+    center_isolated_corr_noise_sq = (center_isolated_flux * gain * center_isolated_aper_corr_err / center_isolated_aper_corr **2) ** 2
 
-        # Calculate photometric parameteres
-        center_isolated_flux = source_flux[:, source_coords_matched_idx].get() / np.array(
-            aperture_corrections[source_coords_matched_idx].T)
-        center_isolated_back_flux = cp.abs(back_flux[:, source_coords_matched_idx]).get()
-        center_isolated_source_noise = np.sqrt(source_flux[:, source_coords_matched_idx].get() * gain) / np.array(
-            aperture_corrections[source_coords_matched_idx].T) \
-                                       + source_flux[:, source_coords_matched_idx].get() * gain * 0.2 / np.array(
-            aperture_corrections[source_coords_matched_idx].T)
-        center_isolated_back_noise = np.sqrt(center_isolated_back_flux * gain)
-        center_isolated_read_noise = area.get().reshape(-1, 1) * rdnoise ** 2
-        center_isolated_noise = np.sqrt(
-            center_isolated_source_noise ** 2 + center_isolated_back_noise ** 2 + center_isolated_read_noise) / gain / np.sqrt(
-            n_images)
+    center_isolated_total_noise = np.sqrt(center_isolated_source_noise_sq + center_isolated_back_noise_sq + center_isolated_read_noise_sq + center_isolated_corr_noise_sq) / gain / np.sqrt(n_images)
 
-        center_isolated_snr = center_isolated_flux / center_isolated_noise
-        center_conv_snr = conv_snr[source_coords_matched_idx].get()
+    center_isolated_snr = center_isolated_signal / center_isolated_total_noise
+    center_conv_snr = conv_snr[source_coords_matched_idx].get()
 
-        # Find optimal aperture radius
-        opt_radii_idx = np.argmax(center_isolated_snr, axis=0)
-        opt_radii = radii[opt_radii_idx]
-        pov = np.polyfit(np.log(center_conv_snr), np.log(opt_radii), 1, cov=False)
+    # Find optimal aperture radius
+    opt_radii_idx = np.argmax(center_isolated_snr, axis=0)
+    opt_radii = radii[opt_radii_idx]
+    pov = np.polyfit(np.log10(center_conv_snr), np.log10(opt_radii), 1, cov=False)
 
-        # Calculate optimal flux and noise
-        source_opt_rad = np.ceil(
-            np.fmax(np.fmin((np.e ** (pov[0] * np.log(conv_snr.get()) + pov[1])), max_radii), min_radii)).astype(int)
-        source_opt_rad_idx = np.searchsorted(radii, source_opt_rad, side='right') - 1
-        opt_aperture_corrections = np.array(aperture_corrections)[np.arange(source_coord.shape[0]), source_opt_rad_idx]
+    # Calculate optimal flux and noise
+    source_opt_rad = np.round(
+        np.fmax(np.fmin((10 ** (pov[0] * np.log10(conv_snr.get()) + pov[1])), max_radii), min_radii)).astype(int)
+    source_opt_rad_idx = np.searchsorted(radii, source_opt_rad, side='right') - 1
+    opt_aperture_corrections = np.array(aperture_corrections)[np.arange(source_coord.shape[0]), source_opt_rad_idx]
+    opt_aperture_correction_errors = np.array(aperture_correction_errors)[np.arange(source_coord.shape[0]), source_opt_rad_idx]
 
-    opt_flux = source_flux[source_opt_rad_idx, np.arange(source_coord.shape[0])].get() / opt_aperture_corrections
-    opt_back_flux = cp.abs(back_flux[source_opt_rad_idx, np.arange(source_coord.shape[0])]).get()
-    opt_area = area[source_opt_rad_idx].get()
-    opt_noise = np.sqrt(opt_flux * gain + opt_area * rdnoise ** 2 + opt_back_flux * gain) / gain / np.sqrt(n_images)
+    opt_flux = np.array(source_flux[source_opt_rad_idx, np.arange(source_coord.shape[0])].get())
     mask = opt_flux > 0
+    opt_flux = opt_flux[mask]
+    opt_aper_corr = np.array(opt_aperture_corrections)[mask]
+    opt_corr_err = np.array(opt_aperture_correction_errors)[mask]
 
-    # Obtain aditional information for header purposes
-    ref_snr = [10, 100, 1000, 5000]
+    opt_signal = opt_flux / opt_aper_corr
+
+    opt_back_noise_sq = np.abs(back_flux[source_opt_rad_idx, np.arange(source_coord.shape[0])]).get()[mask] * gain
+    opt_read_noise_sq = area[source_opt_rad_idx].get()[mask] * rdnoise ** 2
+    opt_source_noise_sq = opt_flux * gain / opt_aper_corr ** 2 
+    opt_corr_noise_sq = (opt_flux * gain * opt_corr_err / opt_aper_corr **2) ** 2
+
+    opt_total_noise = np.sqrt(opt_source_noise_sq / n_images +
+                            opt_back_noise_sq / n_images +
+                            opt_read_noise_sq / n_images +
+                            opt_corr_noise_sq) / gain
+    opt_coords = source_coord.get()[mask]
+
+    # Obtain aditional information for header purposes 
+    ref_snr = [10, 100, 250, 1000]
     extra_info = {}
     for snr in ref_snr:
-        ref_idx = np.argmin(np.abs(conv_snr.get() - snr))
-        extra_info[f'RAD{snr}'] = int(source_opt_rad[ref_idx])
-        extra_info[f'CORR{snr}'] = round(opt_aperture_corrections[ref_idx], 3)
+        ref_idx = np.argmin(np.abs(opt_signal/opt_total_noise - snr))
+        extra_info[f'RAD{snr}'] = int(source_opt_rad[mask][ref_idx])
+        extra_info[f'CORR{snr}'] = round(opt_aperture_corrections[mask][ref_idx], 3)
 
-    return opt_flux[mask], opt_noise[mask], source_coord.get()[mask], extra_info
+    return opt_flux, opt_total_noise, opt_coords, extra_info
 
 
 @hierarchical_debug(logger)
@@ -484,28 +510,55 @@ def batch_aperture_photometry(img, back, positions, radii, **kwargs):
     
     """
     mempool = cp.get_default_memory_pool()
-    flux = cp.zeros((len(radii), len(positions)))
-    back_flux = cp.zeros((len(radii), len(positions)))
     area = cp.zeros(len(radii))
     image_shape = img.shape
     kernel_shape = 2 * radii[-1] + 1, 2 * radii[-1] + 1
     padding = int((kernel_shape[0] - 1) / 2)
-    new_image_shape = fill_image((image_shape[0] + 2 * padding, image_shape
-    [1] + 2 * padding))
-    img_c = cp.fft.rfft2(img, s=new_image_shape)
-    back_c = cp.fft.rfft2(back, s=new_image_shape)
-    for i, r in enumerate(radii):
-        kernel, area[i] = get_aper_kernel(r, size=kernel_shape[0])
-        kernel = cp.conj(cp.fft.rfft2(kernel, s=new_image_shape))
-        convolved = cp.fft.irfft2(img_c * kernel, s=new_image_shape)
-        convolved = cp.roll(convolved, shift=[padding, padding], axis=[0, 1])
-        convolved = convolved[:image_shape[0], :image_shape[1]]
-        flux[i, :] = convolved[positions[:, 0], positions[:, 1]]
-        convolved = cp.fft.irfft2(back_c * kernel, s=new_image_shape)
-        convolved = cp.roll(convolved, shift=[padding, padding], axis=[0, 1])
-        convolved = convolved[:image_shape[0], :image_shape[1]]
-        back_flux[i, :] = convolved[positions[:, 0], positions[:, 1]]
-    del convolved, kernel, back_c, img_c
+    if len(image_shape) == 3:
+        flux = cp.zeros((image_shape[0], len(radii), len(positions)))
+        back_flux = cp.zeros((image_shape[0], len(radii), len(positions)))
+        new_image_shape = fill_image((image_shape[1] + 2 * padding,
+                                image_shape[2] + 2 * padding))
+        for c in range(image_shape[0]):
+            img_c = cp.fft.rfft2(img[c], s=new_image_shape)
+            if back is not None: back_c = cp.fft.rfft2(back, s=new_image_shape)
+            for i, r in enumerate(radii):
+                kernel, area[i] = get_aper_kernel(r, size=kernel_shape[0])
+                kernel = cp.conj(cp.fft.rfft2(kernel, s=new_image_shape))
+                convolved = cp.fft.irfft2(img_c * kernel, s=new_image_shape)
+                convolved = cp.roll(convolved, shift=[padding, padding], axis=[0, 1])
+                convolved = convolved[:image_shape[1], :image_shape[2]]
+                flux[c, i, :] = convolved[positions[:, 0], positions[:, 1]]
+                if back is not None:
+                    convolved = cp.fft.irfft2(back_c * kernel, s=new_image_shape)
+                    convolved = cp.roll(convolved, shift=[padding, padding], axis=[0, 1])
+                    convolved = convolved[:image_shape[1], :image_shape[2]]
+                    back_flux[c, i, :] = convolved[positions[:, 0], positions[:, 1]]
+                else:
+                    back_flux = None
+    else:
+        flux = cp.zeros((len(radii), len(positions)))
+        back_flux = cp.zeros((len(radii), len(positions)))
+        new_image_shape = fill_image((image_shape[0] + 2 * padding,
+                                    image_shape[1] + 2 * padding))
+        img_c = cp.fft.rfft2(img, s=new_image_shape)
+        if back is not None: back_c = cp.fft.rfft2(back, s=new_image_shape)
+        for i, r in enumerate(radii):
+            kernel, area[i] = get_aper_kernel(r, size=kernel_shape[0])
+            kernel = cp.conj(cp.fft.rfft2(kernel, s=new_image_shape))
+            convolved = cp.fft.irfft2(img_c * kernel, s=new_image_shape)
+            convolved = cp.roll(convolved, shift=[padding, padding], axis=[0, 1])
+            convolved = convolved[:image_shape[0], :image_shape[1]]
+            flux[i, :] = convolved[positions[:, 0], positions[:, 1]]
+            if back is not None:
+                convolved = cp.fft.irfft2(back_c * kernel, s=new_image_shape)
+                convolved = cp.roll(convolved, shift=[padding, padding], axis=[0, 1])
+                convolved = convolved[:image_shape[0], :image_shape[1]]
+                back_flux[i, :] = convolved[positions[:, 0], positions[:, 1]]
+            else:
+                back_flux = None
+    if back is not None: del back_c
+    del convolved, kernel, img_c
     mempool.free_all_blocks()
     gc.collect()
 
@@ -590,12 +643,14 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
     center_mask = (coord[:, 0] > xmin) & (coord[:, 0] < xmax) & (coord[:, 1] > ymin) & (coord[:, 1] < ymax)
     unit_star_dataset_stds = cp.std(unit_star_dataset, axis=(1, 2))
     mask_star_dataset = unit_star_dataset_stds < cp.percentile(cp.std(unit_star_dataset, axis=(1, 2)), 95.4)
-    star_dataset_ref = unit_star_dataset[center_mask & mask_star_dataset][:max_stars_ref, :, :]
+    unit_star_dataset = unit_star_dataset[mask_star_dataset]
     coord = coord[mask_star_dataset]
+
+    star_dataset_ref = unit_star_dataset[center_mask[mask_star_dataset]][:max_stars_ref, :, :]
     if star_dataset_ref.shape[0] < 5:
         logger.error('Less than 5 isolated stars detected. Image may be too crowded or too noisy')
         raise ValueError('Less than 5 isolated stars detected. Image may be too crowded or too noisy')
-    
+
     psf, _ = stack_sigmaclip(star_dataset_ref, n=2)
     psf = psf / cp.sum(psf)
     try:
@@ -610,10 +665,10 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
 
     if pca_method:
         # Create psf deviations dataset
-        unit_star_dataset_dev = unit_star_dataset[mask_star_dataset] - psf
+        unit_star_dataset_dev = unit_star_dataset - psf
         unit_star_dataset_dev_norm = (unit_star_dataset_dev - cp.mean(unit_star_dataset_dev, axis=(1, 2))[:, None,
-                                                              None]) / cp.std(unit_star_dataset_dev, axis=(1, 2))[:,
-                                                                       None, None]
+                                                                None]) / cp.std(unit_star_dataset_dev, axis=(1, 2))[:,
+                                                                        None, None]
 
         # get eigen psfs
         eigen_psfs = get_eigen_psfs(unit_star_dataset_dev_norm, n_components=5)
@@ -647,10 +702,9 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
             sources[:, 1] < img.shape[1] - border)]
 
     # Perform optimized photometry
-    optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry(img, back, conv_ima_sigma, sources,
-                                                                                     coord, tile_section_psf, coeff_map,
-                                                                                     eigen_psfs, psf, fwhm, gain,
-                                                                                     n_images, rdnoise)
+    optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry(img_cp-back, back, conv_ima_sigma, sources,
+                                                                                     coord, tile_section_psf, star_dataset[mask_star_dataset],
+                                                                                     fwhm, gain, n_images, rdnoise, **kwargs)
     dic_calib.update(extra_info)
 
     dfm = pd.DataFrame({'xcentroid': optimal_coords[:, 1],

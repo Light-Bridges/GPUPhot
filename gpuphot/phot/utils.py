@@ -54,11 +54,25 @@ def calculate_tile_nanmean_sigclip(tiles: cp.ndarray, nsigma: float = 2) -> cp.n
     :param nsigma: Number of sigmas to be clipped.
     :return: A tuple containing the mean and standard deviation of the tiles.
     """
-    m = cp.nanmean(tiles, axis=(1, 2))
+    m = cp.nanmedian(tiles, axis=(1, 2))
     s = cp.nanstd(tiles, axis=(1, 2))
     mask = cp.abs(tiles - m[:, None, None]) < nsigma * s[:, None, None]
     tiles[~mask] = cp.nan
     return cp.nanmean(tiles, axis=(1, 2)), cp.nanstd(tiles, axis=(1, 2))
+
+@hierarchical_debug(logger)
+def calculate_tile_nanmedian_sigclip(tiles: cp.ndarray, nsigma: float = 2) -> cp.ndarray:
+    """Calculates the mean of an array of tiles.
+
+    :param tiles: Array of tiles.
+    :param nsigma: Number of sigmas to be clipped.
+    :return: A tuple containing the mean and standard deviation of the tiles.
+    """
+    m = cp.nanmedian(tiles, axis=(1, 2))
+    s = cp.nanstd(tiles, axis=(1, 2))
+    mask = cp.abs(tiles - m[:, None, None]) < nsigma * s[:, None, None]
+    tiles[~mask] = cp.nan
+    return cp.nanmedian(tiles, axis=(1, 2)), cp.nanstd(tiles, axis=(1, 2))
 
 
 def recompose_from_percentiles(percentiles: cp.ndarray, original_shape: tuple, block_size: int) -> cp.ndarray:
