@@ -170,9 +170,9 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     return h_wcs
 
 
-def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=50,
-                  solar_filter=0.5, dist_thres_px=3, min_mag=14, max_mag=18,
-                  plot=False):
+def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=30,
+                  solar_filter=0.6, dist_thres_px=3, min_snr=30, max_snr=300,
+                  std_threshold=0.05, plot=False):
     """Calculate the zeropoint for photometry.
 
     :param df_catalog: Catalog dataframe.
@@ -211,7 +211,8 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=50,
     cat_mag = cat_mag[inf_nan_mask]
     det_mag = det_mag[inf_nan_mask]
     det_emag = 1.0857 / df_sources['snr'][source_coords_matched_idx][inf_nan_mask].values
-    bright_mask = (cat_mag > min_mag) & (cat_mag < max_mag)
+    snr = df_sources['snr'][source_coords_matched_idx][inf_nan_mask].values
+    bright_mask = (snr > min_snr) & (snr < max_snr)
 
     if center_lims is None:
         xmin = np.floor(df_sources['xcentroid'].min())
@@ -226,72 +227,77 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=50,
                   (df_sources['ycentroid'][source_coords_matched_idx][inf_nan_mask].values >= ymin) & \
                   (df_sources['ycentroid'][source_coords_matched_idx][inf_nan_mask].values <= ymax)
 
-    if len(cat_mag[bright_mask]) <= 3:
-        zp, ezp, n, min_mag, max_mag = 0, 0, 0, 0, 0
-    else:
-        y = cat_mag[bright_mask] - det_mag[bright_mask]
-        yer = np.sqrt(det_emag[bright_mask]**2 + (y/cat_mag[bright_mask])**2)
-        mask = np.abs(y - np.nanmedian(y)) < 2*np.nanstd(y)
-        if np.sum(mask) > 15:
-            reg = RANSACRegressor(random_state=42, residual_threshold=0.05).fit(
-                det_mag[bright_mask][mask].reshape(-1, 1), cat_mag[bright_mask][mask].reshape(-1, 1))
-            inlier = reg.inlier_mask_
+    if len(cat_mag[bright_mask]) < 3:
+        return {'ZP': 0, 'EZP': 0, 'CATNSTAR': 0, 'ZPMINMAG': 0, 'ZPMAXMAG': 0}
 
-            if np.sum(inlier) > 10 and np.abs(np.mean(y[mask][inlier]) - np
-                    .mean(y[mask])) < np.std(y[mask]):
-                zp, ezp = weighted_mean_std(y[mask][inlier], yer[mask][inlier])
-                # zp = np.mean(y[mask][inlier])
-                n = np.sum(inlier)
-                ezp /= np.sqrt(n)
-                # ezp = np.std(y[mask][inlier]) / np.sqrt(n)
-                min_mag = np.min(cat_mag[bright_mask][mask][inlier])
-                max_mag = np.max(cat_mag[bright_mask][mask][inlier])
-            else:
-                zp, ezp = weighted_mean_std(y[mask], yer[mask])
-                # zp = np.mean(y[mask])
-                n = np.sum(mask)
-                ezp /= np.sqrt(n)
-                # ezp = np.std(y[mask]) / np.sqrt(n)
-                min_mag = np.min(cat_mag[bright_mask][mask])
-                max_mag = np.max(cat_mag[bright_mask][mask])
+    # Sigma-clipping and RANSAC filtering
+    y = cat_mag[bright_mask] - det_mag[bright_mask]
+    yer = np.sqrt(det_emag[bright_mask]**2 + (y / cat_mag[bright_mask])**2)
+    mask = np.abs(y - np.nanmedian(y)) < 3 * np.nanstd(y)
+
+    if np.sum(mask) > 15:
+        reg = RANSACRegressor(random_state=42, residual_threshold=0.05).fit(
+            det_mag[bright_mask][mask].reshape(-1, 1), cat_mag[bright_mask][mask].reshape(-1, 1))
+        inlier = reg.inlier_mask_
+
+        if np.sum(inlier) > 10 and np.abs(np.mean(y[mask][inlier]) - np.mean(y[mask])) < np.std(y[mask]):
+            bright_mask_indices = np.where(bright_mask)[0] 
+            selected_indices = bright_mask_indices[mask][inlier]  
+            y = y[mask][inlier]
+            yer = yer[mask][inlier]
         else:
-            zp, ezp = weighted_mean_std(y[mask], yer[mask])
-            # zp = np.mean(y[mask])
-            n = np.sum(mask)
-            ezp /= np.sqrt(n)
-            # ezp = np.std(y[mask]) / np.sqrt(n)
-            min_mag = np.min(cat_mag[bright_mask][mask])
-            max_mag = np.max(cat_mag[bright_mask][mask])
+            selected_indices = np.where(bright_mask)[0][mask]
+    else:
+        selected_indices = np.where(bright_mask)[0][mask]
 
-    params = {'ZP': np.round(zp, 4),
-              'EZP': np.round(ezp, 4),
-              'CATNSTAR': n,
-              'ZPMINMAG': np.round(min_mag, 2),
-              'ZPMAXMAG': np.round(max_mag, 2),
-              'BVMIN': np.round(0.65 - solar_filter / 2, 2),
-              'BVMAX': np.round(0.65 + solar_filter / 2, 2),
-              }
+    # Sort stars by brightness (lower magnitude first)
+    sorted_indices = np.argsort(cat_mag[selected_indices])
+    sorted_cat_mag = cat_mag[selected_indices][sorted_indices]
+    sorted_det_mag = det_mag[selected_indices][sorted_indices]
+    sorted_det_emag = det_emag[selected_indices][sorted_indices]
+
+    # Progressive inclusion of stars
+    final_selected_indices = []
+    std_prev = np.inf
+
+    for i in range(len(sorted_cat_mag)):
+        final_selected_indices.append(i)
+        current_mag_diff = sorted_cat_mag[final_selected_indices] - sorted_det_mag[final_selected_indices]
+        current_std = np.std(current_mag_diff)
+
+        if current_std > std_prev * (1 + std_threshold) and len(final_selected_indices) > 15:
+            final_selected_indices.pop() 
+            break
+
+        std_prev = current_std
+
+    final_selected_indices = np.array(final_selected_indices)
+    final_mag_diff = sorted_cat_mag[final_selected_indices] - sorted_det_mag[final_selected_indices]
+    final_err = np.sqrt(sorted_det_emag[final_selected_indices]**2 + (final_mag_diff / sorted_cat_mag[final_selected_indices])**2)
+
+    zp, ezp = weighted_mean_std(final_mag_diff, final_err)
+    n = len(final_selected_indices)
+    ezp /= np.sqrt(n)
+
+    params = {
+        'ZP': np.round(zp, 4),
+        'EZP': np.round(ezp, 4),
+        'CATNSTAR': n,
+        'ZPMINMAG': np.round(np.min(sorted_cat_mag[final_selected_indices]), 2),
+        'ZPMAXMAG': np.round(np.max(sorted_cat_mag[final_selected_indices]), 2),
+        'BVMIN': np.round(0.65 - solar_filter / 2, 2),
+        'BVMAX': np.round(0.65 + solar_filter / 2, 2),
+    }
 
     if plot:
         plt.figure(figsize=(8, 8))
-        ax = plt.subplot(111)
-        ax.plot(cat_mag, cat_mag - det_mag - zp, 'k.', alpha=0.6)
-        if np.sum(mask) > 15:
-            ax.plot(cat_mag[bright_mask][mask], cat_mag[bright_mask][mask] -
-                    det_mag[bright_mask][mask] - zp, 'b.', alpha=0.1)
-            ax.plot(cat_mag[bright_mask][mask][inlier], cat_mag[bright_mask
-            ][mask][inlier] - det_mag[bright_mask][mask][inlier] - zp,
-                    'r.', label='zp = {:.4f} +/- {:.4f} (n={})'.format(zp, ezp,
-                                                                       n), alpha=0.5)
-        else:
-            ax.plot(cat_mag[bright_mask][mask], cat_mag[bright_mask][mask] -
-                    det_mag[bright_mask][mask] - zp, 'r.', label=
-                    'zp = {:.4f} +/- {:.4f} (n={})'.format(zp, ezp, n), alpha=0.5)
-        ax.set_xlabel('catalog magnitude')
-        ax.set_ylabel('error magnitude')
-        ax.legend(frameon=False)
-        ax.set_ylim(-1.5, 1.5)
-        plt.show()
+        plt.plot(cat_mag, cat_mag - det_mag - zp, 'k.', alpha=0.6)
+        plt.plot(sorted_cat_mag[final_selected_indices], sorted_cat_mag[final_selected_indices] -
+                 sorted_det_mag[final_selected_indices] - zp, 'r.', label=f'zp = {zp:.4f} +/- {ezp:.4f} (n={n})')
+        plt.xlabel('Catalog Magnitude')
+        plt.ylabel('Magnitude Difference')
+        plt.legend(frameon=False)
+        plt.ylim(-1.5, 1.5)
 
     return params
 
@@ -325,7 +331,7 @@ def get_maglim(mag: np.ndarray, snr: np.ndarray, snr_lim: float) -> float:
     :param snr_lim: SNR limit.
     :return: Limiting magnitude.
     """
-    mask = (snr > 2) & (snr < 10)
+    mask = (snr > 2) & (snr < 15)
     if np.sum(mask) < 3:
         maglim = 0
         logger.warning('Not enough stars to calculate the limiting magnitude.')

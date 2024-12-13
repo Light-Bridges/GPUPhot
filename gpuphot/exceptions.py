@@ -12,6 +12,14 @@ class InsufficientStarsError(GPUPhotError):
         super().__init__(self.message)
 
 
+class MoffatFitError(GPUPhotError):
+    """Exception raised when the PSF fitting is impossible."""
+
+    def __init__(self, message="Impossible to fit Moffat function to reference PSF"):
+        self.message = f"{message}"
+        super().__init__(self.message)
+
+
 class ImageQualityError(GPUPhotError):
     """Exception raised when the image quality is too poor for processing."""
 
