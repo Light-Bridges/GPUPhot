@@ -79,6 +79,7 @@ def create_processor(instrument_name, config_dir=None):
 
 if __name__ == '__main__':
     test = create_processor('test')
+    test.process_image(None, None, None)
     from astropy.io.fits import Header
 
     print(test.get_header_info(Header()))
