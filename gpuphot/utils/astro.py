@@ -170,7 +170,7 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     return h_wcs
 
 
-def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=30,
+def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=50,
                   solar_filter=0.6, dist_thres_px=3, min_snr=30, max_snr=300,
                   plot=False):
     """Calculate the zeropoint for photometry.
@@ -226,12 +226,17 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=30,
                   (df_sources['ycentroid'][source_coords_matched_idx][inf_nan_mask].values >= ymin) & \
                   (df_sources['ycentroid'][source_coords_matched_idx][inf_nan_mask].values <= ymax)
 
-    if len(cat_mag[bright_mask]) < 3:
-        return {'ZP': 0, 'EZP': 0, 'CATNSTAR': 0, 'ZPMINMAG': 0, 'ZPMAXMAG': 0}
+    if len(cat_mag[bright_mask]) > N:
+        indices_original = np.where(bright_mask)[0]
+        m = np.argsort(snr[bright_mask])
+        brightest_original = indices_original[m[-N:]]
+        brightest_mask = np.zeros(len(bright_mask), dtype=bool)
+        brightest_mask[brightest_original] = True
+        bright_mask = bright_mask & brightest_mask
 
-    if len(cat_mag) <= 3:
+    if len(cat_mag[bright_mask]) <= 3:
         zp, ezp, n, min_mag, max_mag = 0, 0, 0, 0, 0
-        
+
     else:
         y = cat_mag[bright_mask] - det_mag[bright_mask]
         mask = np.abs(y - np.nanmean(y)) < np.nanstd(y)
