@@ -1,7 +1,9 @@
 import os
+from datetime import datetime
 from glob import glob
 
 import numpy as np
+import pytz
 from astropy.io import fits
 from celery import shared_task
 
@@ -27,43 +29,50 @@ def get_processor(instrument_name=None):
 
 
 @shared_task
-def process_directory_task(path=None, filename=None, instrument_name=None):
+def process_directory_task(path=None, filename=None, instrument_name=None, overwrite=False):
     """
-    Process astronomical images (FITS and NPY) with flexible search and configuration options.
+        Process astronomical images (FITS and NPY) with flexible search and configuration options.
 
-    This task searches for images based on the given criteria and initiates individual
-    processing tasks for each image found.
+        This task searches for images based on the given criteria and initiates individual
+        processing tasks for each image found.
 
-    Task Usage Examples:
-    1. Process all images in default path:
-       process_directory_task.delay()
+        Task Usage Examples:
+        1. Process all images in default path:
+           process_directory_task.delay()
 
-    2. Process images in a specific directory:
-       process_directory_task.delay(path='today')
+        2. Process images in a specific directory:
+           process_directory_task.delay(path='today')
 
-    3. Process images matching a specific pattern:
-       process_directory_task.delay(path='today/camera1', filename='image.fits')
+        3. Process images matching a specific pattern:
+           process_directory_task.delay(path='today/camera1', filename='image.fits')
 
-    4. Process images containing a specific name pattern:
-       process_directory_task.delay(filename='NEO')
+        4. Process images containing a specific name pattern:
+           process_directory_task.delay(filename='NEO')
 
-    5. Process with custom instrument configuration:
-       process_directory_task.delay(
-           path='today',
-           instrument_name='other_instrument'
-       )
+        5. Process with custom instrument configuration:
+           process_directory_task.delay(
+               path='today',
+               instrument_name='other_instrument'
+           )
 
-    Args:
-        path (str, optional): Subdirectory to search for images.
-                               If None, searches in base image path.
-        filename (str, optional): Specific filename or pattern to match.
-                                  Supports partial matches and wildcards.
-        instrument_name (str, optional): Override default instrument name.
+        6. Process and overwrite original files:
+           process_directory_task.delay(path='today', overwrite=True)
 
-    Returns:
-        dict: A dictionary containing 'task_ids', a list of task IDs for the
-              individual image processing tasks that were initiated.
-    """
+        Args:
+            path (str, optional): Subdirectory to search for images.
+                                  If None, searches in base image path.
+            filename (str, optional): Specific filename or pattern to match.
+                                      Supports partial matches and wildcards.
+            instrument_name (str, optional): Override default instrument name.
+            overwrite (bool, optional): If True, overwrites original files.
+                                        If False, creates new files with '_photometrized' suffix.
+                                        Defaults to False.
+
+        Returns:
+            dict: A dictionary containing 'task_ids', a list of task IDs for the
+                  individual image processing tasks that were initiated.
+        """
+
     base_path = os.environ.get('IMAGE_BASE_PATH', '/app/images')
 
     if path:
@@ -85,14 +94,14 @@ def process_directory_task(path=None, filename=None, instrument_name=None):
     results = []
     for file_path in image_files:
         relative_path = os.path.relpath(file_path, base_path)
-        task = process_image_task.delay(relative_path, instrument_name)
+        task = process_image_task.delay(relative_path, instrument_name, overwrite)
         results.append(task.id)
 
     return {'task_ids': results}
 
 
 @shared_task(bind=True)  # Usar bind=True para acceder a self
-def process_image_task(self, image_path, instrument_name=None):
+def process_image_task(self, image_path, instrument_name=None, overwrite=False):
     """
     Process a single astronomical image file (FITS or NPY).
 
@@ -103,19 +112,24 @@ def process_image_task(self, image_path, instrument_name=None):
         image_path (str): Path to the image file to be processed.
         instrument_name (str, optional): Name of the instrument to use for processing.
                                          If None, uses the default instrument.
+        overwrite (bool, optional): If True, overwrites the original file.
+                                    If False, creates a new file with '_photometrized' suffix.
+                                    Defaults to False.
 
     Returns:
         dict: A dictionary containing the processing results or error information.
               If successful, the dictionary includes:
-                - 'file': Relative path of the processed file
+                - 'file': Relative path of the original file
+                - 'output_file': Relative path of the processed file
                 - 'dfm': Processed image data
                 - 'header': Dictionary of the image header
               If an error occurs, the dictionary includes:
                 - 'file': Relative path of the file that caused the error
                 - 'error': Description of the error
+                - 'status': 'failed'
 
     Raises:
-        No exceptions are raised as they are caught and returned in the result dictionary.
+        Exception: Raises an exception with error details if processing fails.
 
     Note:
         This task uses the instrument configuration specified by instrument_name
@@ -142,8 +156,26 @@ def process_image_task(self, image_path, instrument_name=None):
                 imheader = fits.Header()
 
         dfm, original_header = processor.process_image(imdata, imheader)
+
+        # TODO - Check if image is photometrized correctly... dfm is not None
+        # - Save dfm to a file
+
+        dateproc = datetime.now().replace(tzinfo=pytz.UTC)
+        original_header['DATEPROC'] = (dateproc.strftime('%Y-%m-%dT%H:%M:%S.%f'), 'Date and time of processing')
+
+        if overwrite:
+            output_path = file_path
+        else:
+            file_name, file_extension = os.path.splitext(file_path)
+            output_path = f"{file_name}_photometrized{file_extension}"
+
+        # Create reduced image fits
+        photometrized_image = fits.PrimaryHDU(data=imdata.astype(np.float32), header=original_header)
+        photometrized_image.writeto(output_path, overwrite=overwrite)
+
         return {
             'file': image_path,
+            'output_file': os.path.relpath(output_path, base_path),
             'dfm': dfm,
             'header': dict(original_header)
         }
