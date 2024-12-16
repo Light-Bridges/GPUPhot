@@ -4,6 +4,7 @@ import inspect
 import logging
 import os
 import platform
+import subprocess
 import sys
 import threading
 import time
@@ -125,8 +126,24 @@ class SystemInfo:
             'python_version': sys.version,
             'architecture': platform.architecture(),
             'processor': platform.processor(),
+            'commit_info': self.get_git_commit_id(),
             'gpu': self.get_gpu_info()
         }
+
+    def get_git_commit_id(self):
+        try:
+            # Obtener el hash del commit actual
+            commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip().decode('utf-8')
+
+            # Obtener el nombre de la rama actual
+            branch_name = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).strip().decode('utf-8')
+            return {
+                'commit_hash': commit_hash,
+                'branch_name': branch_name,
+            }
+        except subprocess.CalledProcessError as e:
+            print(f"Error al obtener la información de Git: {e}")
+            return None
 
     def get_gpu_info(self):
         # Obtener información de las GPUs usando GPUtil
