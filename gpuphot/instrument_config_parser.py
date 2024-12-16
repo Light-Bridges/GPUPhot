@@ -61,7 +61,7 @@ class DefaultConfig:
     DEFAULT_PROCESSING_PARAMS = {
         'SP_filt': False,
         'CR_filt': False,
-        'border': 50,
+        'border': 20,
         'center_factor': 0.7,
         'pca_method': False,
         'tile_section': 300,
