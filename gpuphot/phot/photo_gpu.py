@@ -326,7 +326,7 @@ def process_image(imdata, imheader, header_descriptions=None, **kwargs):
     default_params = {
         'SP_filt': True,
         'CR_filt': False,
-        'border': 10,
+        'border': 20,
         'center_factor': 0.7,
         'pca_method': True,
         'tile_section': 1000,
