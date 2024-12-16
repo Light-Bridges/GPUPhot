@@ -132,16 +132,27 @@ class SystemInfo:
 
     def get_git_commit_id(self):
         try:
-            # Obtener el hash del commit actual
-            commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip().decode('utf-8')
+            git_dir = '.git'
 
-            # Obtener el nombre de la rama actual
-            branch_name = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).strip().decode('utf-8')
+            with open(os.path.join(git_dir, 'HEAD'), 'r') as head_file:
+                head_content = head_file.read().strip()
+
+            if head_content.startswith('ref:'):
+                branch_ref = head_content.split(' ')[-1]
+                branch_name = branch_ref.split('/')[-1]
+
+                with open(os.path.join(git_dir, branch_ref), 'r') as branch_file:
+                    commit_hash = branch_file.read().strip()
+            else:
+                commit_hash = head_content.split(' ')[-1]
+                branch_name = None
+
             return {
                 'commit_hash': commit_hash,
                 'branch_name': branch_name,
             }
-        except subprocess.CalledProcessError as e:
+
+        except Exception as e:
             print(f"Error al obtener la información de Git: {e}")
             return None
 
