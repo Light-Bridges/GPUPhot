@@ -523,6 +523,7 @@ def batch_aperture_photometry(img, back, positions, radii, **kwargs):
 
     convolved = None
     kernel = None
+    img_c = None
 
     if len(image_shape) == 3:
         flux = cp.zeros((image_shape[0], len(radii), len(positions)))
@@ -570,7 +571,7 @@ def batch_aperture_photometry(img, back, positions, radii, **kwargs):
     if back is not None: del back_c
     if convolved is not None: del convolved
     if kernel is not None: del kernel
-    del img_c
+    if img_c is not None: del img_c
     mempool.free_all_blocks()
     gc.collect()
 
