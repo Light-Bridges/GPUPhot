@@ -13,7 +13,7 @@ from cupyx.scipy.ndimage import convolve, label, sum as nd_sum, mean as nd_mean,
 from .conv import fill_image, fill_nan_fft, get_aper_kernel, convolve_fft, gen_apm_filter
 from .psf import create_coeff_map, create_star_dataset, detect_isolated_stars, detect_sources_psf, fit_moffat, \
     get_eigen_psfs, group_star_dataset, project_all_stars_onto_eigenpsfs, recreate_normed_star
-from ..exceptions import InsufficientStarsError, MoffatFitError
+from ..exceptions import InsufficientStarsError, MoffatFitError, capture_cuda_exception
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 from ..phot.background import get_local_background_fft
 from ..stats.reduction import stack_sigmaclip
@@ -297,7 +297,7 @@ def create_aperture_corrections_map(image_shape: tuple, block_size: int, unit_st
 
     return aperture_corrections, aperture_correction_errors, cluster_centers
 
-
+@capture_cuda_exception
 @hierarchical_debug(logger)
 def process_image(imdata, imheader, header_descriptions=None, **kwargs):
     # parameters from header

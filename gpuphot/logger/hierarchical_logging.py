@@ -131,8 +131,9 @@ class SystemInfo:
 
     def get_git_commit_id(self):
         try:
-            current_dir = os.path.abspath(os.getcwd())
-            git_dir = os.path.join(current_dir, '..', '..', '..', '.git')
+            script_dir = os.path.abspath(os.path.dirname(__file__))
+
+            git_dir = os.path.join(script_dir, '..', '..', '.git')
 
             with open(os.path.join(git_dir, 'HEAD'), 'r') as head_file:
                 head_content = head_file.read().strip()
