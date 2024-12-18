@@ -37,7 +37,7 @@ def capture_cuda_exception(func):
     """Decorator to capture CUDA exceptions and retry on illegal address error."""
 
     import os
-
+    import sys
     from cupy_backends.cuda.api.runtime import CUDARuntimeError
 
     def is_running_in_docker():
