@@ -1,6 +1,7 @@
 import json
 import os
 import warnings
+from enum import Enum
 
 import jsonc
 from astropy.io.fits import Header
@@ -11,28 +12,59 @@ warnings.simplefilter("once", UserWarning)
 logger = setup_logger(__name__)
 
 
+class HeaderKey(Enum):
+    EXPT1 = "EXPT1"
+    FILTER = "FILTER"
+    TOTIMA = "TOTIMA"
+    RDNOISE = "RDNOISE"
+    SATLEVEL = "SATLEVEL"
+    POINTRA = "POINTRA"
+    POINTDEC = "POINTDEC"
+    SITEELEV = "SITEELEV"
+    SITELAT = "SITELAT"
+    SITELONG = "SITELONG"
+    DATE_OBS = "DATE-OBS"
+    INMODEL = "INMODEL"
+    PXSIZE = "PXSIZE"
+    GAIN = "GAIN"
+    NAXIS1 = "NAXIS1"
+    NAXIS2 = "NAXIS2"
+    FOCALEN = "FOCALEN"
+    XBINNING = "XBINNING"
+    BIASSTD = "BIASSTD"
+    SITEALT = "SITEALT"
+    CD1_1 = "CD1_1"
+    CD1_2 = "CD1_2"
+    CD2_1 = "CD2_1"
+    CD2_2 = "CD2_2"
+
+
 class DefaultConfig:
     DEFAULT_HEADER_KEYWORDS = {
-        "exposure_time": "EXPT1",
-        "filter": "FILTER",
-        "n_images": "TOTIMA",
-        "rdnoise": "RDNOISE",
-        "satlevel": "SATLEVEL",
-        "target_ra": "POINTRA",
-        "target_dec": "POINTDEC",
-        "site_elevation": "SITEELEV",
-        "site_latitude": "SITELAT",
-        "site_longitude": "SITELONG",
-        "date_obs": "DATE-OBS",
-        "inmodel": "INMODEL",
-        "pxsize": "PXSIZE",
-        "gain": "GAIN",
-        "naxis1": "NAXIS1",
-        "naxis2": "NAXIS2",
-        "focalen": "FOCALEN",
-        "xbinning": "XBINNING",
-        "biasstd": "BIASSTD",
-        "sitealt": "SITEALT",
+        "exposure_time": HeaderKey.EXPT1.value,
+        "filter": HeaderKey.FILTER.value,
+        "n_images": HeaderKey.TOTIMA.value,
+        "rdnoise": HeaderKey.RDNOISE.value,
+        "satlevel": HeaderKey.SATLEVEL.value,
+        "target_ra": HeaderKey.POINTRA.value,
+        "target_dec": HeaderKey.POINTDEC.value,
+        "site_elevation": HeaderKey.SITEELEV.value,
+        "site_latitude": HeaderKey.SITELAT.value,
+        "site_longitude": HeaderKey.SITELONG.value,
+        "date_obs": HeaderKey.DATE_OBS.value,
+        "inmodel": HeaderKey.INMODEL.value,
+        "pxsize": HeaderKey.PXSIZE.value,
+        "gain": HeaderKey.GAIN.value,
+        "naxis1": HeaderKey.NAXIS1.value,
+        "naxis2": HeaderKey.NAXIS2.value,
+        "focalen": HeaderKey.FOCALEN.value,
+        "xbinning": HeaderKey.XBINNING.value,
+        "biasstd": HeaderKey.BIASSTD.value,
+        "sitealt": HeaderKey.SITEALT.value,
+        "cd1_1": HeaderKey.CD1_1.value,
+        "cd1_2": HeaderKey.CD1_2.value,
+        "cd2_1": HeaderKey.CD2_1.value,
+        "cd2_2": HeaderKey.CD2_2.value,
     }
 
     DEFAULT_CAMERA_SPECS = {
@@ -56,6 +88,10 @@ class DefaultConfig:
         "xbinning": None,
         "biasstd": None,
         "sitealt": None,
+        "cd1_1": None,
+        "cd1_2": None,
+        "cd2_1": None,
+        "cd2_2": None,
     }
 
     DEFAULT_PROCESSING_PARAMS = {

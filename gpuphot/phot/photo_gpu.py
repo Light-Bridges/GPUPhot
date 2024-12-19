@@ -10,6 +10,7 @@ from astropy.wcs import WCS
 from cupyx.scipy.ndimage import convolve, label, sum as nd_sum, mean as nd_mean, maximum_filter, \
     median_filter, laplace, binary_dilation
 
+from ..instrument_config_parser import HeaderKey
 from .conv import fill_image, fill_nan_fft, get_aper_kernel, convolve_fft, gen_apm_filter
 from .psf import create_coeff_map, create_star_dataset, detect_isolated_stars, detect_sources_psf, fit_moffat, \
     get_eigen_psfs, group_star_dataset, project_all_stars_onto_eigenpsfs, recreate_normed_star
@@ -301,26 +302,26 @@ def create_aperture_corrections_map(image_shape: tuple, block_size: int, unit_st
 @hierarchical_debug(logger)
 def process_image(imdata, imheader, header_descriptions=None, **kwargs):
     # parameters from header
-    scale = plate_scale_px(imheader['PXSIZE'], imheader['FOCALEN']) * imheader['XBINNING']
-    n_images = imheader['TOTIMA']
-    gain = imheader['GAIN']
+    scale = plate_scale_px(imheader[HeaderKey.PXSIZE.value], imheader[HeaderKey.FOCALEN.value]) * imheader[HeaderKey.XBINNING.value]
+    n_images = imheader[HeaderKey.TOTIMA.value]
+    gain = imheader[HeaderKey.GAIN.value]
     try:
-        rdnoise = imheader['GAIN'] * imheader['BIASSTD']
+        rdnoise = imheader[HeaderKey.GAIN.value] * imheader[HeaderKey.BIASSTD.value]
     except:
-        rdnoise = imheader['RDNOISE']
-    exptime = imheader['EXPT1']
-    satlevel = imheader['SATLEVEL']
-    target_ra = imheader['POINTRA'] * 15
-    target_dec = imheader['POINTDEC']
+        rdnoise = imheader[HeaderKey.RDNOISE.value]
+    exptime = imheader[HeaderKey.EXPT1.value]
+    satlevel = imheader[HeaderKey.SATLEVEL.value]
+    target_ra = imheader[HeaderKey.POINTRA.value] * 15
+    target_dec = imheader[HeaderKey.POINTDEC.value]
     try:
-        site_elevation = imheader['SITEELEV']
+        site_elevation = imheader[HeaderKey.SITEELEV.value]
     except:
-        site_elevation = imheader['SITEALT']
-    site_latitude = imheader['SITELAT']
-    site_longitude = imheader['SITELONG']
-    date_obs = imheader['DATE-OBS']
-    inmodel = imheader['INMODEL']
-    filter = imheader['FILTER']
+        site_elevation = imheader[HeaderKey.SITEALT.value]
+    site_latitude = imheader[HeaderKey.SITELAT.value]
+    site_longitude = imheader[HeaderKey.SITELONG.value]
+    date_obs = imheader[HeaderKey.DATE_OBS.value]
+    inmodel = imheader[HeaderKey.INMODEL.value]
+    filter = imheader[HeaderKey.FILTER.value]
 
     # default parameters
     default_params = {
@@ -889,8 +890,8 @@ def cov_nan(img, nc=10, **kwargs):
 #         Updated FITS header.
 #     """
 #     head = head0.copy()
-#     arcsec_per_pixel = plate_scale_px(head['PXSIZE'], head['FOCALEN']) * head[
-#         'XBINNING']
+#     arcsec_per_pixel = plate_scale_px(head[HeaderKey.PXSIZE.value], head[HeaderKey.FOCALEN.value]) * head[
+#         HeaderKey.XBINNING.value]
 #     signal.signal(signal.SIGALRM, handler)
 #     signal.alarm(120)
 #     try:
@@ -898,8 +899,8 @@ def cov_nan(img, nc=10, **kwargs):
 #         dfm['ycentroid'], size_hint=astrometry.SizeHint(
 #             lower_arcsec_per_pixel=arcsec_per_pixel * 0.8,
 #             upper_arcsec_per_pixel=arcsec_per_pixel * 1.2), position_hint=
-#                                       astrometry.PositionHint(ra_deg=head['POINTRA'] * 360 / 24,
-#                                                               dec_deg=head['POINTDEC'], radius_deg=0.5),
+#                                       astrometry.PositionHint(ra_deg=head[HeaderKey.POINTRA.value] * 360 / 24,
+#                                                               dec_deg=head[HeaderKey.POINTDEC.value], radius_deg=0.5),
 #                                       solution_parameters=
 #                                       astrometry.SolutionParameters(logodds_callback=
 #                                                                     logodds_callback_100, sip_order=3))

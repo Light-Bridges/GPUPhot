@@ -13,6 +13,7 @@ from astropy.wcs import WCS
 from sklearn.linear_model import RANSACRegressor
 
 from .catalog import crossmatch_sources
+from ..instrument_config_parser import HeaderKey
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 from ..stats.reduction import weighted_mean_std
 
@@ -74,7 +75,7 @@ def get_astrometry_params(h_wcs, image_shape):
     w = WCS(h_wcs)
     ra, dec = w.all_pix2world(image_shape[1] // 2, image_shape[0] // 2, 1)
     cd11 = float(h_wcs['CD1_1'][0])
-    cd12 = float(h_wcs['CD1_2'][0])
+    cd12 = float(h_wcs[HeaderKey.CD1_2.value][0])
     scale = np.sqrt(cd11 ** 2 + cd12 ** 2) * 3600
     coocenter = SkyCoord(ra=ra, dec=dec, unit=(u.deg, u.deg), frame='icrs')
     npx = max(image_shape)
@@ -390,10 +391,10 @@ def radec_to_ecl(RA, DEC):
 
 
 def get_ccw(hwcs):
-    cd11 = hwcs['CD1_1']
-    cd12 = hwcs['CD1_2']
-    cd21 = hwcs['CD2_1']
-    cd22 = hwcs['CD2_2']
+    cd11 = hwcs[HeaderKey.CD1_1.value]
+    cd12 = hwcs[HeaderKey.CD1_2.value]
+    cd21 = hwcs[HeaderKey.CD2_1.value]
+    cd22 = hwcs[HeaderKey.CD2_2.value]
     det = cd11 * cd22 - cd12 * cd21
     if det >= 0:
         parity = 1.
@@ -405,10 +406,10 @@ def get_ccw(hwcs):
 
 
 def get_scale(hwcs):
-    cd11 = hwcs['CD1_1']
-    cd12 = hwcs['CD1_2']
-    cd21 = hwcs['CD2_1']
-    cd22 = hwcs['CD2_2']
+    cd11 = hwcs[HeaderKey.CD1_1.value]
+    cd12 = hwcs[HeaderKey.CD1_2.value]
+    cd21 = hwcs[HeaderKey.CD2_1.value]
+    cd22 = hwcs[HeaderKey.CD2_2.value]
     return np.sqrt(cd11 ** 2 + cd12 ** 2) * 3600
 
 

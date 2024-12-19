@@ -39,52 +39,62 @@
     // Keyword for bias standard deviation
     "biasstd": "BIASSTD",
     // Alternative keyword for site altitude
-    "sitealt": "SITEALT"
+    "sitealt": "SITEALT",
+
+    // Keywords for coordinate transformation matrix elements (CD)
+    // CD matrix element corresponding to the first row and first column
+    "cd1_1": "CD1_1",
+    // CD matrix element corresponding to the first row and second column
+    "cd1_2": "CD1_2",
+    // CD matrix element corresponding to the second row and first column
+    "cd2_1": "CD2_1",
+    // CD matrix element corresponding to the second row and second column
+    "cd2_2": "CD2_2"
   },
   "camera_specs": {
     // Default values for missing camera specs when keys do not exist
-    
+
     // Default value for size of each pixel in microns (default value)
     "pxsize": null,
-    
-    // Default value for camera gain (default value)
+
+  	// Default value for camera gain (default value)
   	"gain": null,
-    
-    // Default value for exposure time (default value)
-    "exposure_time": null,
-    
-    // Default value for filter (default value)
-    "filter": null,
-    
-    // Default value for total number of images (default value)
-    "n_images": null,
-    
-    // Default value for read-out noise (default value)
-    "rdnoise": null,
-    
-    // Default value for saturation level (default value)
-    "satlevel": null,
-    
-    // Default value for target right ascension (default value)
-    "target_ra": null,
-    
-    // Default value for target declination (default value)
-    "target_dec": null,
-    
-    // Default value for site elevation (default value)
-    "site_elevation": null,
-    
-    // Default value for site latitude (default value)
-    "site_latitude": null,
-    
-    // Default value for site longitude (default value)
-    "site_longitude": null,
-    
-    // Default value for observation date (default value)
-    "date_obs": null,
-    
-    // Default value for input model (default value)
-    "inmodel": null,
+
+  	// Default value for exposure time (default value)
+  	"exposure_time": null,
+
+  	// Default value for filter (default value)
+  	"filter": null,
+
+  	// Default value for total number of images (default value)
+  	"n_images": null,
+
+  	// Default value for read-out noise (default value)
+  	"rdnoise": null,
+
+  	// Default value for saturation level (default value)
+  	"satlevel": null,
+
+  	// Default value for target right ascension (default value)
+  	"target_ra": null,
+
+  	// Default value for target declination (default value)
+  	"target_dec": null,
+
+  	// Default value for site elevation (default value)
+  	"site_elevation": null,
+
+  	// Default value for site latitude (default value)
+  	"site_latitude": null,
+
+  	// Default value for site longitude (default value)
+  	"site_longitude": null,
+
+  	// Default value for observation date (default value)
+  	"date_obs": null,
+
+  	// Default value for input model (default value)
+  	"inmodel": null,
 
   	// Default values for image width and height (default values)
   	"naxis1": null,
@@ -96,30 +106,50 @@
   	"biasstd": null,
 
   	// Default alternative keyword for site altitude (default value)
-  	"sitealt": null
+  	"sitealt": null,
+
+  	// Default values related to coordinate transformation matrix elements (CD)
+  	// Default value for CD matrix element corresponding to the first row and first column
+  	"cd1_1": null,
+  	// Default value for CD matrix element corresponding to the first row and second column
+  	"cd1_2": null,
+  	// Default value for CD matrix element corresponding to the second row and first column
+  	"cd2_1": null,
+  	// Default value for CD matrix element corresponding to the second row and second column
+  	"cd2_2": null
   },
   "processing_params": {
   	// Size of image tiles for processing (in pixels)
   	"tile_section": 1000,
+
   	// Factor to determine the central region of interest
   	"center_factor": 0.7,
-  	// Flag to enable/disable Spatial Filter
-  	"SP_filt": false,
-  	// Flag to enable/disable Principal Component Analysis method
-  	"pca_method": false,
-  	// Flag to enable/disable Cosmic Ray filtering
-  	"CR_filt": false,
-  	// Size of the border to exclude from processing (in pixels)
-  	"border": 50,
-  	// Flag to enable/disable astrometric correction
-  	"astrom": false,
-  	// Size of image tiles for PSF calculation (in pixels)
-  	"tile_section_psf": 2500,
-  	// Flag to enable/disable image padding
-  	"do_pad": false,
-    // Coefficient for g magnitude in luminosity calculation
-    "lum_gmag_coeff": 0.5,
-    // Coefficient for r magnitude in luminosity calculation
-    "lum_rmag_coeff": 0.5
+
+	  // Flag to enable/disable Spatial Filter
+	  "SP_filt": false,
+
+	  // Flag to enable/disable Principal Component Analysis method
+	  "pca_method": false,
+
+	  // Flag to enable/disable Cosmic Ray filtering
+	  "CR_filt": false,
+
+	  // Size of the border to exclude from processing (in pixels)
+	  "border": 50,
+
+	  // Flag to enable/disable astrometric correction
+	  "astrom": false,
+
+	  // Size of image tiles for PSF calculation (in pixels)
+	  "tile_section_psf": 2500,
+
+	  // Flag to enable/disable image padding
+	  "do_pad": false,
+
+      // Coefficient for g magnitude in luminosity calculation
+      "lum_gmag_coeff": 0.5,
+
+      // Coefficient for r magnitude in luminosity calculation
+      "lum_rmag_coeff": 0.5
   }
 }
