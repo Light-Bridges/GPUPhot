@@ -208,11 +208,16 @@ def hierarchical_debug(logger_name):
 
             start_time = time.time()
             try:
-                logger.debug(f'Starting function {func.__name__}', extra={
+                # Log the start of the function
+                system_info_instance.refresh_gpu_info()
+                critical_logger.debug(f'Starting function {func.__name__}', extra={
                     'function_name': func.__name__,
                     'arguments': arg_str,
-                    'event': 'function_start'
+                    'event': 'function_start',
+                    'system_info': system_info_instance.system_info
                 })
+
+                # Call the function
                 result = func(*args, **kwargs)
                 return_info = format_arg(result)
 
@@ -230,6 +235,7 @@ def hierarchical_debug(logger_name):
 
                 return result
             except Exception as e:
+                # Log the exception
                 tb = traceback.format_exc()
                 system_info_instance.refresh_gpu_info()
                 critical_logger.error(f"Exception in {func.__name__}", extra={
