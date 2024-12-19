@@ -10,6 +10,7 @@ import pandas as pd
 from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
 from astropy.wcs import WCS
+from astropy.time import Time
 from sklearn.linear_model import RANSACRegressor
 
 from .catalog import crossmatch_sources
@@ -147,9 +148,7 @@ def astrometrice2(df: pd.DataFrame, scale: float,
             solution = get_solver().solve(
                 stars_xs=df['xcentroid'],
                 stars_ys=df['ycentroid'],
-                size_hint=astrometry.SizeHint(
-                    lower_arcsec_per_pixel=scale * 0.8,
-                    upper_arcsec_per_pixel=scale * 1.2)
+                size_hint=None
                 ,
                 position_hint=None
                 ,
@@ -389,6 +388,9 @@ def radec_to_ecl(RA, DEC):
     coords_gal = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg').barycentricmeanecliptic
     return round(coords_gal.lon.deg, 6), round(coords_gal.lat.deg, 6)
 
+def date_to_jd(dateobs):
+    Date = Time(dateobs, scale='utc')
+    return Date.jd, Date.mjd
 
 def get_ccw(hwcs):
     cd11 = hwcs[HeaderKey.CD1_1.value]

@@ -5,7 +5,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
 
-from .astro import get_scale, get_ccw, radec_to_altaz, radec_to_ecl, radec_to_gal, radec_to_moon_sun
+from .astro import date_to_jd, get_scale, get_ccw, radec_to_altaz, radec_to_ecl, radec_to_gal, radec_to_moon_sun
 from ..instrument_config_parser import HeaderKey
 from ..logger.hierarchical_logging import setup_logger
 
@@ -66,7 +66,7 @@ def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude
         imheader[v] = h_wcs[v]
 
     w = WCS(h_wcs)
-    ra, dec = w.wcs_pix2world(imheader[HeaderKey.NAXIS1.value] // 2, imheader[HeaderKey.NAXIS2.value] // 2, 1)
+    ra, dec = w.wcs_pix2world(imheader['NAXIS1'] // 2, imheader['NAXIS2'] // 2, 1)
     ra = ra.tolist()
     dec = dec.tolist()
 
@@ -78,8 +78,8 @@ def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude
     lonecl, latecl = radec_to_ecl(ra, dec)
     scale = np.round(get_scale(imheader), 3)
     ccw = np.round(get_ccw(imheader), 1)
-    fovx = np.round(imheader[HeaderKey.NAXIS1.value] * scale / 60, 2)
-    fovy = np.round(imheader[HeaderKey.NAXIS2.value] * scale / 60, 2)
+    fovx = np.round(imheader['NAXIS1'] * scale / 60, 2)
+    fovy = np.round(imheader['NAXIS2'] * scale / 60, 2)
 
     # Usar .get() para evitar KeyError
     imheader.insert('COMINIT', ('RA', ra, header_descriptions.get('RA', '')))
@@ -104,6 +104,14 @@ def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude
     imheader.insert('COMINIT', ('MOONDIST', distance_to_moon, header_descriptions.get('MOONDIST', '')))
     imheader.insert('COMINIT', ('SUNALT', sun_alt, header_descriptions.get('SUNALT', '')))
     imheader.insert('COMINIT', ('SUNAZ', sun_az, header_descriptions.get('SUNAZ', '')))
+
+    if 'JD' not in imheader:
+        try:
+            jd, mjd = date_to_jd(imheader[HeaderKey.DATE_OBS.value])
+            imheader.insert('PCDATE', ('JD-OBS', jd, header_descriptions.get('JD-OBS', '')))
+            imheader.insert('PCDATE', ('MJD-OBS', mjd, header_descriptions.get('MJD-OBS', '')))
+        except:
+            pass
 
     del imheader['COMINIT']
 
