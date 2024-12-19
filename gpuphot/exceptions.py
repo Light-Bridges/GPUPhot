@@ -32,6 +32,13 @@ class ImageQualityError(GPUPhotError):
         self.message = message
         super().__init__(self.message)
 
+class UnableToAstrometrizeError(GPUPhotError):
+    """Exception raised when the astrometry process fails due to inability to astrometrize."""
+
+    def __init__(self, message="Unable to astrometrize the image"):
+        self.message = message
+        super().__init__(self.message)
+
 
 def capture_cuda_exception(func):
     """Decorator to capture CUDA exceptions and retry on illegal address error."""

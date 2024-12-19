@@ -153,31 +153,49 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
                     header_content = f.read()
                 imheader = fits.Header.fromstring(header_content)
             else:
-                imheader = fits.Header()
+                raise ValueError(f"Header file not found for NPY file: {file_path}, expected header file: {header_file}")
+        else:
+            raise ValueError(f"Unsupported file format: {file_path}. Only FITS and NPY files are supported.")
 
-        dfm, original_header = processor.process_image(imdata, imheader)
-
-        # TODO - Check if image is photometrized correctly... dfm is not None
-        # - Save dfm to a file
+        phot_df, hwcs= processor.process_image(imdata, imheader)
 
         dateproc = datetime.now().replace(tzinfo=pytz.UTC)
-        original_header['DATEPROC'] = (dateproc.strftime('%Y-%m-%dT%H:%M:%S.%f'), 'Date and time of processing')
+        hwcs['DATEPROC'] = (dateproc.strftime('%Y-%m-%dT%H:%M:%S.%f'), 'Date and time of processing')
 
-        if overwrite:
-            output_path = file_path
+        if file_path.endswith('.fits'):
+            if overwrite:
+                output_path = file_path
+            else:
+                file_name, file_extension = os.path.splitext(file_path)
+                output_path = f"{file_name}_photometrized{file_extension}"
+
+            # Create reduced image fits
+            photometrized_image = fits.PrimaryHDU(data=imdata.astype(np.float32), header=hwcs)
+            photometrized_image.writeto(output_path, overwrite=overwrite)
+
+        elif file_path.endswith('.npy'):
+            if overwrite:
+                output_path = file_path
+                header_output_path = file_path.rsplit('.', 1)[0] + '.txt'
+            else:
+                file_name, file_extension = os.path.splitext(file_path)
+                output_path = f"{file_name}_photometrized{file_extension}"
+                header_output_path = f"{file_name}_photometrized.txt"
+
+            # Save the processed numpy array
+            np.save(output_path, imdata.astype(np.float32))
+
+            # Save the updated header
+            hwcs.totextfile(header_output_path, overwrite=True)
+
         else:
-            file_name, file_extension = os.path.splitext(file_path)
-            output_path = f"{file_name}_photometrized{file_extension}"
-
-        # Create reduced image fits
-        photometrized_image = fits.PrimaryHDU(data=imdata.astype(np.float32), header=original_header)
-        photometrized_image.writeto(output_path, overwrite=overwrite)
+            raise ValueError(f"Unsupported file format: {file_path}. Only FITS and NPY files are supported.")
 
         return {
             'file': image_path,
             'output_file': os.path.relpath(output_path, base_path),
-            'dfm': dfm,
-            'header': dict(original_header)
+            'phot_df': phot_df,
+            'hwcs': dict(hwcs)
         }
     except Exception as e:
         error_message = f"Error processing file {image_path}: {str(e)}"

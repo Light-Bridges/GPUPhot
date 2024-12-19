@@ -13,7 +13,7 @@ from cupyx.scipy.ndimage import convolve, label, sum as nd_sum, mean as nd_mean,
 from .conv import fill_image, fill_nan_fft, get_aper_kernel, convolve_fft, gen_apm_filter
 from .psf import create_coeff_map, create_star_dataset, detect_isolated_stars, detect_sources_psf, fit_moffat, \
     get_eigen_psfs, group_star_dataset, project_all_stars_onto_eigenpsfs, recreate_normed_star
-from ..exceptions import InsufficientStarsError, MoffatFitError, capture_cuda_exception
+from ..exceptions import InsufficientStarsError, MoffatFitError, capture_cuda_exception, UnableToAstrometrizeError
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 from ..phot.background import get_local_background_fft
 from ..stats.reduction import stack_sigmaclip
@@ -358,6 +358,9 @@ def process_image(imdata, imheader, header_descriptions=None, **kwargs):
         # tile_section_psf=params['tile_section_psf'],
         **params
     )
+
+    if dfm is None:
+        raise UnableToAstrometrizeError()
 
     # Update header
     imheader = update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude, site_elevation, date_obs,
