@@ -66,7 +66,7 @@ def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude
         imheader[v] = h_wcs[v]
 
     w = WCS(h_wcs)
-    ra, dec = w.wcs_pix2world(imheader['NAXIS1'] // 2, imheader['NAXIS2'] // 2, 1)
+    ra, dec = w.wcs_pix2world(imheader[HeaderKey.NAXIS1.value] // 2, imheader[HeaderKey.NAXIS2.value] // 2, 1)
     ra = ra.tolist()
     dec = dec.tolist()
 
@@ -78,8 +78,8 @@ def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude
     lonecl, latecl = radec_to_ecl(ra, dec)
     scale = np.round(get_scale(imheader), 3)
     ccw = np.round(get_ccw(imheader), 1)
-    fovx = np.round(imheader['NAXIS1'] * scale / 60, 2)
-    fovy = np.round(imheader['NAXIS2'] * scale / 60, 2)
+    fovx = np.round(imheader[HeaderKey.NAXIS1.value] * scale / 60, 2)
+    fovy = np.round(imheader[HeaderKey.NAXIS2.value] * scale / 60, 2)
 
     # Usar .get() para evitar KeyError
     imheader.insert('COMINIT', ('RA', ra, header_descriptions.get('RA', '')))
