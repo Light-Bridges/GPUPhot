@@ -13,8 +13,9 @@ class ImageProcessor:
         :param config_dir: Directory where configuration files are located (optional).
                            If not provided, the default directory will be used.
         """
-        config_parser = InstrumentConfigParser(config_dir)
-        self.config = config_parser.get_config(instrument_name)
+        self.instrument_name = instrument_name
+        self.config_parser = InstrumentConfigParser(config_dir)
+        self.config = self.config_parser.get_config(instrument_name)
         self.processing_params = self.config['processing_params']
         self.camera_params = self.config['camera_specs']
         self.header_translator = self.config['header_translator']

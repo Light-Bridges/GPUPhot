@@ -154,7 +154,7 @@ class SystemInfo:
             }
 
         except Exception as e:
-            print(f"Error al obtener la información de Git: {e}")
+            # print(f"Error al obtener la información de Git: {e}")
             return None
 
     def get_gpu_info(self):
