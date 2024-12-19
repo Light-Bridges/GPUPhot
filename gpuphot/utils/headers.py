@@ -5,7 +5,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
 
-from .astro import get_scale, get_ccw, radec_to_altaz, radec_to_ecl, radec_to_gal, radec_to_moon_sun
+from .astro import date_to_jd, get_scale, get_ccw, radec_to_altaz, radec_to_ecl, radec_to_gal, radec_to_moon_sun
 from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
@@ -103,6 +103,14 @@ def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude
     imheader.insert('COMINIT', ('MOONDIST', distance_to_moon, header_descriptions.get('MOONDIST', '')))
     imheader.insert('COMINIT', ('SUNALT', sun_alt, header_descriptions.get('SUNALT', '')))
     imheader.insert('COMINIT', ('SUNAZ', sun_az, header_descriptions.get('SUNAZ', '')))
+
+    if 'JD' not in imheader:
+        try:
+            jd, mjd = date_to_jd(imheader['DATE-OBS'])
+            imheader.insert('PCDATE', ('JD-OBS', jd, header_descriptions.get('JD-OBS', '')))
+            imheader.insert('PCDATE', ('MJD-OBS', mjd, header_descriptions.get('MJD-OBS', '')))
+        except:
+            pass
 
     del imheader['COMINIT']
 
