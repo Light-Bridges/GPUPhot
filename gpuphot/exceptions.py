@@ -49,6 +49,14 @@ class AstrometrizationTimeoutError(GPUPhotError):
         super().__init__(self.message)
 
 
+class DataValidationError(GPUPhotError):
+    """Exception raised when input data is invalid or insufficient."""
+
+    def __init__(self, message="Input data is invalid or insufficient"):
+        self.message = message
+        super().__init__(self.message)
+
+
 class InvalidGroupSizeError(GPUPhotError):
     """Exception raised when the average or minimum group size is invalid."""
 

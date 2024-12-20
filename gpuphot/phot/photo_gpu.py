@@ -14,7 +14,8 @@ from ..instrument_config_parser import HeaderKey
 from .conv import fill_image, fill_nan_fft, get_aper_kernel, convolve_fft, gen_apm_filter
 from .psf import create_coeff_map, create_star_dataset, detect_isolated_stars, detect_sources_psf, fit_moffat, \
     get_eigen_psfs, group_star_dataset, project_all_stars_onto_eigenpsfs, recreate_normed_star
-from ..exceptions import InsufficientStarsError, MoffatFitError, capture_cuda_exception, UnableToAstrometrizeError
+from ..exceptions import InsufficientStarsError, MoffatFitError, capture_cuda_exception, UnableToAstrometrizeError, \
+    DataValidationError
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 from ..phot.background import get_local_background_fft
 from ..stats.reduction import stack_sigmaclip
@@ -467,6 +468,10 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
     # Find optimal aperture radius
     opt_radii_idx = np.argmax(center_isolated_snr, axis=0)
     opt_radii = radii[opt_radii_idx]
+
+    if len(center_conv_snr) == 0 or len(opt_radii) == 0:
+        raise DataValidationError("center_conv_snr or opt_radii is empty. Ensure valid data is provided.")
+
     pov = np.polyfit(np.log10(center_conv_snr), np.log10(opt_radii), 1, cov=False)
 
     # Calculate optimal flux and noise
