@@ -181,7 +181,7 @@ def group_star_dataset(coords: np.ndarray, avg_group_size: int = 10, min_group_s
     """
 
     # Validar parámetros de entrada
-    if avg_group_size <= 0 or min_group_size <= 0:
+    if avg_group_size <= 0 and min_group_size <= 0:
         raise InvalidGroupSizeError(avg_group_size, min_group_size)
 
     n_stars = len(coords)
