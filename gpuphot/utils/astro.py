@@ -14,6 +14,7 @@ from astropy.time import Time
 from sklearn.linear_model import RANSACRegressor
 
 from .catalog import crossmatch_sources
+from ..exceptions import AstrometrizationTimeoutError
 from ..instrument_config_parser import HeaderKey
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 from ..stats.reduction import weighted_mean_std
@@ -93,8 +94,8 @@ def logodds_callback_100(logodds):
 
 
 def handler(signum, frame):
-    print("Astrometrization timeout!")
-    raise Exception("end of time")
+    logger.info("Astrometrization timeout!")
+    raise AstrometrizationTimeoutError("End of time for astrometrization")
 
 
 @hierarchical_debug(logger)

@@ -32,10 +32,14 @@ def delete_header_from(header, val):
 
 def get_if_header_already_post_processed(header, postprocess):
     comments = list()
-    for comment in header["COMMENT"]:
-        comments.append(comment.strip("   "))
-    comments = set(comments)
-    return postprocess in comments
+
+    if 'COMMENT' in header:
+        for comment in header['COMMENT']:
+            comments.append(comment.strip("   "))
+        comments = set(comments)
+        return postprocess in comments
+    else:
+        return False
 
 
 def deg_to_hms(RA, DEC):

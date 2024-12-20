@@ -9,6 +9,7 @@ from scipy.spatial.distance import cdist
 
 from .conv import gaussian_kernel, convolve_fft, fill_nan_fft
 from .utils import calculate_tile_nanmean_sigclip, decompose_into_tiles, recompose_from_percentiles
+from ..exceptions import InvalidGroupSizeError
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 
 logger = setup_logger(__name__)
@@ -179,18 +180,29 @@ def group_star_dataset(coords: np.ndarray, avg_group_size: int = 10, min_group_s
     :return: Array of labels indicating the cluster each star belongs to.
     """
 
-    # create clusters
-    avg_group_size = max(min_group_size, avg_group_size)
+    # Validar parámetros de entrada
+    if avg_group_size <= 0 or min_group_size <= 0:
+        raise InvalidGroupSizeError(avg_group_size, min_group_size)
+
     n_stars = len(coords)
+
+    # Manejar el caso donde no hay estrellas
+    if n_stars == 0:
+        return np.array([])  # Devuelve un array vacío si no hay estrellas
+
+    # Crear clusters
+    avg_group_size = max(min_group_size, avg_group_size)
     num_clusters = max(1, n_stars // avg_group_size)
+
     clustering = AgglomerativeClustering(n_clusters=num_clusters)
     labels = clustering.fit_predict(coords)
+
     groups = {i: coords[labels == i] for i in np.unique(labels)}
 
     # ensure minimum group size
     valid_groups = {}
     small_groups = []
-    
+
     for group_id, stars in groups.items():
         if len(stars) >= min_group_size:
             valid_groups[group_id] = stars

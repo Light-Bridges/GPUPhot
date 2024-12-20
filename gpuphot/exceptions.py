@@ -32,11 +32,30 @@ class ImageQualityError(GPUPhotError):
         self.message = message
         super().__init__(self.message)
 
+
 class UnableToAstrometrizeError(GPUPhotError):
     """Exception raised when the astrometry process fails due to inability to astrometrize."""
 
     def __init__(self, message="Unable to astrometrize the image"):
         self.message = message
+        super().__init__(self.message)
+
+
+class AstrometrizationTimeoutError(GPUPhotError):
+    """Exception raised when the astrometrization process times out."""
+
+    def __init__(self, message="Astrometrization process has timed out"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class InvalidGroupSizeError(GPUPhotError):
+    """Exception raised when the average or minimum group size is invalid."""
+
+    def __init__(self, avg_group_size, min_group_size, message="Invalid group size parameters"):
+        self.avg_group_size = avg_group_size
+        self.min_group_size = min_group_size
+        self.message = f"{message}. avg_group_size: {avg_group_size}, min_group_size: {min_group_size}."
         super().__init__(self.message)
 
 
@@ -64,26 +83,22 @@ def capture_cuda_exception(func):
                         logger.critical("Exiting due to CUDA error in Docker container.")
                         sys.exit('Exiting due to CUDA error.')
                     else:
-                        # Solo mostrar advertencia si no es el último intento
-                        if attempt < max_retries - 1:
-                            logger.warning("CUDA error detected, but not running in Docker. Retrying...")
-                        else:
-                            logger.error("Max retries reached. Exiting due to CUDA error.")
+                        logger.error("Max retries reached. Exiting due to CUDA error.")
+                        raise  # Permitir que se propague el error para manejarlo más arriba
                 else:
-                    # Solo mostrar advertencia si no es el último intento
                     if attempt < max_retries - 1:
-                        logger.warning(f"A non-critical CUDA error occurred in {func.__name__}: {e}. Retrying...")
+                        logger.warning(f"CUDA error detected: {e}. Retrying...")
+                        continue  # Intentar nuevamente si hay más reintentos
                     else:
-                        logger.error(f"Max retries reached for {func.__name__}. Exiting.")
-                        return None
-                    continue
+                        logger.error("Max retries reached for non-critical CUDA error. Raising exception.")
+                        raise  # Lanzar excepción si se han agotado los reintentos
 
             except Exception as e:
                 logger.error(f"An unexpected error occurred in {func.__name__}: {e}")
-                return None
+                raise  # Permitir que se propague cualquier otro tipo de excepción
 
-        logger.debug(f"Max retries reached for {func.__name__}. Returning None.")
-        return None
+        logger.debug(f"Max retries reached for {func.__name__}.")
+        return None  # Esto puede ser opcional dependiendo de cómo quieras manejar los retornos
 
     return wrapper
 
