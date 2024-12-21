@@ -1,3 +1,11 @@
+version: '3.8'
+
+x-celery-env: &celery-env
+  CELERY_BROKER_URL: redis://redis:6379/0
+  CELERY_RESULT_BACKEND: rpc://
+
+
+
 services:
   redis:
     image: redis:alpine
@@ -9,13 +17,16 @@ services:
       context: .
       dockerfile: Dockerfile
       target: worker
+    env_file:
+      - path: ./.env
+        required: false
     environment:
-      - INSTRUMENT_NAME=${INSTRUMENT_NAME:-default}
-      - INSTRUMENT_CONFIG_BASE_PATH=/gpuphot/instrument_configs
-      - IMAGE_BASE_PATH=/data/images
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - GPU_ID=${GPU_ID:-0}
-      - GPUPHOT_GPU_ID=${GPUPHOT_GPU_ID:-0}
+      <<: *celery-env
+      INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
+      INSTRUMENT_CONFIG_BASE_PATH: /gpuphot/instrument_configs
+      IMAGE_BASE_PATH: /data/images
+      GPU_ID: ${GPU_ID:-0}
+#      GPUPHOT_GPU_ID: ${GPUPHOT_GPU_ID:-0}
     volumes:
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/gpuphot/instrument_configs:z
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
@@ -28,8 +39,8 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              device_ids: ["${GPU_ID:-0}"]
-              capabilities: [gpu]
+              device_ids: [ "${GPU_ID:-0}" ]
+              capabilities: [ gpu ]
 
   lab:
     build:
@@ -39,12 +50,12 @@ services:
     ports:
       - "8888:8888"
     environment:
-      - JUPYTER_ENABLE_LAB=yes
-      - INSTRUMENT_NAME=${INSTRUMENT_NAME:-default}
-      - INSTRUMENT_CONFIG_BASE_PATH=/home/jovyan/instrument_configs
-      - IMAGE_BASE_PATH=/home/jovyan/images
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - GPUPHOT_GPU_ID=${GPUPHOT_GPU_ID:-0}
+      <<: *celery-env
+      JUPYTER_ENABLE_LAB: "yes"
+      INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
+      INSTRUMENT_CONFIG_BASE_PATH: /home/jovyan/instrument_configs
+      IMAGE_BASE_PATH: /home/jovyan/images
+#      GPUPHOT_GPU_ID: ${GPUPHOT_GPU_ID:-0}
     volumes:
       - ./notebooks:/home/jovyan/work:z
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/home/jovyan/instrument_configs:z
@@ -64,9 +75,8 @@ services:
       dockerfile: Dockerfile
       target: worker
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND= redis://redis:6379/0
-      - FLOWER_PORT=5555
+      <<: *celery-env
+      FLOWER_PORT: 5555
     ports:
       - "5555:5555"
     depends_on:
@@ -82,5 +92,5 @@ services:
               capabilities: [ gpu ]
 
 volumes:
-    astrometry_cache:
-      driver: local
+  astrometry_cache:
+    driver: local

@@ -266,7 +266,7 @@ def setup_logstash_handler(logger):
     logstash_host = os.environ.get('LOGSTASH_HOST', 'localhost')
     logstash_port = int(os.environ.get('LOGSTASH_PORT', 5000))
 
-    if os.environ.get('LOGSTASH_LOGGING', 'True').lower() == 'true':
+    if os.environ.get('LOGSTASH_LOGGING', 'False').lower() == 'true':
         try:
             formatter = LogstashFormatter(
                 extra_prefix='extra',

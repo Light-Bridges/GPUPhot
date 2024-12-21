@@ -13,6 +13,17 @@ from gpuphot.logger.hierarchical_logging import setup_logger
 logger = setup_logger(__name__)
 
 
+class TaskError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return self.message
+
+    def __reduce__(self):
+        return (self.__class__, (self.message,))
+
+
 def get_processor(instrument_name=None):
     """
     Create a processor with optional custom instrument and configuration path.
@@ -153,11 +164,12 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
                     header_content = f.read()
                 imheader = fits.Header.fromstring(header_content)
             else:
-                raise ValueError(f"Header file not found for NPY file: {file_path}, expected header file: {header_file}")
+                raise ValueError(
+                    f"Header file not found for NPY file: {file_path}, expected header file: {header_file}")
         else:
             raise ValueError(f"Unsupported file format: {file_path}. Only FITS and NPY files are supported.")
 
-        phot_df, hwcs= processor.process_image(imdata, imheader)
+        phot_df, hwcs = processor.process_image(imdata, imheader)
 
         dateproc = datetime.now().replace(tzinfo=pytz.UTC)
         hwcs['DATEPROC'] = (dateproc.strftime('%Y-%m-%dT%H:%M:%S.%f'), 'Date and time of processing')
@@ -208,5 +220,4 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
         }
 
         self.update_state(state='FAILURE', meta=result)
-
-        raise Exception(error_message)
+        raise TaskError(error_message)
