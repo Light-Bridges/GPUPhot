@@ -9,19 +9,9 @@ from celery import shared_task
 
 from gpuphot.image_processor import create_processor
 from gpuphot.logger.hierarchical_logging import setup_logger
+from gpuphot_worker.celery_exceptions import BaseTaskWithFailureHandling, SerializableTaskError
 
 logger = setup_logger(__name__)
-
-
-class TaskError(Exception):
-    def __init__(self, message):
-        self.message = message
-
-    def __str__(self):
-        return self.message
-
-    def __reduce__(self):
-        return (self.__class__, (self.message,))
 
 
 def get_processor(instrument_name=None):
@@ -111,7 +101,7 @@ def process_directory_task(path=None, filename=None, instrument_name=None, overw
     return {'task_ids': results}
 
 
-@shared_task(bind=True)  # Usar bind=True para acceder a self
+@shared_task(bind=True, base=BaseTaskWithFailureHandling)  # Usar bind=True para acceder a self
 def process_image_task(self, image_path, instrument_name=None, overwrite=False):
     """
     Process a single astronomical image file (FITS or NPY).
@@ -211,13 +201,11 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
         }
     except Exception as e:
         error_message = f"Error processing file {image_path}: {str(e)}"
-        logger.error(error_message)
-
-        result = {
-            'file': image_path,
-            'error': error_message,
-            'status': 'failed'
-        }
-
-        self.update_state(state='FAILURE', meta=result)
-        raise TaskError(error_message)
+        self.update_state(
+            state="FAILURE",
+            meta={
+                "exc_type": e.__class__.__name__,
+                "error_message": error_message,
+            },
+        )
+        raise SerializableTaskError(error_message, exc_type=e.__class__.__name__)

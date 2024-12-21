@@ -4,6 +4,14 @@ import os
 # You can set these values in your .env file and reference them in docker-compose.yml
 # for the gpuphot_worker service using environment variables
 
+result_extended = True
+task_serializer = 'json'
+result_serializer = 'json'
+accept_content = ['json']
+result_expires = 24 * 3600
+worker_max_tasks_per_child = 1
+# worker_max_memory_per_child = 500000
+
 # Override settings with environment variables
 for key, value in os.environ.items():
     if key.startswith('CELERY_'):

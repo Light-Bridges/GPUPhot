@@ -1,16 +1,25 @@
 version: '3.8'
 
 x-celery-env: &celery-env
-  CELERY_BROKER_URL: redis://redis:6379/0
-  CELERY_RESULT_BACKEND: rpc://
-
-
+  CELERY_BROKER_URL: amqp://gpuphot:gpuphot@rabbitmq:5672/
+  CELERY_RESULT_BACKEND: redis://redis:6379/0
 
 services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: gpuphot
+      RABBITMQ_DEFAULT_PASS: gpuphot
+    restart: unless-stopped
+
   redis:
-    image: redis:alpine
+    image: redis:6-alpine
     ports:
       - "6379:6379"
+    restart: unless-stopped
 
   gpuphot_worker:
     build:
@@ -26,12 +35,12 @@ services:
       INSTRUMENT_CONFIG_BASE_PATH: /gpuphot/instrument_configs
       IMAGE_BASE_PATH: /data/images
       GPU_ID: ${GPU_ID:-0}
-#      GPUPHOT_GPU_ID: ${GPUPHOT_GPU_ID:-0}
     volumes:
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/gpuphot/instrument_configs:z
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
       - ${ASTROMETRY_CACHE_PATH:-astrometry_cache}:/data/astrometry_cache:z
     depends_on:
+      - rabbitmq
       - redis
     command: [ "celery", "-A", "gpuphot_worker.worker_app", "worker", "-c", "${CELERY_CONCURRENCY:-1}", "-n", "gpuphot-worker-${GPU_ID:-0}", "--soft-time-limit", "240", "--time-limit", "300" ]
     deploy:
@@ -41,6 +50,7 @@ services:
             - driver: nvidia
               device_ids: [ "${GPU_ID:-0}" ]
               capabilities: [ gpu ]
+    restart: unless-stopped
 
   lab:
     build:
@@ -55,7 +65,6 @@ services:
       INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
       INSTRUMENT_CONFIG_BASE_PATH: /home/jovyan/instrument_configs
       IMAGE_BASE_PATH: /home/jovyan/images
-#      GPUPHOT_GPU_ID: ${GPUPHOT_GPU_ID:-0}
     volumes:
       - ./notebooks:/home/jovyan/work:z
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/home/jovyan/instrument_configs:z
@@ -68,29 +77,22 @@ services:
             - driver: nvidia
               count: all
               capabilities: [ gpu ]
+    restart: unless-stopped
 
   flower:
     build:
       context: .
       dockerfile: Dockerfile
-      target: worker
+      target: flower
     environment:
       <<: *celery-env
+      NVIDIA_VISIBLE_DEVICES: "none"
+      NVIDIA_DRIVER_CAPABILITIES: ""
       FLOWER_PORT: 5555
     ports:
       - "5555:5555"
     depends_on:
+      - rabbitmq
       - redis
-      - gpuphot_worker
     command: [ "celery", "-A", "gpuphot_worker.worker_app", "flower" ]
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [ gpu ]
-
-volumes:
-  astrometry_cache:
-    driver: local
+    restart: unless-stopped
