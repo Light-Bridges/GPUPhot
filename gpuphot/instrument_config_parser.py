@@ -39,6 +39,12 @@ class HeaderKey(Enum):
     CD2_2 = "CD2_2"
 
 
+class ImageReduction(Enum):
+    NEVER = "never"
+    ALWAYS = "always"
+    ON_FAILURE = "on_failure"
+
+
 class DefaultConfig:
     DEFAULT_HEADER_KEYWORDS = {
         "exposure_time": HeaderKey.EXPT1.value,
@@ -107,6 +113,13 @@ class DefaultConfig:
         'lum_gmag_coeff': 0.5,
         'lum_rmag_coeff': 0.5,
         'color_range': 0.6,
+    }
+
+    DEFAULT_IMAGE_REDUCTION = {
+        "apply_reduction": ImageReduction.NEVER.value,
+        "binning": 2,
+        "crop_size": None,
+        "center": None
     }
 
 
@@ -193,7 +206,8 @@ class InstrumentConfigParser:
         self.base_config = {
             "header_keywords": DefaultConfig.DEFAULT_HEADER_KEYWORDS.copy(),
             "camera_specs": DefaultConfig.DEFAULT_CAMERA_SPECS.copy(),
-            "processing_params": DefaultConfig.DEFAULT_PROCESSING_PARAMS.copy()
+            "processing_params": DefaultConfig.DEFAULT_PROCESSING_PARAMS.copy(),
+            "image_reduction": DefaultConfig.DEFAULT_IMAGE_REDUCTION.copy()
         }
 
     def _load_json_config(self, file_name):

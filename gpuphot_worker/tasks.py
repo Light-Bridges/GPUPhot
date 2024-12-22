@@ -2,31 +2,15 @@ import os
 from datetime import datetime
 from glob import glob
 
-import numpy as np
 import pytz
-from astropy.io import fits
 from celery import shared_task
 
-from gpuphot.image_processor import create_processor
+from gpuphot.instrument_config_parser import ImageReduction
 from gpuphot.logger.hierarchical_logging import setup_logger
-from gpuphot_worker.celery_exceptions import BaseTaskWithFailureHandling, SerializableTaskError
+from gpuphot_worker.celery_exceptions import SerializableTaskError, BaseTaskWithFailureHandling
+from gpuphot_worker.utils import get_processor, open_image_file, save_processed_image, crop_and_bin_image
 
 logger = setup_logger(__name__)
-
-
-def get_processor(instrument_name=None):
-    """
-    Create a processor with optional custom instrument and configuration path.
-
-    Args:
-        instrument_name (str, optional): Name of the instrument to use.
-
-    Returns:
-        processor: Configured image processor
-    """
-    instrument_name = instrument_name or os.environ.get('INSTRUMENT_NAME', 'default_instrument')
-    config_base_path = os.environ.get('INSTRUMENT_CONFIG_BASE_PATH', '/app/gpuphot/instrument_configs')
-    return create_processor(instrument_name, config_base_path)
 
 
 @shared_task
@@ -101,7 +85,7 @@ def process_directory_task(path=None, filename=None, instrument_name=None, overw
     return {'task_ids': results}
 
 
-@shared_task(bind=True, base=BaseTaskWithFailureHandling)  # Usar bind=True para acceder a self
+@shared_task(bind=True, base=BaseTaskWithFailureHandling)
 def process_image_task(self, image_path, instrument_name=None, overwrite=False):
     """
     Process a single astronomical image file (FITS or NPY).
@@ -109,96 +93,89 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
     This task is designed to be called by process_directory_task for each individual image,
     but can also be used independently to process a single image file.
 
+    Key Features:
+    - Supports image processing with configurable reduction
+    - Handles different image reduction strategies
+    - Generates processing metadata
+
     Args:
         image_path (str): Path to the image file to be processed.
-        instrument_name (str, optional): Name of the instrument to use for processing.
+        instrument_name (str, optional): Name of the instrument for processing.
                                          If None, uses the default instrument.
-        overwrite (bool, optional): If True, overwrites the original file.
-                                    If False, creates a new file with '_photometrized' suffix.
-                                    Defaults to False.
+        overwrite (bool, optional):
+            - True: Overwrites the original file
+            - False: Creates a new file with '_photometrized' suffix
+            Default: False
 
     Returns:
-        dict: A dictionary containing the processing results or error information.
-              If successful, the dictionary includes:
-                - 'file': Relative path of the original file
-                - 'output_file': Relative path of the processed file
-                - 'dfm': Processed image data
-                - 'header': Dictionary of the image header
-              If an error occurs, the dictionary includes:
-                - 'file': Relative path of the file that caused the error
-                - 'error': Description of the error
-                - 'status': 'failed'
+        dict: Processing results with the following keys:
+            On successful processing:
+            - 'input_file': Relative path of the original file
+            - 'process_file': Relative path of the processed file
+            - 'output_file': Output path of the processed file
+            - 'phot_df': Photometric data DataFrame
+            - 'hwcs': WCS header dictionary
+
+            On error:
+            - 'input_file': Path of the file that caused the error
+            - 'error': Error description
+            - 'status': 'failed'
 
     Raises:
-        Exception: Raises an exception with error details if processing fails.
+        SerializableTaskError: Serializable exception with error details
+        MemoryError: If memory issues occur during processing
 
-    Note:
-        This task uses the instrument configuration specified by instrument_name
-        to process the image. It can handle both FITS and NPY file formats.
+    Reduction Strategies:
+    - 'never': Default behavior, no reduction applied
+    - 'always': Apply reduction always
+    - 'on_failure': Apply reduction only if initial processing fails by memory
     """
+
     base_path = os.environ.get('IMAGE_BASE_PATH', '/app/images')
     processor = get_processor(instrument_name)
 
-    file_path = os.path.join(base_path, image_path)
+    reduction_config = processor.config['image_reduction']
+    apply_reduction = reduction_config['apply_reduction']
 
-    try:
-        if file_path.endswith('.fits'):
-            with fits.open(file_path) as hdul:
-                imdata = hdul[0].data
-                imheader = hdul[0].header
-        elif file_path.endswith('.npy'):
-            imdata = np.load(file_path)
-            header_file = file_path.rsplit('.', 1)[0] + '.txt'
-            if os.path.exists(header_file):
-                with open(header_file, 'r') as f:
-                    header_content = f.read()
-                imheader = fits.Header.fromstring(header_content)
-            else:
-                raise ValueError(
-                    f"Header file not found for NPY file: {file_path}, expected header file: {header_file}")
-        else:
-            raise ValueError(f"Unsupported file format: {file_path}. Only FITS and NPY files are supported.")
-
+    def call_process_image(file_path):
+        # Intenta procesar la imagen normalmente
+        imdata, imheader = open_image_file(file_path)
         phot_df, hwcs = processor.process_image(imdata, imheader)
 
+        # Añade la fecha de procesamiento al encabezado
         dateproc = datetime.now().replace(tzinfo=pytz.UTC)
         hwcs['DATEPROC'] = (dateproc.strftime('%Y-%m-%dT%H:%M:%S.%f'), 'Date and time of processing')
 
-        if file_path.endswith('.fits'):
-            if overwrite:
-                output_path = file_path
-            else:
-                file_name, file_extension = os.path.splitext(file_path)
-                output_path = f"{file_name}_photometrized{file_extension}"
-
-            # Create reduced image fits
-            photometrized_image = fits.PrimaryHDU(data=imdata.astype(np.float32), header=hwcs)
-            photometrized_image.writeto(output_path, overwrite=overwrite)
-
-        elif file_path.endswith('.npy'):
-            if overwrite:
-                output_path = file_path
-                header_output_path = file_path.rsplit('.', 1)[0] + '.txt'
-            else:
-                file_name, file_extension = os.path.splitext(file_path)
-                output_path = f"{file_name}_photometrized{file_extension}"
-                header_output_path = f"{file_name}_photometrized.txt"
-
-            # Save the processed numpy array
-            np.save(output_path, imdata.astype(np.float32))
-
-            # Save the updated header
-            hwcs.totextfile(header_output_path, overwrite=True)
-
-        else:
-            raise ValueError(f"Unsupported file format: {file_path}. Only FITS and NPY files are supported.")
+        # Guarda la imagen procesada
+        output_path = save_processed_image(file_path, imdata, hwcs, overwrite)
 
         return {
-            'file': image_path,
+            'input_file': image_path,
+            'process_file': os.path.relpath(file_path, base_path),
             'output_file': os.path.relpath(output_path, base_path),
             'phot_df': phot_df,
             'hwcs': dict(hwcs)
         }
+
+    try:
+        file_path = os.path.join(base_path, image_path)
+
+        if apply_reduction == ImageReduction.ALWAYS.value:
+            return call_process_image(
+                file_path=crop_and_bin_image(file_path, base_path, reduction_config['binning'],
+                                             reduction_config['crop_size'], reduction_config['center'])
+            )
+
+        return call_process_image(file_path)
+
+    except MemoryError:
+        if apply_reduction == ImageReduction.ON_FAILURE.value:
+            return call_process_image(
+                file_path=crop_and_bin_image(file_path, base_path, reduction_config['binning'],
+                                             reduction_config['crop_size'], reduction_config['center'])
+            )
+        else:
+            raise
     except Exception as e:
         error_message = f"Error processing file {image_path}: {str(e)}"
         self.update_state(
