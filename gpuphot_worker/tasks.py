@@ -1,10 +1,12 @@
 import os
+import re
 from datetime import datetime
 from glob import glob
 
 import pytz
 from celery import shared_task
 
+import gpuphot.utils.gpu
 from gpuphot.instrument_config_parser import ImageReduction
 from gpuphot.logger.hierarchical_logging import setup_logger
 from gpuphot_worker.celery_exceptions import SerializableTaskError, BaseTaskWithFailureHandling
@@ -13,10 +15,24 @@ from gpuphot_worker.utils import get_processor, open_image_file, save_processed_
 logger = setup_logger(__name__)
 
 
+def task_error_handler(task, e, image_path):
+    error_message = f"Error processing file {image_path}: {str(e)}"
+    logger.error(error_message)
+
+    task.update_state(
+        state="FAILURE",
+        meta={
+            "exc_type": e.__class__.__name__,
+            "error_message": error_message,
+        },
+    )
+    raise SerializableTaskError(error_message, exc_type=e.__class__.__name__)
+
+
 @shared_task
-def process_directory_task(path=None, filename=None, instrument_name=None, overwrite=False):
+def process_directory_task(path=None, filename=None, instrument_name=None, overwrite=False, exclude_pattern=None):
     """
-        Process astronomical images (FITS and NPY) with flexible search and configuration options.
+    Process astronomical images (FITS and NPY) with flexible search and configuration options.
 
         This task searches for images based on the given criteria and initiates individual
         processing tasks for each image found.
@@ -43,20 +59,23 @@ def process_directory_task(path=None, filename=None, instrument_name=None, overw
         6. Process and overwrite original files:
            process_directory_task.delay(path='today', overwrite=True)
 
-        Args:
-            path (str, optional): Subdirectory to search for images.
-                                  If None, searches in base image path.
-            filename (str, optional): Specific filename or pattern to match.
-                                      Supports partial matches and wildcards.
-            instrument_name (str, optional): Override default instrument name.
-            overwrite (bool, optional): If True, overwrites original files.
-                                        If False, creates new files with '_photometrized' suffix.
-                                        Defaults to False.
+    Args:
+        path (str, optional): Subdirectory to search for images.
+                              If None, searches in base image path.
+        filename (str, optional): Specific filename or pattern to match.
+                                  Supports partial matches and wildcards.
+        instrument_name (str, optional): Override default instrument name.
+        overwrite (bool, optional): If True, overwrites original files.
+                                    If False, creates new files with '_photometrized' suffix.
+                                    Defaults to False.
+        exclude_pattern (str, optional): Regular expression pattern to exclude certain filenames.
 
-        Returns:
-            dict: A dictionary containing 'task_ids', a list of task IDs for the
-                  individual image processing tasks that were initiated.
-        """
+    Returns:
+        dict: A dictionary containing 'task_ids', a list of task IDs for the
+              individual image processing tasks that were initiated.
+    """
+
+    logger.info(f"Processing directory: {path}, filename: {filename}, instrument: {instrument_name}")
 
     base_path = os.environ.get('IMAGE_BASE_PATH', '/app/images')
 
@@ -73,9 +92,16 @@ def process_directory_task(path=None, filename=None, instrument_name=None, overw
     else:
         search_pattern = os.path.join(search_path, '**', '*')
 
+    # Buscar archivos usando glob
     image_files = glob(search_pattern, recursive=True)
     image_files = [f for f in image_files if f.endswith(('.fits', '.npy'))]
 
+    # Aplicar filtro de exclusión usando expresiones regulares
+    if exclude_pattern:
+        regex = re.compile(exclude_pattern)
+        image_files = [f for f in image_files if not regex.search(os.path.basename(f))]
+
+    logger.info(f"Found {len(image_files)} images matching the search criteria")
     results = []
     for file_path in image_files:
         relative_path = os.path.relpath(file_path, base_path)
@@ -130,7 +156,7 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
     - 'always': Apply reduction always
     - 'on_failure': Apply reduction only if initial processing fails by memory
     """
-
+    logger.info(f"Processing image: {image_path} with instrument: {instrument_name}")
     base_path = os.environ.get('IMAGE_BASE_PATH', '/app/images')
     processor = get_processor(instrument_name)
 
@@ -161,28 +187,37 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
         file_path = os.path.join(base_path, image_path)
 
         if apply_reduction == ImageReduction.ALWAYS.value:
+            logger.info(f"Applying image reduction to: {image_path}")
             return call_process_image(
-                file_path=crop_and_bin_image(file_path, base_path, reduction_config['binning'],
+                file_path=crop_and_bin_image(file_path, reduction_config['binning'],
                                              reduction_config['crop_size'], reduction_config['center'])
             )
 
         return call_process_image(file_path)
 
-    except MemoryError:
+    except MemoryError as e:
+        gpuphot.utils.gpu.free_gpu_mem()
         if apply_reduction == ImageReduction.ON_FAILURE.value:
-            return call_process_image(
-                file_path=crop_and_bin_image(file_path, base_path, reduction_config['binning'],
-                                             reduction_config['crop_size'], reduction_config['center'])
-            )
+            try:
+                logger.warning(f"Memory error processing image: {image_path}")
+                logger.info(f"Applying image reduction to: {image_path}")
+                return call_process_image(
+                    file_path=crop_and_bin_image(file_path, reduction_config['binning'],
+                                                 reduction_config['crop_size'], reduction_config['center'])
+                )
+            except Exception as e:
+                task_error_handler(self, e, image_path)
+
         else:
-            raise
+            task_error_handler(self, e, image_path)
     except Exception as e:
-        error_message = f"Error processing file {image_path}: {str(e)}"
-        self.update_state(
-            state="FAILURE",
-            meta={
-                "exc_type": e.__class__.__name__,
-                "error_message": error_message,
-            },
-        )
-        raise SerializableTaskError(error_message, exc_type=e.__class__.__name__)
+        task_error_handler(self, e, image_path)
+        # error_message = f"Error processing file {image_path}: {str(e)}"
+        # self.update_state(
+        #     state="FAILURE",
+        #     meta={
+        #         "exc_type": e.__class__.__name__,
+        #         "error_message": error_message,
+        #     },
+        # )
+        # raise SerializableTaskError(error_message, exc_type=e.__class__.__name__)

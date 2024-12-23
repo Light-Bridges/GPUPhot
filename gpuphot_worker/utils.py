@@ -86,14 +86,12 @@ def save_processed_image(file_path, imdata, hwcs, overwrite):
 
     return output_path
 
-
-def crop_and_bin_image(fits_file, result_path, binning, crop_size=None, center=None):
+def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
     """
     Processes a FITS or NPY file: optionally crops a region of interest and then applies binning.
 
     Args:
         fits_file (str): Path to the FITS or NPY file to process.
-        result_path (str): Path where the processed file will be saved.
         binning (int): Binning factor. If 1, no binning is applied.
         crop_size (int or tuple, optional): Size of the crop (in pixels).
                                             Can be None (no crop), an integer (square), or a tuple (width, height).
@@ -134,13 +132,57 @@ def crop_and_bin_image(fits_file, result_path, binning, crop_size=None, center=N
         # Update WCS to reflect binning
         wcs = wcs[::binning, ::binning]
 
-    # Update header with new WCS
-    imheader.update(wcs.to_header())
+    # Update header after processing
+    if crop_size is not None or binning > 1:
+        # Update dimensions
+        imheader['NAXIS1'] = imdata.shape[1]
+        imheader['NAXIS2'] = imdata.shape[0]
+
+        # Remove CDELT if CD is present
+        if 'CD1_1' in imheader:
+            imheader.remove('CDELT1', ignore_missing=True)
+            imheader.remove('CDELT2', ignore_missing=True)
+        elif binning > 1:
+            # Update CDELT only if CD is not present
+            imheader['CDELT1'] = (imheader.get('CDELT1', 1) * binning)
+            imheader['CDELT2'] = (imheader.get('CDELT2', 1) * binning)
+
+        # Update CTYPE to include SIP if necessary
+        if any(key.startswith('A_') or key.startswith('B_') for key in imheader):
+            if not imheader['CTYPE1'].endswith('-SIP'):
+                imheader['CTYPE1'] += '-SIP'
+            if not imheader['CTYPE2'].endswith('-SIP'):
+                imheader['CTYPE2'] += '-SIP'
+
+        # Preserve SIP distortion keywords
+        sip_keywords = ['A_ORDER', 'B_ORDER', 'AP_ORDER', 'BP_ORDER']
+        sip_keywords.extend([f'A_{i}_{j}' for i in range(4) for j in range(4)])
+        sip_keywords.extend([f'B_{i}_{j}' for i in range(4) for j in range(4)])
+        sip_keywords.extend([f'AP_{i}_{j}' for i in range(4) for j in range(4)])
+        sip_keywords.extend([f'BP_{i}_{j}' for i in range(4) for j in range(4)])
+
+        for keyword in sip_keywords:
+            if keyword in imheader:
+                wcs.wcs.set(keyword, imheader[keyword])
+
+        # Update WCS in header
+        imheader.update(wcs.to_header(relax=True))
+
+        # Update image statistics
+        imheader['DATAMIN'] = np.min(imdata)
+        imheader['DATAMAX'] = np.max(imdata)
+
+        # Add processing history
+        if crop_size is not None:
+            imheader['HISTORY'] = f'Image cropped to size {imdata.shape}'
+        if binning > 1:
+            imheader['HISTORY'] = f'Image binned by factor {binning}'
 
     # Create a new HDU with processed data and updated header
     hdu = fits.PrimaryHDU(imdata, imheader)
 
     # Generate output filename
+    input_dir = os.path.dirname(fits_file)
     output_filename = f"{os.path.splitext(os.path.basename(fits_file))[0]}"
     if crop_size:
         crop_size_str = f"{crop_size[0]}_{crop_size[1]}" if isinstance(crop_size, tuple) else f"{crop_size}_{crop_size}"
@@ -149,7 +191,7 @@ def crop_and_bin_image(fits_file, result_path, binning, crop_size=None, center=N
         output_filename += f"_bin{binning}"
     output_filename += ".fits"
 
-    output_file = os.path.join(result_path, output_filename)
+    output_file = os.path.join(input_dir, output_filename)
 
     # Save the processed file
     hdu.writeto(output_file, overwrite=True)
