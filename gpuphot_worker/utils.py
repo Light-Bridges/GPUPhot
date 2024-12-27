@@ -102,12 +102,21 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
         str: Path of the processed file or original file if no processing was done.
     """
     try:
-        imdata, imheader = open_image_file(fits_file)
+        imdata, imheader = open_image_file(fits_file)  # Ensure this function handles both FITS and NPY formats
     except Exception as e:
         raise ValueError(f"Error opening file {fits_file}: {str(e)}")
 
     wcs = WCS(imheader)
     image_shape = imdata.shape
+
+    # Validate inputs
+    if not isinstance(binning, int) or binning < 1:
+        raise ValueError("Binning factor must be an integer greater than or equal to 1.")
+    if crop_size is not None:
+        if isinstance(crop_size, tuple) and (crop_size[0] > image_shape[1] or crop_size[1] > image_shape[0]):
+            raise ValueError("Crop size cannot be larger than the image dimensions.")
+        if isinstance(crop_size, int) and (crop_size > image_shape[0] or crop_size > image_shape[1]):
+            raise ValueError("Crop size cannot be larger than the image dimensions.")
 
     # Check if any processing is needed
     if binning <= 1 and crop_size is None:
@@ -130,7 +139,10 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
         imdata = imdata.astype(np.float32)
 
         # Update WCS to reflect binning
-        wcs = wcs[::binning, ::binning]
+        if hasattr(wcs.wcs, 'cdelt'):
+            wcs.wcs.cdelt *= binning  # Update CDELT if present
+        elif hasattr(wcs.wcs, 'cd'):
+            wcs.wcs.cd *= binning  # Update CD matrix if present
 
     # Update header after processing
     if crop_size is not None or binning > 1:
@@ -144,8 +156,8 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
             imheader.remove('CDELT2', ignore_missing=True)
         elif binning > 1:
             # Update CDELT only if CD is not present
-            imheader['CDELT1'] = (imheader.get('CDELT1', 1) * binning)
-            imheader['CDELT2'] = (imheader.get('CDELT2', 1) * binning)
+            imheader['CDELT1'] = imheader.get('CDELT1', 1) * binning
+            imheader['CDELT2'] = imheader.get('CDELT2', 1) * binning
 
         # Update CTYPE to include SIP if necessary
         if any(key.startswith('A_') or key.startswith('B_') for key in imheader):
@@ -163,7 +175,7 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
 
         for keyword in sip_keywords:
             if keyword in imheader:
-                wcs.wcs.set(keyword, imheader[keyword])
+                wcs.sip.__dict__[keyword.lower()] = imheader[keyword]
 
         # Update WCS in header
         imheader.update(wcs.to_header(relax=True))
@@ -174,9 +186,9 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
 
         # Add processing history
         if crop_size is not None:
-            imheader['HISTORY'] = f'Image cropped to size {imdata.shape}'
+            imheader.add_history(f'Image cropped to size {imdata.shape}')
         if binning > 1:
-            imheader['HISTORY'] = f'Image binned by factor {binning}'
+            imheader.add_history(f'Image binned by factor {binning}')
 
     # Create a new HDU with processed data and updated header
     hdu = fits.PrimaryHDU(imdata, imheader)
