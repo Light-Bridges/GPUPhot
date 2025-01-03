@@ -423,6 +423,8 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
     conv_snr_isol = conv_ima_sigma[
         cp.round(isolated_coord[:, 0]).astype(cp.int32), cp.round(isolated_coord[:, 1]).astype(cp.int32)]
     conv_snr_mask = conv_snr_isol > min_conv_snr
+    if cp.sum(conv_snr_mask) < 3:
+        raise InsufficientStarsError(cp.sum(conv_snr_mask))
 
     # In case PSF is position-invariant
     # if coeff_map is None or eigen_psfs is None or len(source_coords_matched_idx) < 10:
