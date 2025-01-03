@@ -9,7 +9,7 @@ from scipy.spatial.distance import cdist
 
 from .conv import gaussian_kernel, convolve_fft, fill_nan_fft
 from .utils import calculate_tile_nanmean_sigclip, decompose_into_tiles, recompose_from_percentiles
-from ..exceptions import InvalidGroupSizeError
+from ..exceptions import InsufficientStarsError, InvalidGroupSizeError
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 
 logger = setup_logger(__name__)
@@ -108,7 +108,7 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
         m = (snr > 3) & (peak < sat_lim)
     if cp.sum(m) == 0:
         logger.error('Less than 5 isolated stars detected. Image may be too crowded or too noisy')
-        raise ValueError('Less than 5 isolated stars detected. Image may be too crowded or too noisy')
+        raise InsufficientStarsError(num_stars=cp.sum(m))
     coor_f = cp.asarray(coor_f)[m]
     coor_f = find_local_centroid(conv_sigma, coor_f, int(3 / pxscale))
     if sort:
