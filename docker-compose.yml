@@ -32,13 +32,15 @@ services:
     environment:
       <<: *celery-env
       INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
-      INSTRUMENT_CONFIG_BASE_PATH: /gpuphot/instrument_configs
-      IMAGE_BASE_PATH: /data/images
       GPU_ID: ${GPU_ID:-0}
+      POSTGRES_DB: GPUPhotDB
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
     volumes:
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/gpuphot/instrument_configs:z
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
       - ${ASTROMETRY_CACHE_PATH:-astrometry_cache}:/data/astrometry_cache:z
+      - /run/docker.sock:/run/docker.sock
     depends_on:
       - rabbitmq
       - redis
@@ -65,6 +67,9 @@ services:
       INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
       INSTRUMENT_CONFIG_BASE_PATH: /home/jovyan/instrument_configs
       IMAGE_BASE_PATH: /home/jovyan/images
+      POSTGRES_DB: GPUPhotDB
+      POSTGRES_USER: read_only
+      POSTGRES_PASSWORD: read_only
     volumes:
       - ./notebooks:/home/jovyan/work:z
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/home/jovyan/instrument_configs:z
@@ -95,4 +100,20 @@ services:
       - rabbitmq
       - redis
     command: [ "celery", "-A", "gpuphot_worker.worker_app", "flower" ]
+    restart: unless-stopped
+
+  postgres:
+    build:
+        context: .
+        dockerfile: Dockerfile
+        target: q3c_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: GPUPhotDB
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
+    volumes:
+      - ./gpuphot_database:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     restart: unless-stopped

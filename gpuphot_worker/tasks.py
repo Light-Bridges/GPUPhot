@@ -3,6 +3,7 @@ import re
 from datetime import datetime
 from glob import glob
 
+import numpy as np
 import pytz
 from celery import shared_task
 
@@ -10,7 +11,8 @@ import gpuphot.utils.gpu
 from gpuphot.instrument_config_parser import ImageReduction
 from gpuphot.logger.hierarchical_logging import setup_logger
 from gpuphot_worker.celery_exceptions import SerializableTaskError, BaseTaskWithFailureHandling
-from gpuphot_worker.utils import get_processor, open_image_file, save_processed_image, crop_and_bin_image
+from gpuphot_worker.utils import get_processor, open_image_file, save_processed_image, crop_and_bin_image, \
+    insert_dataframe_to_postgres
 
 logger = setup_logger(__name__)
 
@@ -77,7 +79,7 @@ def process_directory_task(path=None, filename=None, instrument_name=None, overw
 
     logger.info(f"Processing directory: {path}, filename: {filename}, instrument: {instrument_name}")
 
-    base_path = os.environ.get('IMAGE_BASE_PATH', '/app/images')
+    base_path = '/data/images'
 
     if path:
         path = path.lstrip('/')
@@ -157,15 +159,15 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
     - 'on_failure': Apply reduction only if initial processing fails by memory
     """
     logger.info(f"Processing image: {image_path} with instrument: {instrument_name}")
-    base_path = os.environ.get('IMAGE_BASE_PATH', '/app/images')
+    base_path = '/data/images'
     processor = get_processor(instrument_name)
 
     reduction_config = processor.config['image_reduction']
     apply_reduction = reduction_config['apply_reduction']
 
-    def call_process_image(file_path):
+    def call_process_image(file_path_call):
         # Intenta procesar la imagen normalmente
-        imdata, imheader = open_image_file(file_path)
+        imdata, imheader = open_image_file(file_path_call)
         phot_df, hwcs = processor.process_image(imdata, imheader)
 
         # Añade la fecha de procesamiento al encabezado
@@ -173,13 +175,34 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
         hwcs['DATEPROC'] = (dateproc.strftime('%Y-%m-%dT%H:%M:%S.%f'), 'Date and time of processing')
 
         # Guarda la imagen procesada
-        output_path = save_processed_image(file_path, imdata, hwcs, overwrite)
+        output_path = save_processed_image(file_path_call, imdata, hwcs, overwrite)
+
+        # Store photometry results in PostgreSQL
+        process_file = os.path.relpath(file_path_call, base_path)
+
+        # Create a new DataFrame with necessary transformations
+        df_imaphot = (
+            phot_df
+            .assign(trans=lambda x: np.isnan(x['RAERR']))  # Set 'trans' based on RAERR
+            .rename(columns={'RA': 'ra', 'DEC': 'dec', 'noise': 'dflux'})  # Rename columns
+        )
+
+        # Add imageid and select relevant columns
+        df_imaphot['imageid'] = str(process_file)
+        df_imaphot = df_imaphot[['imageid', 'ra', 'dec', 'flux', 'dflux', 'trans']]
+
+        # Insert into PostgreSQL and capture result
+        result_postgress = insert_dataframe_to_postgres(df_imaphot)
 
         return {
             'input_file': image_path,
-            'process_file': os.path.relpath(file_path, base_path),
+            'process_file': process_file,
             'output_file': os.path.relpath(output_path, base_path),
-            'phot_df': phot_df,
+            'imaphot': {
+                'objets': len(phot_df.index) if phot_df is not None else 0,
+                'transients': len(phot_df[phot_df.trans == True].index) if phot_df is not None else 0,
+                'saved': result_postgress
+            },
             'hwcs': dict(hwcs)
         }
 
@@ -189,8 +212,8 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
         if apply_reduction == ImageReduction.ALWAYS.value:
             logger.info(f"Applying image reduction to: {image_path}")
             return call_process_image(
-                file_path=crop_and_bin_image(file_path, reduction_config['binning'],
-                                             reduction_config['crop_size'], reduction_config['center'])
+                file_path_call=crop_and_bin_image(file_path, reduction_config['binning'],
+                                                  reduction_config['crop_size'], reduction_config['center'])
             )
 
         return call_process_image(file_path)
@@ -202,8 +225,8 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
                 logger.warning(f"Memory error processing image: {image_path}")
                 logger.info(f"Applying image reduction to: {image_path}")
                 return call_process_image(
-                    file_path=crop_and_bin_image(file_path, reduction_config['binning'],
-                                                 reduction_config['crop_size'], reduction_config['center'])
+                    file_path_call=crop_and_bin_image(image_path, reduction_config['binning'],
+                                                      reduction_config['crop_size'], reduction_config['center'])
                 )
             except Exception as e:
                 task_error_handler(self, e, image_path)

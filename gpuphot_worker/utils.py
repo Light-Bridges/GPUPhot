@@ -5,8 +5,12 @@ from astropy.io import fits
 from astropy.nddata import Cutout2D
 from astropy.wcs import WCS
 from skimage.measure import block_reduce
+from sqlalchemy import create_engine, exc
 
 from gpuphot.image_processor import create_processor
+from gpuphot.logger.hierarchical_logging import setup_logger
+
+logger = setup_logger(__name__)
 
 
 def get_processor(instrument_name=None):
@@ -20,7 +24,7 @@ def get_processor(instrument_name=None):
         processor: Configured image processor
     """
     instrument_name = instrument_name or os.environ.get('INSTRUMENT_NAME', 'default_instrument')
-    config_base_path = os.environ.get('INSTRUMENT_CONFIG_BASE_PATH', '/app/gpuphot/instrument_configs')
+    config_base_path = '/gpuphot/instrument_configs'
     return create_processor(instrument_name, config_base_path)
 
 
@@ -217,3 +221,44 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
     hdu.writeto(output_file, overwrite=True)
 
     return output_file
+
+
+def insert_dataframe_to_postgres(df, tbl_name='imaphot', unique_col='imageid'):
+    try:
+        # Get database connection parameters from environment variables
+        db_name = os.getenv('POSTGRES_DB', 'GPUPhotDB')
+        user = os.getenv('POSTGRES_USER', 'admin')
+        password = os.getenv('POSTGRES_PASSWORD', 'gpuphot')
+        host = 'postgres'
+        port = '5432'
+
+        # Create the connection string
+        connection_string = f'postgresql://{user}:{password}@{host}:{port}/{db_name}'
+
+        # Create an SQLAlchemy engine
+        engine = create_engine(connection_string)
+
+        # Proceed only if DataFrame is not empty
+        if not df.empty:
+            unique_values = df[unique_col].unique()
+
+            with engine.begin() as connection:  # Use transaction context manager
+                # Delete existing records in one go
+                connection.execute(
+                    f"DELETE FROM {tbl_name} WHERE {unique_col} IN ({', '.join(map(repr, unique_values))})")
+
+                # Insert the DataFrame into the PostgreSQL table in chunks
+                chunk_size = 5000  # Adjust based on your needs
+                for start in range(0, len(df), chunk_size):
+                    end = start + chunk_size
+                    df.iloc[start:end].to_sql(tbl_name, con=connection, if_exists='append', index=False)
+
+        return True
+
+    except exc.SQLAlchemyError as e:
+        logger.error(f"SQLAlchemy error: {str(e)}")
+
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {str(e)}")
+
+    return False

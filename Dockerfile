@@ -41,3 +41,21 @@ CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--NotebookApp.token=''"]
 # Flower target
 FROM base as flower
 CMD ["celery", "-A", "gpuphot_worker.worker_app", "flower"]
+
+
+# Descargar e instalar Q3C
+FROM postgres:15.0-alpine as q3c_postgres
+
+# Instalar las dependencias necesarias
+RUN apk add --no-cache make gcc g++ postgresql-dev wget tar \
+    zstd-dev lz4-dev openssl-dev krb5-dev zlib-dev
+
+# Descargar e instalar Q3C
+RUN wget https://github.com/segasai/q3c/archive/refs/tags/v2.0.0.tar.gz \
+    && tar -xzf v2.0.0.tar.gz \
+    && cd q3c-2.0.0 \
+    && make \
+    && make install
+
+# Limpiar
+RUN apk del make gcc g++ postgresql-dev wget tar
