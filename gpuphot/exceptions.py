@@ -71,7 +71,6 @@ def capture_cuda_exception(func):
     """Decorator to capture CUDA exceptions and retry on illegal address error."""
 
     import os
-    import sys
     from cupy_backends.cuda.api.runtime import CUDARuntimeError
 
     def is_running_in_docker():
@@ -89,7 +88,20 @@ def capture_cuda_exception(func):
                 if any(error in str(e) for error in ("cudaErrorIllegalAddress", "cudaErrorInitializationError")):
                     if is_running_in_docker():
                         logger.critical("Exiting due to CUDA error in Docker container.")
-                        sys.exit('Exiting due to CUDA error.')
+                        try:
+                            # sys.exit('Exiting due to CUDA error.')
+                            import socket
+                            import docker
+
+                            # Obtener hostname (que suele ser el container_id)
+                            container_id = socket.gethostname()
+
+                            # Reiniciar el contenedor
+                            client = docker.DockerClient(base_url='unix://run/docker.sock')
+                            client.containers.get(container_id).restart()
+                        except Exception as e:
+                            logger.error(f"Error restarting container: {e}")
+                        raise
                     else:
                         logger.error("Max retries reached. Exiting due to CUDA error.")
                         raise  # Permitir que se propague el error para manejarlo más arriba

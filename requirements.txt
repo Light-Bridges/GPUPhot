@@ -4,6 +4,7 @@ astrometry~=3.0.0
 astropy~=5.3.4
 astroquery~=0.4.7
 cupy-cuda12x~=12.3.0
+docker~=7.1.0
 ephem~=4.1.6
 GPUtil~=1.4.0
 json-with-comments~=1.2.9

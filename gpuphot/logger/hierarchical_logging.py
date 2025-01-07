@@ -158,21 +158,24 @@ class SystemInfo:
             return None
 
     def get_gpu_info(self):
-        # Obtener información de las GPUs usando GPUtil
-        gpus = GPUtil.getGPUs()
-        if gpus:
-            return [{
-                'id': gpu.id,
-                'name': gpu.name,
-                'driver_version': gpu.driver,
-                'memory_total': gpu.memoryTotal,
-                'memory_free': gpu.memoryFree,
-                'memory_used': gpu.memoryUsed,
-                'temperature': gpu.temperature,
-                'load': gpu.load,
-            } for gpu in gpus]
-        else:
-            return "No GPU detected"
+        try:
+            # Obtener información de las GPUs usando GPUtil
+            gpus = GPUtil.getGPUs()
+            if gpus:
+                return [{
+                    'id': gpu.id,
+                    'name': gpu.name,
+                    'driver_version': gpu.driver,
+                    'memory_total': gpu.memoryTotal,
+                    'memory_free': gpu.memoryFree,
+                    'memory_used': gpu.memoryUsed,
+                    'temperature': gpu.temperature,
+                    'load': gpu.load,
+                } for gpu in gpus]
+            else:
+                return [{'id': -1, 'name': "No GPUs found", 'error': None}]
+        except Exception as e:
+            return [{'id': -1, 'name': "Error retrieving GPU info", 'error': str(e)}]
 
     def refresh_gpu_info(self):
         # Método para actualizar solo la información de la GPU
