@@ -86,7 +86,7 @@ def capture_cuda_exception(func):
                 from .utils.gpu import free_gpu_mem
                 free_gpu_mem()  # Liberar memoria GPU antes de manejar el error
 
-                if "cudaErrorIllegalAddress" in str(e):
+                if any(error in str(e) for error in ("cudaErrorIllegalAddress", "cudaErrorInitializationError")):
                     if is_running_in_docker():
                         logger.critical("Exiting due to CUDA error in Docker container.")
                         sys.exit('Exiting due to CUDA error.')
