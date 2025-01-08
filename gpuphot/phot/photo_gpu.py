@@ -741,7 +741,7 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
         gain=gain,
         rdnoise=rdnoise,
         n_images=n_images,
-        **kwargs
+        # **kwargs
     )
 
     dic_calib.update(extra_info)
