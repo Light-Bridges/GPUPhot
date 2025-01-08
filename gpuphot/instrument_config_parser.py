@@ -13,113 +13,114 @@ logger = setup_logger(__name__)
 
 
 class HeaderKey(Enum):
-    EXPT1 = "EXPT1"
-    FILTER = "FILTER"
-    TOTIMA = "TOTIMA"
-    RDNOISE = "RDNOISE"
-    SATLEVEL = "SATLEVEL"
-    POINTRA = "POINTRA"
-    POINTDEC = "POINTDEC"
-    SITEELEV = "SITEELEV"
-    SITELAT = "SITELAT"
-    SITELONG = "SITELONG"
-    DATE_OBS = "DATE-OBS"
-    INMODEL = "INMODEL"
-    PXSIZE = "PXSIZE"
-    GAIN = "GAIN"
-    NAXIS1 = "NAXIS1"
-    NAXIS2 = "NAXIS2"
-    FOCALEN = "FOCALEN"
-    XBINNING = "XBINNING"
     BIASSTD = "BIASSTD"
-    SITEALT = "SITEALT"
     CD1_1 = "CD1_1"
     CD1_2 = "CD1_2"
     CD2_1 = "CD2_1"
     CD2_2 = "CD2_2"
+    DATE_OBS = "DATE-OBS"
+    EXPT1 = "EXPT1"
+    FILTER = "FILTER"
+    FOCALEN = "FOCALEN"
+    GAIN = "GAIN"
+    INMODEL = "INMODEL"
+    NAXIS1 = "NAXIS1"
+    NAXIS2 = "NAXIS2"
+    POINTDEC = "POINTDEC"
+    POINTRA = "POINTRA"
+    PXSIZE = "PXSIZE"
+    RDNOISE = "RDNOISE"
+    SATLEVEL = "SATLEVEL"
+    SITEALT = "SITEALT"
+    SITEELEV = "SITEELEV"
+    SITELAT = "SITELAT"
+    SITELONG = "SITELONG"
+    TOTIMA = "TOTIMA"
+    XBINNING = "XBINNING"
 
 
 class ImageReduction(Enum):
-    NEVER = "never"
     ALWAYS = "always"
+    NEVER = "never"
     ON_FAILURE = "on_failure"
 
 
 class DefaultConfig:
     DEFAULT_HEADER_KEYWORDS = {
-        "exposure_time": HeaderKey.EXPT1.value,
-        "filter": HeaderKey.FILTER.value,
-        "n_images": HeaderKey.TOTIMA.value,
-        "rdnoise": HeaderKey.RDNOISE.value,
-        "satlevel": HeaderKey.SATLEVEL.value,
-        "target_ra": HeaderKey.POINTRA.value,
-        "target_dec": HeaderKey.POINTDEC.value,
-        "site_elevation": HeaderKey.SITEELEV.value,
-        "site_latitude": HeaderKey.SITELAT.value,
-        "site_longitude": HeaderKey.SITELONG.value,
-        "date_obs": HeaderKey.DATE_OBS.value,
-        "inmodel": HeaderKey.INMODEL.value,
-        "pxsize": HeaderKey.PXSIZE.value,
-        "gain": HeaderKey.GAIN.value,
-        "naxis1": HeaderKey.NAXIS1.value,
-        "naxis2": HeaderKey.NAXIS2.value,
-        "focalen": HeaderKey.FOCALEN.value,
-        "xbinning": HeaderKey.XBINNING.value,
         "biasstd": HeaderKey.BIASSTD.value,
-        "sitealt": HeaderKey.SITEALT.value,
         "cd1_1": HeaderKey.CD1_1.value,
         "cd1_2": HeaderKey.CD1_2.value,
         "cd2_1": HeaderKey.CD2_1.value,
         "cd2_2": HeaderKey.CD2_2.value,
+        "date_obs": HeaderKey.DATE_OBS.value,
+        "exposure_time": HeaderKey.EXPT1.value,
+        "filter": HeaderKey.FILTER.value,
+        "focalen": HeaderKey.FOCALEN.value,
+        "gain": HeaderKey.GAIN.value,
+        "inmodel": HeaderKey.INMODEL.value,
+        "n_images": HeaderKey.TOTIMA.value,
+        "naxis1": HeaderKey.NAXIS1.value,
+        "naxis2": HeaderKey.NAXIS2.value,
+        "pxsize": HeaderKey.PXSIZE.value,
+        "rdnoise": HeaderKey.RDNOISE.value,
+        "satlevel": HeaderKey.SATLEVEL.value,
+        "site_elevation": HeaderKey.SITEELEV.value,
+        "site_latitude": HeaderKey.SITELAT.value,
+        "site_longitude": HeaderKey.SITELONG.value,
+        "sitealt": HeaderKey.SITEALT.value,
+        "target_dec": HeaderKey.POINTDEC.value,
+        "target_ra": HeaderKey.POINTRA.value,
+        "xbinning": HeaderKey.XBINNING.value,
     }
 
     DEFAULT_CAMERA_SPECS = {
-        "exposure_time": None,
-        "filter": None,
-        "n_images": None,
-        "rdnoise": None,
-        "satlevel": None,
-        "target_ra": None,
-        "target_dec": None,
-        "site_elevation": None,
-        "site_latitude": None,
-        "site_longitude": None,
-        "date_obs": None,
-        "inmodel": None,
-        "pxsize": None,
-        "gain": None,
-        "naxis1": None,
-        "naxis2": None,
-        "focalen": None,
-        "xbinning": None,
         "biasstd": None,
-        "sitealt": None,
         "cd1_1": None,
         "cd1_2": None,
         "cd2_1": None,
         "cd2_2": None,
+        "date_obs": None,
+        "exposure_time": None,
+        "filter": None,
+        "focalen": None,
+        "gain": None,
+        "inmodel": None,
+        "n_images": None,
+        "naxis1": None,
+        "naxis2": None,
+        "pxsize": None,
+        "rdnoise": None,
+        "satlevel": None,
+        "site_elevation": None,
+        "site_latitude": None,
+        "site_longitude": None,
+        "sitealt": None,
+        "target_dec": None,
+        "target_ra": None,
+        "xbinning": None,
     }
 
     DEFAULT_PROCESSING_PARAMS = {
-        'SP_filt': False,
-        'CR_filt': False,
         'border': 20,
         'center_factor': 0.7,
-        'pca_method': False,
-        'tile_section': 300,
-        'astrom': True,
-        'tile_section_psf': 3000,
+        'color_range': 0.6,
+        'CR_filt': False,
         'do_pad': True,
         'lum_gmag_coeff': 0.5,
         'lum_rmag_coeff': 0.5,
-        'color_range': 0.6,
+        'max_stars_ref': 15,
+        'min_conv_snr': 300,
+        'pca_method': True,
+        'SP_filt': True,
+        'tile_section': 1000,
+        'tile_section_psf': 3000,
     }
 
     DEFAULT_IMAGE_REDUCTION = {
         "apply_reduction": ImageReduction.NEVER.value,
         "binning": 2,
+        "center": None,
         "crop_size": None,
-        "center": None
     }
 
 

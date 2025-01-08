@@ -10,12 +10,12 @@ from astropy.wcs import WCS
 from cupyx.scipy.ndimage import convolve, label, sum as nd_sum, mean as nd_mean, maximum_filter, \
     median_filter, laplace, binary_dilation
 
-from ..instrument_config_parser import HeaderKey
 from .conv import fill_image, fill_nan_fft, get_aper_kernel, convolve_fft, gen_apm_filter
 from .psf import create_coeff_map, create_star_dataset, detect_isolated_stars, detect_sources_psf, fit_moffat, \
     get_eigen_psfs, group_star_dataset, project_all_stars_onto_eigenpsfs, recreate_normed_star
 from ..exceptions import InsufficientStarsError, MoffatFitError, capture_cuda_exception, UnableToAstrometrizeError, \
     DataValidationError
+from ..instrument_config_parser import HeaderKey, DefaultConfig
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 from ..phot.background import get_local_background_fft
 from ..stats.reduction import stack_sigmaclip
@@ -299,11 +299,13 @@ def create_aperture_corrections_map(image_shape: tuple, block_size: int, unit_st
 
     return aperture_corrections, aperture_correction_errors, cluster_centers
 
+
 @capture_cuda_exception
 @hierarchical_debug(logger)
 def process_image(imdata, imheader, header_descriptions=None, **kwargs):
     # parameters from header
-    scale = plate_scale_px(imheader[HeaderKey.PXSIZE.value], imheader[HeaderKey.FOCALEN.value]) * imheader[HeaderKey.XBINNING.value]
+    scale = plate_scale_px(imheader[HeaderKey.PXSIZE.value], imheader[HeaderKey.FOCALEN.value]) * imheader[
+        HeaderKey.XBINNING.value]
     n_images = imheader[HeaderKey.TOTIMA.value]
     gain = imheader[HeaderKey.GAIN.value]
     try:
@@ -325,20 +327,7 @@ def process_image(imdata, imheader, header_descriptions=None, **kwargs):
     filter = imheader[HeaderKey.FILTER.value]
 
     # default parameters
-    default_params = {
-        'SP_filt': True,
-        'CR_filt': False,
-        'border': 20,
-        'center_factor': 0.7,
-        'pca_method': True,
-        'tile_section': 1000,
-        'max_stars_ref': 15,
-        # 'min_snr': 5,
-        'color_range': 0.6,
-        'tile_section_psf': 3000,
-        'do_pad': True,
-        'min_conv_snr': 300,
-    }
+    default_params = DefaultConfig.DEFAULT_PROCESSING_PARAMS
 
     # Update default parameters with any provided in kwargs
     params = {**default_params, **kwargs}

@@ -223,7 +223,7 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
     return output_file
 
 
-def insert_dataframe_to_postgres(df, tbl_name='imaphot', unique_col='imageid'):
+def insert_dataframe_to_postgres(df, tbl_name, unique_col='imageid'):
     try:
         # Get database connection parameters from environment variables
         db_name = os.getenv('POSTGRES_DB', 'GPUPhotDB')
