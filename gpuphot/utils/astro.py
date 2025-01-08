@@ -1,5 +1,8 @@
+import glob
 import os
 import signal
+import tempfile
+import threading
 from datetime import datetime
 
 import astrometry
@@ -9,19 +12,17 @@ import numpy as np
 import pandas as pd
 from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
-from astropy.wcs import WCS
 from astropy.time import Time
+from astropy.wcs import WCS
 from sklearn.linear_model import RANSACRegressor
 
 from .catalog import crossmatch_sources
 from ..exceptions import AstrometrizationTimeoutError
 from ..instrument_config_parser import HeaderKey
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
-from ..stats.reduction import weighted_mean_std
 
 logger = setup_logger(__name__)
 
-import threading
 
 class SingletonSolver:
     _instance = None
@@ -37,17 +38,44 @@ class SingletonSolver:
         return cls._instance
 
     def initialize_solver(self):
-        if os.path.exists('/data'):
-            cache = '/data/astrometry_cache'
+        default_cache = '/data/astrometry_cache'
+        fallback_cache = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'astrometry_cache')
+
+        if os.path.exists(default_cache):
+            cache = default_cache
         else:
-            cache = '/mnt/data/astrometry_cache'
+            cache = fallback_cache
+            if not os.path.exists(cache):
+                try:
+                    os.makedirs(cache, exist_ok=True)
+                    logger.warning(f"Default cache directory not found. Created fixed directory: {cache}")
+                except PermissionError:
+                    logger.error(f"Unable to create directory {cache}. Check permissions.")
+                    cache = tempfile.TemporaryDirectory(prefix='astrometry_cache')
 
+        logger.debug(f"Using cache directory: {cache}")
 
+        index_files_exist = self.check_index_files_exist(cache)
+        if not index_files_exist:
+            # change text, and log that maybe the files is 1h to down
+
+            logger.warning(
+                "Unable to locate astrometry index files. Starting the download of index files now. Please be patient as this process may take up to an hour, depending on your internet speed.")
+            signal.alarm(0)
 
         self.solver = astrometry.Solver(
             astrometry.series_5200.index_files(cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6}) +
             astrometry.series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10, 11})
         )
+
+    @staticmethod
+    def check_index_files_exist(directory):
+        fits_files = glob.glob(os.path.join(directory, '*.fits'))
+        download_files = glob.glob(os.path.join(directory, '*.download'))
+
+        # Verifica si hay archivos .fits y no hay archivos .download
+        return len(fits_files) > 0 and len(download_files) == 0
+
 
 @hierarchical_debug(logger)
 def get_solver():
@@ -389,9 +417,11 @@ def radec_to_ecl(RA, DEC):
     coords_gal = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg').barycentricmeanecliptic
     return round(coords_gal.lon.deg, 6), round(coords_gal.lat.deg, 6)
 
+
 def date_to_jd(dateobs):
     Date = Time(dateobs, scale='utc')
     return Date.jd, Date.mjd
+
 
 def get_ccw(hwcs):
     cd11 = hwcs[HeaderKey.CD1_1.value]

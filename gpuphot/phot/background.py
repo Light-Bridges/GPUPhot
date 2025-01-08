@@ -35,10 +35,15 @@ def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper:
     tiles = decompose_into_tiles(img_std_conv, tile_section)
     percentiles = calculate_tile_percentiles(tiles, qt=qt)
     per = recompose_from_percentiles(percentiles, image.shape, tile_section)
+
     del tiles, percentiles
     mempool.free_all_blocks()
 
     mask = img_std_conv > per
+
+    del per
+    mempool.free_all_blocks()
+
     mask = binary_erosion(mask, cp.ones((max(int(ks / pxscale + 1), 2), max(int(ks / pxscale + 1), 2))))
     mask = binary_dilation(mask, cp.ones((max(int(ks / pxscale + 1), 2), max(int(ks / pxscale + 1), 2))))
     mask = binary_dilation(mask, cp.ones((max(int(ks / pxscale + 1), 2), max(int(ks / pxscale + 1), 2))))

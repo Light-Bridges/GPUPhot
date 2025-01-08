@@ -42,9 +42,13 @@ def open_image_file(file_path):
         ValueError: If the file format is not supported or if the header file is missing for NPY.
     """
     if file_path.endswith('.fits'):
-        with fits.open(file_path) as hdul:
-            imdata = hdul[0].data.astype(np.float32)
-            imheader = hdul[0].header
+        try:
+            with fits.open(file_path) as hdul:
+                imdata = hdul[0].data.astype(np.float32)
+                imheader = hdul[0].header
+        except Exception as e:
+            imdata = fits.getdata(file_path).astype(np.float32)
+            imheader = fits.getheader(file_path)
     elif file_path.endswith('.npy'):
         imdata = np.load(file_path)
         header_file = file_path.rsplit('.', 1)[0] + '.txt'

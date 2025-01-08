@@ -3,9 +3,9 @@ import numpy as np
 from cupyx.scipy.ndimage import maximum_filter
 from lmfit import Model
 from scipy.spatial import KDTree
-from sklearn.decomposition import PCA
-from sklearn.cluster import AgglomerativeClustering
 from scipy.spatial.distance import cdist
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.decomposition import PCA
 
 from .conv import gaussian_kernel, convolve_fft, fill_nan_fft
 from .utils import calculate_tile_nanmean_sigclip, decompose_into_tiles, recompose_from_percentiles
@@ -447,6 +447,8 @@ def fit_moffat(star_data: np.ndarray) -> tuple:
     center = (np.array([X[np.argmax(Z)], Y[np.argmax(Z)]])).astype(int)
     r = np.sqrt((X - center[0]) ** 2 + (Y - center[1]) ** 2)
 
+    del X, Y
+
     # Remove the sky from the outer part of the star
     sky = np.median(Z[r > np.percentile(r, 0.7)])
     Z = Z.astype(np.float32) - sky
@@ -457,6 +459,7 @@ def fit_moffat(star_data: np.ndarray) -> tuple:
     mask = r < 5 * fwhm
     r = r[mask]
     Z = Z[mask]
+    del mask
 
     # Fit the Moffat profile
     model = Model(moffat, independent_vars=['r'])

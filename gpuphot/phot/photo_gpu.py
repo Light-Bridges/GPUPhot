@@ -10,6 +10,7 @@ from astropy.wcs import WCS
 from cupyx.scipy.ndimage import convolve, label, sum as nd_sum, mean as nd_mean, maximum_filter, \
     median_filter, laplace, binary_dilation
 
+from gpuphot.utils.gpu import free_gpu_mem
 from .conv import fill_image, fill_nan_fft, get_aper_kernel, convolve_fft, gen_apm_filter
 from .psf import create_coeff_map, create_star_dataset, detect_isolated_stars, detect_sources_psf, fit_moffat, \
     get_eigen_psfs, group_star_dataset, project_all_stars_onto_eigenpsfs, recreate_normed_star
@@ -718,6 +719,9 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
     sources = sources[(sources[:, 0] > border) & (sources[:, 0] < img.shape[0] - border) & (sources[:, 1] > border) & (
             sources[:, 1] < img.shape[1] - border)]
 
+    del coeff_map, img, rms
+    mempool.free_all_blocks()
+
     # Perform optimized photometry
 
     # optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry(img_cp - back, back,
@@ -742,6 +746,9 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
         # center_factor=kwargs.get('center_factor', 1.0),
         # min_conv_snr=kwargs.get('min_conv_snr', 300.0)
     )
+
+    del img_cp, back, conv_ima_sigma
+    mempool.free_all_blocks()
 
     dic_calib.update(extra_info)
 

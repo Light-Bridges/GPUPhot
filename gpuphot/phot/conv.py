@@ -12,6 +12,7 @@ def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, do_pad: bool = True, **k
 
     :param image: Image array to be processed.
     :param kernel: Kernel to be used in the convolution.
+    :param do_pad: Whether to pad the image.
     :return: The convolved image.
     """
     image_shape = image.shape
@@ -157,7 +158,7 @@ def fill_nan_fft(image: cp.ndarray, lk: int, li: int = 0, min_neighbors: int = 5
     del not_nan_mask
     image_zeroed = cp.where(cp.isnan(image), 0, image)
     neighbor_sum = convolve_fft(image_zeroed, k_app, **kwargs)
-    del image_zeroed
+    del image_zeroed, k_app
     result = cp.where((valid_neighbors >= min_neighbors) & (cp.isnan(image)), neighbor_sum / valid_neighbors, image)
-    del valid_neighbors
+    del valid_neighbors, neighbor_sum
     return result

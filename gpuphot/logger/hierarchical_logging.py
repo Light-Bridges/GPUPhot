@@ -347,6 +347,10 @@ class SingletonLogger:
         else:
             logger.setLevel(logging.ERROR)  # Default to ERROR level.
 
+        # Silenciar LogProcessingWorker
+        log_processing_worker_logger = logging.getLogger("LogProcessingWorker")
+        log_processing_worker_logger.setLevel(logging.CRITICAL)  # Ignorar logs menores a CRITICAL
+
         # Configure StreamHandler.
         handler = logging.StreamHandler()
         formatter = IndentFormatter('%(asctime)s - %(levelname)s - %(indent)s%(message)s')
