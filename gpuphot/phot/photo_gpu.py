@@ -375,10 +375,7 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
     :param conv_ima_sigma: Convolution sigma map as a CuPy ndarray.
     :param source_coord: Coordinates of sources as a CuPy ndarray.
     :param isolated_coord: Coordinates of isolated stars as a CuPy ndarray.
-    :param tile_section_psf: Size of the PSF tile section.
-    :param coeff_map: Coefficient map for PSF reconstruction.
-    :param eigen_psfs: Eigen PSFs used in the reconstruction.
-    :param psf: Base PSF array.
+    :param star_dataset:
     :param fwhm: Full-width at half-maximum of the PSF.
     :param gain: Gain value for flux conversion.
     :param rdnoise: Read noise value of the detector.
@@ -722,13 +719,14 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
             sources[:, 1] < img.shape[1] - border)]
 
     # Perform optimized photometry
-    # TODO: Revisar por Miguel: n_images, rdnoise estaban mal posicionados... se crea llamada nueva y se añade kwargs
+
     # optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry(img_cp - back, back,
     #                                                                                  conv_ima_sigma, sources,
     #                                                                                  coord, tile_section_psf,
     #                                                                                  star_dataset[mask_star_dataset],
     #                                                                                  fwhm, gain, n_images, rdnoise)
 
+    # TODO: Revisar por Miguel: dejamos center_factor y min_conv_snr con valor dor defecto de la función, o por defecto de DEFAULT_PROCESSING_PARAMS
     optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry(
         img=img_cp - back,
         back=back,
@@ -741,7 +739,8 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
         gain=gain,
         rdnoise=rdnoise,
         n_images=n_images,
-        # **kwargs
+        # center_factor=kwargs.get('center_factor', 1.0),
+        # min_conv_snr=kwargs.get('min_conv_snr', 300.0)
     )
 
     dic_calib.update(extra_info)
