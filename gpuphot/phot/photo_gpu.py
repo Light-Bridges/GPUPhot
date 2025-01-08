@@ -706,7 +706,7 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
         x = np.array([x1, x2, x1, x2])
         y = np.array([y1, y2, y2, y1])
         fwhm_lab = ['FWHMLL', 'FWHMLR', 'FWHMUL', 'FWHMUR']
-        fwhms = np.zeros(len(fwhm_lab))
+        # fwhms = np.zeros(len(fwhm_lab))
         for point in range(len(fwhm_lab)):
             psf_l = psf + recreate_normed_star(coeff_map, eigen_psfs, (x[point], y[point]))
             try:
@@ -722,11 +722,28 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
             sources[:, 1] < img.shape[1] - border)]
 
     # Perform optimized photometry
-    optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry(img_cp - back, back,
-                                                                                     conv_ima_sigma, sources,
-                                                                                     coord, tile_section_psf,
-                                                                                     star_dataset[mask_star_dataset],
-                                                                                     fwhm, gain, n_images, rdnoise)
+    # TODO: Revisar por Miguel: n_images, rdnoise estaban mal posicionados... se crea llamada nueva y se añade kwargs
+    # optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry(img_cp - back, back,
+    #                                                                                  conv_ima_sigma, sources,
+    #                                                                                  coord, tile_section_psf,
+    #                                                                                  star_dataset[mask_star_dataset],
+    #                                                                                  fwhm, gain, n_images, rdnoise)
+
+    optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry(
+        img=img_cp - back,
+        back=back,
+        conv_ima_sigma=conv_ima_sigma,
+        source_coord=sources,
+        isolated_coord=coord,
+        tile_section_psf=tile_section_psf,
+        star_dataset=star_dataset[mask_star_dataset],
+        fwhm=fwhm,
+        gain=gain,
+        rdnoise=rdnoise,
+        n_images=n_images,
+        **kwargs
+    )
+
     dic_calib.update(extra_info)
 
     dfm = pd.DataFrame({'xcentroid': optimal_coords[:, 1],
