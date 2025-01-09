@@ -82,8 +82,11 @@ def capture_cuda_exception(func):
             try:
                 return func(*args, **kwargs)
             except CUDARuntimeError as e:
-                from .utils.gpu import free_gpu_mem
-                free_gpu_mem()  # Liberar memoria GPU antes de manejar el error
+                try:
+                    from .utils.gpu import free_gpu_mem
+                    free_gpu_mem()  # Liberar memoria GPU antes de manejar el error
+                except Exception:
+                    pass
 
                 if any(error in str(e) for error in ("cudaErrorIllegalAddress", "cudaErrorInitializationError")):
                     if is_running_in_docker():
