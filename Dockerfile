@@ -22,24 +22,42 @@ COPY requirements_3_12.txt requirements-worker.txt ./
 RUN . venv/bin/activate && \
     pip install --no-cache-dir -r requirements_3_12.txt -r requirements-worker.txt
 
-# Copy application code
-COPY . .
+## Copy application code
+#COPY . .
 
 # Set Python path and virtual environment path
 ENV PYTHONPATH=/app VIRTUAL_ENV=/app/venv PATH="/app/venv/bin:$PATH"
 
 # Worker target
 FROM base as worker
+
+# Copy application code
+WORKDIR /app
+COPY . .
+
+
 CMD ["celery", "-A", "gpuphot_worker.worker_app", "worker", "--loglevel=info"]
 
 # Lab target
 FROM base as lab
 RUN . venv/bin/activate && pip install --no-cache-dir jupyter jupyterlab
+
+
+# Copy application code
+WORKDIR /app
+COPY . .
+
 WORKDIR /home/jovyan
+
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--NotebookApp.token=''"]
 
 # Flower target
 FROM base as flower
+
+# Copy application code
+WORKDIR /app
+COPY . .
+
 CMD ["celery", "-A", "gpuphot_worker.worker_app", "flower"]
 
 
