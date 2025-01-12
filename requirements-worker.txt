@@ -4,3 +4,4 @@ flower
 pytz
 scikit-image
 SQLAlchemy
+psycopg2-binary

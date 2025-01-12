@@ -52,10 +52,10 @@ class ImageProcessor:
         # Llama a la función process_image con el header traducido
         phot_df, hwcs = process_image(imdata, translated_header, header_descriptions, **params)
 
-        # Traduce el header procesado de vuelta a las keywords originales del usuario
-        original_hwcs = self.header_translator.translate_back_header(hwcs)
+        ## Traduce el header procesado de vuelta a las keywords originales del usuario
+        #original_hwcs = self.header_translator.translate_back_header(hwcs)
 
-        return phot_df, original_hwcs
+        return phot_df, hwcs
 
     def get_header_info(self, header):
         """Retrieves translated header information.

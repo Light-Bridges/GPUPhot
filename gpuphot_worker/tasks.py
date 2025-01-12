@@ -1,18 +1,19 @@
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from glob import glob
 
 import numpy as np
 import pytz
-from celery import shared_task
+from celery import shared_task, current_app as app
 
+import gpuphot.utils.gpu
 import gpuphot.utils.gpu
 from gpuphot.instrument_config_parser import ImageReduction
 from gpuphot.logger.hierarchical_logging import setup_logger
 from gpuphot_worker.celery_exceptions import SerializableTaskError, BaseTaskWithFailureHandling
 from gpuphot_worker.utils import get_processor, open_image_file, save_processed_image, crop_and_bin_image, \
-    insert_dataframe_to_postgres
+    insert_dataframe_to_postgres, populate_ima_stats, generate_gpuphotid, BASE_IMAGES_PATH, PROCESSED_IMAGE_FOLDER
 
 logger = setup_logger(__name__)
 
@@ -32,7 +33,7 @@ def task_error_handler(task, e, image_path):
 
 
 @shared_task
-def process_directory_task(path=None, filename=None, instrument_name=None, overwrite=False, exclude_pattern=None):
+def process_directory_task(path=None, filename=None, instrument_name=None, exclude_pattern=None):
     """
     Process astronomical images (FITS and NPY) with flexible search and configuration options.
 
@@ -58,8 +59,8 @@ def process_directory_task(path=None, filename=None, instrument_name=None, overw
                instrument_name='other_instrument'
            )
 
-        6. Process and overwrite original files:
-           process_directory_task.delay(path='today', overwrite=True)
+        6. Process images in a specific directory:
+           process_directory_task.delay(path='today')
 
     Args:
         path (str, optional): Subdirectory to search for images.
@@ -67,9 +68,6 @@ def process_directory_task(path=None, filename=None, instrument_name=None, overw
         filename (str, optional): Specific filename or pattern to match.
                                   Supports partial matches and wildcards.
         instrument_name (str, optional): Override default instrument name.
-        overwrite (bool, optional): If True, overwrites original files.
-                                    If False, creates new files with '_photometrized' suffix.
-                                    Defaults to False.
         exclude_pattern (str, optional): Regular expression pattern to exclude certain filenames.
 
     Returns:
@@ -79,7 +77,7 @@ def process_directory_task(path=None, filename=None, instrument_name=None, overw
 
     logger.info(f"Processing directory: {path}, filename: {filename}, instrument: {instrument_name}")
 
-    base_path = '/data/images'
+    base_path = BASE_IMAGES_PATH
 
     if path:
         path = path.lstrip('/')
@@ -96,7 +94,9 @@ def process_directory_task(path=None, filename=None, instrument_name=None, overw
 
     # Buscar archivos usando glob
     image_files = glob(search_pattern, recursive=True)
-    image_files = [f for f in image_files if f.endswith(('.fits', '.npy'))]
+    processed_dir = os.path.normpath(os.path.join(base_path, PROCESSED_IMAGE_FOLDER))
+    image_files = [f for f in image_files if
+                   f.endswith(('.fits', '.npy')) and not os.path.normpath(f).startswith(processed_dir)]
 
     # Aplicar filtro de exclusión usando expresiones regulares
     if exclude_pattern:
@@ -104,17 +104,18 @@ def process_directory_task(path=None, filename=None, instrument_name=None, overw
         image_files = [f for f in image_files if not regex.search(os.path.basename(f))]
 
     logger.info(f"Found {len(image_files)} images matching the search criteria")
-    results = []
+
+    results = {}
     for file_path in image_files:
         relative_path = os.path.relpath(file_path, base_path)
-        task = process_image_task.delay(relative_path, instrument_name, overwrite)
-        results.append(task.id)
+        task = process_image_task.delay(relative_path, instrument_name)
+        results[relative_path] = task.id
 
-    return {'task_ids': results}
+    return results
 
 
 @shared_task(bind=True, base=BaseTaskWithFailureHandling)
-def process_image_task(self, image_path, instrument_name=None, overwrite=False):
+def process_image_task(self, image_path, instrument_name=None):
     """
     Process a single astronomical image file (FITS or NPY).
 
@@ -130,10 +131,6 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
         image_path (str): Path to the image file to be processed.
         instrument_name (str, optional): Name of the instrument for processing.
                                          If None, uses the default instrument.
-        overwrite (bool, optional):
-            - True: Overwrites the original file
-            - False: Creates a new file with '_photometrized' suffix
-            Default: False
 
     Returns:
         dict: Processing results with the following keys:
@@ -141,8 +138,10 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
             - 'input_file': Relative path of the original file
             - 'process_file': Relative path of the processed file
             - 'output_file': Output path of the processed file
-            - 'phot_df': Photometric data DataFrame
-            - 'hwcs': WCS header dictionary
+            - 'imaphot.stored': If Photometric data stored in PostgreSQL
+            - 'imaphot.objets': Number of objects detected
+            - 'imaphot.transients': Number of transient objects detected
+            - 'imastats.stored': If Image statistics stored in PostgreSQL
 
             On error:
             - 'input_file': Path of the file that caused the error
@@ -159,7 +158,7 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
     - 'on_failure': Apply reduction only if initial processing fails by memory
     """
     logger.info(f"Processing image: {image_path} with instrument: {instrument_name}")
-    base_path = '/data/images'
+    base_path = BASE_IMAGES_PATH
     processor = get_processor(instrument_name)
 
     reduction_config = processor.config['image_reduction']
@@ -174,11 +173,14 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
         dateproc = datetime.now().replace(tzinfo=pytz.UTC)
         hwcs['DATEPROC'] = (dateproc.strftime('%Y-%m-%dT%H:%M:%S.%f'), 'Date and time of processing')
 
+        process_file = os.path.relpath(file_path_call, base_path)
+        gpuphotid = str(generate_gpuphotid(process_file))
+        hwcs['GPUPHOTI'] = (gpuphotid, 'Unique identifier for GPUPhot processing')
+
         # Guarda la imagen procesada
-        output_path = save_processed_image(file_path_call, imdata, hwcs, overwrite)
+        output_path = save_processed_image(file_path_call, base_path, imdata, hwcs)
 
         # Store photometry results in PostgreSQL
-        process_file = os.path.relpath(file_path_call, base_path)
 
         # Create a new DataFrame with necessary transformations
         df_imaphot = (
@@ -188,22 +190,25 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
         )
 
         # Add imageid and select relevant columns
-        df_imaphot['imageid'] = str(process_file)
-        df_imaphot = df_imaphot[['imageid', 'ra', 'dec', 'flux', 'dflux', 'trans']]
+        df_imaphot['id'] = gpuphotid
+        df_imaphot = df_imaphot[['id', 'ra', 'dec', 'flux', 'dflux', 'trans']]
 
         # Insert into PostgreSQL and capture result
-        result_postgress = insert_dataframe_to_postgres(df_imaphot)
+        result_imastats = populate_ima_stats(gpuphotid, str(output_path), hwcs, 'imastats')
+        result_imaphot = insert_dataframe_to_postgres(df_imaphot, 'imaphot')
 
         return {
             'input_file': image_path,
             'process_file': process_file,
             'output_file': os.path.relpath(output_path, base_path),
             'imaphot': {
-                'objets': len(phot_df.index) if phot_df is not None else 0,
-                'transients': len(phot_df[phot_df.trans == True].index) if phot_df is not None else 0,
-                'saved': result_postgress
+                'objets': len(df_imaphot.index) if df_imaphot is not None else 0,
+                'transients': len(df_imaphot[df_imaphot.trans == True].index) if df_imaphot is not None else 0,
+                'stored': result_imaphot
             },
-            'hwcs': dict(hwcs)
+            'imastats': {
+                'stored': result_imastats
+            }
         }
 
     try:
@@ -235,12 +240,58 @@ def process_image_task(self, image_path, instrument_name=None, overwrite=False):
             task_error_handler(self, e, image_path)
     except Exception as e:
         task_error_handler(self, e, image_path)
-        # error_message = f"Error processing file {image_path}: {str(e)}"
-        # self.update_state(
-        #     state="FAILURE",
-        #     meta={
-        #         "exc_type": e.__class__.__name__,
-        #         "error_message": error_message,
-        #     },
-        # )
-        # raise SerializableTaskError(error_message, exc_type=e.__class__.__name__)
+
+#
+# # Tarea dummy que se ejecutará cada minuto
+# @shared_task
+# def dummy_task(message):
+#     print(message)
+#
+#
+# @shared_task
+# def remove_task(message):
+#     print(message)
+#
+#
+# @shared_task
+# def update_tasks():
+#     # Obtén la hora actual en UTC
+#     now = datetime.now(tz=pytz.utc)
+#
+#     # Calcula el tiempo objetivo para ejecutar la tarea dentro de un minuto
+#     target_time = now + timedelta(minutes=1, seconds=5)
+#     target_time_remove = now + timedelta(minutes=2, seconds=5)
+#
+#     # Añade una nueva tarea dummy que se ejecutará a la hora específica
+#     scheduled_tasks = app.control.inspect().scheduled()
+#     task_number = sum(len(task_list) for task_list in scheduled_tasks.values()) if scheduled_tasks else 0
+#
+#     # Formatea el tiempo objetivo como una cadena legible
+#     formatted_time = target_time.strftime('%Y-%m-%dT%H:%M:%S.%f')
+#     formatted_time_remove = target_time_remove.strftime('%Y-%m-%dT%H:%M:%S.%f')
+#
+#     # Ejecuta la tarea dummy a la hora específica usando eta
+#     dummy_task.apply_async(args=[f'Soy tarea dummy {task_number} y me ejecuto a las {formatted_time}'], eta=target_time)
+#     remove_task.apply_async(args=[f'Soy tarea remove {task_number} y me ejecuto a las {formatted_time_remove}'],
+#                             eta=target_time_remove)
+#
+#     print(f"Tarea dummy añadida para ejecución a las {formatted_time} con argumento 'Soy tarea {task_number}'")
+#     print(f"Tarea remove añadida para ejecución a las {formatted_time_remove} con argumento 'Soy tarea {task_number}'")
+#
+#     if scheduled_tasks:
+#         print("Tareas programadas:")
+#         for worker, task_list in scheduled_tasks.items():
+#             print(f"Worker: {worker} - {len(task_list)} tareas programadas")
+#             for task_info in task_list:
+#                 print(
+#                     f"  - Tarea: {task_info['request']['name']}, ETA: {task_info['eta']}, Prioridad: {task_info['priority']}")
+#
+#                 # Revoca la tarea si es una tarea 'remove'
+#                 if 'remove' in task_info['request']['name']:
+#                     # Usa el nombre de la tarea y los argumentos para revocar
+#                     app.control.revoke(task_info['request']['id'],
+#                                        terminate=True)  # Cambia esto según cómo obtengas el ID si es necesario
+#                     print(f"Tarea revocada: {task_info['request']['name']}")
+#
+#     else:
+#         print("No hay tareas programadas.")

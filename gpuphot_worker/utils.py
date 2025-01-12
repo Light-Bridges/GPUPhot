@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import os
 
 import numpy as np
@@ -5,12 +7,15 @@ from astropy.io import fits
 from astropy.nddata import Cutout2D
 from astropy.wcs import WCS
 from skimage.measure import block_reduce
-from sqlalchemy import create_engine, exc
+from sqlalchemy import create_engine, exc, text
 
 from gpuphot.image_processor import create_processor
 from gpuphot.logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
+
+BASE_IMAGES_PATH = '/data/images'
+PROCESSED_IMAGE_FOLDER = 'gpuphot_processed'
 
 
 def get_processor(instrument_name=None):
@@ -64,29 +69,32 @@ def open_image_file(file_path):
     return imdata, imheader
 
 
-def save_processed_image(file_path, imdata, hwcs, overwrite):
+def save_processed_image(file_path, base_path, imdata, hwcs):
     """
-    Saves the processed image data and header as a FITS file.
+    Saves the processed image data and header as a FITS file in a 'gpuphot_processed' subdirectory.
 
     Args:
         file_path (str): Original file path.
+        base_path (str): Base path for relative paths.
         imdata (numpy.ndarray): Processed image data.
         hwcs (fits.Header): Updated header with WCS information.
-        overwrite (bool): If True, overwrites the original file if it's a FITS file.
 
     Returns:
         str: Path of the saved FITS file.
 
     Raises:
-        ValueError: If the file format is not supported.
+        ValueError: If there's an issue creating the output directory.
     """
-    # Determine the output path
-    if file_path.endswith('.fits') and overwrite:
-        output_path = file_path
-    else:
-        # For any input format, we'll save as FITS
-        file_name = os.path.splitext(file_path)[0]
-        output_path = f"{file_name}_photometrized.fits"
+    # Get the relative path
+    process_file = os.path.relpath(file_path, base_path)
+
+    # Create the new output path
+    output_dir = os.path.join(base_path, PROCESSED_IMAGE_FOLDER, os.path.dirname(process_file))
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Change the extension to .fits
+    file_name = os.path.splitext(os.path.basename(process_file))[0]
+    output_path = os.path.join(output_dir, f"{file_name}.fits")
 
     # Create and save the FITS file
     photometrized_image = fits.PrimaryHDU(data=imdata.astype(np.float32), header=hwcs)
@@ -227,17 +235,24 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
     return output_file
 
 
-def insert_dataframe_to_postgres(df, tbl_name, unique_col='imageid'):
+def __generate_connection_string():
+    # Get database connection parameters from environment variables
+    db_name = os.getenv('POSTGRES_DB', 'GPUPhotDB')
+    user = os.getenv('POSTGRES_USER', 'admin')
+    password = os.getenv('POSTGRES_PASSWORD', 'gpuphot')
+    host = 'postgres'
+    port = '5432'
+
+    # Create the connection string
+    connection_string = f'postgresql://{user}:{password}@{host}:{port}/{db_name}'
+
+    return connection_string
+
+
+def insert_dataframe_to_postgres(df, tbl_name, unique_col='id'):
     try:
         # Get database connection parameters from environment variables
-        db_name = os.getenv('POSTGRES_DB', 'GPUPhotDB')
-        user = os.getenv('POSTGRES_USER', 'admin')
-        password = os.getenv('POSTGRES_PASSWORD', 'gpuphot')
-        host = 'postgres'
-        port = '5432'
-
-        # Create the connection string
-        connection_string = f'postgresql://{user}:{password}@{host}:{port}/{db_name}'
+        connection_string = __generate_connection_string()
 
         # Create an SQLAlchemy engine
         engine = create_engine(connection_string)
@@ -248,8 +263,8 @@ def insert_dataframe_to_postgres(df, tbl_name, unique_col='imageid'):
 
             with engine.begin() as connection:  # Use transaction context manager
                 # Delete existing records in one go
-                connection.execute(
-                    f"DELETE FROM {tbl_name} WHERE {unique_col} IN ({', '.join(map(repr, unique_values))})")
+                delete_query = text(f"DELETE FROM {tbl_name} WHERE {unique_col} IN :values")
+                connection.execute(delete_query, {"values": tuple(unique_values)})
 
                 # Insert the DataFrame into the PostgreSQL table in chunks
                 chunk_size = 5000  # Adjust based on your needs
@@ -266,3 +281,83 @@ def insert_dataframe_to_postgres(df, tbl_name, unique_col='imageid'):
         logger.error(f"An unexpected error occurred: {str(e)}")
 
     return False
+
+
+def queryStrAdd(query: str, toAdd: str) -> str:
+    return query + "'" + toAdd + "', "
+
+
+def queryAdd(query: str, toAdd) -> str:
+    return query + str(toAdd) + ", "
+
+
+# Takes a FITS header and formats it into a PSQL-compatible HStore fragment.
+def headerToHstore(header):
+    fragment = ""
+    for key, value in header.items():
+        if key != "COMMENT" and not isinstance(value, fits.header._HeaderCommentaryCards):
+            # Convertir todo a string y escapar las comillas dobles
+            key_str = str(key).replace('"', '\\"')
+            value_str = str(value).replace('"', '\\"')
+            fragment += f'"{key_str}" => "{value_str}", '
+    return fragment[:-2]
+
+
+def insert_header(header, file_path):
+    query_parts = ["INSERT INTO imastats (id, file_path, "]
+
+    columns = [
+        "naxis1", "naxis2", "telescop", "instrume", "camera", "filter",
+        "date_obs", "exptime", "object", "ra", "dec", "fwhm", "maglim", "header"
+    ]
+    query_parts.append(", ".join(columns))
+    query_parts.append(") VALUES (")
+
+    query_parts.append(f"'{header.get('GPUPHOTI', '')}', '{file_path}', ")
+
+    keys = [
+        "NAXIS1", "NAXIS2", "TELESCOP", "INSTRUME", "CAMERA", "FILTER",
+        "DATE-OBS", "EXPTIME", "OBJECT", "RA", "DEC", "FWHM", "MAGLIM"
+    ]
+
+    for key in keys:
+        value = header.get(key, 'NULL')
+        if value == 'NULL' or value is None:
+            query_parts.append("NULL, ")
+        elif isinstance(value, (int, float)):
+            query_parts.append(f"{value}, ")
+        else:
+            query_parts.append(f"'{str(value)}', ")
+
+    hstore_fragment = headerToHstore(header)
+    query_parts.append(f"'{hstore_fragment}'")
+
+    query = ''.join(query_parts) + ") ON CONFLICT (id) DO UPDATE SET "
+
+    update_parts = [f"{col} = EXCLUDED.{col}" for col in columns]
+    query += ", ".join(update_parts)
+
+    return query
+
+
+def populate_ima_stats(gpuphotid, file_path, header, delete_prev=True):
+    try:
+        connection_string = __generate_connection_string()
+        engine = create_engine(connection_string)
+
+        with engine.begin() as connection:
+            if delete_prev:
+                delete_query = text(f"DELETE FROM imastats WHERE id = '{gpuphotid}'")
+                connection.execute(delete_query)
+
+            q = insert_header(header, file_path)
+            connection.execute(text(q))
+        return True
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+    return False
+
+
+def generate_gpuphotid(process_file):
+    h = hmac.new('GPUPHOT_KEY'.encode(), process_file.encode(), hashlib.sha1)
+    return str(h.hexdigest())

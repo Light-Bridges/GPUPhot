@@ -1,3 +1,4 @@
+import inspect
 import os
 import re
 import signal
@@ -41,7 +42,7 @@ class SingletonSolver:
 
         default_cache = '/data/astrometry_cache'
         env_cache = os.getenv('ASTROMETRY_CACHE_PATH')
-        fallback_cache = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'astrometry_cache')
+        fallback_cache = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..', 'astrometry_cache')
 
         if os.path.exists(default_cache):
             cache = default_cache
@@ -179,21 +180,35 @@ def astrometrice2(df: pd.DataFrame, scale: float,
 
     try:
         solver = get_solver()
+        solve_params = inspect.signature(solver.solve).parameters
+
+        if 'stars_xs' in solve_params and 'stars_ys' in solve_params:
+            star_data = {'stars_xs': df['xcentroid'], 'stars_ys': df['ycentroid']}
+        elif 'stars' in solve_params:
+            star_data = {'stars': df[['xcentroid', 'ycentroid']].values.tolist()}
+        else:
+            raise ValueError("Unexpected solver.solve() signature")
+
+        # Common parameters for both solve attempts
+        common_params = {
+            'solution_parameters': astrometry.SolutionParameters(
+                logodds_callback=logodds_callback_100,
+                sip_order=sip_order
+            )
+        }
+
         solution = solver.solve(
-            stars_xs=df['xcentroid'],
-            stars_ys=df['ycentroid'],
+            **star_data,
             size_hint=astrometry.SizeHint(
                 lower_arcsec_per_pixel=scale * 0.8,
-                upper_arcsec_per_pixel=scale * 1.2)
-            ,
+                upper_arcsec_per_pixel=scale * 1.2
+            ),
             position_hint=astrometry.PositionHint(
                 ra_deg=central_ra,
                 dec_deg=central_dec,
-                radius_deg=0.5, )
-            ,
-            solution_parameters=astrometry.SolutionParameters(
-                logodds_callback=logodds_callback_100,
-                sip_order=sip_order)
+                radius_deg=0.5,
+            ),
+            **common_params
         )
         nmatches = len(solution.matches)
         logger.debug(f'Total matches: {nmatches}')
@@ -203,15 +218,10 @@ def astrometrice2(df: pd.DataFrame, scale: float,
             signal.alarm(60)
             logger.warning('No matches found. Trying without position hint.')
             solution = solver.solve(
-                stars_xs=df['xcentroid'],
-                stars_ys=df['ycentroid'],
-                size_hint=None
-                ,
-                position_hint=None
-                ,
-                solution_parameters=astrometry.SolutionParameters(
-                    logodds_callback=logodds_callback_100,
-                    sip_order=sip_order)
+                **star_data,
+                size_hint=None,
+                position_hint=None,
+                **common_params
             )
             nmatches = len(solution.matches)
             logger.debug(f'Total matches: {nmatches}')
