@@ -241,13 +241,18 @@ def process_image_task(self, image_path, instrument_name=None):
     except Exception as e:
         task_error_handler(self, e, image_path)
 
-#
-# # Tarea dummy que se ejecutará cada minuto
-# @shared_task
-# def dummy_task(message):
-#     print(message)
-#
-#
+
+@shared_task
+def dummy_task(instrument_name=None):
+    """
+    This task is a dummy task that prints a message to the console.
+
+    Can change the code to process images automatically.
+    """
+    print(f"Dummy task executed with instrument: {instrument_name}")
+    # Example: process_directory_task.delay(path='today', instrument_name=instrument_name)
+    return f"Dummy task executed with instrument: {instrument_name}"
+
 # @shared_task
 # def remove_task(message):
 #     print(message)

@@ -63,7 +63,7 @@ The following environment variables can be configured in the `.env` file:
 
 * **`INSTRUMENT_NAME`**: Name of the instrument to load the configuration for. Default: `default`.
 * **`INSTRUMENT_CONFIG_PATH`**: Path to the directory containing instrument configuration files. Default: `./gpuphot/instrument_configs`.
-* **`IMAGE_BASE_PATH`**: Base path for storing images. Default: `~/gpuphot_images`. Inside the container, this path is mapped to `/home/jovyan/images`.
+* **`IMAGE_BASE_PATH`**: Base path for storing images. Default: `~/gpuphot_images`. Inside the container, this path is mapped to `/data/images`.
 * **`CELERY_CONCURRENCY`**: Number of Celery workers to run concurrently. Adjust this value based on your GPU resources. Default: `1`.
 
 Make sure to adjust these variables according to your specific configuration.

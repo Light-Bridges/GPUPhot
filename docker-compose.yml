@@ -46,9 +46,9 @@ services:
       - "6379:6379"
     restart: unless-stopped
 
-#  beat:
-#    <<: *common-worker-backend
-#    command: ["celery", "-A", "gpuphot_worker.worker_app", "beat"]
+  beat:
+    <<: *common-worker-backend
+    command: ["celery", "-A", "gpuphot_worker.worker_app", "beat"]
 
   gpuphot_worker:
     <<: *common-worker-backend
@@ -75,15 +75,15 @@ services:
       <<: *celery-env
       JUPYTER_ENABLE_LAB: "yes"
       INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
-      INSTRUMENT_CONFIG_BASE_PATH: /home/jovyan/instrument_configs
-      IMAGE_BASE_PATH: /home/jovyan/images
+      INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
+      IMAGE_BASE_PATH: /data/images
       POSTGRES_DB: GPUPhotDB
       POSTGRES_USER: read_only
       POSTGRES_PASSWORD: read_only
     volumes:
       - ./notebooks:/home/jovyan/work:z
-      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/home/jovyan/instrument_configs:z
-      - ${IMAGE_PATH:-~/gpuphot_images}:/home/jovyan/images:z
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
       - ${ASTROMETRY_CACHE_PATH:-astrometry_cache}:/data/astrometry_cache:z
     deploy:
       resources:

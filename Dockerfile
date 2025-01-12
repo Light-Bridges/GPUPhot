@@ -49,7 +49,7 @@ COPY . .
 
 WORKDIR /home/jovyan
 
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--NotebookApp.token=''"]
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--NotebookApp.token=''", "--notebook-dir=/home/jovyan/work"]
 
 # Flower target
 FROM base as flower
