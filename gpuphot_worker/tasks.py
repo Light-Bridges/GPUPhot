@@ -98,9 +98,6 @@ def process_directory_task(path=None, filename=None, instrument_name=None, exclu
               individual image processing tasks that were initiated.
     """
 
-    logger.info(
-        f"Processing directory: {path}, filename: {filename}, instrument: {instrument_name}, reprocess: {reprocess}")
-
     base_path = BASE_IMAGES_PATH
 
     if path:
@@ -108,6 +105,9 @@ def process_directory_task(path=None, filename=None, instrument_name=None, exclu
         search_path = os.path.join(base_path, path)
     else:
         search_path = base_path
+
+    logger.info(
+        f"Processing directory: {path}, filename: {filename}, instrument: {instrument_name}, reprocess: {reprocess}")
 
     if filename:
         if '*' not in filename:
@@ -196,8 +196,12 @@ def process_image_task(self, image_path, instrument_name=None):
     - 'on_failure': Apply reduction only if initial processing fails due to memory issues.
     """
 
-    logger.info(f"Processing image: {image_path} with instrument: {instrument_name}")
     base_path = BASE_IMAGES_PATH
+    if image_path:
+        image_path = image_path.lstrip('/')
+
+    logger.info(f"Processing image: {image_path} with instrument: {instrument_name}")
+
     processor = get_processor(instrument_name)
 
     reduction_config = processor.config['image_reduction']
