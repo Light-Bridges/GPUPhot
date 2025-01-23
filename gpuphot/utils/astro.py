@@ -26,6 +26,9 @@ logger = setup_logger(__name__)
 
 
 class SingletonSolver:
+    """
+    A singleton class for managing the astrometry solver.
+    """
     _instance = None
     _lock = threading.Lock()
 
@@ -39,6 +42,9 @@ class SingletonSolver:
         return cls._instance
 
     def initialize_solver(self):
+        """
+        Initialize the astrometry solver with appropriate index files.
+        """
 
         default_cache = '/data/astrometry_cache'
         env_cache = os.getenv('ASTROMETRY_CACHE_PATH')
@@ -94,6 +100,14 @@ class SingletonSolver:
 
     @staticmethod
     def check_index_files_exist(directory):
+        """
+        Check if astrometry index files exist in the given directory.
+
+        :param directory: Directory to check for index files.
+        :type directory: str
+        :return: True if index files exist, False otherwise.
+        :rtype: bool
+        """
         fits_count = 0
         download_count = 0
 
@@ -109,10 +123,8 @@ def get_solver():
     """
     Get the astrometry solver with index files.
 
-    Returns
-    -------
-    astrometry.Solver
-        Configured astrometry solver instance.
+    :return: Configured astrometry solver instance.
+    :rtype: astrometry.Solver
     """
     return SingletonSolver().solver
     # if os.path.exists('/data'):
@@ -129,6 +141,16 @@ def get_solver():
 
 
 def get_astrometry_params(h_wcs, image_shape):
+    """
+    Get astrometry parameters from WCS header.
+
+    :param h_wcs: WCS header.
+    :type h_wcs: dict
+    :param image_shape: Shape of the image.
+    :type image_shape: tuple
+    :return: Center coordinates, field of view, and scale.
+    :rtype: tuple
+    """
     w = WCS(h_wcs)
     ra, dec = w.all_pix2world(image_shape[1] // 2, image_shape[0] // 2, 1)
     cd11 = float(h_wcs['CD1_1'][0])
@@ -141,6 +163,14 @@ def get_astrometry_params(h_wcs, image_shape):
 
 
 def logodds_callback_100(logodds):
+    """
+    Callback function for astrometry solver.
+
+    :param logodds: Log-odds of the solution.
+    :type logodds: list
+    :return: Action to take (STOP or CONTINUE).
+    :rtype: astrometry.Action
+    """
     # print(logodds)
     if (logodds[0] > 100.0) | (len(logodds) > 2):
         return astrometry.Action.STOP
@@ -149,6 +179,15 @@ def logodds_callback_100(logodds):
 
 
 def handler(signum, frame):
+    """
+    Signal handler for astrometry timeout.
+
+    :param signum: Signal number.
+    :type signum: int
+    :param frame: Current stack frame.
+    :type frame: frame
+    :raises AstrometrizationTimeoutError: If astrometry times out.
+    """
     logger.info("Astrometrization timeout!")
     raise AstrometrizationTimeoutError("End of time for astrometrization")
 
@@ -160,19 +199,18 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     """
     Perform astrometry on an image.
 
-    Parameters
-    ----------
-    dfm : pd.DataFrame
-        Dataframe containing detected sources.
-    head0 : dict
-        FITS header.
-    im_shape : tuple
-        Shape of the image.
-
-    Returns
-    -------
-    dict
-        Updated FITS header.
+    :param df: Dataframe containing detected sources.
+    :type df: pd.DataFrame
+    :param scale: Image scale in arcseconds per pixel.
+    :type scale: float
+    :param central_ra: Central right ascension in degrees.
+    :type central_ra: float
+    :param central_dec: Central declination in degrees.
+    :type central_dec: float
+    :param sip_order: SIP (Simple Imaging Polynomial) order, default is 3.
+    :type sip_order: int
+    :return: Updated WCS header.
+    :rtype: dict
     """
 
     signal.signal(signal.SIGALRM, handler)
@@ -240,28 +278,31 @@ def astrometrice2(df: pd.DataFrame, scale: float,
 def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=50,
                   solar_filter=0.6, dist_thres_px=3, min_snr=30, max_snr=300,
                   plot=False):
-    """Calculate the zeropoint for photometry.
+    """
+    Calculate the zeropoint for photometry.
 
     :param df_catalog: Catalog dataframe.
     :type df_catalog: pd.DataFrame
-    :param flux: Flux values.
-    :type flux: ndarray
-    :param noise: Noise values.
-    :type noise: ndarray
-    :param coord: Coordinates of sources.
-    :type coord: ndarray
+    :param df_sources: Sources dataframe.
+    :type df_sources: pd.DataFrame
     :param exptime: Exposure time.
     :type exptime: float
-    :param solar_filter: Solar filter, by default 0.3.
-    :type solar_filter: float, optional
-    :param dist_thres_px: Distance threshold in pixels, by default 3.
-    :type dist_thres_px: int, optional
-    :param N: Number of brightest stars to use, by default 50.
-    :type N: int, optional
-    :param plot: Whether to plot the results, by default False.
-    :type plot: bool, optional
-
-
+    :param center_lims: Limits for center region, optional.
+    :type center_lims: tuple or None
+    :param N: Number of brightest stars to use, default is 50.
+    :type N: int
+    :param solar_filter: Solar filter value, default is 0.6.
+    :type solar_filter: float
+    :param dist_thres_px: Distance threshold in pixels, default is 3.
+    :type dist_thres_px: int
+    :param min_snr: Minimum signal-to-noise ratio, default is 30.
+    :type min_snr: int
+    :param max_snr: Maximum signal-to-noise ratio, default is 300.
+    :type max_snr: int
+    :param plot: Whether to plot the results, default is False.
+    :type plot: bool
+    :return: Dictionary of zeropoint parameters.
+    :rtype: dict
     """
     source_coords_matched_idx, ref_coords_matched_idx = crossmatch_sources(df_sources[['RA', 'DEC']].values,
                                                                            df_catalog[['RA', 'DEC']].values,
@@ -371,10 +412,15 @@ def get_target_snr(dfm: pd.DataFrame, target_ra: float, target_dec: float, dist_
     Get the SNR of the target.
 
     :param dfm: Dataframe with photometry data.
+    :type dfm: pd.DataFrame
     :param target_ra: Target right ascension, in degrees.
+    :type target_ra: float
     :param target_dec: Target declination, in degrees.
-    :param dist_thres_px: Distance threshold in pixels, by default 3.
+    :type target_dec: float
+    :param dist_thres_px: Distance threshold in pixels, default is 3.
+    :type dist_thres_px: int
     :return: SNR of the target.
+    :rtype: float
     """
     _, idx = crossmatch_sources([[target_ra, target_dec]],
                                 dfm[['RA', 'DEC']].values,
@@ -391,9 +437,13 @@ def get_maglim(mag: np.ndarray, snr: np.ndarray, snr_lim: float) -> float:
     Get the limiting magnitude.
 
     :param mag: Magnitude values.
+    :type mag: numpy.ndarray
     :param snr: SNR values.
+    :type snr: numpy.ndarray
     :param snr_lim: SNR limit.
+    :type snr_lim: float
     :return: Limiting magnitude.
+    :rtype: float
     """
     mask = (snr > 2) & (snr < 15)
     if np.sum(mask) < 3:
@@ -408,6 +458,24 @@ def get_maglim(mag: np.ndarray, snr: np.ndarray, snr_lim: float) -> float:
 
 
 def radec_to_moon_sun(ra, dec, site_latitude, site_longitude, site_elevation, date_obs):
+    """
+    Calculate moon and sun positions relative to a target.
+
+    :param ra: Right ascension of target in degrees.
+    :type ra: float
+    :param dec: Declination of target in degrees.
+    :type dec: float
+    :param site_latitude: Latitude of observation site in degrees.
+    :type site_latitude: float
+    :param site_longitude: Longitude of observation site in degrees.
+    :type site_longitude: float
+    :param site_elevation: Elevation of observation site in meters.
+    :type site_elevation: float
+    :param date_obs: Date and time of observation.
+    :type date_obs: str
+    :return: Tuple of moon altitude, azimuth, distance to target, phase, and sun altitude and azimuth.
+    :rtype: tuple
+    """
     observer = ephem.Observer()
     observer.lat = np.radians(site_latitude)
     observer.lon = np.radians(site_longitude)
@@ -437,6 +505,24 @@ def radec_to_moon_sun(ra, dec, site_latitude, site_longitude, site_elevation, da
 
 
 def radec_to_altaz(RA, DEC, SITELAT, SITELON, SITEELEV, Date):
+    """
+    Convert RA/Dec to altitude and azimuth.
+
+    :param RA: Right ascension in degrees.
+    :type RA: float
+    :param DEC: Declination in degrees.
+    :type DEC: float
+    :param SITELAT: Site latitude in degrees.
+    :type SITELAT: float
+    :param SITELON: Site longitude in degrees.
+    :type SITELON: float
+    :param SITEELEV: Site elevation in meters.
+    :type SITEELEV: float
+    :param Date: Observation date and time.
+    :type Date: str
+    :return: Tuple of azimuth, altitude, airmass, and zenith distance.
+    :rtype: tuple
+    """
     coords_deg = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg')
     Observatory = EarthLocation(lat=SITELAT * u.deg, lon=SITELON * u.deg, height=SITEELEV * u.m)
     aa = AltAz(location=Observatory, obstime=Date)
@@ -447,21 +533,57 @@ def radec_to_altaz(RA, DEC, SITELAT, SITELON, SITEELEV, Date):
 
 
 def radec_to_gal(RA, DEC):
+    """
+    Convert RA/Dec to Galactic coordinates.
+
+    :param RA: Right ascension in degrees.
+    :type RA: float
+    :param DEC: Declination in degrees.
+    :type DEC: float
+    :return: Tuple of Galactic longitude and latitude.
+    :rtype: tuple
+    """
     coords_gal = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg').galactic
     return round(coords_gal.l.deg, 6), round(coords_gal.b.deg, 6)
 
 
 def radec_to_ecl(RA, DEC):
+    """
+    Convert RA/Dec to Ecliptic coordinates.
+
+    :param RA: Right ascension in degrees.
+    :type RA: float
+    :param DEC: Declination in degrees.
+    :type DEC: float
+    :return: Tuple of Ecliptic longitude and latitude.
+    :rtype: tuple
+    """
     coords_gal = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg').barycentricmeanecliptic
     return round(coords_gal.lon.deg, 6), round(coords_gal.lat.deg, 6)
 
 
 def date_to_jd(dateobs):
+    """
+    Convert date to Julian Date.
+
+    :param dateobs: Observation date and time.
+    :type dateobs: str
+    :return: Tuple of Julian Date and Modified Julian Date.
+    :rtype: tuple
+    """
     Date = Time(dateobs, scale='utc')
     return Date.jd, Date.mjd
 
 
 def get_ccw(hwcs):
+    """
+    Get the counter-clockwise rotation angle from WCS header.
+
+    :param hwcs: WCS header.
+    :type hwcs: dict
+    :return: Counter-clockwise rotation angle in degrees.
+    :rtype: float
+    """
     cd11 = hwcs[HeaderKey.CD1_1.value]
     cd12 = hwcs[HeaderKey.CD1_2.value]
     cd21 = hwcs[HeaderKey.CD2_1.value]
@@ -477,6 +599,14 @@ def get_ccw(hwcs):
 
 
 def get_scale(hwcs):
+    """
+    Get the image scale from WCS header.
+
+    :param hwcs: WCS header.
+    :type hwcs: dict
+    :return: Image scale in arcseconds per pixel.
+    :rtype: float
+    """
     cd11 = hwcs[HeaderKey.CD1_1.value]
     cd12 = hwcs[HeaderKey.CD1_2.value]
     cd21 = hwcs[HeaderKey.CD2_1.value]
@@ -485,10 +615,29 @@ def get_scale(hwcs):
 
 
 def plate_scale_px(microns, focal):
+    """
+    Calculate plate scale in arcseconds per pixel.
+
+    :param microns: Pixel size in microns.
+    :type microns: float
+    :param focal: Focal length in mm.
+    :type focal: float
+    :return: Plate scale in arcseconds per pixel.
+    :rtype: float
+    """
+
     # pixel size in microns
     return plate_scale_mm(focal) * microns / 1000  # arcsec/px
 
 
 def plate_scale_mm(focal):
+    """
+    Calculate plate scale in arcseconds per mm.
+
+    :param focal: Focal length in mm.
+    :type focal: float
+    :return: Plate scale in arcseconds per mm.
+    :rtype: float
+    """
     # focal length in mm
     return 206265 / focal  # arcsec/mm

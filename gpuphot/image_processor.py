@@ -7,11 +7,14 @@ logger = setup_logger(__name__)
 
 class ImageProcessor:
     def __init__(self, instrument_name, config_dir=None):
-        """Initializes the image processor with configuration for a specific instrument.
+        """
+        Initialize the image processor with configuration for a specific instrument.
 
         :param instrument_name: Name of the instrument for which to configure the processor.
+        :type instrument_name: str
         :param config_dir: Directory where configuration files are located (optional).
                            If not provided, the default directory will be used.
+        :type config_dir: str or None
         """
         self.instrument_name = instrument_name
         self.config_parser = InstrumentConfigParser(config_dir)
@@ -35,13 +38,18 @@ class ImageProcessor:
 
     @hierarchical_debug(logger)
     def process_image(self, imdata, imheader, header_descriptions = None, **kwargs):
-        """Processes an image using the specified parameters and translates headers.
+        """
+        Process an image using the specified parameters and translate headers.
 
         :param imdata: The image data to be processed.
+        :type imdata: numpy.ndarray
         :param imheader: The original FITS header associated with the image.
+        :type imheader: astropy.io.fits.header.Header
         :param header_descriptions: Descriptions of the header keywords.
+        :type header_descriptions: dict or None
         :param kwargs: Additional parameters for processing that override default settings.
         :return: A tuple containing the data frame of processed results and the translated original header.
+        :rtype: tuple(pandas.DataFrame, astropy.io.fits.header.Header)
         """
         # Traduce el header a las keywords estándar
         translated_header = self.header_translator.translate_header(imheader)
@@ -58,22 +66,29 @@ class ImageProcessor:
         return phot_df, hwcs
 
     def get_header_info(self, header):
-        """Retrieves translated header information.
+        """
+        Retrieve translated header information.
 
         :param header: The FITS header to be translated.
+        :type header: astropy.io.fits.header.Header
         :return: The translated header with standard keywords.
+        :rtype: astropy.io.fits.header.Header
         """
         return self.header_translator.translate_header(header)
 
 
 # Function to create the processor
 def create_processor(instrument_name, config_dir=None):
-    """Creates an instance of ImageProcessor for a specified instrument.
+    """
+    Create an instance of ImageProcessor for a specified instrument.
 
     :param instrument_name: Name of the instrument for which to create a processor.
+    :type instrument_name: str
     :param config_dir: Directory where configuration files are located (optional).
                        If not provided, the default directory will be used.
+    :type config_dir: str or None
     :return: An instance of ImageProcessor configured for the specified instrument.
+    :rtype: ImageProcessor
     """
     return ImageProcessor(instrument_name, config_dir)
 

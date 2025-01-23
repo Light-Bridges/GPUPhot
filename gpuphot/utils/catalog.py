@@ -10,6 +10,18 @@ logger = setup_logger(__name__)
 
 
 def crossmatch_sources(source_coords, ref_coords, thres_px=2):
+    """
+    Cross-match source coordinates with reference coordinates.
+
+    :param source_coords: Array of source coordinates.
+    :type source_coords: numpy.ndarray
+    :param ref_coords: Array of reference coordinates.
+    :type ref_coords: numpy.ndarray
+    :param thres_px: Threshold distance in pixels for matching, default is 2.
+    :type thres_px: float
+    :return: Tuple of matched source and reference indices.
+    :rtype: tuple(numpy.ndarray, numpy.ndarray)
+    """
     tree = KDTree(ref_coords)
     dist, idx = tree.query(source_coords, k=1)
     mask = dist < thres_px
@@ -24,20 +36,24 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                 vizier_cache=True, custom_vizier_search_func=None,
                 expected_columns=None, **kwargs):
     """
-    Retrieves astronomical data from the Vizier catalog based on specified parameters.
-
-    This function queries the Vizier catalog for objects in a defined region and applies
-    filters to the results based on magnitude limits. It also allows for the use of a
-    custom search function if provided.
+    Retrieve astronomical data from the Vizier catalog based on specified parameters.
 
     :param catalog: The name of the Vizier catalog to query.
+    :type catalog: str
     :param coocenter: The coordinates (center) around which to search for objects.
+    :type coocenter: astropy.coordinates.SkyCoord
     :param radii: The radius within which to search for objects (in degrees).
+    :type radii: float
     :param maglimit: The magnitude limit for filtering results.
+    :type maglimit: float
     :param ref_filter: The reference filter used for magnitude filtering.
+    :type ref_filter: str
     :param vizier_timeout: Timeout duration for the query (default is 60 seconds).
+    :type vizier_timeout: int
     :param vizier_row_limit: Maximum number of rows to return from the query (default is -1, which means no limit).
+    :type vizier_row_limit: int
     :param vizier_cache: Boolean flag to enable or disable caching of results (default is True).
+    :type vizier_cache: bool
     :param custom_vizier_search_func: Optional custom function for querying the Vizier catalog.
                                        This function must accept the following parameters:
                                        - catalog: The name of the Vizier catalog to query.
@@ -46,8 +62,11 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                                        - maglimit: The magnitude limit for filtering results.
                                        - ref_filter: The reference filter used for magnitude filtering.
                                        - expected_columns: List of expected column names in the results.
-
+    :type custom_vizier_search_func: callable or None
+    :param expected_columns: List of expected column names in the results.
+    :type expected_columns: list or None
     :return: A DataFrame containing the results of the query, filtered by the specified parameters.
+    :rtype: pandas.DataFrame
     """
     if custom_vizier_search_func is not None:
         return custom_vizier_search_func(catalog, coocenter, radii, maglimit, ref_filter, expected_columns)
@@ -64,25 +83,24 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
 @hierarchical_debug(logger)
 def catalog_results(coocenter, radius, filter, inmodel, maglimit=23, **kwargs):
     """
-    Processes astronomical data to calculate magnitudes and other parameters
-    for stars based on various filters and models.
-
-    This function retrieves data from different catalogs depending on the specified
-    filter and calculates magnitudes, errors, and solar indices for stars. It uses
-    the __getVizier function to fetch necessary data and applies specific calculations
-    based on the input parameters.
+    Process astronomical data to calculate magnitudes and other parameters for stars based on various filters and models.
 
     :param coocenter: The coordinates (center) around which to search for objects.
+    :type coocenter: astropy.coordinates.SkyCoord
     :param radius: The radius within which to search for objects (in degrees).
+    :type radius: float
     :param filter: The specific filter type used to determine which catalog to query.
+    :type filter: str
     :param inmodel: The model used for calculating magnitudes, affecting coefficients applied.
+    :type inmodel: str
     :param maglimit: The magnitude limit for filtering results (default is 23).
+    :type maglimit: float
     :param kwargs: Additional keyword arguments passed to __getVizier, including luminosity coefficients.
-
     :return: A tuple containing:
-        - result: A DataFrame with calculated magnitudes and associated parameters.
-        - catalog: The name of the catalog used in the query.
-        - ref_filter: The reference filter used in calculations.
+             - result: A DataFrame with calculated magnitudes and associated parameters.
+             - catalog: The name of the catalog used in the query.
+             - ref_filter: The reference filter used in calculations.
+    :rtype: tuple(pandas.DataFrame, str, str)
     """
     if coocenter.dec.deg < -30:
         catalog = 'II/379'  # SkyMapper Southern Sky Survey. DR4 : II/379

@@ -25,14 +25,14 @@ def task_error_handler(task, e, image_path):
     This function logs the error details, updates the task state to "FAILURE",
     and raises a SerializableTaskError with relevant information.
 
-    Args:
-        task (Task): The task instance that encountered an error.
-        e (Exception): The exception that was raised during the task execution.
-        image_path (str): The path of the image file that caused the error.
-
-    Raises:
-        SerializableTaskError: An error that includes the original exception type
-                                and a message describing the error.
+    :param task: The task instance that encountered an error.
+    :type task: celery.Task
+    :param e: The exception that was raised during the task execution.
+    :type e: Exception
+    :param image_path: The path of the image file that caused the error.
+    :type image_path: str
+    :raises SerializableTaskError: An error that includes the original exception type
+                                    and a message describing the error.
     """
     error_message = f"Error processing file {image_path}: {str(e)}"
     logger.error(error_message)
@@ -61,41 +61,39 @@ def process_directory_task(path=None, filename=None, instrument_name=None, exclu
     This task searches for images based on specified criteria and initiates individual
     processing tasks for each image found.
 
-    Task Usage Examples:
-        1. Process all images in the default path:
-           process_directory_task.delay()
+    :param path: Subdirectory to search for images. If None, searches in the base image path.
+    :type path: str, optional
+    :param filename: Specific filename or pattern to match. Supports partial matches and wildcards.
+    :type filename: str, optional
+    :param instrument_name: Overrides the default instrument name.
+    :type instrument_name: str, optional
+    :param exclude_pattern: Regular expression pattern to exclude certain filenames.
+    :type exclude_pattern: str, optional
+    :param reprocess: If True, processes all found images; if False, skips images already processed.
+                      Default is True.
+    :type reprocess: bool, optional
+    :return: A dictionary containing 'task_ids', which is a list of task IDs for the individual image processing tasks initiated.
+    :rtype: dict
 
-        2. Process images in a specific directory:
-           process_directory_task.delay(path='today')
+    Examples
+    --------
+    1. Process all images in the default path:
+       >>> process_directory_task.delay()
 
-        3. Process images matching a specific filename:
-           process_directory_task.delay(path='today/camera1', filename='image.fits')
+    2. Process images in a specific directory:
+       >>> process_directory_task.delay(path='today')
 
-        4. Process images containing a specific name pattern:
-           process_directory_task.delay(filename='NEO')
+    3. Process images matching a specific filename:
+       >>> process_directory_task.delay(path='today/camera1', filename='image.fits')
 
-        5. Process with a custom instrument configuration:
-           process_directory_task.delay(
-               path='today',
-               instrument_name='other_instrument'
-           )
+    4. Process images containing a specific name pattern:
+       >>> process_directory_task.delay(filename='NEO')
 
-        6. Process without reprocesing processed files:
-           process_directory_task.delay(path='today', reprocess=False)
+    5. Process with a custom instrument configuration:
+       >>> process_directory_task.delay(path='today', instrument_name='other_instrument')
 
-    Args:
-        path (str, optional): Subdirectory to search for images.
-                              If None, searches in the base image path.
-        filename (str, optional): Specific filename or pattern to match.
-                                  Supports partial matches and wildcards.
-        instrument_name (str, optional): Overrides the default instrument name.
-        exclude_pattern (str, optional): Regular expression pattern to exclude certain filenames.
-        reprocess (bool, optional): If True, processes all found images; if False,
-                                    skips images already processed.
-
-    Returns:
-        dict: A dictionary containing 'task_ids', which is a list of task IDs for the
-              individual image processing tasks that were initiated.
+    6. Process without reprocessing already processed files:
+       >>> process_directory_task.delay(path='today', reprocess=False)
     """
 
     base_path = BASE_IMAGES_PATH
@@ -163,37 +161,63 @@ def process_image_task(self, image_path, instrument_name=None):
     - Handles different image reduction methods.
     - Generates and stores processing metadata.
 
-    Args:
-        image_path (str): The path to the image file to be processed.
-        instrument_name (str, optional): The name of the instrument for processing.
-                                          If None, the default instrument is used.
+    :param image_path: The path to the image file to be processed.
+    :type image_path: str
+    :param instrument_name: The name of the instrument for processing. If None, the default instrument is used.
+    :type instrument_name: str or None
 
-    Returns:
-        dict: Processing results containing the following keys:
-            On successful processing:
-            - 'input_file': Relative path of the original file.
-            - 'process_file': Relative path of the processed file.
-            - 'output_file': Output path of the processed file.
-            - 'imaphot': A dictionary with photometric data:
-                - 'stored': Indicates if photometric data is stored in PostgreSQL.
-                - 'objets': Number of objects detected.
-                - 'transients': Number of transient objects detected.
-            - 'imastats': A dictionary with image statistics:
-                - 'stored': Indicates if image statistics are stored in PostgreSQL.
+    :return: Processing results containing various keys depending on success or failure.
+    :rtype: dict
 
-            On error:
-            - 'input_file': Path of the file that caused the error.
-            - 'error': Error description.
-            - 'status': 'failed'.
+    :raises SerializableTaskError: A serializable exception with error details.
+    :raises MemoryError: If memory issues occur during processing.
 
-    Raises:
-        SerializableTaskError: A serializable exception with error details.
-        MemoryError: If memory issues occur during processing.
+    On successful processing, the returned dictionary contains:
+
+    - input_file (str): Relative path of the original file.
+    - process_file (str): Relative path of the processed file.
+    - output_file (str): Output path of the processed file.
+    - imaphot (dict): A dictionary with photometric data:
+        - stored (bool): Indicates if photometric data is stored in PostgreSQL.
+        - objets (int): Number of objects detected.
+        - transients (int): Number of transient objects detected.
+    - imastats (dict): A dictionary with image statistics:
+        - stored (bool): Indicates if image statistics are stored in PostgreSQL.
+
+    On error, the returned dictionary contains:
+
+    - input_file (str): Path of the file that caused the error.
+    - error (str): Error description.
+    - status (str): 'failed'.
 
     Reduction Strategies:
     - 'never': Default behavior; no reduction applied.
     - 'always': Apply reduction unconditionally.
     - 'on_failure': Apply reduction only if initial processing fails due to memory issues.
+
+    Example return value on success::
+
+        {
+            "input_file": "path/to/image.fits",
+            "process_file": "processed/path/to/image.fits",
+            "output_file": "/data/images/processed/image.fits",
+            "imaphot": {
+                "stored": True,
+                "objets": 100,
+                "transients": 5,
+            },
+            "imastats": {
+                "stored": True,
+            }
+        }
+
+    Example return value on failure::
+
+        {
+            "input_file": "path/to/image.fits",
+            "error": "MemoryError during processing",
+            "status": "failed"
+        }
     """
 
     base_path = BASE_IMAGES_PATH

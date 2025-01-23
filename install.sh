@@ -22,5 +22,5 @@ case $OS in
 esac
 
 # Instalar el paquete Python
-pip install -r requirements.txt
-pip install .
+#pip install -r requirements.txt
+#pip install .

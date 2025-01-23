@@ -12,17 +12,28 @@ logger = setup_logger(__name__)
 def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper: int = 100,
                              avg_aper: int = 20, tile_section: int = 500, ks: int = 2,
                              get_std: bool = False, **kwargs) -> tuple:
-    """Obtains the local background using FFT-based convolution.
+    """
+    Obtain the local background using FFT-based convolution.
 
     :param image: Image array to be processed.
+    :type image: numpy.ndarray or cupy.ndarray
     :param pxscale: Pixel scale in arcsec/pixel.
+    :type pxscale: float
     :param qt: Percentile for local background.
+    :type qt: float
     :param fill_aper: Aperture size for filling NaNs, in arcsec.
+    :type fill_aper: int
     :param avg_aper: Aperture size for calculating the mean, in arcsec.
+    :type avg_aper: int
     :param tile_section: Tile size for calculating the local percentile, in pixels.
+    :type tile_section: int
     :param ks: Aperture size for dilation, in arcsec.
+    :type ks: int
     :param get_std: Whether to return standard deviation image.
+    :type get_std: bool
+    :param kwargs: Additional keyword arguments.
     :return: A tuple containing the local background of an image and the standard deviation.
+    :rtype: tuple
     """
     if type(image) != cp.ndarray: image = cp.array(image)
     mempool = cp.get_default_memory_pool()

@@ -22,11 +22,10 @@ def get_processor(instrument_name=None):
     """
     Create a processor with optional custom instrument and configuration path.
 
-    Args:
-        instrument_name (str, optional): Name of the instrument to use.
-
-    Returns:
-        processor: Configured image processor
+    :param instrument_name: Name of the instrument to use.
+    :type instrument_name: str or None
+    :return: Configured image processor
+    :rtype: ImageProcessor
     """
     instrument_name = instrument_name or os.environ.get('INSTRUMENT_NAME', 'default_instrument')
     config_base_path = '/gpuphot/instrument_configs'
@@ -37,15 +36,13 @@ def open_image_file(file_path):
     """
     Opens an astronomical image file (FITS or NPY) and returns the data and header.
 
-    Args:
-        file_path (str): Path to the image file.
-
-    Returns:
-        tuple: (imdata, imheader) where imdata is a numpy array and imheader is a fits.Header object.
-
-    Raises:
-        ValueError: If the file format is not supported or if the header file is missing for NPY.
+    :param file_path: Path to the image file.
+    :type file_path: str
+    :return: Tuple containing image data and header.
+    :rtype: tuple(numpy.ndarray, astropy.io.fits.Header)
+    :raises ValueError: If the file format is not supported or if the header file is missing for NPY.
     """
+
     if file_path.endswith('.fits'):
         try:
             with fits.open(file_path) as hdul:
@@ -73,17 +70,17 @@ def save_processed_image(file_path, base_path, imdata, hwcs):
     """
     Saves the processed image data and header as a FITS file in a 'gpuphot_processed' subdirectory.
 
-    Args:
-        file_path (str): Original file path.
-        base_path (str): Base path for relative paths.
-        imdata (numpy.ndarray): Processed image data.
-        hwcs (fits.Header): Updated header with WCS information.
-
-    Returns:
-        str: Path of the saved FITS file.
-
-    Raises:
-        ValueError: If there's an issue creating the output directory.
+    :param file_path: Original file path.
+    :type file_path: str
+    :param base_path: Base path for relative paths.
+    :type base_path: str
+    :param imdata: Processed image data.
+    :type imdata: numpy.ndarray
+    :param hwcs: Updated header with WCS information.
+    :type hwcs: astropy.io.fits.Header
+    :return: Path of the saved FITS file.
+    :rtype: str
+    :raises ValueError: If there's an issue creating the output directory.
     """
     # Get the relative path
     process_file = os.path.relpath(file_path, base_path)
@@ -107,17 +104,19 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
     """
     Processes a FITS or NPY file: optionally crops a region of interest and then applies binning.
 
-    Args:
-        fits_file (str): Path to the FITS or NPY file to process.
-        binning (int): Binning factor. If 1, no binning is applied.
-        crop_size (int or tuple, optional): Size of the crop (in pixels).
-                                            Can be None (no crop), an integer (square), or a tuple (width, height).
-        center (tuple, optional): Coordinates of the crop center (x, y).
-                                  If not provided and crop_size is not None, the image center is used.
-
-    Returns:
-        str: Path of the processed file or original file if no processing was done.
+    :param fits_file: Path to the FITS or NPY file to process.
+    :type fits_file: str
+    :param binning: Binning factor. If 1, no binning is applied.
+    :type binning: int
+    :param crop_size: Size of the crop (in pixels). Can be None (no crop), an integer (square), or a tuple (width, height).
+    :type crop_size: int or tuple or None
+    :param center: Coordinates of the crop center (x, y). If not provided and crop_size is not None, the image center is used.
+    :type center: tuple or None
+    :return: Path of the processed file or original file if no processing was done.
+    :rtype: str
+    :raises ValueError: If inputs are invalid or processing is not possible.
     """
+
     try:
         imdata, imheader = open_image_file(fits_file)
     except Exception as e:
@@ -236,6 +235,13 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
 
 
 def __generate_connection_string():
+    """
+    Generate a PostgreSQL connection string using environment variables.
+
+    :return: PostgreSQL connection string.
+    :rtype: str
+    """
+
     # Get database connection parameters from environment variables
     db_name = os.getenv('POSTGRES_DB', 'GPUPhotDB')
     user = os.getenv('POSTGRES_USER', 'admin')
@@ -250,6 +256,18 @@ def __generate_connection_string():
 
 
 def insert_dataframe_to_postgres(df, tbl_name, unique_col='id'):
+    """
+    Insert a DataFrame into a PostgreSQL table, replacing existing records.
+
+    :param df: DataFrame to insert.
+    :type df: pandas.DataFrame
+    :param tbl_name: Name of the target table.
+    :type tbl_name: str
+    :param unique_col: Name of the column with unique values.
+    :type unique_col: str
+    :return: True if successful, False otherwise.
+    :rtype: bool
+    """
     try:
         # Get database connection parameters from environment variables
         connection_string = __generate_connection_string()
@@ -284,15 +302,43 @@ def insert_dataframe_to_postgres(df, tbl_name, unique_col='id'):
 
 
 def queryStrAdd(query: str, toAdd: str) -> str:
+    """
+    Add a string value to an SQL query.
+
+    :param query: Existing SQL query.
+    :type query: str
+    :param toAdd: String to add to the query.
+    :type toAdd: str
+    :return: Updated SQL query.
+    :rtype: str
+    """
     return query + "'" + toAdd + "', "
 
 
 def queryAdd(query: str, toAdd) -> str:
+    """
+    Add a non-string value to an SQL query.
+
+    :param query: Existing SQL query.
+    :type query: str
+    :param toAdd: Value to add to the query.
+    :type toAdd: Any
+    :return: Updated SQL query.
+    :rtype: str
+    """
     return query + str(toAdd) + ", "
 
 
 # Takes a FITS header and formats it into a PSQL-compatible HStore fragment.
 def headerToHstore(header):
+    """
+    Convert a FITS header to a PostgreSQL HStore-compatible string.
+
+    :param header: FITS header.
+    :type header: astropy.io.fits.Header
+    :return: HStore-compatible string.
+    :rtype: str
+    """
     fragment = ""
     for key, value in header.items():
         if key != "COMMENT" and not isinstance(value, fits.header._HeaderCommentaryCards):
@@ -304,6 +350,16 @@ def headerToHstore(header):
 
 
 def insert_header(header, file_path):
+    """
+    Generate an SQL query to insert or update a FITS header in the database.
+
+    :param header: FITS header.
+    :type header: astropy.io.fits.Header
+    :param file_path: Path of the FITS file.
+    :type file_path: str
+    :return: SQL query string.
+    :rtype: str
+    """
     query_parts = ["INSERT INTO imastats (id, file_path, "]
 
     columns = [
@@ -341,6 +397,21 @@ def insert_header(header, file_path):
 
 
 def populate_ima_stats(gpuphotid, file_path, header, delete_prev=True):
+    """
+    Insert or update image statistics in the database.
+
+    :param gpuphotid: Unique identifier for the image.
+    :type gpuphotid: str
+    :param file_path: Path of the image file.
+    :type file_path: str
+    :param header: FITS header of the image.
+    :type header: astropy.io.fits.Header
+    :param delete_prev: Whether to delete previous entries for this image.
+    :type delete_prev: bool
+    :return: True if successful, False otherwise.
+    :rtype: bool
+    """
+
     try:
         connection_string = __generate_connection_string()
         engine = create_engine(connection_string)
@@ -359,5 +430,13 @@ def populate_ima_stats(gpuphotid, file_path, header, delete_prev=True):
 
 
 def generate_gpuphotid(process_file):
+    """
+    Generate a unique identifier for a processed file.
+
+    :param process_file: Path of the processed file.
+    :type process_file: str
+    :return: Unique identifier.
+    :rtype: str
+    """
     h = hmac.new('GPUPHOT_KEY'.encode(), process_file.encode(), hashlib.sha1)
     return str(h.hexdigest())

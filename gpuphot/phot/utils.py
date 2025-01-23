@@ -6,11 +6,15 @@ logger = setup_logger(__name__)
 
 
 def decompose_into_tiles(image: cp.ndarray, block_size: int) -> cp.ndarray:
-    """Decomposes an image into tiles of a specific size.
+    """
+    Decompose an image into tiles of a specific size.
 
     :param image: Image array to be decomposed.
+    :type image: cupy.ndarray
     :param block_size: Size of the tiles.
+    :type block_size: int
     :return: An array containing the tiles.
+    :rtype: cupy.ndarray
     """
     h, w = image.shape
     num_tiles_y = h // block_size
@@ -26,33 +30,45 @@ def decompose_into_tiles(image: cp.ndarray, block_size: int) -> cp.ndarray:
 
 @hierarchical_debug(logger)
 def calculate_tile_percentiles(tiles: cp.ndarray, qt: float = 70) -> cp.ndarray:
-    """Calculates the percentiles of an array of tiles.
+    """
+    Calculate the percentiles of an array of tiles.
 
     :param tiles: Array of tiles.
+    :type tiles: cupy.ndarray
     :param qt: Percentile to be calculated.
+    :type qt: float
     :return: An array containing the percentiles for each tile.
+    :rtype: cupy.ndarray
     """
+
     tiles = tiles[~cp.isnan(tiles).any(axis=(1, 2))]
     return cp.percentile(tiles, qt, axis=(1, 2))
 
 
 @hierarchical_debug(logger)
 def calculate_tile_nanmean(tiles: cp.ndarray) -> cp.ndarray:
-    """Calculates the mean of an array of tiles.
+    """
+    Calculate the mean of an array of tiles.
 
     :param tiles: Array of tiles.
+    :type tiles: cupy.ndarray
     :return: An array containing the mean for each tile.
+    :rtype: cupy.ndarray
     """
     return cp.nanmean(tiles, axis=(1, 2))
 
 
 @hierarchical_debug(logger)
 def calculate_tile_nanmean_sigclip(tiles: cp.ndarray, nsigma: float = 2) -> cp.ndarray:
-    """Calculates the mean of an array of tiles.
+    """
+    Calculate the mean of an array of tiles using sigma clipping.
 
     :param tiles: Array of tiles.
+    :type tiles: cupy.ndarray
     :param nsigma: Number of sigmas to be clipped.
+    :type nsigma: float
     :return: A tuple containing the mean and standard deviation of the tiles.
+    :rtype: tuple(cupy.ndarray, cupy.ndarray)
     """
     m = cp.nanmedian(tiles, axis=(1, 2))
     s = cp.nanstd(tiles, axis=(1, 2))
@@ -62,11 +78,15 @@ def calculate_tile_nanmean_sigclip(tiles: cp.ndarray, nsigma: float = 2) -> cp.n
 
 @hierarchical_debug(logger)
 def calculate_tile_nanmedian_sigclip(tiles: cp.ndarray, nsigma: float = 2) -> cp.ndarray:
-    """Calculates the mean of an array of tiles.
+    """
+    Calculate the median of an array of tiles using sigma clipping.
 
     :param tiles: Array of tiles.
+    :type tiles: cupy.ndarray
     :param nsigma: Number of sigmas to be clipped.
-    :return: A tuple containing the mean and standard deviation of the tiles.
+    :type nsigma: float
+    :return: A tuple containing the median and standard deviation of the tiles.
+    :rtype: tuple(cupy.ndarray, cupy.ndarray)
     """
     m = cp.nanmedian(tiles, axis=(1, 2))
     s = cp.nanstd(tiles, axis=(1, 2))
@@ -76,12 +96,17 @@ def calculate_tile_nanmedian_sigclip(tiles: cp.ndarray, nsigma: float = 2) -> cp
 
 
 def recompose_from_percentiles(percentiles: cp.ndarray, original_shape: tuple, block_size: int) -> cp.ndarray:
-    """Recomposes an image from its percentiles.
+    """
+    Recompose an image from its percentiles.
 
     :param percentiles: Array containing the percentiles of the tiles.
+    :type percentiles: cupy.ndarray
     :param original_shape: Shape of the original image.
+    :type original_shape: tuple
     :param block_size: Size of the tiles.
+    :type block_size: int
     :return: An array containing the recomposed image.
+    :rtype: cupy.ndarray
     """
     h, w = original_shape
     num_tiles_y = h // block_size

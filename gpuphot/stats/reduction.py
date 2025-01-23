@@ -10,14 +10,15 @@ logger = setup_logger(__name__)
 
 
 def center(im, size):
-    """Center the image to the given size.
+    """
+    Center the image to the given size.
 
     :param im: Input image.
-    :type im: ndarray
+    :type im: numpy.ndarray
     :param size: Desired size for centering.
     :type size: int
-
-    
+    :return: Centered image.
+    :rtype: numpy.ndarray
     """
     if im.shape[0] > size:
         c0 = int((im.shape[0] - size) / 2)
@@ -32,16 +33,17 @@ def center(im, size):
 
 @hierarchical_debug(logger)
 def register_shift(fc, uf=100, n=1000):
-    """Register and shift image stack based on phase cross-correlation.
+    """
+    Register and shift image stack based on phase cross-correlation.
 
     :param fc: Stack of images to be registered.
-    :type fc: ndarray
+    :type fc: numpy.ndarray
     :param uf: Upsample factor for subpixel precision, by default 100.
     :type uf: int, optional
     :param n: Size for centering the images, by default 1000.
     :type n: int, optional
-
-    
+    :return: Registered and shifted image stack.
+    :rtype: numpy.ndarray
     """
     fc1 = fc.copy()
     im0 = center(fc[0], n)
@@ -62,16 +64,17 @@ def register_shift(fc, uf=100, n=1000):
 
 @hierarchical_debug(logger)
 def stack_sigmaclip(data, it=5, n=3):
-    """Stack images with sigma clipping.
+    """
+    Stack images with sigma clipping.
 
     :param data: Stack of images to be processed.
-    :type data: ndarray
+    :type data: cupy.ndarray
     :param it: Number of iterations for sigma clipping, by default 5.
     :type it: int, optional
     :param n: Sigma clipping threshold, by default 3.
     :type n: int, optional
-
-    
+    :return: Tuple containing the average and standard deviation of the stacked images.
+    :rtype: tuple(cupy.ndarray, cupy.ndarray or None)
     """
     nim = data.shape[0]
     if nim < 3:
@@ -120,12 +123,18 @@ def stack_sigmaclip(data, it=5, n=3):
 def register_shift_frames(frames_list, upsample_factor=100, center_size=
 1000, shift_limit_pix=300):
     """
+    Register and shift frames from a list of file paths.
 
-    :param frames_list: 
-    :param upsample_factor:  (Default value = 100)
-    :param center_size:  (Default value = 1000)
-    :param shift_limit_pix:  (Default value = 300)
-
+    :param frames_list: List of file paths to the frames.
+    :type frames_list: list
+    :param upsample_factor: Upsample factor for subpixel precision, by default 100.
+    :type upsample_factor: int, optional
+    :param center_size: Size for centering the images, by default 1000.
+    :type center_size: int, optional
+    :param shift_limit_pix: Maximum allowed shift in pixels, by default 300.
+    :type shift_limit_pix: int, optional
+    :return: Registered and shifted image stack.
+    :rtype: cupy.ndarray
     """
 
     fc0 = cp.asarray(fits.getdata(frames_list[0]), dtype=cp.float32)
@@ -150,9 +159,20 @@ def register_shift_frames(frames_list, upsample_factor=100, center_size=
 
     return fc
 
+
 @hierarchical_debug(logger)
 def weighted_mean_std(data, errors):
-    weights = 1 / errors**2
+    """
+    Calculate weighted mean and standard deviation.
+
+    :param data: Input data.
+    :type data: numpy.ndarray
+    :param errors: Error values corresponding to the data.
+    :type errors: numpy.ndarray
+    :return: Tuple containing the weighted mean and weighted standard deviation.
+    :rtype: tuple(float, float)
+    """
+    weights = 1 / errors ** 2
     weighted_mean = np.sum(weights * data) / np.sum(weights)
-    weighted_std = np.sqrt(np.sum(weights * (data - weighted_mean)**2) / np.sum(weights))
+    weighted_std = np.sqrt(np.sum(weights * (data - weighted_mean) ** 2) / np.sum(weights))
     return weighted_mean, weighted_std

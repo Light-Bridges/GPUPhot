@@ -17,43 +17,49 @@ logger = setup_logger(__name__)
 def phase_cross_correlation(reference_image, moving_image, *,
                             upsample_factor=100, space='real', return_error=True, reference_mask=None,
                             moving_mask=None, overlap_ratio=0.3, normalization='phase'):
-    """Efficient subpixel image translation registration by cross-correlation.
-    This code gives the same precision as the FFT upsampled cross-correlation
+    """
+     Perform efficient subpixel image translation registration by cross-correlation.
+
+    This function provides the same precision as the FFT upsampled cross-correlation
     in a fraction of the computation time and with reduced memory requirements.
     It obtains an initial estimate of the cross-correlation peak by an FFT and
     then refines the shift estimation by upsampling the DFT only in a small
-    neighborhood of that estimate by means of a matrix-multiply DFT [1]_.
+    neighborhood of that estimate by means of a matrix-multiply DFT.[1]_.
+
 
     :param reference_image: Reference image.
     :type reference_image: array
     :param moving_image: Image to register. Must be same dimensionality as ``reference_image``.
     :type moving_image: array
     :param upsample_factor: Upsampling factor. Images will be registered to within ``1 / upsample_factor`` of a pixel.
-        Default is 1 (no upsampling). Not used if any of ``reference_mask`` or ``moving_mask`` is not None.
+                            Default is 100 (upsampling). Not used if any of ``reference_mask`` or ``moving_mask`` is not None.
     :type upsample_factor: int, optional
     :param space: Defines how the algorithm interprets input data. "real" means data will be FFT'd to compute the correlation,
-        while "fourier" data will bypass FFT of input data. Case insensitive. Not used if any of ``reference_mask``
-        or ``moving_mask`` is not None. (Default value = 'real')
-    :type space: string, one of "real" or "fourier", optional
-    :param return_error: Returns error and phase difference if on, otherwise only shifts are returned.
-        Has no effect if any of ``reference_mask`` or ``moving_mask`` is not None. In this case only shifts are returned. (Default value = True)
+                  while "fourier" data will bypass FFT of input data. Case insensitive. Not used if any of ``reference_mask``
+                  or ``moving_mask`` is not None.
+    :type space: str, optional
+    :param return_error: Returns error and phase difference if True, otherwise only shifts are returned.
+                         Has no effect if any of ``reference_mask`` or ``moving_mask`` is not None.
     :type return_error: bool, optional
     :param reference_mask: Boolean mask for ``reference_image``. The mask should evaluate to ``True`` (or 1) on valid pixels.
-        ``reference_mask`` should have the same shape as ``reference_image``. (Default value = None)
-    :type reference_mask: ndarray
+                           ``reference_mask`` should have the same shape as ``reference_image``.
+    :type reference_mask: ndarray, optional
     :param moving_mask: Boolean mask for ``moving_image``. The mask should evaluate to ``True`` (or 1) on valid pixels.
-        ``moving_mask`` should have the same shape as ``moving_image``. If ``None``, ``reference_mask`` will be used. (Default value = None)
+                        ``moving_mask`` should have the same shape as ``moving_image``. If ``None``, ``reference_mask`` will be used.
     :type moving_mask: ndarray or None, optional
     :param overlap_ratio: Minimum allowed overlap ratio between images. The correlation for translations corresponding with an overlap
-        ratio lower than this threshold will be ignored. A lower `overlap_ratio` leads to smaller maximum translation,
-        while a higher `overlap_ratio` leads to greater robustness against spurious matches due to small overlap
-        between masked images. Used only if one of ``reference_mask`` or ``moving_mask`` is not None. (Default value = 0.3)
+                          ratio lower than this threshold will be ignored. Used only if one of ``reference_mask`` or ``moving_mask`` is not None.
     :type overlap_ratio: float, optional
-    :param normalization: The type of normalization to apply to the cross-correlation. This parameter is unused when masks (Default value = 'phase')
-    :type normalization: {"phase", None}
-    :param *: 
-    :returns: shifts->     Shift vector (in pixels) required to register ``moving_image`` with ``reference_image``. Axis ordering is consistent with numpy (e.g. Z, Y, X)
-    :rtype: ndarray
+    :param normalization: The type of normalization to apply to the cross-correlation. This parameter is unused when masks are provided.
+    :type normalization: {"phase", None}, optional
+    :return: A tuple containing:
+             - shifts: Shift vector (in pixels) required to register ``moving_image`` with ``reference_image``.
+             - error: Registration error (if ``return_error=True``)
+             - phasediff: Global phase difference between the two images (if ``return_error=True``)
+    :rtype: tuple
+    :raises ValueError: If images are not the same shape, or if ``space`` is not "real" or "fourier",
+                        or if ``normalization`` is not "phase" or None, or if NaN values are found in the input data.
+
 
     Notes
     -----
@@ -165,7 +171,9 @@ def phase_cross_correlation(reference_image, moving_image, *,
 @hierarchical_debug(logger)
 def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
                    axis_offsets=None):
-    """Upsampled DFT by matrix multiplication.
+    """
+    Perform an upsampled Discrete Fourier Transform (DFT) by matrix multiplication.
+
     This code is intended to provide the same result as if the following
     operations were performed:
         - Embed the array "data" in an array that is ``upsample_factor`` times
@@ -174,22 +182,25 @@ def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
         - Take the FFT of the larger array.
         - Extract an ``[upsampled_region_size]`` region of the result, starting
           with the ``[axis_offsets+1]`` element.
-    It achieves this result by computing the DFT in the output array without
-    the need to zeropad. Much faster and memory efficient than the zero-padded
-    FFT approach if ``upsampled_region_size`` is much smaller than
-    ``data.size * upsample_factor``.
+
+
+    This function computes the DFT in the output array without the need to zero-pad,
+    achieving faster and more memory-efficient results compared to a zero-padded FFT
+    approach when the upsampled region size is much smaller than ``data.size * upsample_factor``.
 
     :param data: The input data array (DFT of original data) to upsample.
-    :type data: array
-    :param upsampled_region_size: The size of the region to be sampled.  If one integer is provided, it
-        is duplicated up to the dimensionality of ``data``.
-    :type upsampled_region_size: integer or tuple of integers, optional
-    :param upsample_factor: The upsampling factor.  Defaults to 1.
-    :type upsample_factor: integer, optional
-    :param axis_offsets:  (Default value = None)
-    :type axis_offsets: tuple of integers, optional
-
-    
+    :type data: cupy.ndarray
+    :param upsampled_region_size: The size of the region to be sampled. If one integer is provided,
+                                   it is duplicated up to the dimensionality of ``data``.
+    :type upsampled_region_size: int or tuple of int
+    :param upsample_factor: The upsampling factor. Defaults to 1.
+    :type upsample_factor: int, optional
+    :param axis_offsets: Offsets for each axis in the output region. Defaults to None.
+                         If None, offsets are set to 0 for all axes.
+    :type axis_offsets: tuple of int, optional
+    :return: The upsampled DFT result.
+    :rtype: cupy.ndarray
+    :raises ValueError: If the number of axis offsets does not match the number of dimensions in ``data``.
     """
     upsampled_region_size = [upsampled_region_size] * data.ndim
     if axis_offsets is None:
@@ -212,16 +223,17 @@ def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
 
 @hierarchical_debug(logger)
 def _compute_error(cross_correlation_max, src_amp, target_amp):
-    """Compute RMS error metric between ``src_image`` and ``target_image``.
+    """
+    Compute the RMS error metric between two images based on their cross-correlation.
 
-    :param cross_correlation_max: The complex value of the cross correlation at its maximum point.
+    :param cross_correlation_max: The complex value of the cross-correlation at its maximum point.
     :type cross_correlation_max: complex
     :param src_amp: The normalized average image intensity of the source image.
     :type src_amp: float
-    :param target_amp: 
+    :param target_amp: The normalized average image intensity of the target image.
     :type target_amp: float
-
-    
+    :return: The computed RMS error metric.
+    :rtype: cupy.ndarray
     """
     error = 1.0 - cross_correlation_max * cross_correlation_max.conj() / (
             src_amp * target_amp)
@@ -230,12 +242,15 @@ def _compute_error(cross_correlation_max, src_amp, target_amp):
 
 
 def _compute_phasediff(cross_correlation_max):
-    """Compute global phase difference between the two images (should be zero if images are non-negative).
+    """
+    Compute the global phase difference between two images.
 
-    :param cross_correlation_max: 
+    This value should be zero if both images are non-negative.
+
+    :param cross_correlation_max: The complex value of the cross-correlation at its maximum point.
     :type cross_correlation_max: complex
-
-    
+    :return: The global phase difference in radians.
+    :rtype: cupy.ndarray
     """
 
     return cp.arctan2(cross_correlation_max.imag, cross_correlation_max.real)

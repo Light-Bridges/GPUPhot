@@ -13,13 +13,15 @@ logger = setup_logger(__name__)
 
 
 def delete_header_from(header, val):
-    """Delete a section from the FITS header.
+    """
+    Delete a section from the FITS header.
 
     :param header: FITS header.
     :type header: dict
     :param val: Value to delete.
     :type val: str
-
+    :return: Modified FITS header.
+    :rtype: dict
     """
     for i, v in enumerate(header.values()):
         if val in str(v):
@@ -31,6 +33,16 @@ def delete_header_from(header, val):
 
 
 def get_if_header_already_post_processed(header, postprocess):
+    """
+    Check if the header has already been post-processed.
+
+    :param header: FITS header.
+    :type header: dict
+    :param postprocess: Post-processing step to check for.
+    :type postprocess: str
+    :return: True if the header has been post-processed, False otherwise.
+    :rtype: bool
+    """
     comments = list()
 
     if 'COMMENT' in header:
@@ -43,6 +55,16 @@ def get_if_header_already_post_processed(header, postprocess):
 
 
 def deg_to_hms(RA, DEC):
+    """
+    Convert Right Ascension and Declination from degrees to HMS/DMS format.
+
+    :param RA: Right Ascension in degrees.
+    :type RA: float
+    :param DEC: Declination in degrees.
+    :type DEC: float
+    :return: Tuple of RA in HMS format and DEC in DMS format.
+    :rtype: tuple(str, str)
+    """
     coords_deg = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg')
     ra_hms = '%02d:%02d:%.6f' % coords_deg.ra.hms
     if DEC > 0:
@@ -55,6 +77,26 @@ def deg_to_hms(RA, DEC):
 
 def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude, site_elevation, date_obs,
                                   header_descriptions=None):
+    """
+    Update the FITS header with astrometry information.
+
+    :param imheader: Original FITS header.
+    :type imheader: astropy.io.fits.Header
+    :param h_wcs: WCS header information.
+    :type h_wcs: dict
+    :param site_latitude: Latitude of the observation site.
+    :type site_latitude: float
+    :param site_longitude: Longitude of the observation site.
+    :type site_longitude: float
+    :param site_elevation: Elevation of the observation site.
+    :type site_elevation: float
+    :param date_obs: Date of observation.
+    :type date_obs: str
+    :param header_descriptions: Dictionary of header keyword descriptions.
+    :type header_descriptions: dict or None
+    :return: Updated FITS header.
+    :rtype: astropy.io.fits.Header
+    """
     if header_descriptions is None:
         header_descriptions = {}
     astro_exists = get_if_header_already_post_processed(imheader, "ASTROMETRY")
@@ -123,6 +165,18 @@ def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude
 
 
 def update_header_with_photometry(imheader, dic_calib, header_descriptions=None):
+    """
+    Update the FITS header with photometry information.
+
+    :param imheader: Original FITS header.
+    :type imheader: astropy.io.fits.Header
+    :param dic_calib: Dictionary of calibration values.
+    :type dic_calib: dict
+    :param header_descriptions: Dictionary of header keyword descriptions.
+    :type header_descriptions: dict or None
+    :return: Updated FITS header.
+    :rtype: astropy.io.fits.Header
+    """
     if header_descriptions is None:
         header_descriptions = {}
     phot_exists = get_if_header_already_post_processed(imheader, "PHOTOMETRY")
