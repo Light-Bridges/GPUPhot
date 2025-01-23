@@ -116,29 +116,44 @@ If you encounter issues with the automatic setup:
   requirements).
 
 For more detailed information on GPU allocation and Docker, refer to the official Docker documentation on GPU support.
-
 ## Services Overview
 
 ### RabbitMQ (Message Broker)
-
-Handles task communication between Celery workers.
+- Handles task communication between Celery workers.
+- Management interface accessible at: http://localhost:15672
+- Default credentials: 
+  - Username: gpuphot
+  - Password: gpuphot
 
 ### Redis (Result Backend)
-
-Stores task results temporarily.
+- Stores task results temporarily.
+- Port: 6379 (not typically accessed directly)
 
 ### Celery Workers (`gpuphot_worker`)
-
-Processes tasks such as image processing.
+- Processes tasks such as image processing.
+- Utilizes GPU for computations.
+- No direct access; managed through Celery.
 
 ### PostgreSQL (`postgres`)
-
-Stores processed image statistics and metadata.
+- Stores processed image statistics and metadata.
+- Port: 5432
+- Database: GPUPhotDB
+- Default credentials:
+  - Username: admin
+  - Password: gpuphot (configurable via POSTGRES_PASSWORD in .env)
 
 ### JupyterLab (`lab`)
-
-Provides an interactive environment for running notebooks.
+- Provides an interactive environment for running notebooks.
+- Accessible at: http://localhost:8888
+- No token required (as per configuration)
 
 ### Flower (`flower`)
+- Monitors Celery tasks in real-time.
+- Accessible at: http://localhost:5555
+- No authentication configured by default
 
-Monitors Celery tasks in real-time.
+### Beat
+- Celery Beat scheduler for periodic tasks.
+- No direct access; runs in the background.
+
+Note: All credentials mentioned are default values and can be modified in the .env file or docker-compose.yml for enhanced security in production environments.
