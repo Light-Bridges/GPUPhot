@@ -135,7 +135,7 @@ def capture_cuda_exception(func):
                 except Exception:
                     pass
 
-                if any(error in str(e) for error in ("cudaErrorIllegalAddress", "cudaErrorInitializationError")):
+                if any(error in str(e) for error in ("cudaErrorIllegalAddress", "cudaErrorInitializationError", "cudaErrorInvalidValue")):
                     if is_running_in_docker():
                         logger.critical("Exiting due to CUDA error in Docker container.")
                         try:
