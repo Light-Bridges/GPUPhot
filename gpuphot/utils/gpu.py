@@ -8,7 +8,12 @@ logger = setup_logger(__name__)
 
 
 def free_gpu_mem() -> None:
-    """Liberates GPU memory by freeing all memory blocks allocated by the default memory pool."""
+    """
+    Liberate GPU memory by freeing all memory blocks allocated by the default memory pool.
+
+    This function frees all memory blocks in both the default memory pool and the default pinned memory pool,
+    and then calls the garbage collector to clean up any remaining objects.
+    """
     mempool = cp.get_default_memory_pool()
     pinned_mempool = cp.get_default_pinned_memory_pool()
     mempool.free_all_blocks()
@@ -17,8 +22,16 @@ def free_gpu_mem() -> None:
 
 
 def init_gpu(**kwargs) -> None:
-    """Inicializa y registra información de la GPU usando CuPy"""
+    """
+    Initialize and log information about the GPU using CuPy.
 
+    This function performs the following tasks:
+    1. Logs the CuPy version.
+    2. Determines the number of available GPUs.
+    3. For each GPU, logs its name and total memory.
+
+    :param kwargs: Additional keyword arguments (currently unused).
+    """
     # Versión de CuPy
     logger.debug('CuPy version ' + cp.__version__)
 

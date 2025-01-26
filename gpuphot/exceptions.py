@@ -9,7 +9,14 @@ class GPUPhotError(Exception):
 
 
 class InsufficientStarsError(GPUPhotError):
-    """Exception raised when there are not enough isolated stars for processing."""
+    """
+    Exception raised when there are not enough isolated stars for processing.
+
+    :param num_stars: The number of stars detected.
+    :type num_stars: int
+    :param message: The error message (optional).
+    :type message: str
+    """
 
     def __init__(self, num_stars, message="Insufficient number of isolated stars detected"):
         self.num_stars = num_stars
@@ -18,7 +25,12 @@ class InsufficientStarsError(GPUPhotError):
 
 
 class MoffatFitError(GPUPhotError):
-    """Exception raised when the PSF fitting is impossible."""
+    """
+    Exception raised when the PSF fitting is impossible.
+
+    :param message: The error message (optional).
+    :type message: str
+    """
 
     def __init__(self, message="Impossible to fit Moffat function to reference PSF"):
         self.message = f"{message}"
@@ -26,7 +38,12 @@ class MoffatFitError(GPUPhotError):
 
 
 class ImageQualityError(GPUPhotError):
-    """Exception raised when the image quality is too poor for processing."""
+    """
+    Exception raised when the image quality is too poor for processing.
+
+    :param message: The error message (optional).
+    :type message: str
+    """
 
     def __init__(self, message="Image may be too crowded or too noisy"):
         self.message = message
@@ -34,7 +51,12 @@ class ImageQualityError(GPUPhotError):
 
 
 class UnableToAstrometrizeError(GPUPhotError):
-    """Exception raised when the astrometry process fails due to inability to astrometrize."""
+    """
+    Exception raised when the astrometry process fails due to inability to astrometrize.
+
+    :param message: The error message (optional).
+    :type message: str
+    """
 
     def __init__(self, message="Unable to astrometrize the image"):
         self.message = message
@@ -42,7 +64,12 @@ class UnableToAstrometrizeError(GPUPhotError):
 
 
 class AstrometrizationTimeoutError(GPUPhotError):
-    """Exception raised when the astrometrization process times out."""
+    """
+    Exception raised when the astrometrization process times out.
+
+    :param message: The error message (optional).
+    :type message: str
+    """
 
     def __init__(self, message="Astrometrization process has timed out"):
         self.message = message
@@ -50,7 +77,12 @@ class AstrometrizationTimeoutError(GPUPhotError):
 
 
 class DataValidationError(GPUPhotError):
-    """Exception raised when input data is invalid or insufficient."""
+    """
+    Exception raised when input data is invalid or insufficient.
+
+    :param message: The error message (optional).
+    :type message: str
+    """
 
     def __init__(self, message="Input data is invalid or insufficient"):
         self.message = message
@@ -58,7 +90,16 @@ class DataValidationError(GPUPhotError):
 
 
 class InvalidGroupSizeError(GPUPhotError):
-    """Exception raised when the average or minimum group size is invalid."""
+    """
+    Exception raised when the average or minimum group size is invalid.
+
+    :param avg_group_size: The average group size.
+    :type avg_group_size: float
+    :param min_group_size: The minimum group size.
+    :type min_group_size: float
+    :param message: The error message (optional).
+    :type message: str
+    """
 
     def __init__(self, avg_group_size, min_group_size, message="Invalid group size parameters"):
         self.avg_group_size = avg_group_size
@@ -68,8 +109,14 @@ class InvalidGroupSizeError(GPUPhotError):
 
 
 def capture_cuda_exception(func):
-    """Decorator to capture CUDA exceptions and retry on illegal address error."""
+    """
+    Decorator to capture CUDA exceptions and retry on illegal address error.
 
+    :param func: The function to be decorated.
+    :type func: callable
+    :return: The wrapped function.
+    :rtype: callable
+    """
     import os
     from cupy_backends.cuda.api.runtime import CUDARuntimeError
 
@@ -88,7 +135,7 @@ def capture_cuda_exception(func):
                 except Exception:
                     pass
 
-                if any(error in str(e) for error in ("cudaErrorIllegalAddress", "cudaErrorInitializationError")):
+                if any(error in str(e) for error in ("cudaErrorIllegalAddress", "cudaErrorInitializationError", "cudaErrorInvalidValue")):
                     if is_running_in_docker():
                         logger.critical("Exiting due to CUDA error in Docker container.")
                         try:

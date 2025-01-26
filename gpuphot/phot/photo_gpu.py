@@ -60,14 +60,15 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def gen_moff_filter(alpha, beta, **kwargs):
-    """Generate a Moffat filter.
+    """
+    Generate a Moffat filter.
 
     :param alpha: Alpha parameter for Moffat filter.
     :type alpha: float
     :param beta: Beta parameter for Moffat filter.
     :type beta: float
-
-    
+    :return: Moffat filter kernel and kernel size.
+    :rtype: tuple(cupy.ndarray, int)
     """
     fw = alpha * (2 * np.sqrt(2 ** (1 / beta) - 1))
     sigma_r = fw / (2.0 * np.sqrt(2.0 * np.log(2.0)))
@@ -86,18 +87,19 @@ def gen_moff_filter(alpha, beta, **kwargs):
 
 @hierarchical_debug(logger)
 def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool(), **kwargs):
-    """Estimate the sky background and RMS noise.
+    """
+    Estimate the sky background and RMS noise.
 
     :param im_g: Input image.
-    :type im_g: ndarray
+    :type im_g: cupy.ndarray
     :param fw: Full width at half maximum.
     :type fw: float
     :param qt: Quantile for sky estimation, by default 90.
     :type qt: float, optional
     :param mem: Memory pool, by default cp.get_default_memory_pool().
-    :type mem: cupy.cuda.memory.PinnedMemoryPool, optional
-
-    
+    :type mem: cupy.cuda.memory.MemoryPool, optional
+    :return: Estimated sky background, RMS noise, and memory usage.
+    :rtype: tuple(cupy.ndarray, cupy.ndarray, int)
     """
     sigma_r = fw / (2.0 * np.sqrt(2.0 * np.log(2.0)))
     lk = np.ceil(sigma_r).astype(np.int16) * 4
@@ -121,7 +123,8 @@ def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool(), **kwargs):
 @hierarchical_debug(logger)
 def SP_filter(img, filter_size=3, high_threshold_factor=10,
               low_threshold_factor=5, scaling_factor=1.4826, **kwargs):
-    """Apply a median filter to remove salt-and-pepper noise.
+    """
+    Apply a median filter to remove salt-and-pepper noise.
 
     :param img: Input image.
     :type img: cupy.ndarray
@@ -133,8 +136,8 @@ def SP_filter(img, filter_size=3, high_threshold_factor=10,
     :type low_threshold_factor: float, optional
     :param scaling_factor: Scaling factor for estimating the standard deviation from MAD (default is 1.4826).
     :type scaling_factor: float, optional
-
-    
+    :return: Filtered image.
+    :rtype: cupy.ndarray
     """
     med_filter = median_filter(img, size=filter_size)
     dif = img - med_filter
@@ -150,14 +153,15 @@ def SP_filter(img, filter_size=3, high_threshold_factor=10,
 
 @hierarchical_debug(logger)
 def CR_filter(img, thres=3, **kwargs):
-    """Apply a cosmic ray filter to an image.
+    """
+    Apply a cosmic ray filter to an image.
 
     :param img: Input image.
     :type img: cupy.ndarray
     :param thres: Threshold for cosmic ray detection (default is 3).
     :type thres: float, optional
-
-    
+    :return: Filtered image.
+    :rtype: cupy.ndarray
     """
 
     img = cp.asarray(img, dtype=cp.float32)
@@ -189,15 +193,16 @@ def CR_filter(img, thres=3, **kwargs):
 
 @hierarchical_debug(logger)
 def gen_moff_filter2(alpha, beta, **kwargs):
-    """Generate a Moffat filter with adjusted alpha.
-
-    :param alpha: Alpha parameter for Moffat filter.
-    :type alpha: float
-    :param beta: Beta parameter for Moffat filter.
-    :type beta: float
-
-    
     """
+     Generate a Moffat filter with adjusted alpha.
+
+     :param alpha: Alpha parameter for Moffat filter.
+     :type alpha: float
+     :param beta: Beta parameter for Moffat filter.
+     :type beta: float
+     :return: Moffat filter kernel and kernel size.
+     :rtype: tuple(cupy.ndarray, int)
+     """
     alpha = alpha / 2
     fw = alpha * (2 * np.sqrt(2 ** (1 / beta) - 1))
     sigma_r = fw / (2.0 * np.sqrt(2.0 * np.log(2.0)))
@@ -215,11 +220,12 @@ def gen_moff_filter2(alpha, beta, **kwargs):
 @hierarchical_debug(logger)
 def calculate_aperture_corrections(corr: np.ndarray) -> cp.ndarray:
     """
-    Calculates aperture corrections for all stars in an optimized way.
+    Calculate aperture corrections for all stars in an optimized way.
 
-    :param star_dataset_ref: Reference star dataset.
-    :param radii: Aperture radii.
-    :return: Aperture corrections and errors.
+    :param corr: Array of aperture corrections.
+    :type corr: numpy.ndarray
+    :return: Aperture correction factors and errors.
+    :rtype: tuple(numpy.ndarray, numpy.ndarray)
     """
 
     # correct ouliers
@@ -237,13 +243,21 @@ def calculate_aperture_corrections(corr: np.ndarray) -> cp.ndarray:
 def find_aperture_corrections(sources: cp.ndarray, corrections: np.ndarray, correction_errors: np.ndarray,
                               cluster_centers: np.ndarray,
                               opt_rad_idx: np.array = None, **kwargs) -> cp.ndarray:
-    """Find the aperture correction for each source.
+    """
+    Find the aperture correction for each source.
 
     :param sources: Array of source coordinates.
+    :type sources: cupy.ndarray
     :param corrections: Array of aperture corrections.
-    :param tile_centers: Array of tile centers.
-    :param opt_rad_idx: Array of optimal radii indices.
-    :return: Array of aperture corrections for each source.
+    :type corrections: numpy.ndarray
+    :param correction_errors: Array of aperture correction errors.
+    :type correction_errors: numpy.ndarray
+    :param cluster_centers: Array of cluster centers.
+    :type cluster_centers: numpy.ndarray
+    :param opt_rad_idx: Array of optimal radii indices (optional).
+    :type opt_rad_idx: numpy.ndarray or None
+    :return: Array of aperture corrections and errors for each source.
+    :rtype: tuple(cupy.ndarray, cupy.ndarray)
     """
     _, tile_idx = crossmatch_sources(sources.get(), cluster_centers, thres_px=int(cp.max(sources)))
     if opt_rad_idx is None:
@@ -259,15 +273,20 @@ def find_aperture_corrections(sources: cp.ndarray, corrections: np.ndarray, corr
 def create_aperture_corrections_map(image_shape: tuple, block_size: int, unit_star_dataset: cp.ndarray,
                                     coords: cp.ndarray, radii: np.ndarray, **kwargs):
     """
-    Calculates aperture corrections for all stars in an optimized way.
+    Calculate aperture corrections for all stars in an optimized way.
 
     :param image_shape: Tuple (height, width) of the image.
+    :type image_shape: tuple
     :param block_size: Size of the tiles.
-    :param coeff_map: Coefficient map for recreating normalized stars.
-    :param eigen_psfs: Eigen PSFs for reconstruction.
-    :param psf: Base PSF array.
+    :type block_size: int
+    :param unit_star_dataset: Dataset of unit stars.
+    :type unit_star_dataset: cupy.ndarray
+    :param coords: Coordinates of stars.
+    :type coords: cupy.ndarray
     :param radii: Radii for aperture photometry.
-    :return: Dictionary mapping each star to its aperture correction.
+    :type radii: numpy.ndarray
+    :return: Aperture corrections, errors, and cluster centers.
+    :rtype: tuple(numpy.ndarray, numpy.ndarray, numpy.ndarray)
     """
     # calculate aperture photometry curves
     positions = cp.array([[unit_star_dataset.shape[1] // 2, unit_star_dataset.shape[2] // 2]])
@@ -303,6 +322,20 @@ def create_aperture_corrections_map(image_shape: tuple, block_size: int, unit_st
 @capture_cuda_exception
 @hierarchical_debug(logger)
 def process_image(imdata, imheader, header_descriptions=None, **kwargs):
+    """
+    Process an image using the specified parameters and translate headers.
+
+    :param imdata: The image data to be processed.
+    :type imdata: numpy.ndarray
+    :param imheader: The original FITS header associated with the image.
+    :type imheader: astropy.io.fits.header.Header
+    :param header_descriptions: Descriptions of the header keywords (optional).
+    :type header_descriptions: dict or None
+    :param kwargs: Additional parameters for processing that override default settings.
+    :return: A tuple containing the data frame of processed results and the updated header.
+    :rtype: tuple(pandas.DataFrame, astropy.io.fits.header.Header)
+    :raises UnableToAstrometrizeError: If the image cannot be astrometrized.
+    """
     # parameters from header
     scale = plate_scale_px(imheader[HeaderKey.PXSIZE.value], imheader[HeaderKey.FOCALEN.value]) * imheader[
         HeaderKey.XBINNING.value]
@@ -368,22 +401,39 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
                            gain: float, rdnoise: float, n_images: int = 1, center_factor: float = 1.0,
                            min_conv_snr: float = 300.0):
     """
-    Optimizes the aperture photometry process to find the best radii for signal-to-noise ratio (SNR) for each star.
+        Optimize the aperture photometry process to find the best radii for signal-to-noise ratio (SNR) for each star.
 
-    :param img: Input image as a CuPy ndarray.
-    :param back: Background image as a CuPy ndarray.
-    :param conv_ima_sigma: Convolution sigma map as a CuPy ndarray.
-    :param source_coord: Coordinates of sources as a CuPy ndarray.
-    :param isolated_coord: Coordinates of isolated stars as a CuPy ndarray.
-    :param star_dataset:
-    :param fwhm: Full-width at half-maximum of the PSF.
-    :param gain: Gain value for flux conversion.
-    :param rdnoise: Read noise value of the detector.
-    :param n_images: Number of images.
-    :param center_factor: Fraction defining the central region for selecting isolated stars (default is 1.0).
-    :param min_conv_snr: Minimum convolutional SNR for selecting isolated stars (default is 300.0).
-    :return: Tuple containing the optimized fluxes, noise and fitting parameters.
-    """
+        :param img: Input image.
+        :type img: cupy.ndarray
+        :param back: Background image.
+        :type back: cupy.ndarray
+        :param conv_ima_sigma: Convolution sigma map.
+        :type conv_ima_sigma: cupy.ndarray
+        :param source_coord: Coordinates of sources.
+        :type source_coord: cupy.ndarray
+        :param isolated_coord: Coordinates of isolated stars.
+        :type isolated_coord: cupy.ndarray
+        :param tile_section_psf: Size of PSF tiles.
+        :type tile_section_psf: int
+        :param star_dataset: Dataset of stars.
+        :type star_dataset: cupy.ndarray
+        :param fwhm: Full-width at half-maximum of the PSF.
+        :type fwhm: float
+        :param gain: Gain value for flux conversion.
+        :type gain: float
+        :param rdnoise: Read noise value of the detector.
+        :type rdnoise: float
+        :param n_images: Number of images (default is 1).
+        :type n_images: int
+        :param center_factor: Fraction defining the central region for selecting isolated stars (default is 1.0).
+        :type center_factor: float
+        :param min_conv_snr: Minimum convolutional SNR for selecting isolated stars (default is 300.0).
+        :type min_conv_snr: float
+        :return: Tuple containing the optimized fluxes, noise, coordinates, and extra information.
+        :rtype: tuple(numpy.ndarray, numpy.ndarray, numpy.ndarray, dict)
+        :raises InsufficientStarsError: If there are not enough isolated stars for processing.
+        :raises DataValidationError: If input data is invalid or insufficient.
+        """
     # Memory pool
     mempool = cp.get_default_memory_pool()
 
@@ -503,18 +553,19 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
 
 @hierarchical_debug(logger)
 def batch_aperture_photometry(img, back, positions, radii, **kwargs):
-    """Perform aperture photometry in batch mode.
+    """
+    Perform aperture photometry in batch mode.
 
     :param img: Image data.
-    :type img: ndarray
+    :type img: cupy.ndarray
     :param back: Background image.
-    :type back: ndarray
+    :type back: cupy.ndarray or None
     :param positions: Positions of sources.
-    :type positions: ndarray
+    :type positions: cupy.ndarray
     :param radii: Aperture radii.
-    :type radii: ndarray
-
-
+    :type radii: numpy.ndarray
+    :return: Tuple containing flux, background flux, and aperture area.
+    :rtype: tuple(cupy.ndarray, cupy.ndarray or None, cupy.ndarray)
     """
     mempool = cp.get_default_memory_pool()
     area = cp.zeros(len(radii))
@@ -589,26 +640,51 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
     Calibrate an image.
 
     :param imdata: Image data.
+    :type imdata: numpy.ndarray
     :param inmodel: Instrument model.
+    :type inmodel: str
+    :param filter: Filter used for the image.
+    :type filter: str
     :param scale: Image scale, in arcsec/pixel.
+    :type scale: float
     :param gain: Gain value, in e-/ADU.
+    :type gain: float
     :param rdnoise: Read noise value, in e-.
+    :type rdnoise: float
     :param exptime: Exposure time, in seconds.
+    :type exptime: float
     :param satlevel: Saturation level, in ADU.
+    :type satlevel: float
     :param target_ra: Target right ascension, in degrees.
+    :type target_ra: float
     :param target_dec: Target declination, in degrees.
+    :type target_dec: float or None
     :param n_images: Number of stacked images.
+    :type n_images: int
     :param SP_filt: Whether to apply a Salt-and-Pepper filter.
+    :type SP_filt: bool
     :param CR_filt: Whether to apply a cosmic ray filter.
+    :type CR_filt: bool
     :param border: Distance from the border where sources are ignored.
+    :type border: int
     :param center_factor: Factor to select the center of the image for reference calculations.
+    :type center_factor: float
     :param pca_method: Whether to use PCA for PSF fitting.
+    :type pca_method: bool
     :param tile_section: Tile section size for background estimation.
+    :type tile_section: int
     :param max_stars_ref: Maximum number of stars to use for reference PSF.
+    :type max_stars_ref: int
     :param min_snr: Minimum SNR for source detection.
+    :type min_snr: int
     :param color_range: Color range around B-V = 0.65 for zeropoing calculations.
+    :type color_range: float
     :param tile_section_psf: Tile section size for aperture corrections variations.
+    :type tile_section_psf: int
     :return: Calibration dictionary, astrometry dictionary, photometry dataframe.
+    :rtype: tuple(dict, dict, pandas.DataFrame)
+    :raises InsufficientStarsError: If less than 5 isolated stars are detected.
+    :raises MoffatFitError: If there's an error fitting Moffat to reference PSF.
     """
 
     mempool = cp.get_default_memory_pool()
@@ -819,16 +895,17 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
 
 @hierarchical_debug(logger)
 def aperture_photometry(img, positions, aper_rad, **kwargs):
-    """Perform aperture photometry.
+    """
+    Perform aperture photometry.
 
     :param img: Image data.
-    :type img: ndarray
+    :type img: cupy.ndarray
     :param positions: Positions of sources.
-    :type positions: ndarray
+    :type positions: cupy.ndarray
     :param aper_rad: Aperture radius.
     :type aper_rad: int
-
-    
+    :return: Flux and area of the aperture.
+    :rtype: tuple(cupy.ndarray, float)
     """
     kernel, area = get_aper_kernel(aper_rad)
     conv_ima = convolve_fft(img, kernel, **kwargs)
@@ -841,20 +918,21 @@ def aperture_photometry(img, positions, aper_rad, **kwargs):
 
 @hierarchical_debug(logger)
 def get_fwhm_mof(model, img, step=50, ns=25, mins=3, **kwargs):
-    """Get the full width at half maximum using Moffat model.
+    """
+    Get the full width at half maximum using Moffat model.
 
     :param model: Model to use for FWHM estimation.
-    :type model: Model
+    :type model: object
     :param img: Image data.
-    :type img: ndarray
-    :param step: Step size for sampling, by default 50.
-    :type step: int, optional
-    :param ns: Number of samples, by default 25.
-    :type ns: int, optional
-    :param mins: Minimum number of stars, by default 3.
-    :type mins: int, optional
-
-    
+    :type img: numpy.ndarray
+    :param step: Step size for sampling.
+    :type step: int
+    :param ns: Number of samples.
+    :type ns: int
+    :param mins: Minimum number of stars.
+    :type mins: int
+    :return: Mean FWHM, standard deviation of FWHM, mean alpha, and mean beta.
+    :rtype: tuple(float, float, float, float)
     """
     ims, cs = sample_im(img, step, ns)
     pred2 = model.predict(ims)
@@ -866,14 +944,15 @@ def get_fwhm_mof(model, img, step=50, ns=25, mins=3, **kwargs):
 
 @hierarchical_debug(logger)
 def cov_nan(img, nc=10, **kwargs):
-    """Fill NaN values in an image using convolution.
+    """
+    Fill NaN values in an image using convolution.
 
     :param img: Input image.
-    :type img: ndarray
-    :param nc: Number of chunks, by default 10.
-    :type nc: int, optional
-
-    
+    :type img: cupy.ndarray
+    :param nc: Number of chunks.
+    :type nc: int
+    :return: Image with NaN values filled.
+    :rtype: cupy.ndarray
     """
     delta = np.round(img.shape[0] / nc).astype(int)
     for i in range(nc):
@@ -1051,16 +1130,17 @@ def cov_nan(img, nc=10, **kwargs):
 
 @hierarchical_debug(logger)
 def sample_im(img, nc=50, ns=100, **kwargs):
-    """Sample an image.
+    """
+    Sample an image.
 
     :param img: Input image.
-    :type img: ndarray
-    :param nc: Number of chunks, by default 50.
-    :type nc: int, optional
-    :param ns: Number of samples, by default 100.
-    :type ns: int, optional
-
-    
+    :type img: numpy.ndarray
+    :param nc: Number of chunks.
+    :type nc: int
+    :param ns: Number of samples.
+    :type ns: int
+    :return: Sampled image chunks and their maximum values.
+    :rtype: tuple(numpy.ndarray, numpy.ndarray)
     """
     delta = np.round((img.shape[0] - 512) / nc).astype(int)
     pi = 512 * 512
@@ -1088,12 +1168,13 @@ def sample_im(img, nc=50, ns=100, **kwargs):
 
 @hierarchical_debug(logger)
 def pred_mof(pred, **kwargs):
-    """Predict Moffat parameters.
+    """
+    Predict Moffat parameters.
 
     :param pred: Predicted values.
-    :type pred: ndarray
-
-    
+    :type pred: numpy.ndarray
+    :return: Alpha, beta, number of stars, and FWHM.
+    :rtype: tuple(numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray)
     """
     alpha = pred[:, 1]
     beta = pred[:, 0] * 0.4 + 4.565
@@ -1123,10 +1204,14 @@ def pred_mof(pred, **kwargs):
 @hierarchical_debug(logger)
 def sigma_clip(img, sclip, **kwargs):
     """
+    Perform sigma clipping on an image.
 
-    :param img: 
-    :param sclip: 
-
+    :param img: Input image.
+    :type img: cupy.ndarray
+    :param sclip: Sigma clipping factor.
+    :type sclip: float
+    :return: Mean and standard deviation of the clipped image.
+    :rtype: tuple(float, float)
     """
     img0 = img.copy()
     for i in range(5):
@@ -1142,9 +1227,12 @@ def sigma_clip(img, sclip, **kwargs):
 @hierarchical_debug(logger)
 def gen_gauss_filter(fw, **kwargs):
     """
+    Generate a Gaussian filter.
 
-    :param fw: 
-
+    :param fw: Full width at half maximum.
+    :type fw: float
+    :return: Gaussian filter kernel and kernel size.
+    :rtype: tuple(cupy.ndarray, int)
     """
     sigma_r = fw / (2.0 * np.sqrt(2.0 * np.log(2.0)))
     sigma_r2 = sigma_r * sigma_r
@@ -1165,19 +1253,32 @@ def gen_gauss_filter(fw, **kwargs):
 def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
 =4, mincut=10, mem=cp.get_default_pinned_memory_pool(), **kwargs):
     """
+    Detect sources in an image using GPU.
 
-    :param img: 
-    :param sky: 
-    :param rms: 
-    :param sdet: 
-    :param mode:  (Default value = 'g')
-    :param fw:  (Default value = 1)
-    :param alpha:  (Default value = 0)
-    :param beta:  (Default value = 0)
-    :param minpix:  (Default value = 4)
-    :param mincut:  (Default value = 10)
-    :param mem:  (Default value = cp.get_default_pinned_memory_pool())
-
+    :param img: Input image.
+    :type img: cupy.ndarray
+    :param sky: Sky background.
+    :type sky: cupy.ndarray
+    :param rms: RMS noise.
+    :type rms: cupy.ndarray
+    :param sdet: Detection threshold in sigma units.
+    :type sdet: float
+    :param mode: Detection mode ('g' for Gaussian).
+    :type mode: str
+    :param fw: Full width at half maximum.
+    :type fw: float
+    :param alpha: Moffat alpha parameter (not used for Gaussian mode).
+    :type alpha: float
+    :param beta: Moffat beta parameter (not used for Gaussian mode).
+    :type beta: float
+    :param minpix: Minimum number of pixels for a valid detection.
+    :type minpix: int
+    :param mincut: Minimum flux cut for a valid detection.
+    :type mincut: float
+    :param mem: GPU memory pool.
+    :type mem: cupy.cuda.MemoryPool
+    :return: DataFrame of detected sources, mask of small detections, and memory usage.
+    :rtype: tuple(pandas.DataFrame, cupy.ndarray, int)
     """
     gf, lk = gen_gauss_filter(fw)
     g = convolve(img - sky, gf, origin=(0, 0))
@@ -1219,11 +1320,16 @@ def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
 @hierarchical_debug(logger)
 def get_peak_image(img, positions, aper_rad, **kwargs):
     """
+    Get peak values in an image at specified positions.
 
-    :param img: 
-    :param positions: 
-    :param aper_rad: 
-
+    :param img: Input image.
+    :type img: cupy.ndarray
+    :param positions: Positions to check for peaks.
+    :type positions: cupy.ndarray
+    :param aper_rad: Aperture radius for peak detection.
+    :type aper_rad: int
+    :return: Peak values at specified positions.
+    :rtype: cupy.ndarray
     """
     lk = 2 * aper_rad
     img_m = maximum_filter(img, size=lk)

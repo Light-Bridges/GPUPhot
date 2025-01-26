@@ -17,12 +17,17 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def find_local_max(image: cp.ndarray, min_distance: int, threshold_abs: float) -> cp.ndarray:
-    """Calculate local maxima in an image.
+    """
+    Calculate local maxima in an image.
 
     :param image: Image array to be processed.
+    :type image: cupy.ndarray
     :param min_distance: Minimum distance between peaks.
+    :type min_distance: int
     :param threshold_abs: Absolute threshold for peaks.
+    :type threshold_abs: float
     :return: Array of detected peaks.
+    :rtype: cupy.ndarray
     """
     max_mask = image == maximum_filter(image, size=min_distance)
     threshold_mask = image > threshold_abs
@@ -32,12 +37,17 @@ def find_local_max(image: cp.ndarray, min_distance: int, threshold_abs: float) -
 
 @hierarchical_debug(logger)
 def find_local_centroid(image: cp.ndarray, peaks: cp.ndarray, window_size: int = 5) -> cp.ndarray:
-    """Calculate centroids of detected peaks in an image.
-    
+    """
+    Calculate centroids of detected peaks in an image.
+
     :param image: Image where the peaks are located.
+    :type image: cupy.ndarray
     :param peaks: Coordinates of the peaks.
+    :type peaks: cupy.ndarray
     :param window_size: Size of the square neighborhood around the peak.
+    :type window_size: int
     :return: Array of calculated centroids.
+    :rtype: cupy.ndarray
     """
 
     if window_size % 2 == 0: window_size += 1
@@ -71,17 +81,27 @@ def find_local_centroid(image: cp.ndarray, peaks: cp.ndarray, window_size: int =
 @hierarchical_debug(logger)
 def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_lim: int = 50000, min_snr: float = 10,
                           dist_asec: float = 10, sort: bool = True, **kwargs) -> cp.array:
-    """Detects isolated stars in an image using a fft convolution kernel.
-        The stars are detected by convolving the image with a Gaussian kernel and filtered by a minimum signal-to-noise ratio.
+    """
+    Detect isolated stars in an image using a fft convolution kernel.
+    The stars are detected by convolving the image with a Gaussian kernel and filtered by a minimum signal-to-noise ratio.
 
     :param img: Image array to be processed.
+    :type img: cupy.ndarray
     :param rms: RMS of the image.
+    :type rms: cupy.ndarray
     :param pxscale: Pixel scale in arcsec/pixel.
+    :type pxscale: float
     :param sat_lim: Saturation limit.
+    :type sat_lim: int
     :param min_snr: Minimum signal-to-noise ratio.
+    :type min_snr: float
     :param dist_asec: Minimum distance in arcsec.
+    :type dist_asec: float
     :param sort: Whether to sort the detected stars by signal-to-noise ratio and distance.
+    :type sort: bool
     :return: An array containing the coordinates of the detected stars.
+    :rtype: cupy.ndarray
+    :raises InsufficientStarsError: If less than 5 isolated stars are detected.
     """
 
     mempool = cp.get_default_memory_pool()
@@ -123,16 +143,20 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
 
 @hierarchical_debug(logger)
 def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: int = 1000) -> tuple:
-    """Creates a dataset of stars from an image and a list of coordinates.
+    """
+    Create a dataset of stars from an image and a list of coordinates.
 
     :param img: Image array to be processed.
+    :type img: cupy.ndarray
     :param coords: Array containing the coordinates of the stars.
+    :type coords: cupy.ndarray
     :param pxscale: Pixel scale in arcsec/pixel.
+    :type pxscale: float
     :param N: Number of stars to be selected.
-    :param CR_filter: Whether to apply cosmic ray filtering.
-    :param CR_thres: Cosmic ray threshold.
-    :return: A tuple containing the star dataset, the coordinates of the stars, and the scaling dataset."""
-
+    :type N: int
+    :return: A tuple containing the star dataset, the coordinates of the stars, and the scaling dataset.
+    :rtype: tuple(cupy.ndarray, cupy.ndarray, cupy.ndarray)
+    """
     f = max(int(10 / pxscale), 6)
     n = max(int(1 / pxscale), 2)
     star_dataset = cp.zeros((len(coords), 2 * f + 1, 2 * f + 1), dtype=cp.
@@ -172,12 +196,17 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
 @hierarchical_debug(logger)
 def group_star_dataset(coords: np.ndarray, avg_group_size: int = 10, min_group_size: int = 5) -> np.ndarray:
     """
-    Groups a set of star coordinates into clusters, ensuring no group has fewer stars than min_group_size.
+    Group a set of star coordinates into clusters, ensuring no group has fewer stars than min_group_size.
 
     :param coords: Coordinates of the stars (n_stars, n_features).
+    :type coords: numpy.ndarray
     :param avg_group_size: Desired average group size.
+    :type avg_group_size: int
     :param min_group_size: Minimum allowed size for a group.
+    :type min_group_size: int
     :return: Array of labels indicating the cluster each star belongs to.
+    :rtype: numpy.ndarray
+    :raises InvalidGroupSizeError: If both avg_group_size and min_group_size are less than or equal to zero.
     """
 
     # Validar parámetros de entrada
@@ -229,13 +258,16 @@ def group_star_dataset(coords: np.ndarray, avg_group_size: int = 10, min_group_s
 
 @hierarchical_debug(logger)
 def get_eigen_psfs(normed_star_dataset: cp.array, n_components: int = 5) -> cp.array:
-    """Calculates the eigen PSFs from a dataset of normalized stars.
+    """
+    Calculate the eigen PSFs from a dataset of normalized stars.
 
     :param normed_star_dataset: Dataset of normalized stars.
+    :type normed_star_dataset: cupy.ndarray
     :param n_components: Number of components to be used.
+    :type n_components: int
     :return: An array containing the eigen PSFs.
+    :rtype: cupy.ndarray
     """
-
     pca = PCA(n_components=n_components)
     starset_flattened = normed_star_dataset.reshape(normed_star_dataset.shape[0],
                                                     normed_star_dataset.shape[1] ** 2).get()
@@ -246,13 +278,16 @@ def get_eigen_psfs(normed_star_dataset: cp.array, n_components: int = 5) -> cp.a
 
 @hierarchical_debug(logger)
 def project_all_stars_onto_eigenpsfs(normed_star_dataset: cp.array, eigen_psfs: cp.array) -> cp.array:
-    """Projects all stars onto the eigen PSFs.
+    """
+    Project all stars onto the eigen PSFs.
 
     :param normed_star_dataset: Dataset of normalized stars.
+    :type normed_star_dataset: cupy.ndarray
     :param eigen_psfs: Array containing the eigen PSFs.
+    :type eigen_psfs: cupy.ndarray
     :return: An array containing the coefficients of the stars projected onto the eigen PSFs.
+    :rtype: cupy.ndarray
     """
-
     num_stars = normed_star_dataset.shape[0]
     flattened_star_dim = normed_star_dataset.shape[1] * normed_star_dataset.shape[2]
     stars_matrix = normed_star_dataset.reshape((num_stars, flattened_star_dim))
@@ -265,17 +300,24 @@ def project_all_stars_onto_eigenpsfs(normed_star_dataset: cp.array, eigen_psfs: 
 @hierarchical_debug(logger)
 def create_coeff_map(img_shape: tuple, positions: cp.array, coefficients: cp.array, pxscale: float,
                      tile_section: int = None, env_factor: float = 3) -> cp.ndarray:
-    """Creates a coefficient map from a list of positions and coefficients.
+    """
+    Create a coefficient map from a list of positions and coefficients.
 
     :param img_shape: Dimensions of the image.
+    :type img_shape: tuple
     :param positions: Array containing the positions of the coefficients.
+    :type positions: cupy.ndarray
     :param coefficients: Array containing the coefficients.
+    :type coefficients: cupy.ndarray
     :param pxscale: Pixel scale in arcsec/pixel.
+    :type pxscale: float
     :param tile_section: Size of the tile section.
+    :type tile_section: int or None
     :param env_factor: Factor for the environment check for outlier detection.
+    :type env_factor: float
     :return: A coefficient map.
+    :rtype: cupy.ndarray
     """
-
     coeff_map = cp.nan * cp.ones((coefficients.shape[0], img_shape[0], img_shape[1]), dtype=cp.float32)
     coeff_map[:, cp.round(positions[:, 0]).astype(int), cp.round(positions[:, 1]).astype(int)] = coefficients
     if tile_section is None:
@@ -306,20 +348,16 @@ def calculate_kernel_area(img_shape: tuple, psf: cp.ndarray, coeff_map: cp.ndarr
     """
     Calculate the area of the kernel.
 
-    Parameters
-    ----------
-
-    psf : ndarray
-        Point spread function.
-    coeff_map : ndarray, optional
-        Coefficient map, by default None.
-    eigen_psfs : ndarray, optional
-        Eigen PSFs, by default None.
-    
-    Returns
-    -------
-    ndarray
-        Map of the kernel area.
+    :param img_shape: Shape of the image.
+    :type img_shape: tuple
+    :param psf: Point spread function.
+    :type psf: cupy.ndarray
+    :param coeff_map: Coefficient map, by default None.
+    :type coeff_map: cupy.ndarray or None
+    :param eigen_psfs: Eigen PSFs, by default None.
+    :type eigen_psfs: cupy.ndarray or None
+    :return: Map of the kernel area.
+    :rtype: cupy.ndarray
     """
 
     A = cp.zeros(img_shape, dtype=cp.float32)
@@ -341,27 +379,22 @@ def detect_sources_psf(img: cp.ndarray, rms: cp.ndarray, fwhm: float, psf: cp.ar
     """
     Detect sources using PCA.
 
-    Parameters
-    ----------
-    img : ndarray
-        Input image.
-    rms : float
-        Root mean square noise level.
-    fwhm : float
-        Full width at half maximum.
-    psf : ndarray
-        Reference point spread function.
-    eigen_psfs : ndarray
-        Eigen PSFs.
-    coeff_map : ndarray
-        Coefficient map.
-    min_snr : float, optional
-        Minimum signal-to-noise ratio, by default 5.
-
-    Returns
-    -------
-    tuple
-        (coordinates, conv_ima_sigma) where coordinates are the detected sources and conv_ima_sigma is the convolved image with PCA.
+    :param img: Input image.
+    :type img: cupy.ndarray
+    :param rms: Root mean square noise level.
+    :type rms: cupy.ndarray
+    :param fwhm: Full width at half maximum.
+    :type fwhm: float
+    :param psf: Reference point spread function.
+    :type psf: cupy.ndarray
+    :param eigen_psfs: Eigen PSFs.
+    :type eigen_psfs: cupy.ndarray or None
+    :param coeff_map: Coefficient map.
+    :type coeff_map: cupy.ndarray or None
+    :param min_snr: Minimum signal-to-noise ratio, by default 5.
+    :type min_snr: int
+    :return: Tuple containing coordinates of detected sources and the convolved image with PCA.
+    :rtype: tuple(cupy.ndarray, cupy.ndarray)
     """
     mempool = cp.get_default_memory_pool()
     flipped_psf = cp.flip(psf, (0, 1))
@@ -380,12 +413,17 @@ def detect_sources_psf(img: cp.ndarray, rms: cp.ndarray, fwhm: float, psf: cp.ar
 
 
 def recreate_normed_star(coeff_map: cp.ndarray, eigen_psfs: cp.array, coords: cp.array) -> cp.ndarray:
-    """Recreates a normalized star from the coefficient map.
+    """
+    Recreate a normalized star from the coefficient map.
 
     :param coeff_map: Coefficient map.
+    :type coeff_map: cupy.ndarray
     :param eigen_psfs: Array containing the eigen PSFs.
+    :type eigen_psfs: cupy.ndarray
     :param coords: Tuple containing the coordinates of the star (x,y).
+    :type coords: tuple
     :return: The recreated normalized star.
+    :rtype: cupy.ndarray
     """
     x, y = coords
     coeff = coeff_map[:, y, x]
@@ -397,14 +435,21 @@ def recreate_normed_star(coeff_map: cp.ndarray, eigen_psfs: cp.array, coords: cp
 @hierarchical_debug(logger)
 def recreate_normed_star_vectorized(coeff_map: cp.ndarray, eigen_psfs: cp.array, xs: cp.array, ys: cp.array,
                                     **kwargs) -> cp.ndarray:
-    """Recreates a set of normalized stars from the coefficient map.
+    """
+    Recreate a set of normalized stars from the coefficient map.
 
     :param coeff_map: Coefficient map.
+    :type coeff_map: cupy.ndarray
     :param eigen_psfs: Array containing the eigen PSFs.
+    :type eigen_psfs: cupy.ndarray
     :param xs: Array containing the x-coordinates of the stars.
+    :type xs: cupy.ndarray
     :param ys: Array containing the y-coordinates of the stars.
+    :type ys: cupy.ndarray
     :return: An array containing the recreated normalized stars.
+    :rtype: cupy.ndarray
     """
+
     coeffs = coeff_map[:, ys, xs]
     coeffs = coeffs.reshape(-1, coeffs.shape[-1])
     reshaped_eigen_psfs = eigen_psfs.reshape(eigen_psfs.shape[0], -1)
@@ -416,12 +461,17 @@ def recreate_normed_star_vectorized(coeff_map: cp.ndarray, eigen_psfs: cp.array,
 
 def recreate_normed_stars_batch(coeff_map: cp.ndarray, eigen_psfs: cp.ndarray, coords: cp.ndarray,
                                 **kwargs) -> cp.ndarray:
-    """Recreates normalized stars for a batch of coordinates.
+    """
+    Recreate normalized stars for a batch of coordinates.
 
     :param coeff_map: Coefficient map of shape (num_coeffs, height, width).
+    :type coeff_map: cupy.ndarray
     :param eigen_psfs: Array containing the eigen PSFs of shape (num_coeffs, psf_height, psf_width).
+    :type eigen_psfs: cupy.ndarray
     :param coords: Array of coordinates of shape (num_points, 2), where each row is (x, y).
+    :type coords: cupy.ndarray
     :return: Array of recreated normalized stars of shape (num_points, psf_height, psf_width).
+    :rtype: cupy.ndarray
     """
     xs, ys = coords[:, 0], coords[:, 1]
     coeffs = coeff_map[:, ys, xs]
@@ -433,10 +483,13 @@ def recreate_normed_stars_batch(coeff_map: cp.ndarray, eigen_psfs: cp.ndarray, c
 
 @hierarchical_debug(logger)
 def fit_moffat(star_data: np.ndarray) -> tuple:
-    """Fits a Moffat profile to a star.
+    """
+    Fit a Moffat profile to a star.
 
     :param star_data: Image array containing the star data.
+    :type star_data: numpy.ndarray
     :return: A tuple containing the radial coordinates, the intensity profile, the fit result, the FWHM, and the FWHM uncertainty.
+    :rtype: tuple(numpy.ndarray, numpy.ndarray, lmfit.model.ModelResult, float, float)
     """
 
     # Reshape the 2D image to 1D arrays
@@ -478,11 +531,15 @@ def fit_moffat(star_data: np.ndarray) -> tuple:
 
 
 def filter_centroids_kdtree(centroids: np.array, min_distance: float) -> np.array:
-    """ Filters centroids using a KDTree.
+    """
+    Filter centroids using a KDTree.
 
     :param centroids: Array containing the centroids to be filtered.
+    :type centroids: numpy.ndarray
     :param min_distance: Minimum distance between centroids.
+    :type min_distance: float
     :return: An array containing the filtered centroids.
+    :rtype: numpy.ndarray
     """
     distances = get_centroids_distance_kdtree(centroids)
     mask = distances >= min_distance
@@ -491,10 +548,13 @@ def filter_centroids_kdtree(centroids: np.array, min_distance: float) -> np.arra
 
 @hierarchical_debug(logger)
 def get_centroids_distance_kdtree(centroids: np.array):
-    """Find the distance between centroid and its nearest neighbor using KDTree.
-    
+    """
+    Find the distance between centroid and its nearest neighbor using KDTree.
+
     :param centroids: Array of centroids.
+    :type centroids: numpy.ndarray
     :return: Array of distances.
+    :rtype: numpy.ndarray
     """
 
     tree = KDTree(centroids)
@@ -503,27 +563,40 @@ def get_centroids_distance_kdtree(centroids: np.array):
 
 
 def moffat(r: np.array, A: float = 1., r0: float = 0., B: float = 1., R: float = 1.) -> np.array:
-    """ Moffat profile function.
+    """
+    Moffat profile function.
     https://nbviewer.org/github/ysbach/AO_2017/blob/master/04_Ground_Based_Concept.ipynb#1.2.-Moffat
 
     :param r: Radial coordinates.
+    :type r: numpy.ndarray
     :param A: Peak intensity.
+    :type A: float
     :param r0: Central position.
+    :type r0: float
     :param B: Power index.
+    :type B: float
     :param R: Scale factor.
+    :type R: float
     :return: The Moffat profile.
+    :rtype: numpy.ndarray
     """
     return A * (1 + ((r - r0) / R) ** 2) ** (-B)
 
 
 def moffat_fwhm(R: float, B: float, R_err: float, B_err: float) -> tuple:
-    """Calculates the FWHM of a Moffat profile.
+    """
+    Calculate the FWHM of a Moffat profile.
 
     :param R: Scale factor.
+    :type R: float
     :param B: Power index.
+    :type B: float
     :param R_err: Scale factor uncertainty.
+    :type R_err: float
     :param B_err: Power index uncertainty.
+    :type B_err: float
     :return: A tuple containing the FWHM and the FWHM uncertainty.
+    :rtype: tuple(float, float)
     """
     FWHM = 2 * R * np.sqrt(2 ** (1 / B) - 1)
     FWHM_err = 2 * R_err * np.sqrt(2 ** (1 / B) - 1) + 2 * R * B_err * \

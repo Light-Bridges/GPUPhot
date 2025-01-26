@@ -1,1 +1,23 @@
+include LICENSE
+include README.md
+include USAGE.md
+include INSTALL.md
+include DOCKER.md
 include requirements.txt
+include requirements-worker.txt
+include requirements_3_12.txt
+include pyproject.toml
+include setup.py
+include launch_gpuphot.sh
+include docker-compose.yml
+include Dockerfile
+include init-db.sql
+
+recursive-include gpuphot *.py *.json
+recursive-include gpuphot_worker *.py
+recursive-include docs *.rst *.py
+recursive-include notebooks *.ipynb
+recursive-include tests *.py
+
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]

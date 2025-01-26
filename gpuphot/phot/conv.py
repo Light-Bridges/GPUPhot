@@ -8,12 +8,17 @@ logger = setup_logger(__name__)
 
 @hierarchical_debug(logger)
 def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, do_pad: bool = True, **kwargs) -> cp.ndarray:
-    """Convolve an image with a kernel using FFT.
+    """
+    Convolve an image with a kernel using FFT.
 
     :param image: Image array to be processed.
+    :type image: cupy.ndarray
     :param kernel: Kernel to be used in the convolution.
+    :type kernel: cupy.ndarray
     :param do_pad: Whether to pad the image.
+    :type do_pad: bool
     :return: The convolved image.
+    :rtype: cupy.ndarray
     """
     image_shape = image.shape
     kernel_shape = kernel.shape
@@ -34,12 +39,17 @@ def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, do_pad: bool = True, **k
 
 @hierarchical_debug(logger)
 def get_mean_std(im_g: cp.ndarray, lk: int, std: bool = True, **kwargs) -> tuple:
-    """Calculates the mean and standard deviation of an image using FFT convolution.
+    """
+    Calculate the mean and standard deviation of an image using FFT convolution.
 
     :param im_g: Image array to be processed.
+    :type im_g: cupy.ndarray
     :param lk: Length of the kernel.
+    :type lk: int
     :param std: Whether to calculate the standard deviation.
+    :type std: bool
     :return: A tuple containing the mean and standard deviation of the image.
+    :rtype: tuple
     """
     im_g = cp.asarray(im_g, dtype=cp.float64)
     k_app = gen_apm_filter(lk)
@@ -55,11 +65,15 @@ def get_mean_std(im_g: cp.ndarray, lk: int, std: bool = True, **kwargs) -> tuple
 
 @hierarchical_debug(logger)
 def gaussian_kernel(lk: int, sigma: int, **kwargs) -> cp.ndarray:
-    """Generates a 2D Gaussian kernel.
+    """
+    Generate a 2D Gaussian kernel.
 
     :param lk: Length of the kernel.
+    :type lk: int
     :param sigma: Standard deviation of the Gaussian kernel.
+    :type sigma: int
     :return: A 2D Gaussian kernel.
+    :rtype: cupy.ndarray
     """
     k_dim = (2 * lk + 1, 2 * lk + 1)
     x = cp.linspace(-lk, lk, k_dim[0])
@@ -71,11 +85,15 @@ def gaussian_kernel(lk: int, sigma: int, **kwargs) -> cp.ndarray:
 
 
 def get_aper_kernel(radius: int, size: int = None, **kwargs) -> tuple:
-    """Generates a circular kernel for aperture photometry.
+    """
+    Generate a circular kernel for aperture photometry.
 
     :param radius: Radius of the circular kernel.
+    :type radius: int
     :param size: Size of the kernel. Default is 2*radius+1.
+    :type size: int or None
     :return: A circular kernel and the area of the kernel.
+    :rtype: tuple
     """
     if size is None:
         size = 2 * radius + 1
@@ -88,10 +106,13 @@ def get_aper_kernel(radius: int, size: int = None, **kwargs) -> tuple:
 
 
 def fill_image(image_shape: tuple, **kwargs) -> tuple:
-    """Calculates the new image shape rounding up to the next power of 2.
+    """
+    Calculate the new image shape rounding up to the next power of 2.
 
     :param image_shape: Original image shape.
+    :type image_shape: tuple
     :return: A tuple containing the new height and width values.
+    :rtype: tuple
     """
     h, w = image_shape
     new_height = 2 ** int(np.ceil(np.log2(h)))
@@ -101,12 +122,17 @@ def fill_image(image_shape: tuple, **kwargs) -> tuple:
 
 @hierarchical_debug(logger)
 def gen_apm_filter(lk: int, li: int = 0, norm: bool = True, **kwargs) -> cp.ndarray:
-    """Generates an aperture filter for the detection of sources in an image.
+    """
+    Generate an aperture filter for the detection of sources in an image.
 
     :param lk: Length of the kernel.
+    :type lk: int
     :param li: Length of the inner kernel. Default is 0 (no inner kernel).
+    :type li: int
     :param norm: Whether to normalize the kernel.
+    :type norm: bool
     :return: An aperture filter.
+    :rtype: cupy.ndarray
     """
     k_dim = (2 * lk + 1, 2 * lk + 1)
     indi = cp.indices(k_dim)
@@ -127,9 +153,12 @@ def gen_apm_filter(lk: int, li: int = 0, norm: bool = True, **kwargs) -> cp.ndar
 @hierarchical_debug(logger)
 def batch_aper_kernel(radius, **kwargs):
     """
+    Generate a batch of aperture kernels.
 
-    :param radius: 
-
+    :param radius: Radius or list of radii for the kernels.
+    :type radius: int or list
+    :return: A tuple containing the kernel and its area.
+    :rtype: tuple
     """
 
     kernel = cp.zeros((2 * radius[-1] + 1, 2 * radius[-1] + 1))
@@ -143,13 +172,19 @@ def batch_aper_kernel(radius, **kwargs):
 
 @hierarchical_debug(logger)
 def fill_nan_fft(image: cp.ndarray, lk: int, li: int = 0, min_neighbors: int = 5, **kwargs) -> cp.ndarray:
-    """Fills NaN values in an image using FFT convolution.
+    """
+    Fill NaN values in an image using FFT convolution.
 
     :param image: Image array to be processed.
+    :type image: cupy.ndarray
     :param lk: Length of the kernel.
+    :type lk: int
     :param li: Length of the inner kernel.
+    :type li: int
     :param min_neighbors: Minimum number of valid neighbors.
+    :type min_neighbors: int
     :return: The image array with NaN values filled.
+    :rtype: cupy.ndarray
     """
     k_app = gen_apm_filter(lk, li=li, norm=False)
     image = image.astype(cp.double)

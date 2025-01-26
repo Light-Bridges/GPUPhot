@@ -20,31 +20,32 @@ logger = setup_logger(__name__)
 @hierarchical_debug(logger)
 def _masked_phase_cross_correlation(reference_image, moving_image,
                                     reference_mask, moving_mask=None, overlap_ratio=0.3):
-    """Masked image translation registration by masked normalized cross-correlation.
+    """
+    Perform masked image translation registration by masked normalized cross-correlation.
 
     :param reference_image: Reference image.
     :type reference_image: ndarray
     :param moving_image: Image to register. Must be the same dimensionality as `reference_image`,
-        but not necessarily the same size.
+                         but not necessarily the same size.
     :type moving_image: ndarray
     :param reference_mask: Boolean mask for `reference_image`. The mask should evaluate to `True`
-        (or 1) on valid pixels. `reference_mask` should have the same shape as `reference_image`.
+                           (or 1) on valid pixels. `reference_mask` should have the same shape as `reference_image`.
     :type reference_mask: ndarray
     :param moving_mask: Boolean mask for `moving_image`. The mask should evaluate to `True`
-        (or 1) on valid pixels. `moving_mask` should have the same shape
-        as `moving_image`. If `None`, `reference_mask` will be used. (Default value = None)
+                        (or 1) on valid pixels. `moving_mask` should have the same shape
+                        as `moving_image`. If `None`, `reference_mask` will be used.
     :type moving_mask: ndarray or None, optional
     :param overlap_ratio: Minimum allowed overlap ratio between images. The correlation for
-        translations corresponding with an overlap ratio lower than this
-        threshold will be ignored. A lower `overlap_ratio` leads to smaller
-        maximum translation, while a higher `overlap_ratio` leads to greater
-        robustness against spurious matches due to small overlap between
-        masked images. (Default value = 0.3)
+                          translations corresponding with an overlap ratio lower than this
+                          threshold will be ignored.
     :type overlap_ratio: float, optional
-    :returns: shifts->     Shift vector (in pixels) required to register `moving_image`
-        with `reference_image`. Axis ordering is consistent with
-        numpy (e.g. Z, Y, X).
+    :return: Shift vector (in pixels) required to register `moving_image`
+             with `reference_image`. Axis ordering is consistent with
+             numpy (e.g. Z, Y, X).
     :rtype: ndarray
+    :raises ValueError: If input images have different shapes and moving_mask is not explicitly set,
+                        or if image sizes don't match their respective mask sizes.
+
 
     References
     ----------
@@ -81,39 +82,33 @@ def _masked_phase_cross_correlation(reference_image, moving_image,
 @hierarchical_debug(logger)
 def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
                            overlap_ratio=0.3):
-    """Masked normalized cross-correlation between arrays.
+    """
+    Compute masked normalized cross-correlation between arrays.
 
     :param arr1: First array.
     :type arr1: ndarray
     :param arr2: Second array. The dimensions of `arr2` along axes that are not
-        transformed should be equal to that of `arr1`.
+                 transformed should be equal to that of `arr1`.
     :type arr2: ndarray
     :param m1: Mask of `arr1`. The mask should evaluate to `True`
-        (or 1) on valid pixels. `m1` should have the same shape as `arr1`.
+               (or 1) on valid pixels. `m1` should have the same shape as `arr1`.
     :type m1: ndarray
     :param m2: Mask of `arr2`. The mask should evaluate to `True`
-        (or 1) on valid pixels. `m2` should have the same shape as `arr2`.
+               (or 1) on valid pixels. `m2` should have the same shape as `arr2`.
     :type m2: ndarray
-    :param mode: 'full': This returns the convolution at each point of overlap. At
-        the end-points of the convolution, the signals do not overlap
-        completely, and boundary effects may be seen.
-        'same': The output is the same size as `arr1`, centered with respect
-        to the `‘full’` output. Boundary effects are less prominent. (Default value = 'full')
-    :type mode: {'full', 'same'}, optional
-    :param axes: Axes along which to compute the cross-correlation. (Default value = (-2)
+    :param mode: {'full', 'same'}, optional
+                 'full': Returns the convolution at each point of overlap.
+                 'same': The output is the same size as `arr1`, centered with respect
+                         to the 'full' output.
+    :type mode: str, optional
+    :param axes: Axes along which to compute the cross-correlation.
     :type axes: tuple of ints, optional
-    :param overlap_ratio: Minimum allowed overlap ratio between images. The correlation for
-        translations corresponding with an overlap ratio lower than this
-        threshold will be ignored. A lower `overlap_ratio` leads to smaller
-        maximum translation, while a higher `overlap_ratio` leads to greater
-        robustness against spurious matches due to small overlap between
-        masked images. (Default value = 0.3)
+    :param overlap_ratio: Minimum allowed overlap ratio between images.
     :type overlap_ratio: float, optional
-    :param -1): 
-    :returns: out->     Masked normalized cross-correlation.
+    :return: Masked normalized cross-correlation.
     :rtype: ndarray
     :raises ValueError: If correlation `mode` is not valid, or array dimensions along
-        non-transformation axes are not equal.
+                        non-transformation axes are not equal.
 
     References
     ----------
@@ -208,16 +203,17 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
 
 @hierarchical_debug(logger)
 def _flip(arr, axes=None):
-    """Reverse array over many axes. Generalization of arr[::-1] for many
-    dimensions. If `axes` is `None`, flip along all axes.
+    """
+    Reverse array over many axes. Generalization of arr[::-1] for many dimensions.
 
     :param arr: Input array to be flipped.
     :type arr: ndarray
-    :param axes: Axes over which to flip the array. If None, flips over all axes. (Default value = None)
-    :type axes: tuple of ints, optional
-
-    
+    :param axes: Axes over which to flip the array. If None, flips over all axes.
+    :type axes: tuple of ints or None, optional
+    :return: Flipped array.
+    :rtype: ndarray
     """
+
     if axes is None:
         reverse = [slice(None, None, -1)] * arr.ndim
     else:
@@ -230,8 +226,8 @@ def _flip(arr, axes=None):
 
 @hierarchical_debug(logger)
 def _centered(arr, newshape, axes):
-    """Return the center `newshape` portion of `arr`, leaving axes not
-    in `axes` untouched.
+    """
+    Return the center `newshape` portion of `arr`, leaving axes not in `axes` untouched.
 
     :param arr: Input array.
     :type arr: ndarray
@@ -239,8 +235,8 @@ def _centered(arr, newshape, axes):
     :type newshape: tuple of ints
     :param axes: Axes along which to center the array.
     :type axes: tuple of ints
-
-    
+    :return: Centered array.
+    :rtype: ndarray
     """
     newshape = cp.asarray(newshape)
     currshape = cp.array(arr.shape)
