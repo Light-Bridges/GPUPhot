@@ -169,20 +169,19 @@ def catalog_results(coocenter, radius, filter, inmodel, maglimit=23, **kwargs):
         magerr = lum_gmag_coeff * vizier_results['e_gmag'] + lum_rmag_coeff * vizier_results['e_rmag']
         ref_filter = f'{lum_gmag_coeff}*g+{lum_rmag_coeff}*r'
 
-        # TODO: Delete it
-        if inmodel == 'iKon936':
-            mag = 0.46872 * vizier_results['gmag'] + 0.53127 * vizier_results['rmag']
-            magerr = 0.46872 * vizier_results['e_gmag'] + 0.53127 * vizier_results['e_rmag']
-            ref_filter = '0.46872*g+0.53127*r'
-
-        elif inmodel == 'QHY411MERIS':
-            mag = 0.51595 * vizier_results['gmag'] + 0.48404 * vizier_results['rmag']
-            magerr = 0.51595 * vizier_results['e_gmag'] + 0.48404 * vizier_results['e_rmag']
-            ref_filter = '0.51595*g+0.48404*r'
-        else:
-            mag = 0.5 * vizier_results['gmag'] + 0.5 * vizier_results['rmag']
-            magerr = 0.5 * vizier_results['e_gmag'] + 0.5 * vizier_results['e_rmag']
-            ref_filter = '0.5*g+0.5*r'
+        # if inmodel == 'iKon936':
+        #     mag = 0.46872 * vizier_results['gmag'] + 0.53127 * vizier_results['rmag']
+        #     magerr = 0.46872 * vizier_results['e_gmag'] + 0.53127 * vizier_results['e_rmag']
+        #     ref_filter = '0.46872*g+0.53127*r'
+        #
+        # elif inmodel == 'QHY411MERIS':
+        #     mag = 0.51595 * vizier_results['gmag'] + 0.48404 * vizier_results['rmag']
+        #     magerr = 0.51595 * vizier_results['e_gmag'] + 0.48404 * vizier_results['e_rmag']
+        #     ref_filter = '0.51595*g+0.48404*r'
+        # else:
+        #     mag = 0.5 * vizier_results['gmag'] + 0.5 * vizier_results['rmag']
+        #     magerr = 0.5 * vizier_results['e_gmag'] + 0.5 * vizier_results['e_rmag']
+        #     ref_filter = '0.5*g+0.5*r'
 
         result = pd.DataFrame({'ID': vizier_results['objID'],
                                'RA': vizier_results['RAJ2000'],
