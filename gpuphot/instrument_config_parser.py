@@ -31,7 +31,7 @@ class HeaderKey(Enum):
     PXSIZE = "PXSIZE"
     RDNOISE = "RDNOISE"
     SATLEVEL = "SATLEVEL"
-    SITEALT = "SITEALT"
+    SITEALT = "SITEALT"     # TODO: Remove this key when all code use ImageProcessor.process_image
     SITEELEV = "SITEELEV"
     SITELAT = "SITELAT"
     SITELONG = "SITELONG"
