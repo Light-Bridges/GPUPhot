@@ -35,7 +35,7 @@ nb_db['cells'].append(nbf.v4.new_markdown_cell(
 ))
 
 nb_db['cells'].append(nbf.v4.new_code_cell(
-    "from gpuphot_worker.database_utils import get_tables_and_columns\n\n"
+    "from gpuphot_worker.database_search_utils import get_tables_and_columns\n\n"
     "# Obtener las tablas y columnas de la base de datos\n"
     "tables_and_columns = get_tables_and_columns()\n\n"
     "# Mostrar las columnas de cada tabla\n"
@@ -48,16 +48,16 @@ nb_db['cells'].append(nbf.v4.new_code_cell(
 
 nb_db['cells'].append(nbf.v4.new_markdown_cell(
     "## Available Functions\n"
-    "The following code lists all the functions available in the `gpuphot_worker.database_utils` module."
+    "The following code lists all the functions available in the `gpuphot_worker.database_search_utils` module."
 ))
 
 nb_db['cells'].append(nbf.v4.new_code_cell(
-    "from gpuphot_worker import database_utils\n"
+    "from gpuphot_worker import database_search_utils\n"
     "import inspect\n\n"
-    "# Obtener todas las funciones del módulo database_utils\n"
-    "functions = inspect.getmembers(database_utils, inspect.isfunction)\n\n"
+    "# Obtener todas las funciones del módulo database_search_utils\n"
+    "functions = inspect.getmembers(database_search_utils, inspect.isfunction)\n\n"
     "# Mostrar las funciones disponibles\n"
-    "print('Funciones disponibles en gpuphot_worker.database_utils:')\n"
+    "print('Funciones disponibles en gpuphot_worker.database_search_utils:')\n"
     "for name, _ in functions:\n"
     "    print(f'  - {name}')"
 ))
@@ -71,7 +71,7 @@ nb_db['cells'].append(nbf.v4.new_markdown_cell(
 nb_db['cells'].append(nbf.v4.new_code_cell(
     "import pandas as pd\n"
     "from IPython.display import display\n"
-    "from gpuphot_worker.database_utils import search_by_radec\n\n"
+    "from gpuphot_worker.database_search_utils import search_by_radec\n\n"
     "# Example: Search for objects near RA=14.123, Dec=31.345 with a radius of 1 degree\n"
     "ra, dec, radius = 14.123, 31.345, 1.0\n"
     "df_objects = search_by_radec(ra, dec, radius, table='imaphot')\n"
@@ -89,7 +89,7 @@ nb_db['cells'].append(nbf.v4.new_markdown_cell(
 ))
 
 nb_db['cells'].append(nbf.v4.new_code_cell(
-    "from gpuphot_worker.database_utils import search_by_date_range\n\n"
+    "from gpuphot_worker.database_search_utils import search_by_date_range\n\n"
     "# Example: Search for images observed between 2024-01-01 and 2024-12-31\n"
     "start_date, end_date = '2024-01-01', '2024-12-31'\n"
     "df_date_results = search_by_date_range(start_date, end_date)\n\n"
@@ -104,7 +104,7 @@ nb_db['cells'].append(nbf.v4.new_markdown_cell(
 ))
 
 nb_db['cells'].append(nbf.v4.new_code_cell(
-    "from gpuphot_worker.database_utils import search_by_filename\n\n"
+    "from gpuphot_worker.database_search_utils import search_by_filename\n\n"
     "# Example: Search for images containing 'Mrk352' in the filename\n"
     "filename_part = 'Mrk352'\n"
     "df_file_results = search_by_filename(filename_part)\n\n"
@@ -119,7 +119,7 @@ nb_db['cells'].append(nbf.v4.new_markdown_cell(
 ))
 
 nb_db['cells'].append(nbf.v4.new_code_cell(
-    "from gpuphot_worker.database_utils import search_transients\n\n"
+    "from gpuphot_worker.database_search_utils import search_transients\n\n"
     "# Example: Search for transients observed after 2024-01-01\n"
     "date_after = '2024-01-01'\n"
     "df_transients = search_transients(date_after)\n\n"
@@ -181,7 +181,7 @@ nb_db['cells'].append(nbf.v4.new_markdown_cell(
 ))
 
 nb_db['cells'].append(nbf.v4.new_code_cell(
-    "from gpuphot_worker.database_utils import connect_to_db\n\n"
+    "from gpuphot_worker.database_search_utils import connect_to_db\n\n"
     "# Example: Connect to the database\n"
     "conn = connect_to_db()\n"
     "print('Connection established successfully!')"
@@ -194,7 +194,7 @@ nb_db['cells'].append(nbf.v4.new_markdown_cell(
 ))
 
 nb_db['cells'].append(nbf.v4.new_code_cell(
-    "from gpuphot_worker.database_utils import search_by_filenames\n\n"
+    "from gpuphot_worker.database_search_utils import search_by_filenames\n\n"
     "# Example: Search for images with filenames 'image1.fits' and 'image2.fits'\n"
     "filenames = ['image1.fits', 'image2.fits']\n"
     "df_multiple_files = search_by_filenames(filenames)\n\n"
@@ -209,7 +209,7 @@ nb_db['cells'].append(nbf.v4.new_markdown_cell(
 ))
 
 nb_db['cells'].append(nbf.v4.new_code_cell(
-    "from gpuphot_worker.database_utils import search_transient_images\n"
+    "from gpuphot_worker.database_search_utils import search_transient_images\n"
     "from datetime import datetime, timedelta\n\n"
     "# Obtener la fecha actual y restar una semana\n"
     "date_after = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')\n\n"
