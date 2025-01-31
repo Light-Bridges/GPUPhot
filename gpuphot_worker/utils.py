@@ -1,5 +1,3 @@
-import hashlib
-import hmac
 import os
 
 import numpy as np
@@ -7,7 +5,6 @@ from astropy.io import fits
 from astropy.nddata import Cutout2D
 from astropy.wcs import WCS
 from skimage.measure import block_reduce
-from sqlalchemy import create_engine, exc, text
 
 from gpuphot.image_processor import create_processor
 from gpuphot.logger.hierarchical_logging import setup_logger
@@ -103,6 +100,7 @@ def save_processed_image(file_path, base_path, imdata, hwcs):
 def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
     """
     Processes a FITS or NPY file: optionally crops a region of interest and then applies binning.
+    Maintains a detailed history of all processing steps in the FITS header.
 
     :param fits_file: Path to the FITS or NPY file to process.
     :type fits_file: str
@@ -116,6 +114,7 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
     :rtype: str
     :raises ValueError: If inputs are invalid or processing is not possible.
     """
+    logger.debug(f"Processing file: {fits_file}, binning: {binning}, crop_size: {crop_size}, center: {center}")
 
     try:
         imdata, imheader = open_image_file(fits_file)
@@ -132,11 +131,17 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
     if crop_size is not None:
         if center is None:
             center = (image_shape[1] // 2, image_shape[0] // 2)
+        elif isinstance(center, (tuple, list)) and len(center) == 2:
+            center = tuple(center)
+        else:
+            raise ValueError("Center must be a tuple or list of two integers.")
 
         if isinstance(crop_size, int):
             crop_size = (crop_size, crop_size)
-        elif not isinstance(crop_size, tuple) or len(crop_size) != 2:
-            raise ValueError("Crop size must be an integer or a tuple of two integers.")
+        elif isinstance(crop_size, (tuple, list)) and len(crop_size) == 2:
+            crop_size = tuple(crop_size)
+        else:
+            raise ValueError("Crop size must be an integer or a tuple/list of two integers.")
 
         # Check if the crop is possible
         half_width, half_height = crop_size[0] // 2, crop_size[1] // 2
@@ -149,81 +154,63 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
     if binning <= 1 and crop_size is None:
         return fits_file
 
+    imheader['COMINIT'] = 'e'
+    imheader.insert('COMINIT', ('COMMENT', '***************************'))
+    imheader.insert('COMINIT', ('COMMENT', '       IMAGE PROCESSING    '))
+    imheader.insert('COMINIT', ('COMMENT', '***************************'))
+
+    if crop_size is not None:
+        crop_size_str = f"{crop_size[0]}x{crop_size[1]}"
+        imheader.insert('COMINIT', ('COMMENT', f"CROP APPLIED - Size: {crop_size_str}, Center: {center}"))
+
+    if binning > 1:
+        imheader.insert('COMINIT', ('COMMENT', f"BINNING APPLIED - Factor: {binning}"))
+
+    # Register original dimensions in the header
+    if 'ORIG_NAXIS1' not in imheader:
+        imheader.insert('COMINIT', ('COMMENT', 'Original dimensions of the image before any processing.'))
+        imheader.insert('COMINIT', ('O_NAXIS1', image_shape[1]))
+        imheader.insert('COMINIT', ('O_NAXIS2', image_shape[0]))
+
     # Apply cropping if crop_size is specified
     if crop_size is not None:
         cutout = Cutout2D(imdata, center, crop_size, wcs=wcs)
         imdata = cutout.data
         wcs = cutout.wcs
+        imheader.insert('COMINIT', ('COMMENT', f'Image cropped from {image_shape} to {crop_size}.'))
 
     # Apply binning if necessary
     if binning > 1:
         imdata = block_reduce(imdata, block_size=(binning, binning), func=np.median)
-        imdata[imdata < 0] = 0
-        imdata[imdata > 2 ** 16 - 1] = 2 ** 16 - 1
-        imdata = imdata.astype(np.float32)
+        imdata = np.clip(imdata, 0, 65535).astype(np.float32)
 
-        # Update WCS to reflect binning
         if hasattr(wcs.wcs, 'cdelt'):
             wcs.wcs.cdelt *= binning
         elif hasattr(wcs.wcs, 'cd'):
             wcs.wcs.cd *= binning
 
-        # Update GAIN and RDNOISE if present
         if 'GAIN' in imheader:
             imheader['GAIN'] *= binning ** 2
         if 'RDNOISE' in imheader:
             imheader['RDNOISE'] /= binning
 
     # Update header after processing
-    if crop_size is not None or binning > 1:
-        imheader['NAXIS1'] = imdata.shape[1]
-        imheader['NAXIS2'] = imdata.shape[0]
+    imheader['NAXIS1'] = imdata.shape[1]
+    imheader['NAXIS2'] = imdata.shape[0]
+    imheader['CDELT1'] = imheader.get('CDELT1', 1) * binning
+    imheader['CDELT2'] = imheader.get('CDELT2', 1) * binning
 
-        if 'CD1_1' in imheader:
-            imheader.remove('CDELT1', ignore_missing=True)
-            imheader.remove('CDELT2', ignore_missing=True)
-        elif binning > 1:
-            imheader['CDELT1'] = imheader.get('CDELT1', 1) * binning
-            imheader['CDELT2'] = imheader.get('CDELT2', 1) * binning
+    # imheader.update(wcs.to_header(relax=True))
+    imheader['DATAMIN'] = np.min(imdata)
+    imheader['DATAMAX'] = np.max(imdata)
 
-        # Handle SIP distortion
-        try:
-            if any(key.startswith('A_') or key.startswith('B_') for key in imheader):
-                for ctype in ['CTYPE1', 'CTYPE2']:
-                    if ctype in imheader and not imheader[ctype].endswith('-SIP'):
-                        imheader[ctype] += '-SIP'
+    del imheader['COMINIT']
 
-                sip_keywords = ['A_ORDER', 'B_ORDER', 'AP_ORDER', 'BP_ORDER']
-                sip_keywords.extend([f'{p}_{i}_{j}' for p in 'ABAPBP' for i in range(4) for j in range(4)])
-
-                # Solo intentar procesar SIP si el objeto WCS lo soporta
-                if hasattr(wcs, 'sip') and wcs.sip is not None:
-                    for keyword in sip_keywords:
-                        if keyword in imheader:
-                            value = imheader[keyword]
-                            if keyword.startswith(('A_', 'B_')) and keyword not in ['A_ORDER', 'B_ORDER']:
-                                value /= binning ** (int(keyword.split('_')[1]) - 1)
-                            setattr(wcs.sip, keyword.lower(), value)
-
-        except Exception as e:
-            pass
-
-        # Update WCS in header
-        imheader.update(wcs.to_header(relax=True))
-
-        imheader['DATAMIN'] = np.min(imdata)
-        imheader['DATAMAX'] = np.max(imdata)
-
-        if crop_size is not None:
-            imheader.add_history(f'Image cropped to size {imdata.shape}')
-        if binning > 1:
-            imheader.add_history(f'Image binned by factor {binning}')
-
-    # Create a new HDU and save
+    # Save the new FITS file
     hdu = fits.PrimaryHDU(imdata, imheader)
     output_filename = f"{os.path.splitext(os.path.basename(fits_file))[0]}"
     if crop_size:
-        crop_size_str = f"{crop_size[0]}_{crop_size[1]}" if isinstance(crop_size, tuple) else f"{crop_size}_{crop_size}"
+        crop_size_str = f"{crop_size[0]}_{crop_size[1]}"
         output_filename += f"_crop{crop_size_str}"
     if binning > 1:
         output_filename += f"_bin{binning}"
@@ -231,212 +218,6 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
     output_file = os.path.join(os.path.dirname(fits_file), output_filename)
     hdu.writeto(output_file, overwrite=True)
 
+    logger.debug(f"Cropped and/or binned image saved to: {output_file}")
+
     return output_file
-
-
-def __generate_connection_string():
-    """
-    Generate a PostgreSQL connection string using environment variables.
-
-    :return: PostgreSQL connection string.
-    :rtype: str
-    """
-
-    # Get database connection parameters from environment variables
-    db_name = os.getenv('POSTGRES_DB', 'GPUPhotDB')
-    user = os.getenv('POSTGRES_USER', 'admin')
-    password = os.getenv('POSTGRES_PASSWORD', 'gpuphot')
-    host = 'postgres'
-    port = '5432'
-
-    # Create the connection string
-    connection_string = f'postgresql://{user}:{password}@{host}:{port}/{db_name}'
-
-    return connection_string
-
-
-def insert_dataframe_to_postgres(df, tbl_name, unique_col='id'):
-    """
-    Insert a DataFrame into a PostgreSQL table, replacing existing records.
-
-    :param df: DataFrame to insert.
-    :type df: pandas.DataFrame
-    :param tbl_name: Name of the target table.
-    :type tbl_name: str
-    :param unique_col: Name of the column with unique values.
-    :type unique_col: str
-    :return: True if successful, False otherwise.
-    :rtype: bool
-    """
-    try:
-        # Get database connection parameters from environment variables
-        connection_string = __generate_connection_string()
-
-        # Create an SQLAlchemy engine
-        engine = create_engine(connection_string)
-
-        # Proceed only if DataFrame is not empty
-        if not df.empty:
-            unique_values = df[unique_col].unique()
-
-            with engine.begin() as connection:  # Use transaction context manager
-                # Delete existing records in one go
-                delete_query = text(f"DELETE FROM {tbl_name} WHERE {unique_col} IN :values")
-                connection.execute(delete_query, {"values": tuple(unique_values)})
-
-                # Insert the DataFrame into the PostgreSQL table in chunks
-                chunk_size = 5000  # Adjust based on your needs
-                for start in range(0, len(df), chunk_size):
-                    end = start + chunk_size
-                    df.iloc[start:end].to_sql(tbl_name, con=connection, if_exists='append', index=False)
-
-        return True
-
-    except exc.SQLAlchemyError as e:
-        logger.error(f"SQLAlchemy error: {str(e)}")
-
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {str(e)}")
-
-    return False
-
-
-def queryStrAdd(query: str, toAdd: str) -> str:
-    """
-    Add a string value to an SQL query.
-
-    :param query: Existing SQL query.
-    :type query: str
-    :param toAdd: String to add to the query.
-    :type toAdd: str
-    :return: Updated SQL query.
-    :rtype: str
-    """
-    return query + "'" + toAdd + "', "
-
-
-def queryAdd(query: str, toAdd) -> str:
-    """
-    Add a non-string value to an SQL query.
-
-    :param query: Existing SQL query.
-    :type query: str
-    :param toAdd: Value to add to the query.
-    :type toAdd: Any
-    :return: Updated SQL query.
-    :rtype: str
-    """
-    return query + str(toAdd) + ", "
-
-
-# Takes a FITS header and formats it into a PSQL-compatible HStore fragment.
-def headerToHstore(header):
-    """
-    Convert a FITS header to a PostgreSQL HStore-compatible string.
-
-    :param header: FITS header.
-    :type header: astropy.io.fits.Header
-    :return: HStore-compatible string.
-    :rtype: str
-    """
-    fragment = ""
-    for key, value in header.items():
-        if key != "COMMENT" and not isinstance(value, fits.header._HeaderCommentaryCards):
-            # Convertir todo a string y escapar las comillas dobles
-            key_str = str(key).replace('"', '\\"')
-            value_str = str(value).replace('"', '\\"')
-            fragment += f'"{key_str}" => "{value_str}", '
-    return fragment[:-2]
-
-
-def insert_header(header, file_path):
-    """
-    Generate an SQL query to insert or update a FITS header in the database.
-
-    :param header: FITS header.
-    :type header: astropy.io.fits.Header
-    :param file_path: Path of the FITS file.
-    :type file_path: str
-    :return: SQL query string.
-    :rtype: str
-    """
-    query_parts = ["INSERT INTO imastats (id, file_path, "]
-
-    columns = [
-        "naxis1", "naxis2", "telescop", "instrume", "camera", "filter",
-        "date_obs", "exptime", "object", "ra", "dec", "fwhm", "maglim", "header"
-    ]
-    query_parts.append(", ".join(columns))
-    query_parts.append(") VALUES (")
-
-    query_parts.append(f"'{header.get('GPUPHOTI', '')}', '{file_path}', ")
-
-    keys = [
-        "NAXIS1", "NAXIS2", "TELESCOP", "INSTRUME", "CAMERA", "FILTER",
-        "DATE-OBS", "EXPTIME", "OBJECT", "RA", "DEC", "FWHM", "MAGLIM"
-    ]
-
-    for key in keys:
-        value = header.get(key, 'NULL')
-        if value == 'NULL' or value is None:
-            query_parts.append("NULL, ")
-        elif isinstance(value, (int, float)):
-            query_parts.append(f"{value}, ")
-        else:
-            query_parts.append(f"'{str(value)}', ")
-
-    hstore_fragment = headerToHstore(header)
-    query_parts.append(f"'{hstore_fragment}'")
-
-    query = ''.join(query_parts) + ") ON CONFLICT (id) DO UPDATE SET "
-
-    update_parts = [f"{col} = EXCLUDED.{col}" for col in columns]
-    query += ", ".join(update_parts)
-
-    return query
-
-
-def populate_ima_stats(gpuphotid, file_path, header, delete_prev=True):
-    """
-    Insert or update image statistics in the database.
-
-    :param gpuphotid: Unique identifier for the image.
-    :type gpuphotid: str
-    :param file_path: Path of the image file.
-    :type file_path: str
-    :param header: FITS header of the image.
-    :type header: astropy.io.fits.Header
-    :param delete_prev: Whether to delete previous entries for this image.
-    :type delete_prev: bool
-    :return: True if successful, False otherwise.
-    :rtype: bool
-    """
-
-    try:
-        connection_string = __generate_connection_string()
-        engine = create_engine(connection_string)
-
-        with engine.begin() as connection:
-            if delete_prev:
-                delete_query = text(f"DELETE FROM imastats WHERE id = '{gpuphotid}'")
-                connection.execute(delete_query)
-
-            q = insert_header(header, file_path)
-            connection.execute(text(q))
-        return True
-    except Exception as e:
-        logger.error(f"An error occurred: {e}")
-    return False
-
-
-def generate_gpuphotid(process_file):
-    """
-    Generate a unique identifier for a processed file.
-
-    :param process_file: Path of the processed file.
-    :type process_file: str
-    :return: Unique identifier.
-    :rtype: str
-    """
-    h = hmac.new('GPUPHOT_KEY'.encode(), process_file.encode(), hashlib.sha1)
-    return str(h.hexdigest())

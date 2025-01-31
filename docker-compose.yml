@@ -77,9 +77,6 @@ services:
       INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
       INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
       IMAGE_BASE_PATH: /data/images
-      POSTGRES_DB: GPUPhotDB
-      POSTGRES_USER: read_only
-      POSTGRES_PASSWORD: read_only
     volumes:
       - ./notebooks:/home/jovyan/work:z
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z

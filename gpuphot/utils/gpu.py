@@ -14,11 +14,27 @@ def free_gpu_mem() -> None:
     This function frees all memory blocks in both the default memory pool and the default pinned memory pool,
     and then calls the garbage collector to clean up any remaining objects.
     """
+    # Obtener los pools de memoria
     mempool = cp.get_default_memory_pool()
     pinned_mempool = cp.get_default_pinned_memory_pool()
+
+    # Obtener la memoria libre antes de liberar
+    memory_before = mempool.free_bytes()
+
+    # Liberar todos los bloques de memoria
     mempool.free_all_blocks()
     pinned_mempool.free_all_blocks()
+
+    # Forzar la recolección de basura
     gc.collect()
+
+    # Obtener la memoria libre después de liberar
+    memory_after = mempool.free_bytes()
+
+    # Calcular la memoria liberada
+    memory_freed = memory_after - memory_before
+
+    logger.debug(f"Memoria liberada: {memory_freed} bytes")
 
 
 def init_gpu(**kwargs) -> None:

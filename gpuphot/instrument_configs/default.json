@@ -1,155 +1,185 @@
 {
   "header_keywords": {
-    // Keyword for exposure time in the image header
+    // Keyword for exposure time in the FITS header
     "exposure_time": "EXPT1",
-    // Keyword for filter used in the image header
+
+    // Keyword for the filter used during observation
     "filter": "FILTER",
-    // Keyword for total number of images
+
+    // Keyword for the total number of images in the sequence
     "n_images": "TOTIMA",
-    // Keyword for read-out noise
+
+    // Keyword for the read-out noise of the camera
     "rdnoise": "RDNOISE",
-    // Keyword for saturation level
+
+    // Keyword for the saturation level of the camera (in ADU)
     "satlevel": "SATLEVEL",
-    // Keyword for target right ascension
+
+    // Keyword for the right ascension of the target (in degrees)
     "target_ra": "POINTRA",
-    // Keyword for target declination
+
+    // Keyword for the declination of the target (in degrees)
     "target_dec": "POINTDEC",
-    // Keyword for site elevation
+
+    // Keyword for the elevation of the observation site (in meters)
     "site_elevation": "SITEELEV",
-    // Keyword for site latitude
+
+    // Keyword for the latitude of the observation site (in degrees)
     "site_latitude": "SITELAT",
-    // Keyword for site longitude
+
+    // Keyword for the longitude of the observation site (in degrees)
     "site_longitude": "SITELONG",
-    // Keyword for observation date
+
+    // Keyword for the observation date (in ISO format)
     "date_obs": "DATE-OBS",
-    // Keyword for input model
+
+    // Keyword for the input model used during observation
     "inmodel": "INMODEL",
-    // Keyword for pixel size
+
+    // Keyword for the pixel size of the camera (in microns)
     "pxsize": "PXSIZE",
-    // Keyword for camera gain
+
+    // Keyword for the gain of the camera (in electrons/ADU)
     "gain": "GAIN",
-    // Keyword for image width
+
+    // Keyword for the width of the image (in pixels)
     "naxis1": "NAXIS1",
-    // Keyword for image height
+
+    // Keyword for the height of the image (in pixels)
     "naxis2": "NAXIS2",
-    // Keyword for focal length
+
+    // Keyword for the focal length of the telescope (in mm)
     "focalen": "FOCALEN",
-    // Keyword for X-axis binning
+
+    // Keyword for the binning factor along the X-axis
     "xbinning": "XBINNING",
-    // Keyword for bias standard deviation
+
+    // Keyword for the standard deviation of the bias frame
     "biasstd": "BIASSTD",
-    // Alternative keyword for site altitude
+
+    // Alternative keyword for the altitude of the observation site (in meters)
     "sitealt": "SITEALT",
 
-    // Keywords for coordinate transformation matrix elements (CD)
-    // CD matrix element corresponding to the first row and first column
+    // Keywords for the coordinate transformation matrix (CD matrix)
+    // CD matrix element for the first row and first column
     "cd1_1": "CD1_1",
-    // CD matrix element corresponding to the first row and second column
+
+    // CD matrix element for the first row and second column
     "cd1_2": "CD1_2",
-    // CD matrix element corresponding to the second row and first column
+
+    // CD matrix element for the second row and first column
     "cd2_1": "CD2_1",
-    // CD matrix element corresponding to the second row and second column
+
+    // CD matrix element for the second row and second column
     "cd2_2": "CD2_2"
   },
   "camera_specs": {
-    // Default values for missing camera specs when keys do not exist
+    // Default values for camera specifications when keywords are missing
 
-    // Default value for size of each pixel in microns (default value)
+    // Default pixel size (in microns)
     "pxsize": null,
 
-  	// Default value for camera gain (default value)
-  	"gain": null,
+    // Default camera gain (in electrons/ADU)
+    "gain": null,
 
-  	// Default value for exposure time (default value)
-  	"exposure_time": null,
+    // Default exposure time (in seconds)
+    "exposure_time": null,
 
-  	// Default value for filter (default value)
-  	"filter": null,
+    // Default filter used during observation
+    "filter": null,
 
-  	// Default value for total number of images (default value)
-  	"n_images": null,
+    // Default total number of images in the sequence
+    "n_images": null,
 
-  	// Default value for read-out noise (default value)
-  	"rdnoise": null,
+    // Default read-out noise of the camera (in electrons)
+    "rdnoise": null,
 
-  	// Default value for saturation level (default value)
-  	"satlevel": null,
+    // Default saturation level of the camera (in ADU)
+    "satlevel": null,
 
-  	// Default value for target right ascension (default value)
-  	"target_ra": null,
+    // Default right ascension of the target (in degrees)
+    "target_ra": null,
 
-  	// Default value for target declination (default value)
-  	"target_dec": null,
+    // Default declination of the target (in degrees)
+    "target_dec": null,
 
-  	// Default value for site elevation (default value)
-  	"site_elevation": null,
+    // Default elevation of the observation site (in meters)
+    "site_elevation": null,
 
-  	// Default value for site latitude (default value)
-  	"site_latitude": null,
+    // Default latitude of the observation site (in degrees)
+    "site_latitude": null,
 
-  	// Default value for site longitude (default value)
-  	"site_longitude": null,
+    // Default longitude of the observation site (in degrees)
+    "site_longitude": null,
 
-  	// Default value for observation date (default value)
-  	"date_obs": null,
+    // Default observation date (in ISO format)
+    "date_obs": null,
 
-  	// Default value for input model (default value)
-  	"inmodel": null,
+    // Default input model used during observation
+    "inmodel": null,
 
-  	// Default values for image width and height (default values)
-  	"naxis1": null,
-  	"naxis2": null,
+    // Default width of the image (in pixels)
+    "naxis1": null,
 
-  	// Default values related to focal length, binning, and bias standard deviation (default values)
-  	"focalen": null,
-  	"xbinning": null,
-  	"biasstd": null,
+    // Default height of the image (in pixels)
+    "naxis2": null,
 
-  	// Default alternative keyword for site altitude (default value)
-  	"sitealt": null,
+    // Default focal length of the telescope (in mm)
+    "focalen": null,
 
-  	// Default values related to coordinate transformation matrix elements (CD)
-  	// Default value for CD matrix element corresponding to the first row and first column
-  	"cd1_1": null,
-  	// Default value for CD matrix element corresponding to the first row and second column
-  	"cd1_2": null,
-  	// Default value for CD matrix element corresponding to the second row and first column
-  	"cd2_1": null,
-  	// Default value for CD matrix element corresponding to the second row and second column
-  	"cd2_2": null
+    // Default binning factor along the X-axis
+    "xbinning": null,
+
+    // Default standard deviation of the bias frame
+    "biasstd": null,
+
+    // Default altitude of the observation site (in meters)
+    "sitealt": null,
+
+    // Default CD matrix element for the first row and first column
+    "cd1_1": null,
+
+    // Default CD matrix element for the first row and second column
+    "cd1_2": null,
+
+    // Default CD matrix element for the second row and first column
+    "cd2_1": null,
+
+    // Default CD matrix element for the second row and second column
+    "cd2_2": null
   },
   "processing_params": {
-  	// Size of image tiles for processing (in pixels)
-  	"tile_section": 1000,
+    // Size of image tiles for processing (in pixels)
+    "tile_section": 1000,
 
-  	// Factor to determine the central region of interest
-  	"center_factor": 0.7,
+    // Factor to define the central region of interest (as a fraction of the image size)
+    "center_factor": 0.7,
 
-	  // Flag to enable/disable Spatial Filter
-	  "SP_filt": false,
+    // Enable/disable spatial filtering during processing
+    "SP_filt": false,
 
-	  // Flag to enable/disable Principal Component Analysis method
-	  "pca_method": false,
+    // Enable/disable Principal Component Analysis (PCA) for image processing
+    "pca_method": false,
 
-	  // Flag to enable/disable Cosmic Ray filtering
-	  "CR_filt": false,
+    // Enable/disable cosmic ray filtering during processing
+    "CR_filt": false,
 
-	  // Size of the border to exclude from processing (in pixels)
-	  "border": 50,
+    // Size of the border to exclude from processing (in pixels)
+    "border": 50,
 
-	  // Flag to enable/disable astrometric correction
-	  "astrom": false,
+    // Enable/disable astrometric correction during processing
+    "astrom": false,
 
-	  // Size of image tiles for PSF calculation (in pixels)
-	  "tile_section_psf": 2500,
+    // Size of image tiles for PSF calculation (in pixels)
+    "tile_section_psf": 2500,
 
-	  // Flag to enable/disable image padding
-	  "do_pad": false,
+    // Enable/disable image padding during processing
+    "do_pad": false,
 
-      // Coefficient for g magnitude in luminosity calculation
-      "lum_gmag_coeff": 0.5,
+    // Coefficient for g-band magnitude in luminosity calculation
+    "lum_gmag_coeff": 0.5,
 
-      // Coefficient for r magnitude in luminosity calculation
-      "lum_rmag_coeff": 0.5
+    // Coefficient for r-band magnitude in luminosity calculation
+    "lum_rmag_coeff": 0.5
   }
 }

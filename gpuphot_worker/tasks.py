@@ -13,7 +13,8 @@ from gpuphot.instrument_config_parser import ImageReduction
 from gpuphot.logger.hierarchical_logging import setup_logger
 from gpuphot_worker.celery_exceptions import SerializableTaskError, BaseTaskWithFailureHandling
 from gpuphot_worker.utils import get_processor, open_image_file, save_processed_image, crop_and_bin_image, \
-    insert_dataframe_to_postgres, populate_ima_stats, generate_gpuphotid, BASE_IMAGES_PATH, PROCESSED_IMAGE_FOLDER
+    BASE_IMAGES_PATH, PROCESSED_IMAGE_FOLDER
+from gpuphot_worker.database_insert_utils import insert_dataframe_to_postgres, populate_ima_stats, generate_gpuphotid
 
 logger = setup_logger(__name__)
 
@@ -54,7 +55,7 @@ def task_error_handler(task, e, image_path):
 
 
 @shared_task
-def process_directory_task(path=None, filename=None, instrument_name=None, exclude_pattern=None, reprocess=True):
+def process_directory_task(path=None, filename=None, instrument_name=None, exclude_pattern=None, reprocess=False):
     """
     Processes astronomical images (FITS and NPY) with customizable search and configuration options.
 
@@ -70,7 +71,7 @@ def process_directory_task(path=None, filename=None, instrument_name=None, exclu
     :param exclude_pattern: Regular expression pattern to exclude certain filenames.
     :type exclude_pattern: str, optional
     :param reprocess: If True, processes all found images; if False, skips images already processed.
-                      Default is True.
+                      Default is .
     :type reprocess: bool, optional
     :return: A dictionary containing 'task_ids', which is a list of task IDs for the individual image processing tasks initiated.
     :rtype: dict
@@ -117,6 +118,9 @@ def process_directory_task(path=None, filename=None, instrument_name=None, exclu
     # Search for files using glob
     image_files = glob(search_pattern, recursive=True)
     processed_dir = os.path.normpath(os.path.join(base_path, PROCESSED_IMAGE_FOLDER))
+
+    # Filter out processed files from the list
+    image_files = [f for f in image_files if not f.startswith(processed_dir)]
 
     # Filter out files that are already processed if reprocess is False
     if not reprocess:
@@ -232,6 +236,7 @@ def process_image_task(self, image_path, instrument_name=None):
     apply_reduction = reduction_config['apply_reduction']
 
     def call_process_image(file_path_call):
+        logger.debug(f"Processing file: {file_path_call}")
         # Attempt to process the image normally
         imdata, imheader = open_image_file(file_path_call)
         phot_df, hwcs = processor.process_image(imdata, imheader)
@@ -242,7 +247,7 @@ def process_image_task(self, image_path, instrument_name=None):
 
         process_file = os.path.relpath(file_path_call, base_path)
         gpuphotid = str(generate_gpuphotid(process_file))
-        hwcs['GPUPHOTI'] = (gpuphotid, 'Unique identifier for GPUPhot processing')
+        hwcs['GPUPHOTI'] = (gpuphotid, 'GPUPhot Unique identifier')
 
         # Save the processed image
         output_path = save_processed_image(file_path_call, base_path, imdata, hwcs)
@@ -295,7 +300,7 @@ def process_image_task(self, image_path, instrument_name=None):
                 logger.warning(f"Memory error processing image: {image_path}")
                 logger.info(f"Applying image reduction to: {image_path}")
                 return call_process_image(
-                    file_path_call=crop_and_bin_image(image_path, reduction_config['binning'],
+                    file_path_call=crop_and_bin_image(file_path, reduction_config['binning'],
                                                       reduction_config['crop_size'], reduction_config['center'])
                 )
             except Exception as e:
