@@ -41,11 +41,23 @@ def task_error_handler(task, e, image_path):
     # Check if the task has a valid task_id before updating its state
     if task and hasattr(task, 'id') and task.id is not None:
         try:
+            # Capture the full traceback
+            import traceback
+            tb = traceback.format_exc()
+
+            # Update the task state with more detailed information
             task.update_state(
                 state="FAILURE",
                 meta={
                     "exc_type": e.__class__.__name__,
                     "error_message": error_message,
+                    "traceback": tb,  # Include the full traceback
+                    "additional_info": {
+                        "image_path": image_path,
+                        "original_exception": str(e),
+                        "cause": str(e.__cause__) if e.__cause__ else None,
+                        "context": str(e.__context__) if e.__context__ else None,
+                    }
                 },
             )
         except Exception as update_error:
