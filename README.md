@@ -35,6 +35,8 @@ Basic usage:
 
 ```
 from gpuphot.image_processor import create_processor
+from gpuphot_worker.utils import open_image_file
+
 processor = create_processor('default', '/path/to/configs')
 imdata, imheader = open_image_file('/path/to/image.fits')
 phot_df, hwcs = processor.process_image(imdata, imheader)
@@ -53,101 +55,165 @@ Contributions to GPUPhot are welcome! Please refer to the [CONTRIBUTING.md](CONT
 
 GPUPhot is released under the [MIT License](LICENSE).
 
----------------------------
-# OLD (To delete)
-# GPUPhot
+[//]: # ()
+[//]: # (---------------------------)
 
-GPUPhot is a Python library for GPU-accelerated photometry and astrometry.
+[//]: # (# OLD &#40;To delete&#41;)
 
-## Installation
+[//]: # (# GPUPhot)
 
-Before installing the `gpuphot` library, ensure that the necessary system packages are installed. You can use the
-provided `install_dependencies.sh` script:
+[//]: # ()
+[//]: # (GPUPhot is a Python library for GPU-accelerated photometry and astrometry.)
 
-```bash
-bash install.sh
-```
+[//]: # ()
+[//]: # (## Installation)
 
-To install the `gpuphot` library, use the command:
+[//]: # ()
+[//]: # (Before installing the `gpuphot` library, ensure that the necessary system packages are installed. You can use the)
 
-```bash
-pip install .
-```
+[//]: # (provided `install_dependencies.sh` script:)
 
-## Running with Docker Compose
+[//]: # ()
+[//]: # (```bash)
 
-To run GPUPhot using Docker Compose, follow these steps:
+[//]: # (bash install.sh)
 
-1. **Create a `.env` file:**
+[//]: # (```)
 
-Create a file named `.env` in the same directory as your `docker-compose.yml`. This file will contain the necessary
-environment variables for configuration. An example `.env` file is shown below. Make sure to adjust the values according
-to your specific configuration:
+[//]: # ()
+[//]: # (To install the `gpuphot` library, use the command:)
 
-```
-INSTRUMENT_NAME=default
-INSTRUMENT_CONFIG_PATH=./gpuphot/instrument_configs
-IMAGE_BASE_PATH=~/gpuphot_images
-CELERY_CONCURRENCY=1
-```
+[//]: # ()
+[//]: # (```bash)
 
-2. **Run Docker Compose:**
+[//]: # (pip install .)
 
-Once you've created and configured the `.env` file, you can run Docker Compose with the following command:
+[//]: # (```)
 
-```bash
-docker compose up -d
-```
+[//]: # ()
+[//]: # (## Running with Docker Compose)
 
-This will build the necessary Docker images (if not already built) and start the containers in detached mode (in the
-background).
+[//]: # ()
+[//]: # (To run GPUPhot using Docker Compose, follow these steps:)
 
-3. **Access JupyterLab:**
+[//]: # ()
+[//]: # (1. **Create a `.env` file:**)
 
-You can access JupyterLab by opening your web browser and navigating to `http://localhost:8888`.
+[//]: # ()
+[//]: # (Create a file named `.env` in the same directory as your `docker-compose.yml`. This file will contain the necessary)
 
-4. **Access Flower (Celery Monitor):**
+[//]: # (environment variables for configuration. An example `.env` file is shown below. Make sure to adjust the values according)
 
-You can access Flower, the Celery task monitor, at `http://localhost:5555`. This allows you to monitor the status of
-image processing tasks.
+[//]: # (to your specific configuration:)
 
-5. **Stop the containers:**
+[//]: # ()
+[//]: # (```)
 
-To stop the containers, run the following command:
+[//]: # (INSTRUMENT_NAME=default)
 
-```bash
-docker compose down
-```
+[//]: # (INSTRUMENT_CONFIG_PATH=./gpuphot/instrument_configs)
 
-## Environment Variables
+[//]: # (IMAGE_BASE_PATH=~/gpuphot_images)
 
-The following environment variables can be configured in the `.env` file:
+[//]: # (CELERY_CONCURRENCY=1)
 
-* **`INSTRUMENT_NAME`**: Name of the instrument to load the configuration for. Default: `default`.
-* **`INSTRUMENT_CONFIG_PATH`**: Path to the directory containing instrument configuration files. Default:
-  `./gpuphot/instrument_configs`.
-* **`IMAGE_BASE_PATH`**: Base path for storing images. Default: `~/gpuphot_images`. Inside the container, this path is
-  mapped to `/data/images`.
-* **`CELERY_CONCURRENCY`**: Number of Celery workers to run concurrently. Adjust this value based on your GPU resources.
-  Default: `1`.
+[//]: # (```)
 
-Make sure to adjust these variables according to your specific configuration.
+[//]: # ()
+[//]: # (2. **Run Docker Compose:**)
 
-## Usage
+[//]: # ()
+[//]: # (Once you've created and configured the `.env` file, you can run Docker Compose with the following command:)
 
-To use GPUPhot in your Python scripts or Jupyter notebooks, you can import it as follows:
+[//]: # ()
+[//]: # (```bash)
 
-```python
-import gpuphot
-```
+[//]: # (docker compose up -d)
 
-For detailed usage instructions and API documentation, please refer to the [official documentation](#).
+[//]: # (```)
 
-## Contributing
+[//]: # ()
+[//]: # (This will build the necessary Docker images &#40;if not already built&#41; and start the containers in detached mode &#40;in the)
 
-Contributions to GPUPhot are welcome! Please refer to the [contribution guidelines](CONTRIBUTING.md) for more
-information.
+[//]: # (background&#41;.)
 
-## License
+[//]: # ()
+[//]: # (3. **Access JupyterLab:**)
 
-GPUPhot is released under the [MIT License](LICENSE).
+[//]: # ()
+[//]: # (You can access JupyterLab by opening your web browser and navigating to `http://localhost:8888`.)
+
+[//]: # ()
+[//]: # (4. **Access Flower &#40;Celery Monitor&#41;:**)
+
+[//]: # ()
+[//]: # (You can access Flower, the Celery task monitor, at `http://localhost:5555`. This allows you to monitor the status of)
+
+[//]: # (image processing tasks.)
+
+[//]: # ()
+[//]: # (5. **Stop the containers:**)
+
+[//]: # ()
+[//]: # (To stop the containers, run the following command:)
+
+[//]: # ()
+[//]: # (```bash)
+
+[//]: # (docker compose down)
+
+[//]: # (```)
+
+[//]: # ()
+[//]: # (## Environment Variables)
+
+[//]: # ()
+[//]: # (The following environment variables can be configured in the `.env` file:)
+
+[//]: # ()
+[//]: # (* **`INSTRUMENT_NAME`**: Name of the instrument to load the configuration for. Default: `default`.)
+
+[//]: # (* **`INSTRUMENT_CONFIG_PATH`**: Path to the directory containing instrument configuration files. Default:)
+
+[//]: # (  `./gpuphot/instrument_configs`.)
+
+[//]: # (* **`IMAGE_BASE_PATH`**: Base path for storing images. Default: `~/gpuphot_images`. Inside the container, this path is)
+
+[//]: # (  mapped to `/data/images`.)
+
+[//]: # (* **`CELERY_CONCURRENCY`**: Number of Celery workers to run concurrently. Adjust this value based on your GPU resources.)
+
+[//]: # (  Default: `1`.)
+
+[//]: # ()
+[//]: # (Make sure to adjust these variables according to your specific configuration.)
+
+[//]: # ()
+[//]: # (## Usage)
+
+[//]: # ()
+[//]: # (To use GPUPhot in your Python scripts or Jupyter notebooks, you can import it as follows:)
+
+[//]: # ()
+[//]: # (```python)
+
+[//]: # (import gpuphot)
+
+[//]: # (```)
+
+[//]: # ()
+[//]: # (For detailed usage instructions and API documentation, please refer to the [official documentation]&#40;#&#41;.)
+
+[//]: # ()
+[//]: # (## Contributing)
+
+[//]: # ()
+[//]: # (Contributions to GPUPhot are welcome! Please refer to the [contribution guidelines]&#40;CONTRIBUTING.md&#41; for more)
+
+[//]: # (information.)
+
+[//]: # ()
+[//]: # (## License)
+
+[//]: # ()
+[//]: # (GPUPhot is released under the [MIT License]&#40;LICENSE&#41;.)
