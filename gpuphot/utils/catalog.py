@@ -81,7 +81,7 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
 
 
 @hierarchical_debug(logger)
-def catalog_results(coocenter, radius, filter, inmodel, maglimit=23, **kwargs):
+def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     """
     Process astronomical data to calculate magnitudes and other parameters for stars based on various filters and models.
 
@@ -91,8 +91,6 @@ def catalog_results(coocenter, radius, filter, inmodel, maglimit=23, **kwargs):
     :type radius: float
     :param filter: The specific filter type used to determine which catalog to query.
     :type filter: str
-    :param inmodel: The model used for calculating magnitudes, affecting coefficients applied.
-    :type inmodel: str
     :param maglimit: The magnitude limit for filtering results (default is 23).
     :type maglimit: float
     :param kwargs: Additional keyword arguments passed to __getVizier, including luminosity coefficients.

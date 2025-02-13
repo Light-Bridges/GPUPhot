@@ -356,7 +356,6 @@ def process_image(imdata, imheader, header_descriptions=None, **kwargs):
     site_latitude = imheader[HeaderKey.SITELAT.value]
     site_longitude = imheader[HeaderKey.SITELONG.value]
     date_obs = imheader[HeaderKey.DATE_OBS.value]
-    inmodel = imheader[HeaderKey.INMODEL.value]
     filter = imheader[HeaderKey.FILTER.value]
 
     # default parameters
@@ -367,7 +366,7 @@ def process_image(imdata, imheader, header_descriptions=None, **kwargs):
 
     # Call calibrate_image with updated parameters
     dfm, h_wcs, dic_calib = calibrate_image(
-        imdata, inmodel, filter,
+        imdata, filter,
         scale, gain, rdnoise, exptime, satlevel,
         target_ra, target_dec, n_images=n_images,
         # SP_filt=params['SP_filt'],
@@ -631,7 +630,7 @@ def batch_aperture_photometry(img, back, positions, radii, **kwargs):
 
 
 @hierarchical_debug(logger)
-def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float, gain: float, rdnoise: float,
+def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, rdnoise: float,
                     exptime: float, satlevel: float, target_ra: float, target_dec: float = None, n_images: int = 1,
                     SP_filt: bool = True, CR_filt: bool = False, border: int = 10, center_factor: float = 0.7,
                     pca_method: bool = True, tile_section: int = 1000, max_stars_ref: int = 15, min_snr: int = 5,
@@ -641,8 +640,6 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
 
     :param imdata: Image data.
     :type imdata: numpy.ndarray
-    :param inmodel: Instrument model.
-    :type inmodel: str
     :param filter: Filter used for the image.
     :type filter: str
     :param scale: Image scale, in arcsec/pixel.
@@ -844,7 +841,7 @@ def calibrate_image(imdata: np.ndarray, inmodel: str, filter: str, scale: float,
         # Photometrize
         coocenter, FOV, scale = get_astrometry_params(h_wcs, imdata.shape)
         result, catalog, ref_filter = catalog_results(coocenter, FOV / 2,
-                                                      filter, inmodel, maglimit=23, **kwargs)
+                                                      filter, maglimit=23, **kwargs)
         dic_calib['CATALOG'] = catalog
         dic_calib['CATBAND'] = ref_filter
 
