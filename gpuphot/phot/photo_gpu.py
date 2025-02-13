@@ -1301,7 +1301,7 @@ def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
     el = nd_mean(im1[0, :, :] * im1[1, :, :], label_im, ids) / nd_mean(g,
                                                                        label_im, ids)
     el = el - x * y
-    coor = x.astype(cp.int), y.astype(cp.int)
+    coor = x.astype(cp.int16), y.astype(cp.int16)
     mm = cp.get_default_memory_pool().used_bytes()
     flux = g[coor]
     del g
