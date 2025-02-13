@@ -185,6 +185,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         magerr = lum_gmag_coeff * vizier_results['e_gmag'] + lum_rmag_coeff * vizier_results['e_rmag']
         ref_filter = f'{lum_gmag_coeff}*g+{lum_rmag_coeff}*r'
 
+
         # if inmodel == 'iKon936':
         #     mag = 0.46872 * vizier_results['gmag'] + 0.53127 * vizier_results['rmag']
         #     magerr = 0.46872 * vizier_results['e_gmag'] + 0.53127 * vizier_results['e_rmag']
