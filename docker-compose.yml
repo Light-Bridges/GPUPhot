@@ -19,6 +19,8 @@ x-common-worker-backend: &common-worker-backend
     POSTGRES_DB: GPUPhotDB
     POSTGRES_USER: admin
     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
+    INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
+    IMAGE_BASE_PATH: /data/images
   volumes:
     - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/gpuphot/instrument_configs:z
     - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z

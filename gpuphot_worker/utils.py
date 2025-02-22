@@ -11,8 +11,8 @@ from gpuphot.logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
-BASE_IMAGES_PATH = '/data/images'
-PROCESSED_IMAGE_FOLDER = 'gpuphot_processed'
+BASE_IMAGES_PATH = os.environ.get('IMAGE_BASE_PATH', '/data/images')
+PROCESSED_IMAGE_FOLDER = os.environ.get('PROCESSED_IMAGE_FOLDER', 'gpuphot_processed')
 
 
 def get_processor(instrument_name=None):
@@ -25,7 +25,7 @@ def get_processor(instrument_name=None):
     :rtype: ImageProcessor
     """
     instrument_name = instrument_name or os.environ.get('INSTRUMENT_NAME', 'default_instrument')
-    config_base_path = '/gpuphot/instrument_configs'
+    config_base_path = os.environ.get('INSTRUMENT_CONFIG_BASE_PATH', '/gpuphot/instrument_configs')
     return create_processor(instrument_name, config_base_path)
 
 
