@@ -337,8 +337,7 @@ def process_image(imdata, imheader, header_descriptions=None, **kwargs):
     :raises UnableToAstrometrizeError: If the image cannot be astrometrized.
     """
     # parameters from header
-    scale = plate_scale_px(imheader[HeaderKey.PXSIZE.value], imheader[HeaderKey.FOCALEN.value]) * imheader[
-        HeaderKey.XBINNING.value]
+    scale = plate_scale_px(imheader[HeaderKey.PXSIZE.value], imheader[HeaderKey.FOCALEN.value]) 
     n_images = imheader[HeaderKey.TOTIMA.value]
     gain = imheader[HeaderKey.GAIN.value]
     try:
