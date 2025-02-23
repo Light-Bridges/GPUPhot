@@ -11,8 +11,8 @@ from gpuphot.logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
-BASE_IMAGES_PATH = '/data/images'
-PROCESSED_IMAGE_FOLDER = 'gpuphot_processed'
+BASE_IMAGES_PATH = os.environ.get('IMAGE_BASE_PATH', '/data/images')
+PROCESSED_IMAGE_FOLDER = os.environ.get('PROCESSED_IMAGE_FOLDER', 'gpuphot_processed')
 
 
 def get_processor(instrument_name=None):
@@ -25,7 +25,7 @@ def get_processor(instrument_name=None):
     :rtype: ImageProcessor
     """
     instrument_name = instrument_name or os.environ.get('INSTRUMENT_NAME', 'default_instrument')
-    config_base_path = '/gpuphot/instrument_configs'
+    config_base_path = os.environ.get('INSTRUMENT_CONFIG_BASE_PATH', '/gpuphot/instrument_configs')
     return create_processor(instrument_name, config_base_path)
 
 
@@ -97,7 +97,7 @@ def save_processed_image(file_path, base_path, imdata, hwcs):
     return output_path
 
 
-def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
+def crop_and_bin_image(fits_file, binning, binning_method='sum', crop_size=None, center=None):
     """
     Processes a FITS or NPY file: optionally crops a region of interest and then applies binning.
     Maintains a detailed history of all processing steps in the FITS header.
@@ -110,6 +110,8 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
     :type crop_size: int or tuple or None
     :param center: Coordinates of the crop center (x, y). If not provided and crop_size is not None, the image center is used.
     :type center: tuple or None
+    :param binning_method: Method to apply binning. Can be 'sum' or 'median'.
+    :type binning_method: str
     :return: Path of the processed file or original file if no processing was done.
     :rtype: str
     :raises ValueError: If inputs are invalid or processing is not possible.
@@ -181,7 +183,13 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
 
     # Apply binning if necessary
     if binning > 1:
-        imdata = block_reduce(imdata, block_size=(binning, binning), func=np.median)
+        VALID_METHODS = {'sum', 'median'}
+        binning_method = binning_method.lower()
+        if binning_method not in VALID_METHODS:
+            raise ValueError(f"Invalid binning method: {binning_method}. Valid methods: {VALID_METHODS}")
+
+        bin_func = np.sum if binning_method == 'sum' else np.median
+        imdata = block_reduce(imdata, block_size=(binning, binning), func=bin_func)
         imdata = np.clip(imdata, 0, 65535).astype(np.float32)
 
         if hasattr(wcs.wcs, 'cdelt'):
@@ -189,12 +197,28 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
         elif hasattr(wcs.wcs, 'cd'):
             wcs.wcs.cd *= binning
 
-        if 'GAIN' in imheader:
-            imheader['GAIN'] *= binning ** 2
-        if 'RDNOISE' in imheader:
-            imheader['RDNOISE'] /= binning
+        imheader['BIN-FCTR'] = (binning, 'Binning factor applied')
+        imheader['BIN_ALG'] = (binning_method.upper(), 'Pixel combination method')
+        imheader['BINSTAT'] = ('LINEAR' if binning_method == 'sum' else 'NONLINEAR',
+                               'Linearity of binning operation')
 
-    # Update header after processing
+        imheader['BINFCTR'] = (binning, 'Binning factor in both axes')
+        imheader['BINTYPE'] = ('LINEAR' if binning_method == 'sum' else 'NON_LINEAR')
+
+        if binning_method == 'sum':
+            imheader['GAIN'] = imheader.get('GAIN', 1.0) / binning ** 2
+            imheader['RDNOISE'] = imheader.get('RDNOISE', 0.0) * binning
+        elif binning_method == 'median':
+            imheader['GAIN'] = imheader.get('GAIN', 1.0) * np.sqrt(np.pi / 2) / binning ** 2
+            imheader['RDNOISE'] = imheader.get('RDNOISE', 0.0) / np.sqrt(binning ** 2 - np.pi / 2 + 1)
+
+        imheader.add_history(f"Binning applied: {binning}x{binning} using {binning_method} method")
+        if binning_method == 'median':
+            # if binning > 4:
+            #     raise ValueError("Median binning limited to factors ≤4")
+            imheader.add_history(f"WARNING: Median binning alters photometric linearity (deviation ~12% at 2x2)")
+
+            # Update header after processing
     imheader['NAXIS1'] = imdata.shape[1]
     imheader['NAXIS2'] = imdata.shape[0]
     imheader['CDELT1'] = imheader.get('CDELT1', 1) * binning
@@ -213,7 +237,7 @@ def crop_and_bin_image(fits_file, binning, crop_size=None, center=None):
         crop_size_str = f"{crop_size[0]}_{crop_size[1]}"
         output_filename += f"_crop{crop_size_str}"
     if binning > 1:
-        output_filename += f"_bin{binning}"
+        output_filename += f"_bin{binning}_{binning_method}"
     output_filename += ".fits"
     output_file = os.path.join(os.path.dirname(fits_file), output_filename)
     hdu.writeto(output_file, overwrite=True)

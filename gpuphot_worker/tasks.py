@@ -12,9 +12,9 @@ import gpuphot.utils.gpu
 from gpuphot.instrument_config_parser import ImageReduction
 from gpuphot.logger.hierarchical_logging import setup_logger
 from gpuphot_worker.celery_exceptions import SerializableTaskError, BaseTaskWithFailureHandling
+from gpuphot_worker.database_insert_utils import insert_dataframe_to_postgres, populate_ima_stats, generate_gpuphotid
 from gpuphot_worker.utils import get_processor, open_image_file, save_processed_image, crop_and_bin_image, \
     BASE_IMAGES_PATH, PROCESSED_IMAGE_FOLDER
-from gpuphot_worker.database_insert_utils import insert_dataframe_to_postgres, populate_ima_stats, generate_gpuphotid
 
 logger = setup_logger(__name__)
 
@@ -293,14 +293,27 @@ def process_image_task(self, image_path, instrument_name=None):
             }
         }
 
+    file_path = os.path.join(base_path, image_path)
+    binning_config = reduction_config.get('binning', 1)
+    if isinstance(binning_config, int):
+        factor = binning_config
+        method = 'sum'
+    else:
+        factor = binning_config['factor']
+        method = binning_config.get('method', 'sum')
+
     try:
-        file_path = os.path.join(base_path, image_path)
 
         if apply_reduction == ImageReduction.ALWAYS.value:
             logger.info(f"Applying image reduction to: {image_path}")
             return call_process_image(
-                file_path_call=crop_and_bin_image(file_path, reduction_config['binning'],
-                                                  reduction_config['crop_size'], reduction_config['center'])
+                file_path_call=crop_and_bin_image(
+                    fits_file=file_path,
+                    binning=factor,
+                    binning_method=method,
+                    crop_size=reduction_config['crop_size'],
+                    center=reduction_config['center']
+                )
             )
 
         return call_process_image(file_path)
@@ -312,8 +325,13 @@ def process_image_task(self, image_path, instrument_name=None):
                 logger.warning(f"Memory error processing image: {image_path}")
                 logger.info(f"Applying image reduction to: {image_path}")
                 return call_process_image(
-                    file_path_call=crop_and_bin_image(file_path, reduction_config['binning'],
-                                                      reduction_config['crop_size'], reduction_config['center'])
+                    file_path_call=crop_and_bin_image(
+                        fits_file=file_path,
+                        binning=factor,
+                        binning_method=method,
+                        crop_size=reduction_config['crop_size'],
+                        center=reduction_config['center']
+                    )
                 )
             except Exception as e:
                 task_error_handler(self, e, image_path)
