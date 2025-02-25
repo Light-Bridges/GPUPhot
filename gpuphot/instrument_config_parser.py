@@ -118,7 +118,10 @@ class DefaultConfig:
 
     DEFAULT_IMAGE_REDUCTION = {
         "apply_reduction": ImageReduction.NEVER.value,
-        "binning": 2,
+        "binning": {
+            "factor": 2,
+            "method": "sum" # sum, median
+        },
         "center": None,
         "crop_size": None,
     }

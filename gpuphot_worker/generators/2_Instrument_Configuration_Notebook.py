@@ -44,7 +44,11 @@ nb_config['cells'].append(nbf.v4.new_markdown_cell(
 ))
 
 nb_config['cells'].append(nbf.v4.new_code_cell(
-    "from gpuphot.instrument_config_parser import InstrumentConfigParser\n\n"
+    "from gpuphot.instrument_config_parser import InstrumentConfigParser\n"
+    "import os\n\n"
+    "# Define the configuration directory\n"
+    "INSTRUMENT_CONFIG_BASE_PATH = os.getenv('INSTRUMENT_CONFIG_BASE_PATH', '/data/instrument_configs')\n"
+    "print(f'Configuration directory: {INSTRUMENT_CONFIG_BASE_PATH}')\n\n"
     "# Create a default configuration file (optional)\n"
     "config_parser = InstrumentConfigParser(config_dir=INSTRUMENT_CONFIG_BASE_PATH)\n"
     "config_parser.generate_default_config()\n"
