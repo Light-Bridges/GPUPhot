@@ -4,6 +4,7 @@ from astropy import units as u
 from astroquery.vizier import Vizier
 from scipy.spatial import KDTree
 
+from .timeout import TimeoutExecutor
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 
 logger = setup_logger(__name__)
@@ -56,11 +57,12 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
     :type vizier_cache: bool
     :param custom_vizier_search_func: Optional custom function for querying the Vizier catalog.
                                        This function must accept the following parameters:
-                                       - catalog: The name of the Vizier catalog to query.
                                        - coocenter: The coordinates around which to search.
-                                       - radii: The search radius in degrees.
-                                       - maglimit: The magnitude limit for filtering results.
+                                       - catalog: The name of the Vizier catalog to query.
+                                       - radius: The search radius in degrees.
+                                       - mag_limit: The magnitude limit for filtering results.
                                        - ref_filter: The reference filter used for magnitude filtering.
+                                       - row_limit: Maximum number of rows to return from the query.
                                        - expected_columns: List of expected column names in the results.
     :type custom_vizier_search_func: callable or None
     :param expected_columns: List of expected column names in the results.
@@ -69,7 +71,25 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
     :rtype: pandas.DataFrame
     """
     if custom_vizier_search_func is not None:
-        return custom_vizier_search_func(catalog, coocenter, radii, maglimit, ref_filter, expected_columns)
+        try:
+            executor = TimeoutExecutor(timeout=vizier_timeout)
+            result = executor.execute(
+                custom_vizier_search_func,
+                coocenter=coocenter,
+                catalog=catalog,
+                radius=float(radii),
+                mag_limit=float(maglimit),
+                ref_filter=ref_filter,
+                row_limit=int(vizier_row_limit),
+                expected_columns=expected_columns
+            )
+            return result
+        except TimeoutExecutor.TimeoutError as e:
+            logger.error(f'Timeout error in custom Vizier search function: {e}')
+            return None
+        except Exception as e:
+            logger.error(f'Error in custom Vizier search function: {e}')
+            return None
 
     Vizier.ROW_LIMIT = vizier_row_limit
     timeout = vizier_timeout
@@ -103,7 +123,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     if coocenter.dec.deg < -30:
         catalog = 'II/379'  # SkyMapper Southern Sky Survey. DR4 : II/379
         ref_filter = 'gPSF'
-        expected_columns = ['SMSS', 'RAICRS', 'DEICRS', 'gPSF', 'rPSF']  # Columnas para SkyMapper
+        expected_columns = ['SMSS', 'RAICRS', 'DEICRS', 'gPSF', 'rPSF', 'iPSF', 'zPSF', 'uPSF']  # Columnas para SkyMapper
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
         color = vizier_results['gPSF'] - vizier_results['rPSF']
@@ -184,7 +204,6 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         mag = lum_gmag_coeff * vizier_results['gmag'] + lum_rmag_coeff * vizier_results['rmag']
         magerr = lum_gmag_coeff * vizier_results['e_gmag'] + lum_rmag_coeff * vizier_results['e_rmag']
         ref_filter = f'{lum_gmag_coeff}*g+{lum_rmag_coeff}*r'
-
 
         # if inmodel == 'iKon936':
         #     mag = 0.46872 * vizier_results['gmag'] + 0.53127 * vizier_results['rmag']
