@@ -123,7 +123,8 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     if coocenter.dec.deg < -30:
         catalog = 'II/379'  # SkyMapper Southern Sky Survey. DR4 : II/379
         ref_filter = 'gPSF'
-        expected_columns = ['SMSS', 'RAICRS', 'DEICRS', 'gPSF', 'rPSF', 'iPSF', 'zPSF', 'uPSF']  # Columnas para SkyMapper
+        expected_columns = ['SMSS', 'RAICRS', 'DEICRS', 'gPSF', 'rPSF', 'iPSF', 'zPSF',
+                            'uPSF']  # Columnas para SkyMapper
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
         color = vizier_results['gPSF'] - vizier_results['rPSF']
@@ -154,7 +155,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         catalog = 'I/355/gaiadr3'  # Gaia DR3 Part 1. Main source : I/355
         ref_filter = 'BPmag'
         expected_columns = ['Source', 'RAJ2000', 'DEJ2000', 'BP-RP', f'F{ref_filter[:2]}',
-                            f'e_F{ref_filter[:2]}']  # Columnas para Gaia DR3
+                            f'e_F{ref_filter[:2]}', ref_filter]  # Columnas para Gaia DR3
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
         solar_index = 0.01760 - 0.003226 + (0.3833 + 0.00686) * vizier_results['BP-RP'] + (-0.1345 + 0.1732) * \

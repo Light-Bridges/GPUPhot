@@ -1,4 +1,4 @@
-import multiprocessing
+import multiprocess as mp
 
 
 class TimeoutExecutor:
@@ -9,27 +9,11 @@ class TimeoutExecutor:
         self.timeout = timeout
 
     def execute(self, func, *args, **kwargs):
-        def wrapper(queue):
+        with mp.Pool(processes=1) as pool:
+            result = pool.apply_async(func, args=args, kwds=kwargs)
             try:
-                result = func(*args, **kwargs)
-                queue.put(result)
+                return result.get(timeout=self.timeout)
+            except mp.TimeoutError:
+                raise self.TimeoutError(f"Function {func.__name__} exceeded {self.timeout}s")
             except Exception as e:
-                queue.put(e)
-
-        queue = multiprocessing.Queue()
-        process = multiprocessing.Process(target=wrapper, args=(queue,))
-        process.start()
-        process.join(self.timeout)
-
-        if process.is_alive():
-            process.terminate()
-            process.join()
-            raise self.TimeoutError(f"Function {func.__name__} exc {self.timeout}s")
-
-        if not queue.empty():
-            result = queue.get()
-            if isinstance(result, Exception):
-                raise result
-            return result
-        else:
-            raise Exception("No result returned")
+                raise e
