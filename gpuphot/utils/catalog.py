@@ -81,7 +81,7 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                 mag_limit=float(maglimit),
                 ref_filter=ref_filter,
                 row_limit=int(vizier_row_limit),
-                expected_columns=expected_columns
+                expected_columns=list(set(expected_columns))
             )
             return result
         except TimeoutExecutor.TimeoutError as e:
@@ -98,6 +98,32 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                       column_filters={ref_filter: '<%.1f ' % maglimit}, cache=vizier_cache)
 
     return vizier_results[0]
+
+
+def calculate_solar_index(gmag: pd.Series, rmag: pd.Series) -> pd.Series:
+    """
+    Calculate the solar color index using Pan-STARRS photometric transformations.
+
+    :param gmag: PS1 g-band magnitudes (AB system).
+    :type gmag: pd.Series
+    :param rmag: PS1 r-band magnitudes (AB system).
+    :type rmag: pd.Series
+    :return: Solar color index (B - V - 0.65) using transformations from Tonry et al. 2012.
+    :rtype: pd.Series
+
+    Reference:
+    Tonry J.L. et al. (2012), "The Pan-STARRS1 Photometric System",
+    arXiv:1706.06147 [astro-ph.IM]. URL: https://arxiv.org/abs/1706.06147
+    """
+    # Calculate color term (g - r)
+    color = gmag - rmag
+
+    # Transform to Johnson-Cousins B and V magnitudes (Eq.13-14 from paper)
+    B = gmag + 0.194 + 0.561 * color  # B = g + 0.194 + 0.561(g - r)
+    V = gmag - 0.017 - 0.508 * color  # V = g - 0.017 - 0.508(g - r)
+
+    # Compute solar index relative to solar color (B - V)_sun = 0.65
+    return B - V - 0.65
 
 
 @hierarchical_debug(logger)
@@ -121,35 +147,32 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     :rtype: tuple(pandas.DataFrame, str, str)
     """
     if coocenter.dec.deg < -30:
+        def get_filter(_filter):
+            filter_map = {
+                'SDSSg': 'gPSF',
+                'SDSSr': 'rPSF',
+                'SDSSi': 'iPSF',
+                'SDSSzs': 'zPSF',
+                'SDSSu': 'uPSF',
+            }
+            return filter_map.get(_filter, 'gPSF')
+
         catalog = 'II/379'  # SkyMapper Southern Sky Survey. DR4 : II/379
         ref_filter = 'gPSF'
-        expected_columns = ['SMSS', 'RAICRS', 'DEICRS', 'gPSF', 'rPSF', 'iPSF', 'zPSF',
-                            'uPSF']  # Columnas para SkyMapper
+        final_ref_filter = get_filter(filter)
+        expected_columns = ['SMSS', 'RAICRS', 'DEICRS', 'gPSF', 'rPSF', final_ref_filter]  # Columnas para SkyMapper
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
-        color = vizier_results['gPSF'] - vizier_results['rPSF']
-        B = vizier_results['gPSF'] + 0.194 + 0.561 * color
-        V = vizier_results['gPSF'] - 0.017 - 0.508 * color
-        solar_index = B - V - 0.65
 
-        if filter == 'SDSSg':
-            ref_filter = 'gPSF'
-        elif filter == 'SDSSr':
-            ref_filter = 'rPSF'
-        elif filter == 'SDSSi':
-            ref_filter = 'iPSF'
-        elif filter == 'SDSSzs':
-            ref_filter = 'zPSF'
-        elif filter == 'SDSSu':
-            ref_filter = 'uPSF'
+        solar_index = calculate_solar_index(vizier_results['gPSF'], vizier_results['rPSF'])
 
         result = pd.DataFrame({'ID': vizier_results['SMSS'],
                                'RA': vizier_results['RAICRS'],
                                'DEC': vizier_results['DEICRS'],
-                               'MAG': vizier_results[ref_filter],
-                               'MAGERR': vizier_results[ref_filter] * 0,
+                               'MAG': vizier_results[final_ref_filter],
+                               'MAGERR': vizier_results[final_ref_filter] * 0,
                                'SOLAR': solar_index})
-        ref_filter = ref_filter[:-3]
+        ref_filter = final_ref_filter[:-3]
 
     elif filter == 'Open' or filter == 'OPEN':
         catalog = 'I/355/gaiadr3'  # Gaia DR3 Part 1. Main source : I/355
@@ -187,17 +210,12 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     elif filter == 'Lum' or filter == 'w':
         catalog = 'II/349/ps1'  # The Pan-STARRS release 1 (PS1) Survey - DR1 : II/349
         ref_filter = 'gmag'
-        expected_columns = ['objID', 'RAJ2000', 'DEJ2000', 'gmag', 'rmag', f'e_{ref_filter}',
-                            f'e_rmag']  # Columnas para Pan-STARRS
+        expected_columns = ['objID', 'RAJ2000', 'DEJ2000', 'gmag', 'rmag', 'e_gmag',
+                            'e_rmag']  # Columnas para Pan-STARRS
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
-        color = vizier_results['gmag'] - vizier_results['rmag']
-        # B = vizier_results['gmag'] + 0.213 + 0.587 * color
-        # V = vizier_results['rmag'] + 0.006 + 0.474 * color
-        # https://arxiv.org/pdf/1706.06147.pdf
-        B = vizier_results['gmag'] + 0.194 + 0.561 * color
-        V = vizier_results['gmag'] - 0.017 - 0.508 * color
-        solar_index = B - V - 0.65
+
+        solar_index = calculate_solar_index(vizier_results['gmag'], vizier_results['rmag'])
 
         lum_gmag_coeff = kwargs.get('lum_gmag_coeff', 0.5)
         lum_rmag_coeff = kwargs.get('lum_rmag_coeff', 0.5)
@@ -205,20 +223,6 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         mag = lum_gmag_coeff * vizier_results['gmag'] + lum_rmag_coeff * vizier_results['rmag']
         magerr = lum_gmag_coeff * vizier_results['e_gmag'] + lum_rmag_coeff * vizier_results['e_rmag']
         ref_filter = f'{lum_gmag_coeff}*g+{lum_rmag_coeff}*r'
-
-        # if inmodel == 'iKon936':
-        #     mag = 0.46872 * vizier_results['gmag'] + 0.53127 * vizier_results['rmag']
-        #     magerr = 0.46872 * vizier_results['e_gmag'] + 0.53127 * vizier_results['e_rmag']
-        #     ref_filter = '0.46872*g+0.53127*r'
-        #
-        # elif inmodel == 'QHY411MERIS':
-        #     mag = 0.51595 * vizier_results['gmag'] + 0.48404 * vizier_results['rmag']
-        #     magerr = 0.51595 * vizier_results['e_gmag'] + 0.48404 * vizier_results['e_rmag']
-        #     ref_filter = '0.51595*g+0.48404*r'
-        # else:
-        #     mag = 0.5 * vizier_results['gmag'] + 0.5 * vizier_results['rmag']
-        #     magerr = 0.5 * vizier_results['e_gmag'] + 0.5 * vizier_results['e_rmag']
-        #     ref_filter = '0.5*g+0.5*r'
 
         result = pd.DataFrame({'ID': vizier_results['objID'],
                                'RA': vizier_results['RAJ2000'],
@@ -228,37 +232,31 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
                                'SOLAR': solar_index})
 
     else:
+        def get_filter(_filter):
+            filter_map = {
+                'SDSSg': 'gmag',
+                'SDSSr': 'rmag',
+                'SDSSi': 'imag',
+                'SDSSzs': 'zmag'
+            }
+            return filter_map.get(_filter, 'gmag')
+
         catalog = 'II/349/ps1'  # The Pan-STARRS release 1 (PS1) Survey - DR1 : II/349
         ref_filter = 'gmag'
-        expected_columns = ['objID', 'RAJ2000', 'DEJ2000', ref_filter,
-                            f'e_{ref_filter}']  # Columnas por defecto para Pan-STARRS
+        final_ref_filter = get_filter(filter)
+        expected_columns = ['objID', 'RAJ2000', 'DEJ2000', 'gmag', 'rmag', final_ref_filter,
+                            f'e_{final_ref_filter}']  # Columnas por defecto para Pan-STARRS
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
-        color = vizier_results['gmag'] - vizier_results['rmag']
-        # B = vizier_results['gmag'] + 0.213 + 0.587 * color
-        # V = vizier_results['rmag'] + 0.006 + 0.474 * color
-        # https://arxiv.org/pdf/1706.06147.pdf
-        B = vizier_results['gmag'] + 0.194 + 0.561 * color
-        V = vizier_results['gmag'] - 0.017 - 0.508 * color
-        solar_index = B - V - 0.65
 
-        if filter == 'SDSSg':
-            ref_filter = 'gmag'
-        elif filter == 'SDSSr':
-            ref_filter = 'rmag'
-        elif filter == 'SDSSi':
-            ref_filter = 'imag'
-        elif filter == 'SDSSzs':
-            ref_filter = 'zmag'
-
-        # añadir Johnson
+        solar_index = calculate_solar_index(vizier_results['gmag'], vizier_results['rmag'])
 
         result = pd.DataFrame({'ID': vizier_results['objID'],
                                'RA': vizier_results['RAJ2000'],
                                'DEC': vizier_results['DEJ2000'],
-                               'MAG': vizier_results[ref_filter],
-                               'MAGERR': vizier_results['e_' + ref_filter],
+                               'MAG': vizier_results[final_ref_filter],
+                               'MAGERR': vizier_results['e_' + final_ref_filter],
                                'SOLAR': solar_index})
-        ref_filter = ref_filter[:-3]
+        ref_filter = final_ref_filter[:-3]
 
     return result, catalog, ref_filter
