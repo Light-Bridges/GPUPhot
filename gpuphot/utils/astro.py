@@ -278,9 +278,9 @@ def astrometrice2(df: pd.DataFrame, scale: float,
             ast = AstrometryNet()
             ast.api_key = 'ruavrmwepqfvhdqm'
             image_width, image_height = image_shape
-            h_wcs = ast.solve_from_source_list(dfm_ast['xcentroid'], dfm_ast['ycentroid'],
-                                                    image_width, image_height,
-                                                    solve_timeout=60)
+            h_wcs = ast.solve_from_source_list(df['xcentroid'], df['ycentroid'],
+                                               image_width, image_height,
+                                               solve_timeout=60)
         except Exception as e:
             logger.error(e)
             h_wcs = {}
