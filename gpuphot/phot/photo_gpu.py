@@ -457,6 +457,8 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
     conv_snr_isol = conv_ima_sigma[
         cp.round(isolated_coord[:, 0]).astype(cp.int32), cp.round(isolated_coord[:, 1]).astype(cp.int32)]
     conv_snr_mask = conv_snr_isol > min_conv_snr
+    if cp.sum(conv_snr_mask) < 10:
+        conv_snr_mask = conv_snr_isol > min_conv_snr * 0.5
     if cp.sum(conv_snr_mask) < 3:
         raise InsufficientStarsError(cp.sum(conv_snr_mask))
 
@@ -726,7 +728,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
 
     # Find reference psf
     unit_star_dataset = star_dataset.astype(cp.double) / scaling[:, 3][:, None, None]
-    center_mask = (coord[:, 0] > xmin) & (coord[:, 0] < xmax) & (coord[:, 1] > ymin) & (coord[:, 1] < ymax)
+    center_mask = (coord[:, 1] > xmin) & (coord[:, 1] < xmax) & (coord[:, 0] > ymin) & (coord[:, 0] < ymax)
     unit_star_dataset_stds = cp.std(unit_star_dataset, axis=(1, 2))
     mask_star_dataset = unit_star_dataset_stds < cp.percentile(cp.std(unit_star_dataset, axis=(1, 2)), 95.4)
     unit_star_dataset = unit_star_dataset[mask_star_dataset]
@@ -828,7 +830,8 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
                         'flux': optimal_flux,
                         'noise': optimal_noise,
                         'snr': optimal_flux / optimal_noise})
-    dfm_ast = dfm.sort_values('snr', ascending=False).dropna().reset_index(drop=True)
+    dfm_ast = dfm.loc[dfm.snr > 5]
+    dfm_ast = dfm_ast.sort_values('snr', ascending=False).dropna().reset_index(drop=True)
 
     # Astrometrize
     h_wcs = astrometrice2(dfm_ast, scale, target_ra, target_dec, imdata.shape, sip_order=1)

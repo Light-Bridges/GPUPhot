@@ -218,7 +218,9 @@ def group_star_dataset(coords: np.ndarray, avg_group_size: int = 10, min_group_s
     # Manejar el caso donde no hay estrellas
     if n_stars == 0:
         return np.array([])  # Devuelve un array vacío si no hay estrellas
-
+    if n_stars <= min_group_size:
+        return np.zeros(n_stars, dtype=int)
+    
     # Crear clusters
     avg_group_size = max(min_group_size, avg_group_size)
     num_clusters = max(1, n_stars // avg_group_size)
