@@ -831,7 +831,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     dfm_ast = dfm.sort_values('snr', ascending=False).dropna().reset_index(drop=True)
 
     # Astrometrize
-    h_wcs = astrometrice2(dfm_ast, scale, target_ra, target_dec, sip_order=1)
+    h_wcs = astrometrice2(dfm_ast, scale, target_ra, target_dec, imdata.shape, sip_order=1)
     if h_wcs == {}:
         logger.error('Astrometry failed')
         return dfm, h_wcs, dic_calib
