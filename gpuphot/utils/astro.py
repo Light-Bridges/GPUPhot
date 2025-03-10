@@ -21,6 +21,7 @@ from .catalog import crossmatch_sources
 from ..exceptions import AstrometrizationTimeoutError
 from ..instrument_config_parser import HeaderKey
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+from astroquery.astrometry_net import AstrometryNet
 
 logger = setup_logger(__name__)
 
@@ -153,8 +154,10 @@ def get_astrometry_params(h_wcs, image_shape):
     """
     w = WCS(h_wcs)
     ra, dec = w.all_pix2world(image_shape[1] // 2, image_shape[0] // 2, 1)
-    cd11 = float(h_wcs['CD1_1'][0])
-    cd12 = float(h_wcs[HeaderKey.CD1_2.value][0])
+    try: cd11 = float(h_wcs['CD1_1'][0])
+    except: cd11 = float(h_wcs['CD1_1'])
+    try: cd12 = float(h_wcs[HeaderKey.CD1_2.value][0])
+    except: cd12 = float(h_wcs[HeaderKey.CD1_2.value])
     scale = np.sqrt(cd11 ** 2 + cd12 ** 2) * 3600
     coocenter = SkyCoord(ra=ra, dec=dec, unit=(u.deg, u.deg), frame='icrs')
     npx = max(image_shape)
@@ -195,6 +198,7 @@ def handler(signum, frame):
 @hierarchical_debug(logger)
 def astrometrice2(df: pd.DataFrame, scale: float,
                   central_ra: float, central_dec: float,
+                  image_shape: tuple,
                   sip_order: int = 3) -> dict:
     """
     Perform astrometry on an image.
@@ -213,10 +217,9 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     :rtype: dict
     """
 
-    signal.signal(signal.SIGALRM, handler)
-    signal.alarm(60)
-
     try:
+        signal.signal(signal.SIGALRM, handler)
+        signal.alarm(60)
         solver = get_solver()
         solve_params = inspect.signature(solver.solve).parameters
 
@@ -268,10 +271,20 @@ def astrometrice2(df: pd.DataFrame, scale: float,
             else:
                 h_wcs = {}
                 logger.warning('No matches found.')
+        signal.alarm(0)
     except Exception as e:
-        logger.error(e)
-        h_wcs = {}
-    signal.alarm(0)
+        try:
+            logger.info("Starting online astrometry with AstrometryNet")
+            ast = AstrometryNet()
+            ast.api_key = 'ruavrmwepqfvhdqm'
+            image_width, image_height = image_shape
+            h_wcs = ast.solve_from_source_list(dfm_ast['xcentroid'], dfm_ast['ycentroid'],
+                                                    image_width, image_height,
+                                                    solve_timeout=60)
+        except Exception as e:
+            logger.error(e)
+            h_wcs = {}
+
     return h_wcs
 
 
