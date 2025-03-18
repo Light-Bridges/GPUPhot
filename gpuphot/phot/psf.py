@@ -1,5 +1,6 @@
 import cupy as cp
 import numpy as np
+import nvtx
 from cupyx.scipy.ndimage import maximum_filter
 from lmfit import Model
 from scipy.spatial import KDTree
@@ -15,7 +16,8 @@ from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 logger = setup_logger(__name__)
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('find_local_max',category='phot.psf')
 def find_local_max(image: cp.ndarray, min_distance: int, threshold_abs: float) -> cp.ndarray:
     """
     Calculate local maxima in an image.
@@ -35,7 +37,8 @@ def find_local_max(image: cp.ndarray, min_distance: int, threshold_abs: float) -
     return cp.argwhere(peaks)
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('find_local_centroid',category='phot.psf')
 def find_local_centroid(image: cp.ndarray, peaks: cp.ndarray, window_size: int = 5) -> cp.ndarray:
     """
     Calculate centroids of detected peaks in an image.
@@ -78,7 +81,8 @@ def find_local_centroid(image: cp.ndarray, peaks: cp.ndarray, window_size: int =
     return cp.stack((y_centroid, x_centroid), axis=1)
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('detect_isolated_stars',category='phot.psf')
 def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_lim: int = 50000, min_snr: float = 10,
                           dist_asec: float = 10, sort: bool = True, **kwargs) -> cp.array:
     """
@@ -109,39 +113,52 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
     border = 2 * dist_px
     kernel = gaussian_kernel(int(np.max((5 * 2 + 1, 10 / pxscale))), 2)
     kernel = (kernel - cp.mean(kernel)) / cp.std(kernel)
-    conv_ima = convolve_fft(img, kernel, **kwargs)
-    conv_sigma = conv_ima / rms / cp.sqrt(kernel.shape[0] * kernel.shape[1])
-    del kernel, conv_ima
-    conv_sigma[:border, :] = 0
-    conv_sigma[-border:, :] = 0
-    conv_sigma[:, :border] = 0
-    conv_sigma[:, -border:] = 0
-    coor_f = find_local_max(conv_sigma, min_distance=int(3 / pxscale), threshold_abs=min_snr)
-    dist = get_centroids_distance_kdtree(coor_f.get())
-    dist_mask = dist > dist_px
-    coor_f = coor_f[dist_mask]
-    dist = dist[dist_mask]
-    snr = conv_sigma[coor_f[:, 0], coor_f[:, 1]]
-    peak = img[coor_f[:, 0], coor_f[:, 1]]
-    m = (snr > min_snr) & (peak < sat_lim)
-    if cp.sum(m) == 0:
-        m = (snr > 3) & (peak < sat_lim)
-    if cp.sum(m) == 0:
-        logger.error('Less than 5 isolated stars detected. Image may be too crowded or too noisy')
-        raise InsufficientStarsError(num_stars=cp.sum(m))
-    coor_f = cp.asarray(coor_f)[m]
-    coor_f = find_local_centroid(conv_sigma, coor_f, int(3 / pxscale))
-    if sort:
-        sort_metric = snr[m].get() + dist[m.get()]
-        idx = cp.argsort(np.max(sort_metric) - sort_metric)
-        coor_f = coor_f[idx]
-    del snr, peak, m, dist, dist_mask, sort_metric, idx
-    mempool.free_all_blocks()
 
+    # Usar un contexto para conv_ima y conv_sigma
+    with cp.cuda.Stream():  # Asegura la ejecución asíncrona y la liberación de recursos
+        conv_ima = convolve_fft(img, kernel, **kwargs)
+        conv_sigma = conv_ima / rms / cp.sqrt(kernel.shape[0] * kernel.shape[1])
+        del kernel, conv_ima  # Liberar kernel y conv_ima tan pronto como sea posible
+        mempool.free_all_blocks()  # Asegurar liberación
+
+        conv_sigma[:border, :] = 0
+        conv_sigma[-border:, :] = 0
+        conv_sigma[:, :border] = 0
+        conv_sigma[:, -border:] = 0
+        coor_f = find_local_max(conv_sigma, min_distance=int(3 / pxscale), threshold_abs=min_snr)
+        dist = get_centroids_distance_kdtree(coor_f.get())
+        dist_mask = dist > dist_px
+        coor_f = coor_f[dist_mask]
+        dist = dist[dist_mask]  # Actualizar dist después del filtrado
+        snr = conv_sigma[coor_f[:, 0], coor_f[:, 1]]
+        peak = img[coor_f[:, 0], coor_f[:, 1]]
+        m = (snr > min_snr) & (peak < sat_lim)
+        if cp.sum(m) == 0:
+            m = (snr > 3) & (peak < sat_lim)
+        if cp.sum(m) == 0:
+            logger.error('Less than 5 isolated stars detected. Image may be too crowded or too noisy')
+            raise InsufficientStarsError(num_stars=cp.sum(m))
+
+        coor_f = cp.asarray(coor_f)[m]
+        coor_f = find_local_centroid(conv_sigma, coor_f, int(3 / pxscale))
+
+        del conv_sigma  # Liberar antes del sort
+
+        if sort:
+            # Calcular sort_metric en la GPU si es posible
+            sort_metric = snr[m].get() + dist[m.get()]  # Ahora dist ya ha sido filtrado.
+            idx = cp.argsort(np.max(
+                sort_metric) - sort_metric)  # Se calcula con numpy ya que la cantidad de datos a ordenar es pequeña
+            coor_f = coor_f[idx]
+
+        # Liberación de memoria
+        del snr, peak, m, dist, dist_mask, sort_metric, idx
+
+    mempool.free_all_blocks()
     return coor_f
 
-
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('create_star_dataset',category='phot.psf')
 def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: int = 1000) -> tuple:
     """
     Create a dataset of stars from an image and a list of coordinates.
@@ -159,41 +176,37 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
     """
     f = max(int(10 / pxscale), 6)
     n = max(int(1 / pxscale), 2)
-    star_dataset = cp.zeros((len(coords), 2 * f + 1, 2 * f + 1), dtype=cp.
-                            float32)
-    scaling_dataset = cp.zeros((len(coords), 4), dtype=cp.float32)
-    idx = cp.arange(len(coords))
+    star_dataset = cp.zeros((len(coords), 2 * f + 1, 2 * f + 1), dtype=cp.float32)
+    scaling_dataset = cp.zeros((len(coords), 4), dtype=cp.float32)  # Solo necesitamos el pico
+    valid_coords = []  # Lista para almacenar las coordenadas válidas
+
     for i, (y, x) in enumerate(coords):
-        x_min = x - f
-        x_max = x + f + 1
-        y_min = y - f
-        y_max = y + f + 1
-        if x_min < 0 or y_min < 0 or x_max > img.shape[1] or y_max > img.shape[
-            0]:
-            idx = idx[idx != i]
-            continue
-        subima = img[y_min:y_max, x_min:x_max][::-1, :]
-        peak_pos = cp.unravel_index(cp.argmax(subima), subima.shape)
-        if abs(peak_pos[0] - f) > n or abs(peak_pos[1] - f) > n:
-            idx = idx[idx != i]
-            continue
-        else:
-            peak = subima[peak_pos]
-        star_dataset[i, :] = subima
-        scaling_dataset[i, 0] = peak
-        scaling_dataset[i, 1] = cp.mean(subima)
-        scaling_dataset[i, 2] = cp.var(subima)
-        scaling_dataset[i, 3] = cp.sum(subima)
-    N = min(N, len(idx))
-    idx = idx[:N]
-    try:
-        del subima, peak_pos, peak, x_min, x_max, y_min, y_max, f, n
-    except Exception as e:
-        logger.error(e)
-    return star_dataset[idx], coords[idx], scaling_dataset[idx]
+        x_min = int(x - f)
+        x_max = int(x + f + 1)
+        y_min = int(y - f)
+        y_max = int(y + f + 1)
+
+        # Comprobar límites *antes* de acceder a la imagen.
+        if 0 <= x_min < x_max <= img.shape[1] and 0 <= y_min < y_max <= img.shape[0]:
+            subima = img[y_min:y_max, x_min:x_max]
+            peak_pos = cp.unravel_index(cp.argmax(subima), subima.shape)
+            if abs(peak_pos[0] - f) <= n and abs(peak_pos[1] - f) <= n:
+                peak = subima[peak_pos]
+                star_dataset[i, :] = subima / peak  # Normalizar por el pico
+                scaling_dataset[i, 0] = peak
+                scaling_dataset[i, 1] = cp.mean(subima)
+                scaling_dataset[i, 2] = cp.var(subima)
+                scaling_dataset[i, 3] = cp.sum(subima)
+                valid_coords.append(coords[i]) #Usamos una lista
+
+    valid_coords = cp.array(valid_coords) #Convertimos a array
+    N = min(N, len(valid_coords))
+    # Usar slicing para seleccionar los primeros N elementos *después* de filtrar.
+    return star_dataset[:N], valid_coords[:N], scaling_dataset[:N]
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('group_star_dataset',category='phot.psf')
 def group_star_dataset(coords: np.ndarray, avg_group_size: int = 10, min_group_size: int = 5) -> np.ndarray:
     """
     Group a set of star coordinates into clusters, ensuring no group has fewer stars than min_group_size.
@@ -256,7 +269,8 @@ def group_star_dataset(coords: np.ndarray, avg_group_size: int = 10, min_group_s
     return final_labels
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('get_eigen_psfs',category='phot.psf')
 def get_eigen_psfs(normed_star_dataset: cp.array, n_components: int = 5) -> cp.array:
     """
     Calculate the eigen PSFs from a dataset of normalized stars.
@@ -276,7 +290,8 @@ def get_eigen_psfs(normed_star_dataset: cp.array, n_components: int = 5) -> cp.a
     return eigen_psfs
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('project_all_stars_onto_eigenpsfs',category='phot.psf')
 def project_all_stars_onto_eigenpsfs(normed_star_dataset: cp.array, eigen_psfs: cp.array) -> cp.array:
     """
     Project all stars onto the eigen PSFs.
@@ -297,7 +312,8 @@ def project_all_stars_onto_eigenpsfs(normed_star_dataset: cp.array, eigen_psfs: 
     return coefficients_matrix
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('create_coeff_map',category='phot.psf')
 def create_coeff_map(img_shape: tuple, positions: cp.array, coefficients: cp.array, pxscale: float,
                      tile_section: int = None, env_factor: float = 3) -> cp.ndarray:
     """
@@ -342,7 +358,8 @@ def create_coeff_map(img_shape: tuple, positions: cp.array, coefficients: cp.arr
     return coeff_map
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('calculate_kernel_area',category='phot.psf')
 def calculate_kernel_area(img_shape: tuple, psf: cp.ndarray, coeff_map: cp.ndarray = None,
                           eigen_psfs: cp.ndarray = None):
     """
@@ -372,7 +389,8 @@ def calculate_kernel_area(img_shape: tuple, psf: cp.ndarray, coeff_map: cp.ndarr
     return A
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('detect_sources_psf',category='phot.psf')
 def detect_sources_psf(img: cp.ndarray, rms: cp.ndarray, fwhm: float, psf: cp.array,
                        eigen_psfs: cp.ndarray = None, coeff_map: cp.ndarray = None,
                        min_snr: int = 5, **kwargs) -> cp.ndarray:
@@ -412,6 +430,7 @@ def detect_sources_psf(img: cp.ndarray, rms: cp.ndarray, fwhm: float, psf: cp.ar
     return coor, conv_ima_sigma
 
 
+@nvtx.annotate('recreate_normed_star',category='phot.psf')
 def recreate_normed_star(coeff_map: cp.ndarray, eigen_psfs: cp.array, coords: cp.array) -> cp.ndarray:
     """
     Recreate a normalized star from the coefficient map.
@@ -432,7 +451,8 @@ def recreate_normed_star(coeff_map: cp.ndarray, eigen_psfs: cp.array, coords: cp
     return kernel
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('recreate_normed_star_vectorized',category='phot.psf')
 def recreate_normed_star_vectorized(coeff_map: cp.ndarray, eigen_psfs: cp.array, xs: cp.array, ys: cp.array,
                                     **kwargs) -> cp.ndarray:
     """
@@ -459,6 +479,7 @@ def recreate_normed_star_vectorized(coeff_map: cp.ndarray, eigen_psfs: cp.array,
     return kernels
 
 
+@nvtx.annotate('recreate_normed_stars_batch',category='phot.psf')
 def recreate_normed_stars_batch(coeff_map: cp.ndarray, eigen_psfs: cp.ndarray, coords: cp.ndarray,
                                 **kwargs) -> cp.ndarray:
     """
@@ -481,7 +502,8 @@ def recreate_normed_stars_batch(coeff_map: cp.ndarray, eigen_psfs: cp.ndarray, c
     return kernels
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('fit_moffat',category='phot.psf')
 def fit_moffat(star_data: np.ndarray) -> tuple:
     """
     Fit a Moffat profile to a star.
@@ -530,6 +552,7 @@ def fit_moffat(star_data: np.ndarray) -> tuple:
     return r, Z, result, fwhm, fwhm_err
 
 
+@nvtx.annotate('filter_centroids_kdtree',category='phot.psf')
 def filter_centroids_kdtree(centroids: np.array, min_distance: float) -> np.array:
     """
     Filter centroids using a KDTree.
@@ -546,7 +569,8 @@ def filter_centroids_kdtree(centroids: np.array, min_distance: float) -> np.arra
     return centroids[mask]
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('get_centroids_distance_kdtree',category='phot.psf')
 def get_centroids_distance_kdtree(centroids: np.array):
     """
     Find the distance between centroid and its nearest neighbor using KDTree.
@@ -562,6 +586,7 @@ def get_centroids_distance_kdtree(centroids: np.array):
     return dist[:, 1]
 
 
+@nvtx.annotate('moffat',category='phot.psf')
 def moffat(r: np.array, A: float = 1., r0: float = 0., B: float = 1., R: float = 1.) -> np.array:
     """
     Moffat profile function.
@@ -583,6 +608,7 @@ def moffat(r: np.array, A: float = 1., r0: float = 0., B: float = 1., R: float =
     return A * (1 + ((r - r0) / R) ** 2) ** (-B)
 
 
+@nvtx.annotate('moffat_fwhm',category='phot.psf')
 def moffat_fwhm(R: float, B: float, R_err: float, B_err: float) -> tuple:
     """
     Calculate the FWHM of a Moffat profile.

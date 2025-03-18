@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import psycopg2
 from psycopg2 import sql
@@ -16,11 +18,11 @@ def connect_to_db():
     """
     try:
         conn = psycopg2.connect(
-            dbname="GPUPhotDB",
-            user="read_only",
-            password="read_only",
-            host="postgres",
-            port="5432"
+            dbname=os.getenv('POSTGRES_DB', 'GPUPhotDB'),
+            user=os.getenv('POSTGRES_USER_READ', 'read_only'),
+            password=os.getenv('POSTGRES_PASSWORD_READ', 'read_only'),
+            host=os.getenv('POSTGRES_HOST', 'postgres'),
+            port=os.getenv('POSTGRES_PORT', '5432')
         )
         return conn
     except (Exception, psycopg2.Error) as error:

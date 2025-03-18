@@ -1,4 +1,5 @@
 import numpy as np
+import nvtx
 import pandas as pd
 from astropy import units as u
 from astroquery.vizier import Vizier
@@ -9,6 +10,7 @@ from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 logger = setup_logger(__name__)
 
 
+@nvtx.annotate('crossmatch_sources',category='utils.catalog')
 def crossmatch_sources(source_coords, ref_coords, thres_px=2):
     """
     Cross-match source coordinates with reference coordinates.
@@ -30,7 +32,8 @@ def crossmatch_sources(source_coords, ref_coords, thres_px=2):
     return source_coords_matched_idx, ref_coords_matched_idx
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('__getVizier',category='utils.catalog')
 def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                 vizier_timeout=60, vizier_row_limit=-1,
                 vizier_cache=True, custom_vizier_search_func=None,
@@ -80,7 +83,8 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
     return vizier_results[0]
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('catalog_results',category='utils.catalog')
 def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     """
     Process astronomical data to calculate magnitudes and other parameters for stars based on various filters and models.
@@ -184,7 +188,6 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         mag = lum_gmag_coeff * vizier_results['gmag'] + lum_rmag_coeff * vizier_results['rmag']
         magerr = lum_gmag_coeff * vizier_results['e_gmag'] + lum_rmag_coeff * vizier_results['e_rmag']
         ref_filter = f'{lum_gmag_coeff}*g+{lum_rmag_coeff}*r'
-
 
         # if inmodel == 'iKon936':
         #     mag = 0.46872 * vizier_results['gmag'] + 0.53127 * vizier_results['rmag']

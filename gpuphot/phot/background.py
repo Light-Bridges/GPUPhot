@@ -1,14 +1,17 @@
 import cupy as cp
+import nvtx
 from cupyx.scipy.ndimage import gaussian_filter, binary_erosion, binary_dilation
 
 from .conv import get_mean_std, fill_nan_fft
 from .utils import decompose_into_tiles, calculate_tile_percentiles, recompose_from_percentiles
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+from ..utils.gpu import free_gpu_mem
 
 logger = setup_logger(__name__)
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('get_local_background_fft',category='phot.background')
 def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper: int = 100,
                              avg_aper: int = 20, tile_section: int = 500, ks: int = 2,
                              get_std: bool = False, **kwargs) -> tuple:
@@ -36,24 +39,23 @@ def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper:
     :rtype: tuple
     """
     if type(image) != cp.ndarray: image = cp.array(image)
-    mempool = cp.get_default_memory_pool()
 
     image_cp_conv = gaussian_filter(image, sigma=2)
     _, img_std_conv = get_mean_std(image_cp_conv, max(int(1 / pxscale + 1), 3), **kwargs)
-    del image_cp_conv
-    mempool.free_all_blocks()
+    del image_cp_conv, _
+    free_gpu_mem()
 
     tiles = decompose_into_tiles(img_std_conv, tile_section)
     percentiles = calculate_tile_percentiles(tiles, qt=qt)
     per = recompose_from_percentiles(percentiles, image.shape, tile_section)
 
     del tiles, percentiles
-    mempool.free_all_blocks()
+    free_gpu_mem()
 
     mask = img_std_conv > per
 
-    del per
-    mempool.free_all_blocks()
+    del per, img_std_conv
+    free_gpu_mem()
 
     mask = binary_erosion(mask, cp.ones((max(int(ks / pxscale + 1), 2), max(int(ks / pxscale + 1), 2))))
     mask = binary_dilation(mask, cp.ones((max(int(ks / pxscale + 1), 2), max(int(ks / pxscale + 1), 2))))
@@ -61,8 +63,8 @@ def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper:
     mask = gaussian_filter(cp.array(mask, dtype=cp.float32), sigma=max(int(ks / pxscale + 1), 3)) > 0.05
     img_filled = image.copy()
     img_filled[mask] = cp.nan
-    del img_std_conv, mask
-    mempool.free_all_blocks()
+    del mask, image
+    free_gpu_mem()
 
     lk = max(int(fill_aper / pxscale + 1), 5)
     li = int(lk / 1.8 + 1)
@@ -73,7 +75,7 @@ def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper:
                                               **kwargs)
 
     del img_filled
-    mempool.free_all_blocks()
+    free_gpu_mem()
     return img_filled_m, img_filled_2
 
 

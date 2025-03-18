@@ -1,12 +1,21 @@
 import gc
 
 import cupy as cp
-
+import nvtx
 from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
 
+def human_readable_size(bytes_size):
+    for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
+        if abs(bytes_size) < 1024.0:
+            return f"{bytes_size:.1f}{unit}B"
+        bytes_size /= 1024.0
+    return f"{bytes_size:.1f}YiB"
+
+
+@nvtx.annotate('free_gpu_mem',category='utils.gpu')
 def free_gpu_mem() -> None:
     """
     Liberate GPU memory by freeing all memory blocks allocated by the default memory pool.
@@ -14,29 +23,46 @@ def free_gpu_mem() -> None:
     This function frees all memory blocks in both the default memory pool and the default pinned memory pool,
     and then calls the garbage collector to clean up any remaining objects.
     """
-    # Obtener los pools de memoria
+    # Get memory pools
     mempool = cp.get_default_memory_pool()
     pinned_mempool = cp.get_default_pinned_memory_pool()
 
-    # Obtener la memoria libre antes de liberar
-    memory_before = mempool.free_bytes()
+    # Get free memory before liberation
+    # memory_before = mempool.free_bytes()
 
-    # Liberar todos los bloques de memoria
+    # Free all memory blocks
     mempool.free_all_blocks()
     pinned_mempool.free_all_blocks()
 
-    # Forzar la recolección de basura
+    # Force garbage collection
     gc.collect()
 
-    # Obtener la memoria libre después de liberar
-    memory_after = mempool.free_bytes()
+    # Get free memory after liberation
+    # memory_after = mempool.free_bytes()
 
-    # Calcular la memoria liberada
-    memory_freed = memory_after - memory_before
+    # Calculate freed memory
+    # memory_freed = memory_after - memory_before
 
-    logger.debug(f"Memoria liberada: {memory_freed} bytes")
+    # Display freed memory
+    # logger.debug(f"Memory freed: {human_readable_size(memory_freed)}")
 
 
+@nvtx.annotate('force_free_gpu_memory',category='utils.gpu')
+def force_free_gpu_memory():
+    free_gpu_mem()
+
+    # Sincronizar todos los streams de CUDA
+    cp.cuda.Stream.null.synchronize()
+
+    # Reiniciar el entorno de CuPy
+    cp.get_default_memory_pool().free_all_blocks()
+    cp.get_default_pinned_memory_pool().free_all_blocks()
+
+    # Forzar la limpieza de caché de kernels
+    cp.fft.config.get_plan_cache().clear()
+
+
+@nvtx.annotate('init_gpu',category='utils.gpu')
 def init_gpu(**kwargs) -> None:
     """
     Initialize and log information about the GPU using CuPy.
@@ -83,3 +109,38 @@ def init_gpu(**kwargs) -> None:
     #                                                LogicalDeviceConfiguration(memory_limit=memory_limit)])
     # except Exception:
     #     pass
+
+
+@nvtx.annotate('reset_cupy_allocators',category='utils.gpu')
+def reset_cupy_allocators():
+    # Clear all existing memory pools
+    cp.get_default_memory_pool().free_all_blocks()
+    cp.get_default_pinned_memory_pool().free_all_blocks()
+
+    # Create new memory pools
+    mempool = cp.cuda.MemoryPool()
+    pinned_mempool = cp.cuda.PinnedMemoryPool()
+
+    # Set the new pools as default
+    cp.cuda.set_allocator(mempool.malloc)
+    cp.cuda.set_pinned_memory_allocator(pinned_mempool.malloc)
+
+    # Force garbage collection
+    gc.collect()
+
+    # Synchronize CUDA streams
+    cp.cuda.Stream.null.synchronize()
+
+    # Clear kernel caches
+    cp.fft.config.get_plan_cache().clear()
+
+def maybe_free_arrays(arrays, mempool, threshold=0.2):
+    """
+    Free arrays if free GPU memory is below threshold fraction of total.
+    """
+    free_mem, total_mem = cp.cuda.Device(0).mem_info
+    if free_mem / total_mem < threshold:
+        for arr in arrays:
+            del arr
+        mempool.free_all_blocks()
+        cp.cuda.Stream.null.synchronize()

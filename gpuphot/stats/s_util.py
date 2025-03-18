@@ -6,7 +6,7 @@ from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 logger = setup_logger(__name__)
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
 def judge_dtype(dtype):
     """
     Validate and return a floating point dtype.

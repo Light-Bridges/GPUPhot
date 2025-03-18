@@ -10,6 +10,7 @@ import astrometry
 import ephem
 import matplotlib.pyplot as plt
 import numpy as np
+import nvtx
 import pandas as pd
 from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
@@ -118,7 +119,8 @@ class SingletonSolver:
         return fits_count > 0 and download_count == 0
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('get_solver',category='utils.astro')
 def get_solver():
     """
     Get the astrometry solver with index files.
@@ -140,6 +142,7 @@ def get_solver():
     # return solver
 
 
+@nvtx.annotate('get_astrometry_params',category='utils.astro')
 def get_astrometry_params(h_wcs, image_shape):
     """
     Get astrometry parameters from WCS header.
@@ -192,7 +195,8 @@ def handler(signum, frame):
     raise AstrometrizationTimeoutError("End of time for astrometrization")
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('astrometrice2',category='utils.astro')
 def astrometrice2(df: pd.DataFrame, scale: float,
                   central_ra: float, central_dec: float,
                   sip_order: int = 3) -> dict:
@@ -275,6 +279,7 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     return h_wcs
 
 
+@nvtx.annotate('get_zeropoint',category='utils.astro')
 def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=50,
                   solar_filter=0.6, dist_thres_px=3, min_snr=30, max_snr=300,
                   plot=False):
@@ -407,6 +412,7 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=50,
     return params
 
 
+@nvtx.annotate('get_target_snr',category='utils.astro')
 def get_target_snr(dfm: pd.DataFrame, target_ra: float, target_dec: float, dist_thres_px=3) -> float:
     """
     Get the SNR of the target.
@@ -432,6 +438,7 @@ def get_target_snr(dfm: pd.DataFrame, target_ra: float, target_dec: float, dist_
     return target_snr
 
 
+@nvtx.annotate('get_maglim',category='utils.astro')
 def get_maglim(mag: np.ndarray, snr: np.ndarray, snr_lim: float) -> float:
     """
     Get the limiting magnitude.
@@ -457,6 +464,7 @@ def get_maglim(mag: np.ndarray, snr: np.ndarray, snr_lim: float) -> float:
     return np.round(maglim, 2)
 
 
+@nvtx.annotate('radec_to_moon_sun',category='utils.astro')
 def radec_to_moon_sun(ra, dec, site_latitude, site_longitude, site_elevation, date_obs):
     """
     Calculate moon and sun positions relative to a target.
@@ -504,6 +512,7 @@ def radec_to_moon_sun(ra, dec, site_latitude, site_longitude, site_elevation, da
         sun_az, 2)
 
 
+@nvtx.annotate('radec_to_altaz',category='utils.astro')
 def radec_to_altaz(RA, DEC, SITELAT, SITELON, SITEELEV, Date):
     """
     Convert RA/Dec to altitude and azimuth.
@@ -532,6 +541,7 @@ def radec_to_altaz(RA, DEC, SITELAT, SITELON, SITEELEV, Date):
     return round(coords_altaz.az.deg, 6), round(coords_altaz.alt.deg, 6), round(airmass, 6), round(zen.deg, 6)
 
 
+@nvtx.annotate('radec_to_gal',category='utils.astro')
 def radec_to_gal(RA, DEC):
     """
     Convert RA/Dec to Galactic coordinates.
@@ -547,6 +557,7 @@ def radec_to_gal(RA, DEC):
     return round(coords_gal.l.deg, 6), round(coords_gal.b.deg, 6)
 
 
+@nvtx.annotate('radec_to_ecl',category='utils.astro')
 def radec_to_ecl(RA, DEC):
     """
     Convert RA/Dec to Ecliptic coordinates.
@@ -562,6 +573,7 @@ def radec_to_ecl(RA, DEC):
     return round(coords_gal.lon.deg, 6), round(coords_gal.lat.deg, 6)
 
 
+@nvtx.annotate('date_to_jd',category='utils.astro')
 def date_to_jd(dateobs):
     """
     Convert date to Julian Date.
@@ -575,6 +587,7 @@ def date_to_jd(dateobs):
     return Date.jd, Date.mjd
 
 
+@nvtx.annotate('get_ccw',category='utils.astro')
 def get_ccw(hwcs):
     """
     Get the counter-clockwise rotation angle from WCS header.
@@ -598,6 +611,7 @@ def get_ccw(hwcs):
     return -np.degrees(np.arctan2(A, T))
 
 
+@nvtx.annotate('get_scale',category='utils.astro')
 def get_scale(hwcs):
     """
     Get the image scale from WCS header.
@@ -609,11 +623,12 @@ def get_scale(hwcs):
     """
     cd11 = hwcs[HeaderKey.CD1_1.value]
     cd12 = hwcs[HeaderKey.CD1_2.value]
-    cd21 = hwcs[HeaderKey.CD2_1.value]
-    cd22 = hwcs[HeaderKey.CD2_2.value]
+    # cd21 = hwcs[HeaderKey.CD2_1.value]
+    # cd22 = hwcs[HeaderKey.CD2_2.value]
     return np.sqrt(cd11 ** 2 + cd12 ** 2) * 3600
 
 
+@nvtx.annotate('plate_scale_px',category='utils.astro')
 def plate_scale_px(microns, focal):
     """
     Calculate plate scale in arcseconds per pixel.
@@ -630,6 +645,7 @@ def plate_scale_px(microns, focal):
     return plate_scale_mm(focal) * microns / 1000  # arcsec/px
 
 
+@nvtx.annotate('plate_scale_mm',category='utils.astro')
 def plate_scale_mm(focal):
     """
     Calculate plate scale in arcseconds per mm.

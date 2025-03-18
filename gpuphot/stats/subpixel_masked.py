@@ -7,7 +7,7 @@ and the author's original MATLAB implementation, available on this website:
 http://www.dirkpadfield.com/
 """
 from functools import partial
-
+import nvtx
 import cupy as cp
 from cupyx.scipy import fft as fftmodule
 from cupyx.scipy.fft import next_fast_len
@@ -17,7 +17,8 @@ from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 logger = setup_logger(__name__)
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('_masked_phase_cross_correlation',category='stats.subpixel_masked')
 def _masked_phase_cross_correlation(reference_image, moving_image,
                                     reference_mask, moving_mask=None, overlap_ratio=0.3):
     """
@@ -79,7 +80,8 @@ def _masked_phase_cross_correlation(reference_image, moving_image,
     return -shifts + size_mismatch / 2
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('cross_correlate_masked',category='stats.subpixel_masked')
 def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
                            overlap_ratio=0.3):
     """
@@ -201,7 +203,8 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
     return out
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('_flip',category='stats.subpixel_masked')
 def _flip(arr, axes=None):
     """
     Reverse array over many axes. Generalization of arr[::-1] for many dimensions.
@@ -224,7 +227,8 @@ def _flip(arr, axes=None):
     return arr[tuple(reverse)]
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('_centered',category='stats.subpixel_masked')
 def _centered(arr, newshape, axes):
     """
     Return the center `newshape` portion of `arr`, leaving axes not in `axes` untouched.

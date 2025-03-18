@@ -4,14 +4,14 @@ import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
-
+import nvtx
 from .astro import date_to_jd, get_scale, get_ccw, radec_to_altaz, radec_to_ecl, radec_to_gal, radec_to_moon_sun
 from ..instrument_config_parser import HeaderKey
 from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
-
+@nvtx.annotate('delete_header_from',category='utils.headers')
 def delete_header_from(header, val):
     """
     Delete a section from the FITS header.
@@ -31,7 +31,7 @@ def delete_header_from(header, val):
 
     return header
 
-
+@nvtx.annotate('get_if_header_already_post_processed',category='utils.headers')
 def get_if_header_already_post_processed(header, postprocess):
     """
     Check if the header has already been post-processed.
@@ -53,7 +53,7 @@ def get_if_header_already_post_processed(header, postprocess):
     else:
         return False
 
-
+@nvtx.annotate('deg_to_hms',category='utils.headers')
 def deg_to_hms(RA, DEC):
     """
     Convert Right Ascension and Declination from degrees to HMS/DMS format.
@@ -74,7 +74,7 @@ def deg_to_hms(RA, DEC):
         dec_dms = '-%02d:%02d:%02.6f' % coords_deg.dec.dms
     return ra_hms, dec_dms
 
-
+@nvtx.annotate('update_header_with_astrometry',category='utils.headers')
 def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude, site_elevation, date_obs,
                                   header_descriptions=None):
     """
@@ -163,7 +163,7 @@ def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude
 
     return imheader
 
-
+@nvtx.annotate('update_header_with_photometry',category='utils.headers')
 def update_header_with_photometry(imheader, dic_calib, header_descriptions=None):
     """
     Update the FITS header with photometry information.

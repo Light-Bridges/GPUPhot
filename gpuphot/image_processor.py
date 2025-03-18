@@ -1,5 +1,7 @@
+import nvtx
+
 from .instrument_config_parser import InstrumentConfigParser
-from .logger.hierarchical_logging import setup_logger, hierarchical_debug
+from .logger.hierarchical_logging import setup_logger
 from .phot.photo_gpu import process_image
 
 logger = setup_logger(__name__)
@@ -36,8 +38,8 @@ class ImageProcessor:
         except Exception:
             pass
 
-    @hierarchical_debug(logger)
-    def process_image(self, imdata, imheader, header_descriptions = None, **kwargs):
+    ### # @hierarchical_debug(logger)
+    def process_image(self, imdata, imheader, header_descriptions=None, **kwargs):
         """
         Process an image using the specified parameters and translate headers.
 
@@ -61,7 +63,7 @@ class ImageProcessor:
         phot_df, hwcs = process_image(imdata, translated_header, header_descriptions, **params)
 
         ## Traduce el header procesado de vuelta a las keywords originales del usuario
-        #original_hwcs = self.header_translator.translate_back_header(hwcs)
+        # original_hwcs = self.header_translator.translate_back_header(hwcs)
 
         return phot_df, hwcs
 
@@ -78,6 +80,7 @@ class ImageProcessor:
 
 
 # Function to create the processor
+@nvtx.annotate('create_processor', category='image_processor')
 def create_processor(instrument_name, config_dir=None):
     """
     Create an instance of ImageProcessor for a specified instrument.

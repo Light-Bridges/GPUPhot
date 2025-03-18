@@ -1,159 +1,226 @@
 # Running GPUPhot with Docker Compose
 
-GPUPhot can be deployed using Docker Compose for distributed processing and easy management of services.
+GPUPhot can be deployed using Docker Compose for distributed processing, easy management of services, and a reproducible
+environment. This guide explains how to set up and run GPUPhot with Docker Compose.
 
 ## Prerequisites
 
-- Install Docker and Docker Compose on your system.
-- Clone this repository.
+* **Docker and Docker Compose:** Ensure that you have both Docker and Docker Compose installed on your system. Refer to
+  the official Docker documentation for installation instructions for your specific operating system. This setup has
+  been tested with:
+    * Docker version 20.10 or later.
+    * Docker Compose version 1.29 or later (using the Compose file format version 2 or higher).
+* **NVIDIA GPU and Drivers (If using GPU acceleration):**
+    * An NVIDIA GPU with compute capability 6.0 or higher.
+    * NVIDIA drivers installed and configured correctly. Version 525.x or later is recommended. You should be able to
+      run `nvidia-smi` and see your GPU listed.
+* **Git:** To clone the repository.
 
-## Environment Variables (`.env`)
+## 1. Clone the Repository
 
-Create a `.env` file in the project root with the following variables:
+First, clone the GPUPhot repository from GitHub:
 
+```bash
+git clone https://github.com/Light-Bridges/GPUPhot.git
+cd GPUPhot
 ```
-# Library settings
+
+## 2. Environment Variables (`.env`)
+
+Create a `.env` file in the *root* of the GPUPhot project (the same directory as `docker-compose.yml`). This file will
+contain environment variables that configure GPUPhot and its services.
+
+**Important:** The `.env` file is *optional* if you want to use all the default values. However, you *must* set
+`ASTROMETRY_CACHE_PATH` to a valid path on your host machine.
+
+Here's a complete example `.env` file with *all* available options and their default values. You only need to include
+the variables you want to *change* from their defaults.
+
+```dotenv
+#--------------------------------------------------
+#  Library Settings
+#--------------------------------------------------
+
+# Enable debug mode (True/False).  More verbose logging.
 GPUPHOT_DEBUG=True
+
+# Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 GPUPHOT_LOG_LEVEL=DEBUG
 
-# Astrometry settings
-ASTROMETRY_CACHE_PATH=/path/to/astrometry_cache
+# Environment (development, production)
+GPUPHOT_ENVIRONMENT=development
 
-# Worker settings
+#--------------------------------------------------
+#  Astrometry Settings
+#--------------------------------------------------
+
+# Path on the *host* machine where astrometry index files will be stored.
+# This directory MUST exist and be writable.
+ASTROMETRY_CACHE_PATH=/path/to/your/astrometry_cache  # ***CHANGE THIS***
+
+#--------------------------------------------------
+#  Worker Settings
+#--------------------------------------------------
+
+# Name of the instrument configuration to use (corresponds to a .json file in INSTRUMENT_CONFIG_PATH).
 INSTRUMENT_NAME=default
-INSTRUMENT_CONFIG_PATH=/path/to/instrument_configs
-IMAGE_PATH=/path/to/images
 
-# Database settings
+# Base path on the *host* machine where instrument configuration files are located.
+INSTRUMENT_CONFIG_PATH=/path/to/your/instrument_configs  #  ***CHANGE THIS if not using the default***
+
+# Base path on the *host* machine where astronomical images are located.
+IMAGE_PATH=/path/to/your/images #  ***CHANGE THIS if not using the default***
+
+# Number of Celery worker processes to run per GPU.  Usually 1 is sufficient.
+CELERY_CONCURRENCY=1
+
+#--------------------------------------------------
+#  Database Settings
+#--------------------------------------------------
+
+# Password for the PostgreSQL database.  Change this for production!
 POSTGRES_PASSWORD=gpuphot
 
-# Logging settings (optional)
-LOGSTASH_LOGGING=True
-LOGSTASH_HOST=10.0.210.30  # Replace with your host IP or domain name.
-LOGSTASH_PORT=5000         # Replace with your desired port.
+#--------------------------------------------------
+#  Logging Settings (Optional - for Logstash integration)
+#--------------------------------------------------
+
+# Enable sending logs to Logstash (True/False).
+LOGSTASH_LOGGING=False  # Change to True to enable
+
+# Hostname or IP address of your Logstash server.
+LOGSTASH_HOST=localhost
+
+# Port of your Logstash server.
+LOGSTASH_PORT=5000
 ```
 
-## Starting Services with Docker Compose
+**Explanation of Environment Variables:**
 
-1. Build and start all services:
-   ```
-   docker compose up -d
-   ```
+* **`GPUPHOT_DEBUG`:** Enables verbose logging for debugging. Set to `False` for normal operation.
+* **`GPUPHOT_LOG_LEVEL`:** Sets the logging level. Use `DEBUG` for detailed logs, `INFO` for general information,
+  `WARNING` for warnings, `ERROR` for errors, and `CRITICAL` for critical errors.
+* **`GPUPHOT_ENVIRONMENT`:** Sets the environment, for example 'development' for local use, and 'production' in the
+  deployment.
+* **`ASTROMETRY_CACHE_PATH`:**  *Crucially*, this is the directory on your *host* machine where the large astrometry
+  index files will be downloaded and stored. You *must* set this to a valid, writable directory. This directory should
+  have *plenty of free space* (tens of GB).
+* **`INSTRUMENT_NAME`:** The name of the instrument configuration to use. This corresponds to a JSON file (e.g.,
+  `default.json`, `my_instrument.json`) in the `INSTRUMENT_CONFIG_PATH`.
+* **`INSTRUMENT_CONFIG_PATH`:**  The directory on your *host* machine where your instrument configuration files are
+  located. The default is usually fine.
+* **`IMAGE_PATH`:** The base directory on your *host* machine where your astronomical images are located.
+* **`CELERY_CONCURRENCY`:**  The number of Celery worker processes to run *per GPU*. Usually, `1` is the optimal value,
+  as most of the work is done on the GPU. Increasing this beyond 1 will likely *not* improve performance and may lead to
+  memory issues.
+* **`POSTGRES_PASSWORD`:** The password for the PostgreSQL database.  **Change this for a production environment!**
+* **`LOGSTASH_LOGGING`:** Enables sending logs to a Logstash server. This is optional.
+* **`LOGSTASH_HOST`:** The hostname or IP address of your Logstash server.
+* **`LOGSTASH_PORT`:** The port of your Logstash server.
 
-2. Access services:
-    - **JupyterLab**: `http://localhost:8888`
-    - **Flower (Celery Monitor)**: `http://localhost:5555`
-    - **RabbitMQ Management**: `http://localhost:15672`
+**Security Note:**  Do *not* commit your `.env` file to version control (e.g., Git), especially if it contains passwords
+or other sensitive information. Add `.env` to your `.gitignore` file.
 
-3. To stop all services:
-   ```
-   docker compose down
-   ```
+## 3. Starting Services
 
-# Running GPUPhot with Docker Compose
+There are two ways to start the services: automatically using all available GPUs, or manually.
 
-## Automatic Multi-GPU Setup
+### 3.A. Automatic Multi-GPU Setup (Recommended)
 
-GPUPhot includes a script that automatically detects the number of available GPUs and sets up the appropriate number of
-workers. To use this feature:
+This method uses the `launch_gpuphot.sh` script to automatically detect the available GPUs and configure the Celery
+workers accordingly.
 
-1. Ensure you have the `launch_gpuphot.sh` script in your project root.
-2. Make the script executable:
-   ```
+1. **Make sure `launch_gpuphot.sh` is executable:**
+
+   ```bash
    chmod +x launch_gpuphot.sh
    ```
-3. Run the script:
-   ```
+
+2. **Run the script:**
+
+   ```bash
    ./launch_gpuphot.sh [max_gpus]
    ```
-   You can optionally specify the maximum number of GPUs to use. If not specified, it will use all available GPUs.
 
-This script will:
+    * `[max_gpus]` (optional):  The maximum number of GPUs to use. If omitted, all available GPUs will be used. Example:
+      `./launch_gpuphot.sh 2` will use at most 2 GPUs.
 
-- Detect the number of available GPUs
-- Launch Docker Compose with the correct number of workers (up to the specified maximum)
-- Assign specific GPUs to each worker
+   This script will:
 
-### How it works
+    * Detect the number of available NVIDIA GPUs using `nvidia-smi`.
+    * Start Docker Compose with the appropriate number of `gpuphot_worker` services (one per GPU, up to `max_gpus`).
+    * Set the `GPU_ID` environment variable for each worker to assign it to a specific GPU.
 
-The `launch_gpuphot.sh` script:
+### 3.B. Manual Setup
 
-1. Counts the number of available GPUs using `nvidia-smi`.
-2. Checks if any GPUs are detected and exits if none are found.
-3. Determines the number of workers based on available GPUs and the optional maximum specified.
-4. Scales the `gpuphot_worker` service in Docker Compose to match the worker count.
-5. Assigns each worker to a specific GPU by setting the `GPU_ID` environment variable.
+If you don't want to use the automatic script, or if you want to control the setup more precisely, you can start the
+services manually:
 
-## Manual Setup
+1. **Ensure you have a `.env` file (if you need to override default values).**
 
-If you prefer to set up your environment manually or need more control over the configuration, follow these steps:
-
-1. Create a `.env` file in the project root with necessary environment variables.
-2. Run Docker Compose:
+2. **Run Docker Compose:**
+   ```bash
+    docker compose up -d
    ```
-   docker compose up -d
-   ```
-3. Access services:
-    - JupyterLab: http://localhost:8888
-    - Flower (Celery Monitor): http://localhost:5555
 
-## Customizing the Setup
+   This will start all services defined in `docker-compose.yml` in detached mode (in the background).
 
-You can modify the `launch_gpuphot.sh` script to suit your specific needs. For example, you can limit the number of GPUs
-used by passing an argument:
+## 4. Accessing Services
 
+Once the services are running, you can access them through the following URLs:
+
+* **JupyterLab:**  `http://localhost:8888` (No login required by default)
+* **Flower (Celery Monitor):** `http://localhost:5555` (No authentication by default)
+* **RabbitMQ Management:** `http://localhost:15672` (Default credentials: `gpuphot` / `gpuphot`)
+
+## 5. Stopping Services
+
+To stop all services, run:
+
+```bash
+docker compose down
 ```
-./launch_gpuphot.sh 2  # Use a maximum of 2 GPUs
-```
+
+This will stop and remove the containers, networks, and volumes defined in `docker-compose.yml`.
 
 ## Troubleshooting
 
-If you encounter issues with the automatic setup:
+* **GPU Issues:**
+    * Ensure your NVIDIA drivers are installed and working correctly: `nvidia-smi`
+    * Check that Docker and Docker Compose are configured for GPU support. See the official Docker documentation for GPU
+      support.
+    * Make sure your `docker-compose.yml` file is correctly configured to use GPUs (see the `deploy` section for the
+      `gpuphot_worker` service).
+* **Permission errors:** Make sure you have the right permissions on the folders defined in `.env`
+* **Port Conflicts:** If you have other services running on your machine that use the same ports as GPUPhot (e.g.,
+  another JupyterLab instance), you'll need to change the ports in `docker-compose.yml` or stop the conflicting
+  services.
+* **Out of Memory:** Reduce `CELERY_CONCURRENCY`.
 
-- Ensure NVIDIA drivers are properly installed and `nvidia-smi` is working correctly.
-- Check that Docker and Docker Compose are installed and configured for GPU support.
-- Verify that your Docker Compose file is set up to use GPUs (usually with the `deploy` section specifying GPU
-  requirements).
-
-For more detailed information on GPU allocation and Docker, refer to the official Docker documentation on GPU support.
 ## Services Overview
 
-### RabbitMQ (Message Broker)
-- Handles task communication between Celery workers.
-- Management interface accessible at: http://localhost:15672
-- Default credentials: 
-  - Username: gpuphot
-  - Password: gpuphot
+| Service              | Description                                                                   | Port(s)         | Default Credentials        |
+| :------------------- | :---------------------------------------------------------------------------- | :-------------- | :------------------------- |
+| `rabbitmq`           | Message broker for Celery.  Handles task distribution to workers.            | 5672, 15672    | gpuphot / gpuphot          |
+| `redis`              | Result backend for Celery.  Stores task results temporarily.                 | 6379            | (no authentication)       |
+| `celery_beat`        | Celery Beat scheduler.  Schedules periodic tasks.                            | -               | -                          |
+| `gpuphot_worker`    | Celery worker that processes astronomical images using the GPU.                | -               | -                          |
+| `lab`                | JupyterLab interactive development environment.                               | 8888            | (no token required)       |
+| `flower`             | Celery monitoring tool.  Provides a web interface to monitor tasks and workers. | 5555            | (no authentication)       |
+| `postgres`           | PostgreSQL database.  Stores image metadata and photometry results.        | 5432            | admin / gpuphot (CHANGE THIS!) |
 
-### Redis (Result Backend)
-- Stores task results temporarily.
-- Port: 6379 (not typically accessed directly)
+**Note:** All credentials mentioned are default values.  **You should change these, especially the `POSTGRES_PASSWORD`,
+in a production environment.**
 
-### Celery Workers (`gpuphot_worker`)
-- Processes tasks such as image processing.
-- Utilizes GPU for computations.
-- No direct access; managed through Celery.
+## Customizing the Setup
 
-### PostgreSQL (`postgres`)
-- Stores processed image statistics and metadata.
-- Port: 5432
-- Database: GPUPhotDB
-- Default credentials:
-  - Username: admin
-  - Password: gpuphot (configurable via POSTGRES_PASSWORD in .env)
+* **`docker-compose.yml`:**  You can modify the `docker-compose.yml` file to:
+    * Change port mappings.
+    * Add or remove services.
+    * Adjust resource limits (CPU, memory).
+    * Mount additional volumes.
+* **`launch_gpuphot.sh`:**  You can modify this script to:
+    * Change the logic for determining the number of workers.
+    * Add additional options.
 
-### JupyterLab (`lab`)
-- Provides an interactive environment for running notebooks.
-- Accessible at: http://localhost:8888
-- No token required (as per configuration)
-
-### Flower (`flower`)
-- Monitors Celery tasks in real-time.
-- Accessible at: http://localhost:5555
-- No authentication configured by default
-
-### Beat
-- Celery Beat scheduler for periodic tasks.
-- No direct access; runs in the background.
-
-Note: All credentials mentioned are default values and can be modified in the .env file or docker-compose.yml for enhanced security in production environments.
+By making these changes, the documentation becomes much more complete and helpful.

@@ -7,12 +7,12 @@ import numpy as np
 import pytz
 from celery import shared_task
 
-import gpuphot.utils.gpu
-import gpuphot.utils.gpu
 from gpuphot.instrument_config_parser import ImageReduction
 from gpuphot.logger.hierarchical_logging import setup_logger
+from gpuphot.utils.gpu import reset_cupy_allocators
 from gpuphot_worker.celery_exceptions import SerializableTaskError, BaseTaskWithFailureHandling
 from gpuphot_worker.database_insert_utils import insert_dataframe_to_postgres, populate_ima_stats, generate_gpuphotid
+from gpuphot_worker.header_descriptions import HEADER_DESCRIPTIONS
 from gpuphot_worker.utils import get_processor, open_image_file, save_processed_image, crop_and_bin_image, \
     BASE_IMAGES_PATH, PROCESSED_IMAGE_FOLDER
 
@@ -249,35 +249,43 @@ def process_image_task(self, image_path, instrument_name=None):
 
     def call_process_image(file_path_call):
         logger.debug(f"Processing file: {file_path_call}")
-        # Attempt to process the image normally
-        imdata, imheader = open_image_file(file_path_call)
-        phot_df, hwcs = processor.process_image(imdata, imheader)
+        reset_cupy_allocators()
 
-        # Add processing date to header
-        dateproc = datetime.now().replace(tzinfo=pytz.UTC)
-        hwcs['DATEPROC'] = (dateproc.strftime('%Y-%m-%dT%H:%M:%S.%f'), 'Date and time of processing')
+        try:
+            # Attempt to process the image normally
+            imdata, imheader = open_image_file(file_path_call)
+            phot_df, hwcs = processor.process_image(imdata, imheader, header_descriptions=HEADER_DESCRIPTIONS)
 
-        process_file = os.path.relpath(file_path_call, base_path)
-        gpuphotid = str(generate_gpuphotid(process_file))
-        hwcs['GPUPHOTI'] = (gpuphotid, 'GPUPhot Unique identifier')
+            process_file = os.path.relpath(file_path_call, base_path)
+            gpuphotid = str(generate_gpuphotid(str(process_file)))
+            hwcs['GPUPHOTI'] = (gpuphotid, HEADER_DESCRIPTIONS['GPUPHOTI'])
 
-        # Save the processed image
-        output_path = save_processed_image(file_path_call, base_path, imdata, hwcs)
+            # Add processing date to header
+            dateproc = datetime.now().replace(tzinfo=pytz.UTC)
+            hwcs['DATEPROC'] = (dateproc.strftime('%Y-%m-%dT%H:%M:%S.%f'), HEADER_DESCRIPTIONS['DATEPROC'])
 
-        # Create a new DataFrame with necessary transformations for photometry
-        df_imaphot = (
-            phot_df
-            .assign(trans=lambda x: np.isnan(x['RAERR']))  # Set 'trans' based on RAERR
-            .rename(columns={'RA': 'ra', 'DEC': 'dec', 'noise': 'dflux'})  # Rename columns
-        )
+            # Save the processed image
+            output_path = save_processed_image(file_path_call, base_path, imdata, hwcs)
 
-        # Add image ID and select relevant columns
-        df_imaphot['id'] = gpuphotid
-        df_imaphot = df_imaphot[['id', 'ra', 'dec', 'flux', 'dflux', 'trans']]
+            # Create a new DataFrame with necessary transformations for photometry
+            df_imaphot = (
+                phot_df
+                .assign(trans=lambda x: np.isnan(x['RAERR']))  # Set 'trans' based on RAERR
+                .rename(columns={'RA': 'ra', 'DEC': 'dec', 'noise': 'dflux'})  # Rename columns
+            )
 
-        # Insert into PostgreSQL and capture results
-        result_imastats = populate_ima_stats(gpuphotid, str(output_path), hwcs, 'imastats')
-        result_imaphot = insert_dataframe_to_postgres(df_imaphot, 'imaphot')
+            # Add image ID and select relevant columns
+            df_imaphot['id'] = gpuphotid
+            df_imaphot = df_imaphot[['id', 'ra', 'dec', 'flux', 'dflux', 'trans']]
+
+            # Insert into PostgreSQL and capture results
+            result_imastats = populate_ima_stats(gpuphotid, str(os.path.relpath(output_path, base_path)), hwcs, True)
+            result_imaphot = insert_dataframe_to_postgres(df_imaphot)
+        except Exception as e:
+            logger.error(f"Error processing image: {str(e)}")
+            raise
+        # finally:
+        #     reset_cupy_allocators()
 
         return {
             'input_file': image_path,
@@ -306,7 +314,7 @@ def process_image_task(self, image_path, instrument_name=None):
 
         if apply_reduction == ImageReduction.ALWAYS.value:
             logger.info(f"Applying image reduction to: {image_path}")
-            return call_process_image(
+            result = call_process_image(
                 file_path_call=crop_and_bin_image(
                     fits_file=file_path,
                     binning=factor,
@@ -316,10 +324,13 @@ def process_image_task(self, image_path, instrument_name=None):
                 )
             )
 
-        return call_process_image(file_path)
+        else:
+            result = call_process_image(file_path)
 
+        reset_cupy_allocators()
+        return result
     except MemoryError as e:
-        gpuphot.utils.gpu.free_gpu_mem()
+        reset_cupy_allocators()
         if apply_reduction == ImageReduction.ON_FAILURE.value:
             try:
                 logger.warning(f"Memory error processing image: {image_path}")

@@ -6,14 +6,15 @@ Cupyfication from skimage/registration/_phase_cross_correlation.py
 import cupy as cp
 import numpy as np
 from cupy.fft import fftn, ifftn, fftfreq
-
+import nvtx
 from .subpixel_masked import _masked_phase_cross_correlation
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 
 logger = setup_logger(__name__)
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('phase_cross_correlation',category='stats.subpixel')
 def phase_cross_correlation(reference_image, moving_image, *,
                             upsample_factor=100, space='real', return_error=True, reference_mask=None,
                             moving_mask=None, overlap_ratio=0.3, normalization='phase'):
@@ -152,6 +153,8 @@ def phase_cross_correlation(reference_image, moving_image, *,
         if return_error:
             src_amp = cp.sum(np.real(src_freq * src_freq.conj()))
             target_amp = cp.sum(np.real(target_freq * target_freq.conj()))
+
+    del src_freq, target_freq,image_product
     for dim in range(src_freq.ndim):
         if shape[dim] == 1:
             shifts[dim] = 0
@@ -168,7 +171,8 @@ def phase_cross_correlation(reference_image, moving_image, *,
         return shifts, 0, 0
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('_upsampled_dft',category='stats.subpixel')
 def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
                    axis_offsets=None):
     """
@@ -221,7 +225,8 @@ def _upsampled_dft(data, upsampled_region_size, upsample_factor=1,
     return data
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('_compute_error',category='stats.subpixel')
 def _compute_error(cross_correlation_max, src_amp, target_amp):
     """
     Compute the RMS error metric between two images based on their cross-correlation.
@@ -240,7 +245,7 @@ def _compute_error(cross_correlation_max, src_amp, target_amp):
 
     return cp.sqrt(np.abs(error))
 
-
+@nvtx.annotate('_compute_phasediff',category='stats.subpixel')
 def _compute_phasediff(cross_correlation_max):
     """
     Compute the global phase difference between two images.

@@ -22,8 +22,8 @@ def __generate_connection_string():
     db_name = os.getenv('POSTGRES_DB', 'GPUPhotDB')
     user = os.getenv('POSTGRES_USER', 'admin')
     password = os.getenv('POSTGRES_PASSWORD', 'gpuphot')
-    host = 'postgres'
-    port = '5432'
+    host = os.getenv('POSTGRES_HOST', 'postgres')
+    port = os.getenv('POSTGRES_PORT', '5432')
 
     # Create the connection string
     connection_string = f'postgresql://{user}:{password}@{host}:{port}/{db_name}'
@@ -31,14 +31,12 @@ def __generate_connection_string():
     return connection_string
 
 
-def insert_dataframe_to_postgres(df, tbl_name, unique_col='id'):
+def insert_dataframe_to_postgres(df, unique_col='id'):
     """
     Insert a DataFrame into a PostgreSQL table, replacing existing records.
 
     :param df: DataFrame to insert.
     :type df: pandas.DataFrame
-    :param tbl_name: Name of the target table.
-    :type tbl_name: str
     :param unique_col: Name of the column with unique values.
     :type unique_col: str
     :return: True if successful, False otherwise.
@@ -57,14 +55,14 @@ def insert_dataframe_to_postgres(df, tbl_name, unique_col='id'):
 
             with engine.begin() as connection:  # Use transaction context manager
                 # Delete existing records in one go
-                delete_query = text(f"DELETE FROM {tbl_name} WHERE {unique_col} IN :values")
+                delete_query = text(f"DELETE FROM {'imaphot'} WHERE {unique_col} IN :values")
                 connection.execute(delete_query, {"values": tuple(unique_values)})
 
                 # Insert the DataFrame into the PostgreSQL table in chunks
                 chunk_size = 5000  # Adjust based on your needs
                 for start in range(0, len(df), chunk_size):
                     end = start + chunk_size
-                    df.iloc[start:end].to_sql(tbl_name, con=connection, if_exists='append', index=False)
+                    df.iloc[start:end].to_sql('imaphot', con=connection, if_exists='append', index=False)
 
         return True
 

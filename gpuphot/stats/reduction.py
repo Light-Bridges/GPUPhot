@@ -1,4 +1,5 @@
 import cupy as cp
+import nvtx
 import numpy as np
 from astropy.io import fits
 from cupyx.scipy.ndimage import binary_erosion, shift
@@ -9,6 +10,7 @@ from ..stats.subpixel import phase_cross_correlation as phase_cross_correlation_
 logger = setup_logger(__name__)
 
 
+@nvtx.annotate('center',category='stats.reduction')
 def center(im, size):
     """
     Center the image to the given size.
@@ -31,7 +33,8 @@ def center(im, size):
     return im[c0:-c0, c1:-c1]
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('register_shift',category='stats.reduction')
 def register_shift(fc, uf=100, n=1000):
     """
     Register and shift image stack based on phase cross-correlation.
@@ -59,10 +62,12 @@ def register_shift(fc, uf=100, n=1000):
                        order=1, mode='constant').get()
         logger.debug(f'Detected subpixel offset (y, x): {shifted}')
 
+        del im1, shifted
     return fc1
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('stack_sigmaclip',category='stats.reduction')
 def stack_sigmaclip(data, it=5, n=3):
     """
     Stack images with sigma clipping.
@@ -119,7 +124,8 @@ def stack_sigmaclip(data, it=5, n=3):
     return avg, std
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('register_shift_frames',category='stats.reduction')
 def register_shift_frames(frames_list, upsample_factor=100, center_size=
 1000, shift_limit_pix=300):
     """
@@ -160,7 +166,8 @@ def register_shift_frames(frames_list, upsample_factor=100, center_size=
     return fc
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('weighted_mean_std',category='stats.reduction')
 def weighted_mean_std(data, errors):
     """
     Calculate weighted mean and standard deviation.

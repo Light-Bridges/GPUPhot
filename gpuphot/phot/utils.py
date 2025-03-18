@@ -1,10 +1,11 @@
 import cupy as cp
-
+import nvtx
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
 
 logger = setup_logger(__name__)
 
 
+@nvtx.annotate('decompose_into_tiles',category='phot.utils')
 def decompose_into_tiles(image: cp.ndarray, block_size: int) -> cp.ndarray:
     """
     Decompose an image into tiles of a specific size.
@@ -28,7 +29,8 @@ def decompose_into_tiles(image: cp.ndarray, block_size: int) -> cp.ndarray:
     return tiles
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('calculate_tile_percentiles',category='phot.utils')
 def calculate_tile_percentiles(tiles: cp.ndarray, qt: float = 70) -> cp.ndarray:
     """
     Calculate the percentiles of an array of tiles.
@@ -45,7 +47,8 @@ def calculate_tile_percentiles(tiles: cp.ndarray, qt: float = 70) -> cp.ndarray:
     return cp.percentile(tiles, qt, axis=(1, 2))
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('calculate_tile_nanmean',category='phot.utils')
 def calculate_tile_nanmean(tiles: cp.ndarray) -> cp.ndarray:
     """
     Calculate the mean of an array of tiles.
@@ -58,7 +61,8 @@ def calculate_tile_nanmean(tiles: cp.ndarray) -> cp.ndarray:
     return cp.nanmean(tiles, axis=(1, 2))
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('calculate_tile_nanmean_sigclip',category='phot.utils')
 def calculate_tile_nanmean_sigclip(tiles: cp.ndarray, nsigma: float = 2) -> cp.ndarray:
     """
     Calculate the mean of an array of tiles using sigma clipping.
@@ -76,7 +80,8 @@ def calculate_tile_nanmean_sigclip(tiles: cp.ndarray, nsigma: float = 2) -> cp.n
     tiles[~mask] = cp.nan
     return cp.nanmean(tiles, axis=(1, 2)), cp.nanstd(tiles, axis=(1, 2))
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('calculate_tile_nanmedian_sigclip',category='phot.utils')
 def calculate_tile_nanmedian_sigclip(tiles: cp.ndarray, nsigma: float = 2) -> cp.ndarray:
     """
     Calculate the median of an array of tiles using sigma clipping.
@@ -95,6 +100,7 @@ def calculate_tile_nanmedian_sigclip(tiles: cp.ndarray, nsigma: float = 2) -> cp
     return cp.nanmedian(tiles, axis=(1, 2)), cp.nanstd(tiles, axis=(1, 2))
 
 
+@nvtx.annotate('recompose_from_percentiles',category='phot.utils')
 def recompose_from_percentiles(percentiles: cp.ndarray, original_shape: tuple, block_size: int) -> cp.ndarray:
     """
     Recompose an image from its percentiles.

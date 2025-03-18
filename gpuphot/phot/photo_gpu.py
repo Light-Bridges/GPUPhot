@@ -1,7 +1,8 @@
 import gc
 import time
 import traceback
-
+from contextlib import contextmanager
+import nvtx
 import cupy as cp
 import numpy as np
 import pandas as pd
@@ -22,12 +23,13 @@ from ..stats.reduction import stack_sigmaclip
 from ..utils.astro import astrometrice2, get_astrometry_params, get_maglim, get_target_snr, get_zeropoint, \
     plate_scale_px
 from ..utils.catalog import catalog_results, crossmatch_sources
+from ..utils.gpu import free_gpu_mem, reset_cupy_allocators, maybe_free_arrays
 from ..utils.headers import update_header_with_astrometry, update_header_with_photometry
 
 logger = setup_logger(__name__)
 
 
-# @hierarchical_debug(logger)
+# ### # @hierarchical_debug(logger)
 # def get_solver():
 #     """
 #     Get the astrometry solver with index files.
@@ -58,7 +60,8 @@ logger = setup_logger(__name__)
 #                                                LogicalDeviceConfiguration(memory_limit=1024)])
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('gen_moff_filter',category='phot.photo_gpu')
 def gen_moff_filter(alpha, beta, **kwargs):
     """
     Generate a Moffat filter.
@@ -85,7 +88,8 @@ def gen_moff_filter(alpha, beta, **kwargs):
     return k_app, lk
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('get_sky',category='phot.photo_gpu')
 def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool(), **kwargs):
     """
     Estimate the sky background and RMS noise.
@@ -120,7 +124,8 @@ def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool(), **kwargs):
     return fot_m, fot_m2, mm
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('SP_filter',category='phot.photo_gpu')
 def SP_filter(img, filter_size=3, high_threshold_factor=10,
               low_threshold_factor=5, scaling_factor=1.4826, **kwargs):
     """
@@ -151,7 +156,8 @@ def SP_filter(img, filter_size=3, high_threshold_factor=10,
     return img
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('CR_filter',category='phot.photo_gpu')
 def CR_filter(img, thres=3, **kwargs):
     """
     Apply a cosmic ray filter to an image.
@@ -181,6 +187,7 @@ def CR_filter(img, thres=3, **kwargs):
 
     mask = mask & ref
     img[mask] = cp.nan
+    del img_filled, mask, ref
     n = cp.sum(cp.isnan(img))
     while n > 0:
         img = fill_nan_fft(img, 3, 0, min_neighbors=5)
@@ -188,10 +195,13 @@ def CR_filter(img, thres=3, **kwargs):
             break
         else:
             n = cp.sum(cp.isnan(img))
+
+    free_gpu_mem()
     return img
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('gen_moff_filter2',category='phot.photo_gpu')
 def gen_moff_filter2(alpha, beta, **kwargs):
     """
      Generate a Moffat filter with adjusted alpha.
@@ -217,7 +227,8 @@ def gen_moff_filter2(alpha, beta, **kwargs):
     return k_app, lk
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('calculate_aperture_corrections',category='phot.photo_gpu')
 def calculate_aperture_corrections(corr: np.ndarray) -> cp.ndarray:
     """
     Calculate aperture corrections for all stars in an optimized way.
@@ -239,7 +250,8 @@ def calculate_aperture_corrections(corr: np.ndarray) -> cp.ndarray:
     return corr_fact, corr_err
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('find_aperture_corrections',category='phot.photo_gpu')
 def find_aperture_corrections(sources: cp.ndarray, corrections: np.ndarray, correction_errors: np.ndarray,
                               cluster_centers: np.ndarray,
                               opt_rad_idx: np.array = None, **kwargs) -> cp.ndarray:
@@ -269,7 +281,8 @@ def find_aperture_corrections(sources: cp.ndarray, corrections: np.ndarray, corr
     return aperture_corrections, aperture_correction_errors
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('create_aperture_corrections_map',category='phot.photo_gpu')
 def create_aperture_corrections_map(image_shape: tuple, block_size: int, unit_star_dataset: cp.ndarray,
                                     coords: cp.ndarray, radii: np.ndarray, **kwargs):
     """
@@ -321,6 +334,7 @@ def create_aperture_corrections_map(image_shape: tuple, block_size: int, unit_st
 
 @capture_cuda_exception
 @hierarchical_debug(logger)
+@nvtx.annotate('process_image',category='phot.photo_gpu')
 def process_image(imdata, imheader, header_descriptions=None, **kwargs):
     """
     Process an image using the specified parameters and translate headers.
@@ -336,63 +350,67 @@ def process_image(imdata, imheader, header_descriptions=None, **kwargs):
     :rtype: tuple(pandas.DataFrame, astropy.io.fits.header.Header)
     :raises UnableToAstrometrizeError: If the image cannot be astrometrized.
     """
-    # parameters from header
-    scale = plate_scale_px(imheader[HeaderKey.PXSIZE.value], imheader[HeaderKey.FOCALEN.value]) 
-    n_images = imheader[HeaderKey.TOTIMA.value]
-    gain = imheader[HeaderKey.GAIN.value]
     try:
-        rdnoise = imheader[HeaderKey.GAIN.value] * imheader[HeaderKey.BIASSTD.value]
-    except:
-        rdnoise = imheader[HeaderKey.RDNOISE.value]
-    exptime = imheader[HeaderKey.EXPT1.value]
-    satlevel = imheader[HeaderKey.SATLEVEL.value]
-    target_ra = imheader[HeaderKey.POINTRA.value] * 15
-    target_dec = imheader[HeaderKey.POINTDEC.value]
-    try:
-        site_elevation = imheader[HeaderKey.SITEELEV.value]
-    except:
-        site_elevation = imheader[HeaderKey.SITEALT.value]
-    site_latitude = imheader[HeaderKey.SITELAT.value]
-    site_longitude = imheader[HeaderKey.SITELONG.value]
-    date_obs = imheader[HeaderKey.DATE_OBS.value]
-    filter = imheader[HeaderKey.FILTER.value]
+        # parameters from header
+        scale = plate_scale_px(imheader[HeaderKey.PXSIZE.value], imheader[HeaderKey.FOCALEN.value])
+        n_images = imheader[HeaderKey.TOTIMA.value]
+        gain = imheader[HeaderKey.GAIN.value]
+        try:
+            rdnoise = imheader[HeaderKey.GAIN.value] * imheader[HeaderKey.BIASSTD.value]
+        except:
+            rdnoise = imheader[HeaderKey.RDNOISE.value]
+        exptime = imheader[HeaderKey.EXPT1.value]
+        satlevel = imheader[HeaderKey.SATLEVEL.value]
+        target_ra = imheader[HeaderKey.POINTRA.value] * 15
+        target_dec = imheader[HeaderKey.POINTDEC.value]
+        try:
+            site_elevation = imheader[HeaderKey.SITEELEV.value]
+        except:
+            site_elevation = imheader[HeaderKey.SITEALT.value]
+        site_latitude = imheader[HeaderKey.SITELAT.value]
+        site_longitude = imheader[HeaderKey.SITELONG.value]
+        date_obs = imheader[HeaderKey.DATE_OBS.value]
+        filter = imheader[HeaderKey.FILTER.value]
 
-    # default parameters
-    default_params = DefaultConfig.DEFAULT_PROCESSING_PARAMS
+        # default parameters
+        default_params = DefaultConfig.DEFAULT_PROCESSING_PARAMS
 
-    # Update default parameters with any provided in kwargs
-    params = {**default_params, **kwargs}
+        # Update default parameters with any provided in kwargs
+        params = {**default_params, **kwargs}
 
-    # Call calibrate_image with updated parameters
-    dfm, h_wcs, dic_calib = calibrate_image(
-        imdata, filter,
-        scale, gain, rdnoise, exptime, satlevel,
-        target_ra, target_dec, n_images=n_images,
-        # SP_filt=params['SP_filt'],
-        # CR_filt=params['CR_filt'],
-        # border=params['border'],
-        # center_factor=params['center_factor'],
-        # pca_method=params['pca_method'],
-        # tile_section=params['tile_section'],
-        # max_stars_ref=params['max_stars_ref'],
-        # min_snr=params['min_snr'],
-        # color_range=params['color_range'],
-        # tile_section_psf=params['tile_section_psf'],
-        **params
-    )
+        # Call calibrate_image with updated parameters
+        dfm, h_wcs, dic_calib = calibrate_image(
+            imdata, filter,
+            scale, gain, rdnoise, exptime, satlevel,
+            target_ra, target_dec, n_images=n_images,
+            # SP_filt=params['SP_filt'],
+            # CR_filt=params['CR_filt'],
+            # border=params['border'],
+            # center_factor=params['center_factor'],
+            # pca_method=params['pca_method'],
+            # tile_section=params['tile_section'],
+            # max_stars_ref=params['max_stars_ref'],
+            # min_snr=params['min_snr'],
+            # color_range=params['color_range'],
+            # tile_section_psf=params['tile_section_psf'],
+            **params
+        )
 
-    if dfm is None:
-        raise UnableToAstrometrizeError()
+        if dfm is None:
+            raise UnableToAstrometrizeError()
 
-    # Update header
-    imheader = update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude, site_elevation, date_obs,
-                                             header_descriptions)
-    imheader = update_header_with_photometry(imheader, dic_calib, header_descriptions)
+        # Update header
+        imheader = update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude, site_elevation, date_obs,
+                                                 header_descriptions)
+        imheader = update_header_with_photometry(imheader, dic_calib, header_descriptions)
 
-    return dfm, imheader
+        return dfm, imheader
+    finally:
+      reset_cupy_allocators()
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('perform_opt_photometry',category='phot.photo_gpu')
 def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp.ndarray,
                            source_coord: cp.ndarray, isolated_coord: cp.ndarray,
                            tile_section_psf: int, star_dataset: cp.ndarray, fwhm: float,
@@ -549,7 +567,8 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
     return opt_signal, opt_total_noise, opt_coords, extra_info
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('batch_aperture_photometry',category='phot.photo_gpu')
 def batch_aperture_photometry(img, back, positions, radii, **kwargs):
     """
     Perform aperture photometry in batch mode.
@@ -628,7 +647,23 @@ def batch_aperture_photometry(img, back, positions, radii, **kwargs):
     return flux, back_flux, area
 
 
-@hierarchical_debug(logger)
+# @contextmanager
+# @nvtx.annotate('gpu_array_manager',category='phot.photo_gpu')
+# def gpu_array_manager(data, mempool):
+#     """Context manager para manejo optimizado de arrays temporales"""
+#     arr = cp.asarray(data)
+#     try:
+#         yield arr
+#     finally:
+#         del arr
+#         mempool.free_all_blocks()
+#         cp.cuda.Stream.null.synchronize()
+#
+#
+#
+
+### # @hierarchical_debug(logger)
+@nvtx.annotate('calibrate_image',category='phot.photo_gpu')
 def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, rdnoise: float,
                     exptime: float, satlevel: float, target_ra: float, target_dec: float = None, n_images: int = 1,
                     SP_filt: bool = True, CR_filt: bool = False, border: int = 10, center_factor: float = 0.7,
@@ -684,10 +719,15 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     """
 
     mempool = cp.get_default_memory_pool()
+
+    # with gpu_array_manager(imdata, mempool) as img_cp:
     img_cp = cp.asarray(imdata)
 
     # Get background
     back, _ = get_local_background_fft(img_cp, scale, get_std=False, **kwargs)
+
+    del _
+
     rms = cp.sqrt(back * gain + rdnoise ** 2) / gain / cp.sqrt(n_images)
     xmin = int(imdata.shape[1] * 0.5 * (1 - 0.3))
     xmax = int(imdata.shape[1] * 0.5 * (1 + 0.3))
@@ -697,6 +737,8 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     s = cp.std(back[ymin:ymax, xmin:xmax])
     mask = cp.abs(back[ymin:ymax, xmin:xmax] - m) < 3 * s
     m = cp.median(back[ymin:ymax, xmin:xmax][mask])
+
+    del mask
     fluxsky = np.round(m.get(), 6)
     if fluxsky < 0: logger.warning('Median background flux is negative')
     dic_calib = {'FLUXSKY': fluxsky}
@@ -708,9 +750,14 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
         img = SP_filter(img_cp - back)  # change SP_filter_cupy to SP_filter
     else:
         img = img_cp - back
+
+    # del img_cp
+    maybe_free_arrays([img_cp], mempool)
+
     sources = detect_isolated_stars(img[border:-border, border:-border],
                                     rms[border:-border, border:-border],
                                     scale, sat_lim=satlevel * 0.8, **kwargs)
+
     sources = sources + border
 
     if len(sources) < 5:
@@ -718,6 +765,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
         raise InsufficientStarsError(num_stars=len(sources))
 
     star_dataset, coord, scaling = create_star_dataset(img, sources, scale)
+    del sources
     center_factor = np.min((center_factor, 1))
     xmin = int(imdata.shape[1] * 0.5 * (1 - center_factor))
     xmax = int(imdata.shape[1] * 0.5 * (1 + center_factor))
@@ -733,14 +781,19 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     coord = coord[mask_star_dataset]
 
     star_dataset_ref = unit_star_dataset[center_mask[mask_star_dataset]][:max_stars_ref, :, :]
+    del center_mask, unit_star_dataset_stds, scaling
     if star_dataset_ref.shape[0] < 5:
         logger.error('Less than 5 isolated stars detected. Image may be too crowded or too noisy')
         raise InsufficientStarsError(num_stars=star_dataset_ref.shape[0])
 
     psf, _ = stack_sigmaclip(star_dataset_ref, n=2)
+
+    del star_dataset_ref, _
+
     psf = psf / cp.sum(psf)
     try:
         _, _, _, fwhm, _ = fit_moffat(psf.get())
+        del _
     except:
         logger.error('Error fitting Moffat to reference PSF')
         raise MoffatFitError()
@@ -764,7 +817,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
         eigen_psfs = cp.asarray(eigen_psfs)
         coefficients = project_all_stars_onto_eigenpsfs(unit_star_dataset_dev, eigen_psfs)
         coeff_map = create_coeff_map(imdata.shape, coord, coefficients.T, scale, tile_section=tile_section)
-
+        del coord
         mempool.free_all_blocks()
         gc.collect()
 
@@ -785,6 +838,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
                 fwhm_l = 0
             dic_calib[fwhm_lab[point]] = fwhm_l
 
+    del unit_star_dataset
     # Detect sources
     sources, conv_ima_sigma = detect_sources_psf(img, rms, fwhm, psf, eigen_psfs, coeff_map, min_snr=min_snr, **kwargs)
     sources = sources[(sources[:, 0] > border) & (sources[:, 0] < img.shape[0] - border) & (sources[:, 1] > border) & (
@@ -802,6 +856,12 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     #                                                                                  fwhm, gain, n_images, rdnoise)
 
     # TODO: Revisar por Miguel: dejamos center_factor y min_conv_snr con valor dor defecto de la función, o por defecto de DEFAULT_PROCESSING_PARAMS
+
+    imadata_shape = imdata.shape
+    if 'img_cp' not in locals():
+        img_cp = cp.asarray(imdata)
+    # img_cp = cp.asarray(imdata)
+    # with gpu_array_manager(imdata, mempool) as img_cp:
     optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry(
         img=img_cp - back,
         back=back,
@@ -818,7 +878,9 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
         # min_conv_snr=kwargs.get('min_conv_snr', 300.0)
     )
 
-    del img_cp, back, conv_ima_sigma
+    del img_cp
+
+    del conv_ima_sigma, sources, back, mask_star_dataset, star_dataset
     mempool.free_all_blocks()
 
     dic_calib.update(extra_info)
@@ -828,26 +890,30 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
                         'flux': optimal_flux,
                         'noise': optimal_noise,
                         'snr': optimal_flux / optimal_noise})
+
+    del optimal_coords, optimal_flux, optimal_noise
+
     dfm_ast = dfm.sort_values('snr', ascending=False).dropna().reset_index(drop=True)
 
     # Astrometrize
     h_wcs = astrometrice2(dfm_ast, scale, target_ra, target_dec, sip_order=1)
+    del dfm_ast
     if h_wcs == {}:
         logger.error('Astrometry failed')
         return dfm, h_wcs, dic_calib
 
     else:
         # Photometrize
-        coocenter, FOV, scale = get_astrometry_params(h_wcs, imdata.shape)
+        coocenter, FOV, scale = get_astrometry_params(h_wcs, imadata_shape)
         result, catalog, ref_filter = catalog_results(coocenter, FOV / 2,
                                                       filter, maglimit=23, **kwargs)
         dic_calib['CATALOG'] = catalog
         dic_calib['CATBAND'] = ref_filter
 
         w = WCS(h_wcs)
-        ra, dec = w.all_pix2world(dfm.xcentroid.values, dfm.ycentroid.values, 1)
-        dfm.loc[:, 'RA'] = ra
-        dfm.loc[:, 'DEC'] = dec
+        dfm.loc[:, 'RA'], dfm.loc[:, 'DEC'] = w.all_pix2world(dfm.xcentroid.values, dfm.ycentroid.values, 1)
+        # dfm.loc[:, 'RA'] = ra
+        # dfm.loc[:, 'DEC'] = dec
         photo_dict = get_zeropoint(result, dfm, exptime, center_lims=(xmin, xmax, ymin, ymax),
                                    solar_filter=color_range, dist_thres_px=1.5 * fwhm * scale / 3600)
         dic_calib.update(photo_dict)
@@ -860,6 +926,9 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
         # Add astrometric errors to dfm
         dfm.loc[dfm_idx, 'RAERR'] = dfm.loc[dfm_idx, 'RA'].values - result.loc[catalog_idx, 'RA'].values
         dfm.loc[dfm_idx, 'DECERR'] = dfm.loc[dfm_idx, 'DEC'].values - result.loc[catalog_idx, 'DEC'].values
+
+        del dfm_idx, catalog_idx, result
+
         dic_calib['RAPREC'] = np.round(np.nanmedian(dfm.RAERR) * 3600, 3)
         dic_calib['DECPREC'] = np.round(np.nanmedian(dfm.DECERR) * 3600, 3)
         dic_calib['RADISP'] = np.round(np.nanstd(dfm.RAERR) * 3600, 3)
@@ -870,6 +939,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
             mag = dic_calib['ZP'] - 2.5 * np.log10(dfm.flux.values / exptime)
             snr = dfm.snr.values
             maglim3 = get_maglim(mag, snr, 3)
+            del mag, snr
         except Exception as e:
             maglim3 = 0
             logger.warning('Error calculating limiting magnitude: {}'.format(e))
@@ -889,7 +959,8 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     return dfm, h_wcs, dic_calib
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('aperture_photometry',category='phot.photo_gpu')
 def aperture_photometry(img, positions, aper_rad, **kwargs):
     """
     Perform aperture photometry.
@@ -912,7 +983,8 @@ def aperture_photometry(img, positions, aper_rad, **kwargs):
     return flux, area
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('get_fwhm_mof',category='phot.photo_gpu')
 def get_fwhm_mof(model, img, step=50, ns=25, mins=3, **kwargs):
     """
     Get the full width at half maximum using Moffat model.
@@ -938,7 +1010,8 @@ def get_fwhm_mof(model, img, step=50, ns=25, mins=3, **kwargs):
     return np.mean(fws), np.std(fws), np.mean(alpha), np.mean(beta)
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('cov_nan',category='phot.photo_gpu')
 def cov_nan(img, nc=10, **kwargs):
     """
     Fill NaN values in an image using convolution.
@@ -963,7 +1036,7 @@ def cov_nan(img, nc=10, **kwargs):
 
 
 #
-# @hierarchical_debug(logger)
+# ### # @hierarchical_debug(logger)
 # def astrometrice2(dfm, head0, im_shape):
 #     """
 #     Perform astrometry on an image.
@@ -1007,7 +1080,7 @@ def cov_nan(img, nc=10, **kwargs):
 #     return None
 
 #
-# @hierarchical_debug(logger)
+# ### # @hierarchical_debug(logger)
 # def get_zeropoint(df_catalog, flux, noise, coord, exptime, solar_filter=0.3,
 #                   dist_thres_px=3, N=50, plot=False):
 #     """Calculate the zeropoint for photometry.
@@ -1104,7 +1177,7 @@ def cov_nan(img, nc=10, **kwargs):
 #     return zp, ezp, n, min_mag, max_mag
 
 
-# @hierarchical_debug(logger)
+# ### # @hierarchical_debug(logger)
 # def delete_header_from(header, val):
 #     """Delete a section from the FITS header.
 #
@@ -1124,7 +1197,8 @@ def cov_nan(img, nc=10, **kwargs):
 #     return header
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('sample_im',category='phot.photo_gpu')
 def sample_im(img, nc=50, ns=100, **kwargs):
     """
     Sample an image.
@@ -1162,7 +1236,8 @@ def sample_im(img, nc=50, ns=100, **kwargs):
     return iac2, icmax2
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('pred_mof',category='phot.photo_gpu')
 def pred_mof(pred, **kwargs):
     """
     Predict Moffat parameters.
@@ -1180,7 +1255,7 @@ def pred_mof(pred, **kwargs):
     return alpha, beta, nstar, fwhm
 
 
-# @hierarchical_debug(logger)
+# ### # @hierarchical_debug(logger)
 # def handler(signum, frame):
 #     """
 #     Timeout handler for astrometry.
@@ -1197,7 +1272,8 @@ def pred_mof(pred, **kwargs):
 #     raise Exception('end of time')
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('sigma_clip',category='phot.photo_gpu')
 def sigma_clip(img, sclip, **kwargs):
     """
     Perform sigma clipping on an image.
@@ -1220,7 +1296,8 @@ def sigma_clip(img, sclip, **kwargs):
     return imed, rms
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('gen_gauss_filter',category='phot.photo_gpu')
 def gen_gauss_filter(fw, **kwargs):
     """
     Generate a Gaussian filter.
@@ -1245,7 +1322,8 @@ def gen_gauss_filter(fw, **kwargs):
     return k_app, lk
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('detect_gpu',category='phot.photo_gpu')
 def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
 =4, mincut=10, mem=cp.get_default_pinned_memory_pool(), **kwargs):
     """
@@ -1313,7 +1391,8 @@ def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
     return df, mask, mm
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('get_peak_image',category='phot.photo_gpu')
 def get_peak_image(img, positions, aper_rad, **kwargs):
     """
     Get peak values in an image at specified positions.
@@ -1336,7 +1415,7 @@ def get_peak_image(img, positions, aper_rad, **kwargs):
     return P
 
 
-# @hierarchical_debug(logger)
+# ### # @hierarchical_debug(logger)
 # def logodds_callback_100(logodds):
 #     """
 #     Callback function for astrometry.

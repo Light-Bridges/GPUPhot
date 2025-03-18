@@ -383,7 +383,7 @@ if __name__ == "__main__":
     logger = setup_logger(__name__)
 
 
-    @hierarchical_debug(logger)
+    ### # @hierarchical_debug(logger)
     def example_function(a, b):
         """
         An example function to demonstrate the hierarchical_debug decorator.

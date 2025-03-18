@@ -1,12 +1,14 @@
 import cupy as cp
 import numpy as np
+import nvtx
 
-from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('convolve_fft', category='phot.conv')
 def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, do_pad: bool = True, **kwargs) -> cp.ndarray:
     """
     Convolve an image with a kernel using FFT.
@@ -20,24 +22,33 @@ def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, do_pad: bool = True, **k
     :return: The convolved image.
     :rtype: cupy.ndarray
     """
+
     image_shape = image.shape
     kernel_shape = kernel.shape
     padding = int((kernel_shape[0] - 1) / 2)
+
     if do_pad: image = cp.pad(image, pad_width=padding,
                               mode='reflect')  # esto está provocando un aumento terrible de memoria
     new_image_shape = image.shape
     F_image = cp.fft.rfft2(image, s=new_image_shape)
     F_kernel = cp.fft.rfft2(kernel, s=new_image_shape)
-    F_kernel = cp.conj(F_kernel)
-    convolved = F_image * F_kernel
-    convolved = cp.fft.irfft2(convolved, s=new_image_shape)
-    convolved = cp.roll(convolved, shift=[padding, padding], axis=[0, 1])
-    if do_pad: convolved = convolved[padding:padding + image_shape[0], padding:padding + image_shape[1]]
-    del F_image, F_kernel
-    return convolved
+
+    del image, kernel
+
+    cp.multiply(F_image, F_kernel.conj(), out=F_image)
+    del F_kernel
+
+    F_image = cp.fft.irfft2(F_image, s=new_image_shape)
+    F_image = cp.roll(F_image, shift=[padding, padding], axis=[0, 1])
+    if do_pad: F_image = F_image[padding:padding + image_shape[0], padding:padding + image_shape[1]]
+
+    # cp.get_default_memory_pool().free_all_blocks()
+
+    return F_image
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('get_mean_std', category='phot.conv')
 def get_mean_std(im_g: cp.ndarray, lk: int, std: bool = True, **kwargs) -> tuple:
     """
     Calculate the mean and standard deviation of an image using FFT convolution.
@@ -56,14 +67,17 @@ def get_mean_std(im_g: cp.ndarray, lk: int, std: bool = True, **kwargs) -> tuple
     fot_m = convolve_fft(im_g, k_app, **kwargs)
     if std:
         fot_m2 = convolve_fft(im_g * im_g, k_app, **kwargs)
-        fot_m2 = cp.sqrt(fot_m2 - fot_m * fot_m)
+        # fot_m2 = cp.sqrt(fot_m2 - fot_m * fot_m)
+        cp.subtract(fot_m2, fot_m * fot_m, out=fot_m2)
+        cp.sqrt(fot_m2, out=fot_m2)
     else:
         fot_m2 = None
     del k_app
     return fot_m, fot_m2
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('gaussian_kernel', category='phot.conv')
 def gaussian_kernel(lk: int, sigma: int, **kwargs) -> cp.ndarray:
     """
     Generate a 2D Gaussian kernel.
@@ -84,6 +98,7 @@ def gaussian_kernel(lk: int, sigma: int, **kwargs) -> cp.ndarray:
     return kernel / cp.sum(kernel)
 
 
+@nvtx.annotate('get_aper_kernel', category='phot.conv')
 def get_aper_kernel(radius: int, size: int = None, **kwargs) -> tuple:
     """
     Generate a circular kernel for aperture photometry.
@@ -95,16 +110,26 @@ def get_aper_kernel(radius: int, size: int = None, **kwargs) -> tuple:
     :return: A circular kernel and the area of the kernel.
     :rtype: tuple
     """
+    # if size is None:
+    #     size = 2 * radius + 1
+    # kernel = cp.zeros((size, size))
+    # y, x = cp.indices(kernel.shape)
+    # mask = (x - (size - 1) / 2) ** 2 + (y - (size - 1) / 2) ** 2 <= radius ** 2
+    # kernel[mask] = 1
+    # area = cp.sum(kernel)
+    # return kernel, area
+
     if size is None:
         size = 2 * radius + 1
-    kernel = cp.zeros((size, size))
-    y, x = cp.indices(kernel.shape)
-    mask = (x - (size - 1) / 2) ** 2 + (y - (size - 1) / 2) ** 2 <= radius ** 2
-    kernel[mask] = 1
+    center = (size - 1) / 2.0
+    y, x = cp.indices((size, size), dtype=cp.float64)
+    mask = (x - center) ** 2 + (y - center) ** 2 <= float(radius) ** 2
+    kernel = mask.astype(cp.float64)
     area = cp.sum(kernel)
     return kernel, area
 
 
+@nvtx.annotate('fill_image', category='phot.conv')
 def fill_image(image_shape: tuple, **kwargs) -> tuple:
     """
     Calculate the new image shape rounding up to the next power of 2.
@@ -120,37 +145,63 @@ def fill_image(image_shape: tuple, **kwargs) -> tuple:
     return new_height, new_width
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('gen_apm_filter', category='phot.conv')
 def gen_apm_filter(lk: int, li: int = 0, norm: bool = True, **kwargs) -> cp.ndarray:
     """
     Generate an aperture filter for the detection of sources in an image.
 
     :param lk: Length of the kernel.
     :type lk: int
-    :param li: Length of the inner kernel. Default is 0 (no inner kernel).
+    :param li: Length of the inner kernel.  Default is 0 (no inner kernel).
     :type li: int
     :param norm: Whether to normalize the kernel.
     :type norm: bool
     :return: An aperture filter.
     :rtype: cupy.ndarray
     """
+    # k_dim = (2 * lk + 1, 2 * lk + 1)
+    # indi = cp.indices(k_dim)
+    # fw2 = lk ** 2
+    # k_app = cp.zeros(k_dim)
+    # dist_sq = (lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2
+    # struc = cp.where(dist_sq <= fw2)
+    # k_app[struc] = 1
+    #
+    # # if li is not 0, it creates a circle with radius li and sets the values inside to 0
+    # if li != 0:
+    #     struc_inner = cp.where(dist_sq < (li ** 2))
+    #     k_app[struc_inner] = 0
+    # if norm and k_app.sum() != 0: k_app = k_app / k_app.sum()
+    # return k_app
     k_dim = (2 * lk + 1, 2 * lk + 1)
-    indi = cp.indices(k_dim)
-    fw2 = lk ** 2
-    k_app = cp.zeros(k_dim)
-    dist_sq = (lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2
-    struc = cp.where(dist_sq <= fw2)
-    k_app[struc] = 1
+    indi = cp.indices(k_dim, dtype=cp.float64)  # Use float64 for consistency
+    center = float(lk)
+    dist_sq = (indi[0, :, :] - center) ** 2 + (indi[1, :, :] - center) ** 2
 
-    # if li is not 0, it creates a circle with radius li and sets the values inside to 0
+    # Create the outer circle mask directly
+    mask_outer = dist_sq <= float(lk) ** 2
+
+    # Create the inner circle mask (if li != 0) and combine
     if li != 0:
-        struc_inner = cp.where(dist_sq < (li ** 2))
-        k_app[struc_inner] = 0
-    if norm and k_app.sum() != 0: k_app = k_app / k_app.sum()
+        mask_inner = dist_sq < float(li) ** 2
+        mask = mask_outer & ~mask_inner  # Combine using boolean logic
+    else:
+        mask = mask_outer
+
+    # Create the kernel from the combined mask
+    k_app = mask.astype(cp.float64)
+
+    if norm:
+        kernel_sum = cp.sum(k_app)  # Calculate sum only if normalization is needed
+        if kernel_sum != 0:
+            k_app = k_app / kernel_sum
+
     return k_app
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('batch_aper_kernel', category='phot.conv')
 def batch_aper_kernel(radius, **kwargs):
     """
     Generate a batch of aperture kernels.
@@ -160,17 +211,42 @@ def batch_aper_kernel(radius, **kwargs):
     :return: A tuple containing the kernel and its area.
     :rtype: tuple
     """
+    # Ensure radius is a CuPy array for efficient calculations
+    if isinstance(radius, list) or isinstance(radius, np.ndarray):
+        radius = cp.array(radius, dtype=cp.float64)  # Convert list/np.ndarray to cp.ndarray
+    elif isinstance(radius, int):
+        radius = cp.array([radius], dtype=cp.float64)  # Convert to array
+    elif not isinstance(radius, cp.ndarray):
+        raise TypeError("radius must be an int, list, or NumPy/CuPy array")
 
-    kernel = cp.zeros((2 * radius[-1] + 1, 2 * radius[-1] + 1))
-    y, x = cp.indices(kernel.shape)
-    mask = (x - radius) ** 2 + (y - radius) ** 2 <= radius ** 2
-    kernel[mask] = 1
-    area = cp.sum(kernel)
+    # Handle single radius case to avoid issues with indexing
+    if radius.ndim == 0:  # Scalar case
+        size = int(2 * radius + 1)
+        center = float(radius)
+        y, x = cp.indices((size, size), dtype=cp.float64)
+        mask = (x - center) ** 2 + (y - center) ** 2 <= radius ** 2
+        kernel = mask.astype(cp.float64)
+        area = cp.sum(kernel)
+
+    else:  # radius is an array
+        max_radius = int(cp.max(radius))  # Find the maximum radius
+        size = 2 * max_radius + 1
+        center = float(max_radius)
+        y, x = cp.indices((size, size), dtype=cp.float64)
+
+        # Broadcasting to create masks for all radii at once
+        mask = (x - center) ** 2 + (y - center) ** 2 <= radius.reshape(-1, 1,
+                                                                       1) ** 2  # radius[:, None, None] también es valido
+
+        # The entire mask array serves as the kernel (no need for cp.zeros)
+        kernel = mask.astype(cp.float64)  # Convert boolean mask to float64
+        area = cp.sum(kernel, axis=(1, 2))  # Sum across rows and columns for each kernel
 
     return kernel, area
 
 
-@hierarchical_debug(logger)
+### # @hierarchical_debug(logger)
+@nvtx.annotate('fill_nan_fft', category='phot.conv')
 def fill_nan_fft(image: cp.ndarray, lk: int, li: int = 0, min_neighbors: int = 5, **kwargs) -> cp.ndarray:
     """
     Fill NaN values in an image using FFT convolution.
