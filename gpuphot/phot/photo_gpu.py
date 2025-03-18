@@ -688,6 +688,9 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     mempool = cp.get_default_memory_pool()
     img_cp = cp.asarray(imdata)
 
+    # Protect bad prereduction
+    img_cp[cp.isinf(img_cp) | cp.isnan(img_cp)] = 0
+
     # Get background
     back, _ = get_local_background_fft(img_cp, scale, get_std=False, **kwargs)
     rms = cp.sqrt(back * gain + rdnoise ** 2) / gain / cp.sqrt(n_images)
