@@ -77,3 +77,59 @@ RUN wget https://github.com/segasai/q3c/archive/refs/tags/v2.0.0.tar.gz \
 
 # Limpiar
 RUN apk del make gcc g++ postgresql-dev wget tar
+
+
+## Profiler target
+
+FROM base as profiler
+
+# Activar el entorno virtual
+ENV PATH="/app/venv/bin:$PATH"
+
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+
+# Install SSH server
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssh-server \
+    && mkdir -p /var/run/sshd \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+# Install NVIDIA Nsight Systems
+RUN apt update \
+    && apt install -y --no-install-recommends gnupg \
+    && echo "deb http://developer.download.nvidia.com/devtools/repos/ubuntu2404/$(dpkg --print-architecture) /" | tee /etc/apt/sources.list.d/nvidia-devtools.list \
+    && apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub \
+    && apt update \
+    && apt install nsight-systems-cli -y
+
+# Create directory for profiling scripts
+RUN mkdir -p /app/profiling_scripts /app/profiling_results
+
+# Copy profiling scripts
+COPY ./profiling_scripts/run_profiling.sh /app/profiling_scripts/
+COPY ./profiling_scripts/profile_image_processing.py /app/profiling_scripts/
+RUN chmod +x /app/profiling_scripts/run_profiling.sh
+
+# Install rsyslog for SSH logs
+RUN apt-get update && apt-get install -y rsyslog
+RUN mkdir -p /var/log && touch /var/log/auth.log
+RUN chown syslog:adm /var/log/auth.log && chmod 640 /var/log/auth.log
+RUN echo "local5.* /var/log/sshd.log" >> /etc/rsyslog.conf
+RUN echo "SyslogFacility LOCAL5" >> /etc/ssh/sshd_config
+RUN echo "LogLevel VERBOSE" >> /etc/ssh/sshd_config
+
+# Copy the rest of the code
+WORKDIR /app
+COPY . .
+
+# Expose SSH port for remote profiling
+ARG SSSH_PORT
+EXPOSE ${SSSH_PORT}
+
+# Set root password
+ARG ROOT_PASSWORD
+RUN echo "root:${ROOT_PASSWORD}" | chpasswd
+
+CMD ["/usr/sbin/sshd", "-D"]

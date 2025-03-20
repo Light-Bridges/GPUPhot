@@ -2,6 +2,7 @@ import gc
 
 import cupy as cp
 import nvtx
+
 from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
@@ -15,7 +16,7 @@ def human_readable_size(bytes_size):
     return f"{bytes_size:.1f}YiB"
 
 
-@nvtx.annotate('free_gpu_mem',category='utils.gpu')
+@nvtx.annotate('free_gpu_mem', category='utils.gpu')
 def free_gpu_mem() -> None:
     """
     Liberate GPU memory by freeing all memory blocks allocated by the default memory pool.
@@ -47,7 +48,7 @@ def free_gpu_mem() -> None:
     # logger.debug(f"Memory freed: {human_readable_size(memory_freed)}")
 
 
-@nvtx.annotate('force_free_gpu_memory',category='utils.gpu')
+@nvtx.annotate('force_free_gpu_memory', category='utils.gpu')
 def force_free_gpu_memory():
     free_gpu_mem()
 
@@ -62,7 +63,16 @@ def force_free_gpu_memory():
     cp.fft.config.get_plan_cache().clear()
 
 
-@nvtx.annotate('init_gpu',category='utils.gpu')
+def use_gpu(gpu_id=0):
+    num_gpus = cp.cuda.runtime.getDeviceCount()
+    if gpu_id < num_gpus:
+        cp.cuda.Device(gpu_id).use()
+    else:
+        cp.cuda.Device(0).use()
+        logger.warning(f"GPU {gpu_id} not found. Using GPU 0 by default.")
+
+
+@nvtx.annotate('init_gpu', category='utils.gpu')
 def init_gpu(**kwargs) -> None:
     """
     Initialize and log information about the GPU using CuPy.
@@ -111,7 +121,7 @@ def init_gpu(**kwargs) -> None:
     #     pass
 
 
-@nvtx.annotate('reset_cupy_allocators',category='utils.gpu')
+@nvtx.annotate('reset_cupy_allocators', category='utils.gpu')
 def reset_cupy_allocators():
     # Clear all existing memory pools
     cp.get_default_memory_pool().free_all_blocks()
@@ -133,6 +143,7 @@ def reset_cupy_allocators():
 
     # Clear kernel caches
     cp.fft.config.get_plan_cache().clear()
+
 
 def maybe_free_arrays(arrays, mempool, threshold=0.2):
     """

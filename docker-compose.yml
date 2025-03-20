@@ -126,3 +126,39 @@ services:
       - ./gpuphot_database:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     restart: unless-stopped
+
+  profiler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: profiler
+      args:
+        - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+        - SSSH_PORT=${PROFILER_SSSH_PORT:-2222}
+    profiles: ["debug"]
+    environment:
+      <<: *celery-env
+      INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
+      GPU_ID: ${GPU_ID:-0}
+      POSTGRES_DB: GPUPhotDB
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
+      INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
+      IMAGE_BASE_PATH: /data/images
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+      - ./profiling_results:/app/profiling_results:z
+    ports:
+      - "${PROFILER_SSSH_PORT:-2222}:22"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ "${GPU_ID:-0}" ]
+              capabilities: [ gpu ]
+    stdin_open: true
+    tty: true
+

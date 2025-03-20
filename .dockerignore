@@ -9,3 +9,7 @@
 # Permitir solo los directorios específicos
 !gpuphot/
 !gpuphot_worker/
+
+# Incluir la carpeta profiling_scripts incluso si otras reglas la excluirían
+!profiling_scripts/
+!profiling_scripts/*
