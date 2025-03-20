@@ -149,7 +149,7 @@ services:
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
       - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
-      - ./profiling_results:/app/profiling_results:z
+      - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
     ports:
       - "${PROFILER_SSSH_PORT:-2222}:22"
     deploy:
