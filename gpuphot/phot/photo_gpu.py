@@ -817,7 +817,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
         eigen_psfs = cp.asarray(eigen_psfs)
         coefficients = project_all_stars_onto_eigenpsfs(unit_star_dataset_dev, eigen_psfs)
         coeff_map = create_coeff_map(imdata.shape, coord, coefficients.T, scale, tile_section=tile_section)
-        del coord
+        # del coord
         mempool.free_all_blocks()
         gc.collect()
 
@@ -880,7 +880,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
 
     del img_cp
 
-    del conv_ima_sigma, sources, back, mask_star_dataset, star_dataset
+    del conv_ima_sigma, sources, back, mask_star_dataset, star_dataset, coord
     mempool.free_all_blocks()
 
     dic_calib.update(extra_info)
