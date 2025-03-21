@@ -197,17 +197,67 @@ This will stop and remove the containers, networks, and volumes defined in `dock
   services.
 * **Out of Memory:** Reduce `CELERY_CONCURRENCY`.
 
+### NVIDIA Container Toolkit Configuration Issue
+
+If you encounter issues with GPU access in containers, particularly the need to manually specify GPU devices, it may be
+due to a configuration problem with the NVIDIA Container Toolkit.
+
+**Symptom:**
+You need to manually specify GPU devices when running containers, like this:
+
+```
+
+docker run --gpus all --runtime=nvidia \
+--device /dev/nvidia0 \
+--device /dev/nvidiactl \
+nvidia/cuda:12.6.3-devel-ubuntu24.04 nvidia-smi
+
+```
+
+**Solution:**
+
+1. Check the NVIDIA Container Toolkit configuration file:
+
+```
+
+cat /etc/nvidia-container-runtime/config.toml
+
+```
+
+2. Look for the line `no-cgroups = true`. If present, change it to `false` or comment it out:
+
+```
+
+
+# no-cgroups = false
+
+```
+
+3. Save the file and restart the Docker service:
+
+```
+
+sudo systemctl restart docker
+
+```
+
+After making this change, you should be able to run containers with GPU access without manually specifying device
+mappings.
+
+For more detailed troubleshooting steps and other common issues, please refer to the [Troubleshooting](#troubleshooting)
+section earlier in this document.
+
 ## Services Overview
 
-| Service              | Description                                                                   | Port(s)         | Default Credentials        |
-| :------------------- | :---------------------------------------------------------------------------- | :-------------- | :------------------------- |
-| `rabbitmq`           | Message broker for Celery.  Handles task distribution to workers.            | 5672, 15672    | gpuphot / gpuphot          |
-| `redis`              | Result backend for Celery.  Stores task results temporarily.                 | 6379            | (no authentication)       |
-| `celery_beat`        | Celery Beat scheduler.  Schedules periodic tasks.                            | -               | -                          |
-| `gpuphot_worker`    | Celery worker that processes astronomical images using the GPU.                | -               | -                          |
-| `lab`                | JupyterLab interactive development environment.                               | 8888            | (no token required)       |
-| `flower`             | Celery monitoring tool.  Provides a web interface to monitor tasks and workers. | 5555            | (no authentication)       |
-| `postgres`           | PostgreSQL database.  Stores image metadata and photometry results.        | 5432            | admin / gpuphot (CHANGE THIS!) |
+| Service          | Description                                                                     | Port(s)     | Default Credentials            |
+|:-----------------|:--------------------------------------------------------------------------------|:------------|:-------------------------------|
+| `rabbitmq`       | Message broker for Celery.  Handles task distribution to workers.               | 5672, 15672 | gpuphot / gpuphot              |
+| `redis`          | Result backend for Celery.  Stores task results temporarily.                    | 6379        | (no authentication)            |
+| `celery_beat`    | Celery Beat scheduler.  Schedules periodic tasks.                               | -           | -                              |
+| `gpuphot_worker` | Celery worker that processes astronomical images using the GPU.                 | -           | -                              |
+| `lab`            | JupyterLab interactive development environment.                                 | 8888        | (no token required)            |
+| `flower`         | Celery monitoring tool.  Provides a web interface to monitor tasks and workers. | 5555        | (no authentication)            |
+| `postgres`       | PostgreSQL database.  Stores image metadata and photometry results.             | 5432        | admin / gpuphot (CHANGE THIS!) |
 
 **Note:** All credentials mentioned are default values.  **You should change these, especially the `POSTGRES_PASSWORD`,
 in a production environment.**

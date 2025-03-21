@@ -11,13 +11,13 @@ from sklearn.decomposition import PCA
 from .conv import gaussian_kernel, convolve_fft, fill_nan_fft
 from .utils import calculate_tile_nanmean_sigclip, decompose_into_tiles, recompose_from_percentiles
 from ..exceptions import InsufficientStarsError, InvalidGroupSizeError
-from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('find_local_max',category='phot.psf')
+@nvtx.annotate('find_local_max', category='phot.psf')
 def find_local_max(image: cp.ndarray, min_distance: int, threshold_abs: float) -> cp.ndarray:
     """
     Calculate local maxima in an image.
@@ -38,7 +38,7 @@ def find_local_max(image: cp.ndarray, min_distance: int, threshold_abs: float) -
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('find_local_centroid',category='phot.psf')
+@nvtx.annotate('find_local_centroid', category='phot.psf')
 def find_local_centroid(image: cp.ndarray, peaks: cp.ndarray, window_size: int = 5) -> cp.ndarray:
     """
     Calculate centroids of detected peaks in an image.
@@ -82,7 +82,7 @@ def find_local_centroid(image: cp.ndarray, peaks: cp.ndarray, window_size: int =
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('detect_isolated_stars',category='phot.psf')
+@nvtx.annotate('detect_isolated_stars', category='phot.psf')
 def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_lim: int = 50000, min_snr: float = 10,
                           dist_asec: float = 10, sort: bool = True, **kwargs) -> cp.array:
     """
@@ -157,8 +157,9 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
     mempool.free_all_blocks()
     return coor_f
 
+
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('create_star_dataset',category='phot.psf')
+@nvtx.annotate('create_star_dataset', category='phot.psf')
 def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: int = 1000) -> tuple:
     """
     Create a dataset of stars from an image and a list of coordinates.
@@ -197,16 +198,16 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
                 scaling_dataset[i, 1] = cp.mean(subima)
                 scaling_dataset[i, 2] = cp.var(subima)
                 scaling_dataset[i, 3] = cp.sum(subima)
-                valid_coords.append(coords[i]) #Usamos una lista
+                valid_coords.append(coords[i])  # Usamos una lista
 
-    valid_coords = cp.array(valid_coords) #Convertimos a array
+    valid_coords = cp.array(valid_coords)  # Convertimos a array
     N = min(N, len(valid_coords))
     # Usar slicing para seleccionar los primeros N elementos *después* de filtrar.
     return star_dataset[:N], valid_coords[:N], scaling_dataset[:N]
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('group_star_dataset',category='phot.psf')
+@nvtx.annotate('group_star_dataset', category='phot.psf')
 def group_star_dataset(coords: np.ndarray, avg_group_size: int = 10, min_group_size: int = 5) -> np.ndarray:
     """
     Group a set of star coordinates into clusters, ensuring no group has fewer stars than min_group_size.
@@ -270,7 +271,7 @@ def group_star_dataset(coords: np.ndarray, avg_group_size: int = 10, min_group_s
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('get_eigen_psfs',category='phot.psf')
+@nvtx.annotate('get_eigen_psfs', category='phot.psf')
 def get_eigen_psfs(normed_star_dataset: cp.array, n_components: int = 5) -> cp.array:
     """
     Calculate the eigen PSFs from a dataset of normalized stars.
@@ -282,16 +283,29 @@ def get_eigen_psfs(normed_star_dataset: cp.array, n_components: int = 5) -> cp.a
     :return: An array containing the eigen PSFs.
     :rtype: cupy.ndarray
     """
+    # pca = PCA(n_components=n_components)
+    # starset_flattened = normed_star_dataset.reshape(normed_star_dataset.shape[0],
+    #                                                 normed_star_dataset.shape[1] ** 2).get()
+    # pca.fit_transform(starset_flattened)
+    # eigen_psfs = pca.components_.reshape(-1, normed_star_dataset.shape[1], normed_star_dataset.shape[2])
+    # return eigen_psfs
+
+    # Instanciar PCA con el número de componentes deseado
     pca = PCA(n_components=n_components)
-    starset_flattened = normed_star_dataset.reshape(normed_star_dataset.shape[0],
-                                                    normed_star_dataset.shape[1] ** 2).get()
-    pca_result = pca.fit_transform(starset_flattened)
+    # Aplanar cada estrella (manteniendo datos en GPU; no se usa .get())
+    # (N, H, W) a (N, H*W). Usar -1 en reshape
+    # deja que Cupy calcule H*W sin suponer que W == H.
+    starset_flattened = normed_star_dataset.reshape(normed_star_dataset.shape[0], -1)
+
+    # Ajustar PCA directamente en GPU
+    pca.fit(starset_flattened)
+    # Obtener los eigen PSFs reestructurando los componentes principales al tamaño original de la imagen
     eigen_psfs = pca.components_.reshape(-1, normed_star_dataset.shape[1], normed_star_dataset.shape[2])
     return eigen_psfs
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('project_all_stars_onto_eigenpsfs',category='phot.psf')
+@nvtx.annotate('project_all_stars_onto_eigenpsfs', category='phot.psf')
 def project_all_stars_onto_eigenpsfs(normed_star_dataset: cp.array, eigen_psfs: cp.array) -> cp.array:
     """
     Project all stars onto the eigen PSFs.
@@ -313,7 +327,7 @@ def project_all_stars_onto_eigenpsfs(normed_star_dataset: cp.array, eigen_psfs: 
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('create_coeff_map',category='phot.psf')
+@nvtx.annotate('create_coeff_map', category='phot.psf')
 def create_coeff_map(img_shape: tuple, positions: cp.array, coefficients: cp.array, pxscale: float,
                      tile_section: int = None, env_factor: float = 3) -> cp.ndarray:
     """
@@ -359,7 +373,7 @@ def create_coeff_map(img_shape: tuple, positions: cp.array, coefficients: cp.arr
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('calculate_kernel_area',category='phot.psf')
+@nvtx.annotate('calculate_kernel_area', category='phot.psf')
 def calculate_kernel_area(img_shape: tuple, psf: cp.ndarray, coeff_map: cp.ndarray = None,
                           eigen_psfs: cp.ndarray = None):
     """
@@ -390,7 +404,7 @@ def calculate_kernel_area(img_shape: tuple, psf: cp.ndarray, coeff_map: cp.ndarr
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('detect_sources_psf',category='phot.psf')
+@nvtx.annotate('detect_sources_psf', category='phot.psf')
 def detect_sources_psf(img: cp.ndarray, rms: cp.ndarray, fwhm: float, psf: cp.array,
                        eigen_psfs: cp.ndarray = None, coeff_map: cp.ndarray = None,
                        min_snr: int = 5, **kwargs) -> cp.ndarray:
@@ -430,7 +444,7 @@ def detect_sources_psf(img: cp.ndarray, rms: cp.ndarray, fwhm: float, psf: cp.ar
     return coor, conv_ima_sigma
 
 
-@nvtx.annotate('recreate_normed_star',category='phot.psf')
+@nvtx.annotate('recreate_normed_star', category='phot.psf')
 def recreate_normed_star(coeff_map: cp.ndarray, eigen_psfs: cp.array, coords: cp.array) -> cp.ndarray:
     """
     Recreate a normalized star from the coefficient map.
@@ -452,7 +466,7 @@ def recreate_normed_star(coeff_map: cp.ndarray, eigen_psfs: cp.array, coords: cp
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('recreate_normed_star_vectorized',category='phot.psf')
+@nvtx.annotate('recreate_normed_star_vectorized', category='phot.psf')
 def recreate_normed_star_vectorized(coeff_map: cp.ndarray, eigen_psfs: cp.array, xs: cp.array, ys: cp.array,
                                     **kwargs) -> cp.ndarray:
     """
@@ -479,7 +493,7 @@ def recreate_normed_star_vectorized(coeff_map: cp.ndarray, eigen_psfs: cp.array,
     return kernels
 
 
-@nvtx.annotate('recreate_normed_stars_batch',category='phot.psf')
+@nvtx.annotate('recreate_normed_stars_batch', category='phot.psf')
 def recreate_normed_stars_batch(coeff_map: cp.ndarray, eigen_psfs: cp.ndarray, coords: cp.ndarray,
                                 **kwargs) -> cp.ndarray:
     """
@@ -503,7 +517,7 @@ def recreate_normed_stars_batch(coeff_map: cp.ndarray, eigen_psfs: cp.ndarray, c
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('fit_moffat',category='phot.psf')
+@nvtx.annotate('fit_moffat', category='phot.psf')
 def fit_moffat(star_data: np.ndarray) -> tuple:
     """
     Fit a Moffat profile to a star.
@@ -552,7 +566,7 @@ def fit_moffat(star_data: np.ndarray) -> tuple:
     return r, Z, result, fwhm, fwhm_err
 
 
-@nvtx.annotate('filter_centroids_kdtree',category='phot.psf')
+@nvtx.annotate('filter_centroids_kdtree', category='phot.psf')
 def filter_centroids_kdtree(centroids: np.array, min_distance: float) -> np.array:
     """
     Filter centroids using a KDTree.
@@ -570,7 +584,7 @@ def filter_centroids_kdtree(centroids: np.array, min_distance: float) -> np.arra
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('get_centroids_distance_kdtree',category='phot.psf')
+@nvtx.annotate('get_centroids_distance_kdtree', category='phot.psf')
 def get_centroids_distance_kdtree(centroids: np.array):
     """
     Find the distance between centroid and its nearest neighbor using KDTree.
@@ -586,7 +600,7 @@ def get_centroids_distance_kdtree(centroids: np.array):
     return dist[:, 1]
 
 
-@nvtx.annotate('moffat',category='phot.psf')
+@nvtx.annotate('moffat', category='phot.psf')
 def moffat(r: np.array, A: float = 1., r0: float = 0., B: float = 1., R: float = 1.) -> np.array:
     """
     Moffat profile function.
@@ -608,7 +622,7 @@ def moffat(r: np.array, A: float = 1., r0: float = 0., B: float = 1., R: float =
     return A * (1 + ((r - r0) / R) ** 2) ** (-B)
 
 
-@nvtx.annotate('moffat_fwhm',category='phot.psf')
+@nvtx.annotate('moffat_fwhm', category='phot.psf')
 def moffat_fwhm(R: float, B: float, R_err: float, B_err: float) -> tuple:
     """
     Calculate the FWHM of a Moffat profile.
