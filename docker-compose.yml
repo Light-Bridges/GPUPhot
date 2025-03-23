@@ -1,4 +1,4 @@
-version: '3.8'
+#version: '3.8'
 
 x-celery-env: &celery-env
   CELERY_BROKER_URL: amqp://gpuphot:gpuphot@rabbitmq:5672/

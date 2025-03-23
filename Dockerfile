@@ -1,5 +1,5 @@
 # Base image
-FROM nvidia/cuda:12.6.3-devel-ubuntu24.04 as base
+FROM nvidia/cuda:12.6.3-devel-ubuntu24.04 AS base
 
 # Set non-interactive mode for apt
 ENV DEBIAN_FRONTEND=noninteractive
@@ -29,7 +29,7 @@ RUN . venv/bin/activate && \
 ENV PYTHONPATH=/app VIRTUAL_ENV=/app/venv PATH="/app/venv/bin:$PATH"
 
 # Worker target
-FROM base as worker
+FROM base AS worker
 
 # Copy application code
 WORKDIR /app
@@ -39,7 +39,7 @@ COPY . .
 CMD ["celery", "-A", "gpuphot_worker.worker_app", "worker", "--loglevel=info"]
 
 # Lab target
-FROM base as lab
+FROM base AS lab
 RUN . venv/bin/activate && pip install --no-cache-dir jupyter jupyterlab
 
 
@@ -52,7 +52,7 @@ WORKDIR /home/jovyan
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--NotebookApp.token=''", "--notebook-dir=/home/jovyan/work"]
 
 # Flower target
-FROM base as flower
+FROM base AS flower
 
 # Copy application code
 WORKDIR /app
@@ -62,7 +62,7 @@ CMD ["celery", "-A", "gpuphot_worker.worker_app", "flower"]
 
 
 # Descargar e instalar Q3C
-FROM postgres:15.0-alpine as q3c_postgres
+FROM postgres:15.0-alpine AS q3c_postgres
 
 # Instalar las dependencias necesarias
 RUN apk add --no-cache make gcc g++ postgresql-dev wget tar \
@@ -81,7 +81,7 @@ RUN apk del make gcc g++ postgresql-dev wget tar
 
 ## Profiler target
 
-FROM base as profiler
+FROM base AS profiler
 
 # Activar el entorno virtual
 ENV PATH="/app/venv/bin:$PATH"
