@@ -145,11 +145,26 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
       INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
       IMAGE_BASE_PATH: /data/images
+      NVIDIA_PERSISTENCE_MODE: "on"
+      CUDA_DEVICE_ORDER: PCI_BUS_ID
+    runtime: nvidia
+    cap_add:
+      - SYS_ADMIN
+      - SYS_PTRACE
+      - IPC_LOCK
+    devices:
+      - "/dev/nvidiactl:/dev/nvidiactl"
+      - "/dev/nvidia-uvm:/dev/nvidia-uvm"
+      - "/dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools"
+      - "/dev/nvidia-modeset:/dev/nvidia-modeset"
     volumes:
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
       - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
       - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
+      - /var/run/nvidia-persistenced/socket:/var/run/nvidia-persistenced/socket
+      - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
+      - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:ro
     ports:
       - "${PROFILER_SSSH_PORT:-2222}:22"
     deploy:
@@ -161,4 +176,5 @@ services:
               capabilities: [ gpu ]
     stdin_open: true
     tty: true
+    restart: unless-stopped
 

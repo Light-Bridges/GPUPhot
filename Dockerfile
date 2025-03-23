@@ -96,6 +96,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
     && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
+# Modificar las variables de entorno de NVIDIA
+ENV NVIDIA_DRIVER_CAPABILITIES all,compute,utility,graphics
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64:$LD_LIBRARY_PATH
+
+# Añadir capacidad SYS_ADMIN al instalar nsight-systems
+RUN apt update && apt install -y --no-install-recommends \
+    linux-tools-generic \
+    linux-tools-$(uname -r) \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install NVIDIA Nsight Systems
 RUN apt update \
     && apt install -y --no-install-recommends gnupg \
