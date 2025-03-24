@@ -21,7 +21,7 @@ from sklearn.linear_model import RANSACRegressor
 from .catalog import crossmatch_sources
 from ..exceptions import AstrometrizationTimeoutError
 from ..instrument_config_parser import HeaderKey
-from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -70,7 +70,13 @@ class SingletonSolver:
 
         logger.debug(f"Using cache directory: {cache}")
 
-        index_files_exist = self.check_index_files_exist(cache)
+        required_files = (
+                astrometry.series_5200.index_files(cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6})
+                +
+                astrometry.series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10, 11})
+        )
+
+        index_files_exist = self.check_index_files_exist(required_files)
         if not index_files_exist:
             logger.warning(
                 "Unable to locate astrometry index files. Starting the download of index files now. "
@@ -81,10 +87,7 @@ class SingletonSolver:
             )
 
         try:
-            self.solver = astrometry.Solver(
-                astrometry.series_5200.index_files(cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6}) +
-                astrometry.series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10, 11})
-            )
+            self.solver = astrometry.Solver(required_files)
         except Exception as e:
             error_message = str(e)
             logger.error(f"Error initializing the solver: {error_message}")
@@ -102,27 +105,32 @@ class SingletonSolver:
 
     @staticmethod
     @nvtx.annotate('check_index_files_exist', category='utils.astro.SingletonSolver')
-    def check_index_files_exist(directory):
+    def check_index_files_exist(required_files):
         """
-        Check if astrometry index files exist in the given directory.
+        Check if the required index files exist.
 
-        :param directory: Directory to check for index files.
-        :type directory: str
-        :return: True if index files exist, False otherwise.
+        :param required_files: List of required index files.
+        :type required_files: list
+        :return: True if all files exist, False otherwise.
         :rtype: bool
         """
-        fits_count = 0
-        download_count = 0
-
-        for root, dirs, files in os.walk(directory):
-            fits_count += len([f for f in files if f.endswith('.fits')])
-            download_count += len([f for f in files if f.endswith('.download')])
-
-        return fits_count > 0 and download_count == 0
+        try:
+            for file_path in required_files:
+                fp = str(file_path)
+                if not os.path.exists(fp):
+                    logger.debug(f"Archivo faltante: {fp}")
+                    return False
+                if os.path.exists(f"{fp}.download"):
+                    logger.debug(f"Descarga en curso: {fp}")
+                    return False
+            return True
+        except Exception as e:
+            logger.error(f"Error durante la verificación: {e}")
+            return False
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('get_solver',category='utils.astro')
+@nvtx.annotate('get_solver', category='utils.astro')
 def get_solver():
     """
     Get the astrometry solver with index files.
@@ -144,7 +152,7 @@ def get_solver():
     # return solver
 
 
-@nvtx.annotate('get_astrometry_params',category='utils.astro')
+@nvtx.annotate('get_astrometry_params', category='utils.astro')
 def get_astrometry_params(h_wcs, image_shape):
     """
     Get astrometry parameters from WCS header.
@@ -198,7 +206,7 @@ def handler(signum, frame):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('astrometrice2',category='utils.astro')
+@nvtx.annotate('astrometrice2', category='utils.astro')
 def astrometrice2(df: pd.DataFrame, scale: float,
                   central_ra: float, central_dec: float,
                   sip_order: int = 3) -> dict:
@@ -281,7 +289,7 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     return h_wcs
 
 
-@nvtx.annotate('get_zeropoint',category='utils.astro')
+@nvtx.annotate('get_zeropoint', category='utils.astro')
 def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=50,
                   solar_filter=0.6, dist_thres_px=3, min_snr=30, max_snr=300,
                   plot=False):
@@ -414,7 +422,7 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=50,
     return params
 
 
-@nvtx.annotate('get_target_snr',category='utils.astro')
+@nvtx.annotate('get_target_snr', category='utils.astro')
 def get_target_snr(dfm: pd.DataFrame, target_ra: float, target_dec: float, dist_thres_px=3) -> float:
     """
     Get the SNR of the target.
@@ -440,7 +448,7 @@ def get_target_snr(dfm: pd.DataFrame, target_ra: float, target_dec: float, dist_
     return target_snr
 
 
-@nvtx.annotate('get_maglim',category='utils.astro')
+@nvtx.annotate('get_maglim', category='utils.astro')
 def get_maglim(mag: np.ndarray, snr: np.ndarray, snr_lim: float) -> float:
     """
     Get the limiting magnitude.
@@ -466,7 +474,7 @@ def get_maglim(mag: np.ndarray, snr: np.ndarray, snr_lim: float) -> float:
     return np.round(maglim, 2)
 
 
-@nvtx.annotate('radec_to_moon_sun',category='utils.astro')
+@nvtx.annotate('radec_to_moon_sun', category='utils.astro')
 def radec_to_moon_sun(ra, dec, site_latitude, site_longitude, site_elevation, date_obs):
     """
     Calculate moon and sun positions relative to a target.
@@ -514,7 +522,7 @@ def radec_to_moon_sun(ra, dec, site_latitude, site_longitude, site_elevation, da
         sun_az, 2)
 
 
-@nvtx.annotate('radec_to_altaz',category='utils.astro')
+@nvtx.annotate('radec_to_altaz', category='utils.astro')
 def radec_to_altaz(RA, DEC, SITELAT, SITELON, SITEELEV, Date):
     """
     Convert RA/Dec to altitude and azimuth.
@@ -543,7 +551,7 @@ def radec_to_altaz(RA, DEC, SITELAT, SITELON, SITEELEV, Date):
     return round(coords_altaz.az.deg, 6), round(coords_altaz.alt.deg, 6), round(airmass, 6), round(zen.deg, 6)
 
 
-@nvtx.annotate('radec_to_gal',category='utils.astro')
+@nvtx.annotate('radec_to_gal', category='utils.astro')
 def radec_to_gal(RA, DEC):
     """
     Convert RA/Dec to Galactic coordinates.
@@ -559,7 +567,7 @@ def radec_to_gal(RA, DEC):
     return round(coords_gal.l.deg, 6), round(coords_gal.b.deg, 6)
 
 
-@nvtx.annotate('radec_to_ecl',category='utils.astro')
+@nvtx.annotate('radec_to_ecl', category='utils.astro')
 def radec_to_ecl(RA, DEC):
     """
     Convert RA/Dec to Ecliptic coordinates.
@@ -575,7 +583,7 @@ def radec_to_ecl(RA, DEC):
     return round(coords_gal.lon.deg, 6), round(coords_gal.lat.deg, 6)
 
 
-@nvtx.annotate('date_to_jd',category='utils.astro')
+@nvtx.annotate('date_to_jd', category='utils.astro')
 def date_to_jd(dateobs):
     """
     Convert date to Julian Date.
@@ -589,7 +597,7 @@ def date_to_jd(dateobs):
     return Date.jd, Date.mjd
 
 
-@nvtx.annotate('get_ccw',category='utils.astro')
+@nvtx.annotate('get_ccw', category='utils.astro')
 def get_ccw(hwcs):
     """
     Get the counter-clockwise rotation angle from WCS header.
@@ -613,7 +621,7 @@ def get_ccw(hwcs):
     return -np.degrees(np.arctan2(A, T))
 
 
-@nvtx.annotate('get_scale',category='utils.astro')
+@nvtx.annotate('get_scale', category='utils.astro')
 def get_scale(hwcs):
     """
     Get the image scale from WCS header.
@@ -630,7 +638,7 @@ def get_scale(hwcs):
     return np.sqrt(cd11 ** 2 + cd12 ** 2) * 3600
 
 
-@nvtx.annotate('plate_scale_px',category='utils.astro')
+@nvtx.annotate('plate_scale_px', category='utils.astro')
 def plate_scale_px(microns, focal):
     """
     Calculate plate scale in arcseconds per pixel.
@@ -647,7 +655,7 @@ def plate_scale_px(microns, focal):
     return plate_scale_mm(focal) * microns / 1000  # arcsec/px
 
 
-@nvtx.annotate('plate_scale_mm',category='utils.astro')
+@nvtx.annotate('plate_scale_mm', category='utils.astro')
 def plate_scale_mm(focal):
     """
     Calculate plate scale in arcseconds per mm.
