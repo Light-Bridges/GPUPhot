@@ -42,6 +42,7 @@ class SingletonSolver:
                     cls._instance.initialize_solver()
         return cls._instance
 
+    @nvtx.annotate('initialize_solver', category='utils.astro.SingletonSolver')
     def initialize_solver(self):
         """
         Initialize the astrometry solver with appropriate index files.
@@ -100,6 +101,7 @@ class SingletonSolver:
                     logger.error(f"Error removing file: {remove_error}")
 
     @staticmethod
+    @nvtx.annotate('check_index_files_exist', category='utils.astro.SingletonSolver')
     def check_index_files_exist(directory):
         """
         Check if astrometry index files exist in the given directory.

@@ -7,7 +7,7 @@ from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
-
+@nvtx.annotate('human_readable_size', category='utils.gpu')
 def human_readable_size(bytes_size):
     for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
         if abs(bytes_size) < 1024.0:
@@ -62,7 +62,7 @@ def force_free_gpu_memory():
     # Forzar la limpieza de caché de kernels
     cp.fft.config.get_plan_cache().clear()
 
-
+@nvtx.annotate('use_gpu', category='utils.gpu')
 def use_gpu(gpu_id=0):
     num_gpus = cp.cuda.runtime.getDeviceCount()
     if gpu_id < num_gpus:
@@ -144,7 +144,7 @@ def reset_cupy_allocators():
     # Clear kernel caches
     cp.fft.config.get_plan_cache().clear()
 
-
+@nvtx.annotate('maybe_free_arrays', category='utils.gpu')
 def maybe_free_arrays(arrays, mempool, threshold=0.2):
     """
     Free arrays if free GPU memory is below threshold fraction of total.

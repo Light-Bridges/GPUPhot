@@ -363,10 +363,10 @@ def process_image(imdata, imheader, header_descriptions=None, **kwargs):
         satlevel = imheader[HeaderKey.SATLEVEL.value]
         target_ra = imheader[HeaderKey.POINTRA.value] * 15
         target_dec = imheader[HeaderKey.POINTDEC.value]
-        try:
-            site_elevation = imheader[HeaderKey.SITEELEV.value]
-        except:
-            site_elevation = imheader[HeaderKey.SITEALT.value]
+        # try:
+        site_elevation = imheader[HeaderKey.SITEELEV.value]
+        # except:
+        #     site_elevation = imheader[HeaderKey.SITEALT.value]
         site_latitude = imheader[HeaderKey.SITELAT.value]
         site_longitude = imheader[HeaderKey.SITELONG.value]
         date_obs = imheader[HeaderKey.DATE_OBS.value]

@@ -31,7 +31,7 @@ class HeaderKey(Enum):
     PXSIZE = "PXSIZE"
     RDNOISE = "RDNOISE"
     SATLEVEL = "SATLEVEL"
-    SITEALT = "SITEALT"     # TODO: Remove this key when all code use ImageProcessor.process_image
+    # SITEALT = "SITEALT"     # TODO: Remove this key when all code use ImageProcessor.process_image
     SITEELEV = "SITEELEV"
     SITELAT = "SITELAT"
     SITELONG = "SITELONG"
@@ -67,7 +67,7 @@ class DefaultConfig:
         "site_elevation": HeaderKey.SITEELEV.value,
         "site_latitude": HeaderKey.SITELAT.value,
         "site_longitude": HeaderKey.SITELONG.value,
-        "sitealt": HeaderKey.SITEALT.value,
+        # "sitealt": HeaderKey.SITEALT.value,
         "target_dec": HeaderKey.POINTDEC.value,
         "target_ra": HeaderKey.POINTRA.value,
         "xbinning": HeaderKey.XBINNING.value,
@@ -94,7 +94,7 @@ class DefaultConfig:
         "site_elevation": None,
         "site_latitude": None,
         "site_longitude": None,
-        "sitealt": None,
+        # "sitealt": None,
         "target_dec": None,
         "target_ra": None,
         "xbinning": None,
@@ -218,6 +218,7 @@ class InstrumentConfigParser:
                            If not provided, the default directory will be used.
         :type config_dir: str or None
         """
+        logger.debug(f'Initializing InstrumentConfigParser with config_dir: {config_dir}')
         self.config_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                        'instrument_configs') if not config_dir else config_dir
         self.base_config = {
@@ -273,7 +274,7 @@ class InstrumentConfigParser:
                     if section in instrument_config:
                         config[section].update(instrument_config[section])
             else:
-                logger.debug(f"Configuration for {instrument_name} not found. Using default values.")
+                logger.warning(f"Configuration for {instrument_name} not found. Using default values.")
 
         # Crear y añadir el traductor de headers
         config['header_translator'] = HeaderTranslator(config['header_keywords'])
