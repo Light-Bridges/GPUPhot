@@ -80,7 +80,6 @@ RUN apk del make gcc g++ postgresql-dev wget tar
 
 
 ## Profiler target
-
 FROM base AS profiler
 
 # Activar el entorno virtual
@@ -94,7 +93,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-server \
     && mkdir -p /var/run/sshd \
     && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
-    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config \
+    && sed -i 's/#PermitUserEnvironment no/PermitUserEnvironment yes/' /etc/ssh/sshd_config
 
 # Modificar las variables de entorno de NVIDIA
 ENV NVIDIA_DRIVER_CAPABILITIES all,compute,utility,graphics
@@ -137,4 +137,12 @@ EXPOSE ${SSSH_PORT}
 ARG ROOT_PASSWORD
 RUN echo "root:${ROOT_PASSWORD}" | chpasswd
 
-CMD ["/usr/sbin/sshd", "-D"]
+# Crear script de inicio para capturar las variables de entorno
+RUN echo '#!/bin/bash' > /entrypoint.sh && \
+    echo 'mkdir -p /root/.ssh' >> /entrypoint.sh && \
+    echo 'env | grep -v "^HOSTNAME=" | grep -v "^PWD=" | grep -v "^HOME=" | grep -v "^TERM=" | grep -v "^SHLVL=" > /root/.ssh/environment' >> /entrypoint.sh && \
+    echo 'echo "PATH=$PATH" >> /root/.ssh/environment' >> /entrypoint.sh && \
+    echo '/usr/sbin/sshd -D' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
+CMD ["/entrypoint.sh"]
