@@ -9,9 +9,9 @@ x-common-worker-backend: &common-worker-backend
     context: .
     dockerfile: Dockerfile
     target: worker
-  env_file:
-    - path: ./.env
-      required: false
+#  env_file:
+#    - path: ./.env
+#      required: false
   environment:
     <<: *celery-env
     INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
@@ -68,9 +68,9 @@ services:
       context: .
       dockerfile: Dockerfile
       target: lab
-    env_file:
-      - path: ./.env
-        required: false
+#    env_file:
+#      - path: ./.env
+#        required: false
     ports:
       - "8888:8888"
     environment:
@@ -147,7 +147,9 @@ services:
       IMAGE_BASE_PATH: /data/images
       NVIDIA_PERSISTENCE_MODE: "on"
       CUDA_DEVICE_ORDER: PCI_BUS_ID
-    runtime: nvidia
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-all,compute,utility,graphics}
+#    runtime: nvidia
     cap_add:
       - SYS_ADMIN
       - SYS_PTRACE

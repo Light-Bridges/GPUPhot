@@ -85,9 +85,6 @@ FROM base AS profiler
 # Activar el entorno virtual
 ENV PATH="/app/venv/bin:$PATH"
 
-ENV NVIDIA_VISIBLE_DEVICES all
-ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
-
 # Install SSH server
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-server \
@@ -96,9 +93,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config \
     && sed -i 's/#PermitUserEnvironment no/PermitUserEnvironment yes/' /etc/ssh/sshd_config
 
-# Modificar las variables de entorno de NVIDIA
-ENV NVIDIA_DRIVER_CAPABILITIES all,compute,utility,graphics
-ENV NVIDIA_VISIBLE_DEVICES all
 ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64:$LD_LIBRARY_PATH
 
 # Install NVIDIA Nsight Systems
