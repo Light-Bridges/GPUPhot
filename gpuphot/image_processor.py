@@ -39,7 +39,7 @@ class ImageProcessor:
             pass
 
     ### # @hierarchical_debug(logger)
-    @nvtx.annotate('process_image', category='image_processor.ImageProcessor')
+    @nvtx.annotate('ImageProcessor.process_image', category='image_processor.ImageProcessor')
     def process_image(self, imdata, imheader, header_descriptions=None, **kwargs):
         """
         Process an image using the specified parameters and translate headers.
