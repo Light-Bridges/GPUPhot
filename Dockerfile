@@ -10,25 +10,38 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONPATH=/app
 
 # Install Python and pip with version check
-RUN apt-get update && apt-get upgrade -y && apt-get install --no-install-recommends -y \
-    software-properties-common curl python3 python3-dev python3-pip python3-venv pkg-config \
-    python3-scipy python3-sklearn python3-sklearn-lib python3-matplotlib python3-pytest-astropy && \
+RUN apt-get update && apt-get upgrade -y && \
+    # Instalar dependencias base
+    apt-get install --no-install-recommends -y \
+    software-properties-common curl python3 && \
+    # Verificar versión de Python y actualizar si es necesario
     { \
-    # Verificar versión de Python
-    current_py_version=$(python3 -c "import sys; print('{}.{}'.format(sys.version_info.major, sys.version_info.minor))") && \
+    current_py_version=$(python3 -c "import sys; print('{}.{}'.format(sys.version_info.major, sys.version_info.minor))" 2>/dev/null || echo "0.0") && \
     if [ "$(printf '%s\n' "3.8" "$current_py_version" | sort -V | head -n1)" != "3.8" ]; then \
-        echo "Python version $current_py_version < 3.8 - Installing Python 3.8"; \
+        echo "Instalando Python 3.8"; \
         add-apt-repository ppa:deadsnakes/ppa -y && \
         apt-get update && \
         apt-get install -y python3.8 python3.8-dev python3.8-venv && \
-        update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 && \
-        update-alternatives --set python3 /usr/bin/python3.8; \
-    else \
-        echo "Python version $current_py_version >= 3.8 - Using system Python"; \
+        update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 2 && \
+        update-alternatives --install /usr/bin/python python /usr/bin/python3.8 2 && \
+        ln -sf /usr/bin/python3.8 /usr/bin/python3; \
     fi; \
     } && \
-    update-alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
+    # Instalar paquetes específicos para Python 3.8
+    apt-get install -y --no-install-recommends \
+    # python3-scipy \
+    # python3-sklearn \
+    # python3-matplotlib \
+    # python3-pytest-astropy \
+    python3-dev \
+    python3-pip \
+    python3-venv && \
+    # Limpiar caché
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    # Configurar entorno virtual
     python3 -m venv $VIRTUAL_ENV
+
 
 # Set working directory
 WORKDIR /app
