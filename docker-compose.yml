@@ -213,4 +213,11 @@ services:
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
       - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
       - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
-      - /usr/local/cuda:/usr/local/cuda:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ "${GPU_ID:-0}" ]
+              capabilities: [ gpu ]
+
