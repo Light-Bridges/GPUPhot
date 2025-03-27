@@ -1,6 +1,5 @@
 # Base image
 ARG BASE_IMAGE=nvidia/cuda:12.6.3-devel-ubuntu24.04
-ARG REQUIREMENTS_FILE=requirements_3_12.txt
 
 FROM ${BASE_IMAGE} AS base
 
@@ -37,6 +36,7 @@ WORKDIR /app
 # Create a virtual environment
 RUN python3 -m venv venv
 
+ARG REQUIREMENTS_FILE=requirements_3_12.txt
 # Copy requirements
 COPY ${REQUIREMENTS_FILE} requirements-worker.txt ./
 
