@@ -221,3 +221,26 @@ services:
               device_ids: [ "${GPU_ID:-0}" ]
               capabilities: [ gpu ]
 
+  profiler_jetson_orin:
+    <<: *common-profiler
+#    devices:
+#      - "/dev/nvhost-ctrl:/dev/nvhost-ctrl"
+#      - "/dev/nvhost-ctrl-gpu:/dev/nvhost-ctrl-gpu"
+#      - "/dev/nvhost-prof-gpu:/dev/nvhost-prof-gpu"
+#      - "/dev/nvmap:/dev/nvmap"
+#      - "/dev/nvhost-gpu:/dev/nvhost-gpu"
+#      - "/dev/nvhost-as-gpu:/dev/nvhost-as-gpu"
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+      - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ "${GPU_ID:-0}" ]
+              capabilities: [ gpu ]
+
+

@@ -49,13 +49,16 @@ WORKDIR /app
 # Create a virtual environment
 RUN python3 -m venv venv
 
-ARG REQUIREMENTS_FILE=requirements_3_12.txt
-# Copy requirements
-COPY ${REQUIREMENTS_FILE} requirements-worker.txt ./
-
 # Activate the virtual environment and install requirements
 RUN pip install --upgrade pip setuptools wheel pipenv
+
+# Copy requirements
+COPY requirements-worker.txt ./
 RUN pip install --no-cache-dir -r requirements-worker.txt
+
+# Copy requirements
+ARG REQUIREMENTS_FILE=requirements_3_12.txt
+COPY ${REQUIREMENTS_FILE} ./
 RUN pip install --no-cache-dir -r ${REQUIREMENTS_FILE}
 
 ## Copy application code
