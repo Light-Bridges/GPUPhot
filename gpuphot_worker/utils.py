@@ -270,8 +270,8 @@ def crop_and_bin_image(fits_file, binning, binning_method='sum',
                    Si None, se asume el centro de la imagen resultante.
     :return: Ruta al archivo resultante (FITS).
     """
-    logger.debug(f"Processing file: {fits_file}, binning: {binning}, "
-                 f"crop_size: {crop_size}, center: {center}")
+    logger.debug(f"Cropping and binning file: {os.path.relpath(fits_file, BASE_IMAGES_PATH)}, binning: {binning}, "
+                 f"binning_method: {binning_method}, crop_size: {crop_size}, center: {center}")
 
     # 1) Abrir la imagen
     try:
@@ -345,7 +345,8 @@ def crop_and_bin_image(fits_file, binning, binning_method='sum',
             # IMPORTANTE: Ajustar CRPIX para que la referencia en el cielo
             # siga apuntando al mismo lugar. Después de binning NxN,
             # la crpix debe escalarse.
-            wcs.wcs.crpix /= binning
+            # wcs.wcs.crpix /= binning
+            wcs.wcs.crpix = (wcs.wcs.crpix - 0.5) / binning + 0.5
 
         # -- 3) Actualizar ganancias y ruidos
         imheader['BIN-FCTR'] = (binning, 'Binning factor applied')
@@ -471,5 +472,5 @@ def crop_and_bin_image(fits_file, binning, binning_method='sum',
     output_path = os.path.join(os.path.dirname(fits_file), output_filename)
     hdu.writeto(output_path, overwrite=True)
 
-    logger.debug(f"Processed file saved to: {output_path}")
+    logger.debug(f"Cropped and binned image file saved to: {os.path.relpath(output_path, BASE_IMAGES_PATH)}")
     return output_path

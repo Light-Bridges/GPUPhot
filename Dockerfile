@@ -1,13 +1,22 @@
 # Base image
-FROM nvidia/cuda:12.6.3-devel-ubuntu24.04 AS base
+ARG BASE_IMAGE=nvidia/cuda:12.6.3-devel-ubuntu24.04
+ARG REQUIREMENTS_FILE=requirements_3_12.txt
+
+FROM ${BASE_IMAGE} AS base
 
 # Set non-interactive mode for apt
-ENV DEBIAN_FRONTEND=noninteractive
+#ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    VIRTUAL_ENV=/app/venv \
+    PATH="/app/venv/bin:$PATH" \
+    PYTHONPATH=/app
 
 # Install Python and pip
-RUN apt-get update && \
-    apt-get install -y software-properties-common curl python3 python3-dev python3-pip python3-venv && \
-    update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+RUN apt-get update && apt-get upgrade -y && apt-get install --no-install-recommends -y \
+    software-properties-common curl python3 python3-dev python3-pip python3-venv pkg-config  \
+    python3-scipy python3-sklearn python3-sklearn-lib python3-matplotlib python3-pytest-astropy && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
+    python3 -m venv $VIRTUAL_ENV
 
 # Set working directory
 WORKDIR /app
@@ -16,17 +25,18 @@ WORKDIR /app
 RUN python3 -m venv venv
 
 # Copy requirements
-COPY requirements_3_12.txt requirements-worker.txt ./
+COPY ${REQUIREMENTS_FILE} requirements-worker.txt ./
 
 # Activate the virtual environment and install requirements
-RUN . venv/bin/activate && \
-    pip install --no-cache-dir -r requirements_3_12.txt -r requirements-worker.txt
+RUN pip install --upgrade pip setuptools wheel pipenv
+RUN pip install --no-cache-dir -r requirements-worker.txt
+RUN pip install --no-cache-dir -r ${REQUIREMENTS_FILE}
 
 ## Copy application code
 #COPY . .
 
-# Set Python path and virtual environment path
-ENV PYTHONPATH=/app VIRTUAL_ENV=/app/venv PATH="/app/venv/bin:$PATH"
+## Set Python path and virtual environment path
+#ENV PYTHONPATH=/app VIRTUAL_ENV=/app/venv PATH="/app/venv/bin:$PATH"
 
 # Worker target
 FROM base AS worker

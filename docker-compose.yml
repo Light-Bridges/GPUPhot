@@ -9,6 +9,9 @@ x-common-worker-backend: &common-worker-backend
     context: .
     dockerfile: Dockerfile
     target: worker
+    args:
+      - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
+      - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements_3_12.txt}
 #  env_file:
 #    - path: ./.env
 #      required: false
@@ -68,6 +71,9 @@ services:
       context: .
       dockerfile: Dockerfile
       target: lab
+      args:
+        - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
+        - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements_3_12.txt}
 #    env_file:
 #      - path: ./.env
 #        required: false
@@ -98,6 +104,9 @@ services:
       context: .
       dockerfile: Dockerfile
       target: flower
+      args:
+        - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
+        - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements_3_12.txt}
     environment:
       <<: *celery-env
       NVIDIA_VISIBLE_DEVICES: "none"
@@ -135,6 +144,8 @@ services:
       args:
         - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
         - SSSH_PORT=${PROFILER_SSSH_PORT:-2222}
+        - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
+        - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements_3_12.txt}
     profiles: ["debug"]
     environment:
       <<: *celery-env

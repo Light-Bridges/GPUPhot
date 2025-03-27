@@ -248,7 +248,8 @@ def process_image_task(self, image_path, instrument_name=None):
     apply_reduction = reduction_config['apply_reduction']
 
     def call_process_image(file_path_call):
-        logger.debug(f"Processing file: {file_path_call}")
+        process_file = os.path.relpath(file_path_call, base_path)
+        logger.debug(f"Processing file: {process_file}")
         reset_cupy_allocators()
 
         try:
@@ -256,7 +257,7 @@ def process_image_task(self, image_path, instrument_name=None):
             imdata, imheader = open_image_file(file_path_call)
             phot_df, hwcs = processor.process_image(imdata, imheader, header_descriptions=HEADER_DESCRIPTIONS)
 
-            process_file = os.path.relpath(file_path_call, base_path)
+
             gpuphotid = str(generate_gpuphotid(str(process_file)))
             hwcs['GPUPHOTI'] = (gpuphotid, HEADER_DESCRIPTIONS['GPUPHOTI'])
 

@@ -2,9 +2,7 @@
 **/*
 
 # Permitir solo los archivos específicos
-!requirements.txt
-!requirements_3_12.txt
-!requirements-worker.txt
+!requirements*.txt
 
 # Permitir solo los directorios específicos
 !gpuphot/
