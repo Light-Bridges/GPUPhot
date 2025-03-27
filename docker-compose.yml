@@ -12,9 +12,9 @@ x-common-worker-backend: &common-worker-backend
     args:
       - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
       - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements_3_12.txt}
-#  env_file:
-#    - path: ./.env
-#      required: false
+  #  env_file:
+  #    - path: ./.env
+  #      required: false
   environment:
     <<: *celery-env
     INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
@@ -33,6 +33,46 @@ x-common-worker-backend: &common-worker-backend
     - rabbitmq
     - redis
   restart: unless-stopped
+
+x-common-profiler: &common-profiler
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: profiler
+    args:
+      - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+      - SSSH_PORT=${PROFILER_SSSH_PORT:-2222}
+      - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
+      - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements_3_12.txt}
+  profiles: [ "debug" ]
+  environment:
+    <<: *celery-env
+    INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
+    GPU_ID: ${GPU_ID:-0}
+    POSTGRES_DB: GPUPhotDB
+    POSTGRES_USER: admin
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
+    INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
+    IMAGE_BASE_PATH: /data/images
+    NVIDIA_PERSISTENCE_MODE: "on"
+    CUDA_DEVICE_ORDER: PCI_BUS_ID
+    NVIDIA_VISIBLE_DEVICES: all
+    NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-all,compute,utility,graphics}
+  cap_add:
+    - SYS_ADMIN
+    - SYS_PTRACE
+    - IPC_LOCK
+  #  volumes:
+  #    - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+  #    - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+  #    - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+  #    - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
+  ports:
+    - "${PROFILER_SSSH_PORT:-2222}:22"
+  stdin_open: true
+  tty: true
+  restart: unless-stopped
+
 
 services:
   rabbitmq:
@@ -53,7 +93,7 @@ services:
 
   beat:
     <<: *common-worker-backend
-    command: ["celery", "-A", "gpuphot_worker.worker_app", "beat"]
+    command: [ "celery", "-A", "gpuphot_worker.worker_app", "beat" ]
 
   gpuphot_worker:
     <<: *common-worker-backend
@@ -74,9 +114,9 @@ services:
       args:
         - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
         - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements_3_12.txt}
-#    env_file:
-#      - path: ./.env
-#        required: false
+    #    env_file:
+    #      - path: ./.env
+    #        required: false
     ports:
       - "8888:8888"
     environment:
@@ -137,34 +177,7 @@ services:
     restart: unless-stopped
 
   profiler:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: profiler
-      args:
-        - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
-        - SSSH_PORT=${PROFILER_SSSH_PORT:-2222}
-        - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
-        - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements_3_12.txt}
-    profiles: ["debug"]
-    environment:
-      <<: *celery-env
-      INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
-      GPU_ID: ${GPU_ID:-0}
-      POSTGRES_DB: GPUPhotDB
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
-      INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
-      IMAGE_BASE_PATH: /data/images
-      NVIDIA_PERSISTENCE_MODE: "on"
-      CUDA_DEVICE_ORDER: PCI_BUS_ID
-      NVIDIA_VISIBLE_DEVICES: all
-      NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-all,compute,utility,graphics}
-#    runtime: nvidia
-    cap_add:
-      - SYS_ADMIN
-      - SYS_PTRACE
-      - IPC_LOCK
+    <<: *common-profiler
     devices:
       - "/dev/nvidiactl:/dev/nvidiactl"
       - "/dev/nvidia-uvm:/dev/nvidia-uvm"
@@ -178,8 +191,6 @@ services:
       - /var/run/nvidia-persistenced/socket:/var/run/nvidia-persistenced/socket
       - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
       - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:ro
-    ports:
-      - "${PROFILER_SSSH_PORT:-2222}:22"
     deploy:
       resources:
         reservations:
@@ -187,7 +198,19 @@ services:
             - driver: nvidia
               device_ids: [ "${GPU_ID:-0}" ]
               capabilities: [ gpu ]
-    stdin_open: true
-    tty: true
-    restart: unless-stopped
 
+  profiler_jetson:
+    <<: *common-profiler
+    devices:
+      - "/dev/nvhost-ctrl:/dev/nvhost-ctrl"
+      - "/dev/nvhost-ctrl-gpu:/dev/nvhost-ctrl-gpu"
+      - "/dev/nvhost-prof-gpu:/dev/nvhost-prof-gpu"
+      - "/dev/nvmap:/dev/nvmap"
+      - "/dev/nvhost-gpu:/dev/nvhost-gpu"
+      - "/dev/nvhost-as-gpu:/dev/nvhost-as-gpu"
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+      - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
+      - /usr/local/cuda:/usr/local/cuda:ro
