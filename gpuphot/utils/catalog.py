@@ -5,12 +5,12 @@ from astropy import units as u
 from astroquery.vizier import Vizier
 from scipy.spatial import KDTree
 
-from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
 
-@nvtx.annotate('crossmatch_sources',category='utils.catalog')
+@nvtx.annotate('crossmatch_sources', category='utils.catalog')
 def crossmatch_sources(source_coords, ref_coords, thres_px=2):
     """
     Cross-match source coordinates with reference coordinates.
@@ -33,7 +33,7 @@ def crossmatch_sources(source_coords, ref_coords, thres_px=2):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('__getVizier',category='utils.catalog')
+@nvtx.annotate('__getVizier', category='utils.catalog')
 def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                 vizier_timeout=60, vizier_row_limit=-1,
                 vizier_cache=True, custom_vizier_search_func=None,
@@ -84,7 +84,7 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('catalog_results',category='utils.catalog')
+@nvtx.annotate('catalog_results', category='utils.catalog')
 def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     """
     Process astronomical data to calculate magnitudes and other parameters for stars based on various filters and models.

@@ -59,15 +59,16 @@ x-common-profiler: &common-profiler
     CUDA_DEVICE_ORDER: PCI_BUS_ID
     NVIDIA_VISIBLE_DEVICES: all
     NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-all,compute,utility,graphics}
+    NSYS_PROFILING: 1
+    NSYS_CUDA_TRACE: 1
   cap_add:
     - SYS_ADMIN
     - SYS_PTRACE
+    - SYS_NICE
     - IPC_LOCK
-  #  volumes:
-  #    - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
-  #    - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
-  #    - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
-  #    - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
+    - SYS_RESOURCE
+  security_opt:
+    - seccomp=unconfined
   ports:
     - "${PROFILER_SSSH_PORT:-2222}:22"
   stdin_open: true

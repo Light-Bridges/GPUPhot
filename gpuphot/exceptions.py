@@ -1,3 +1,5 @@
+import nvtx
+
 from .logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
@@ -129,13 +131,15 @@ def capture_cuda_exception(func):
             try:
                 return func(*args, **kwargs)
             except CUDARuntimeError as e:
+                nvtx.mark(f"CUDA error in {func.__name__}: {e}", color="red", category="error")
                 try:
                     from .utils.gpu import free_gpu_mem
                     free_gpu_mem()  # Liberar memoria GPU antes de manejar el error
                 except Exception:
                     pass
 
-                if any(error in str(e) for error in ("cudaErrorIllegalAddress", "cudaErrorInitializationError", "cudaErrorInvalidValue")):
+                if any(error in str(e) for error in
+                       ("cudaErrorIllegalAddress", "cudaErrorInitializationError", "cudaErrorInvalidValue")):
                     if is_running_in_docker():
                         logger.critical("Exiting due to CUDA error in Docker container.")
                         try:

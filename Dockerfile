@@ -163,7 +163,21 @@ RUN apt update && \
 #    echo "deb [signed-by=/etc/apt/keyrings/nvidia-dev-tools.gpg] ${REPO_URL} /" | tee /etc/apt/sources.list.d/nvidia-devtools.list && \
     # Instalar
     apt-get update && \
-    apt-get install -y nsight-systems
+    apt-get install -y nsight-systems && \
+    # Instalar Nsight Systems CLI
+    apt-get install -y nsight-systems-cli
+
+# Instalar herramientas para módulos (solo Jetson)
+ARG TARGET_ARCH
+RUN if [ "$TARGET_ARCH" = "aarch64" ]; then \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        linux-headers-$(uname -r) \
+        build-essential \
+        libncurses-dev && \
+    rm -rf /var/lib/apt/lists/* ; \
+    fi
+
 
 # Create directory for profiling scripts
 RUN mkdir -p /app/profiling_scripts /app/profiling_results
