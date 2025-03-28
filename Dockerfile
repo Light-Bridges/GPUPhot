@@ -132,15 +132,38 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config \
     && sed -i 's/#PermitUserEnvironment no/PermitUserEnvironment yes/' /etc/ssh/sshd_config
 
+# Install rsyslog for SSH logs
+RUN apt-get update && apt-get install -y rsyslog
+RUN mkdir -p /var/log && touch /var/log/auth.log
+RUN chown syslog:adm /var/log/auth.log && chmod 640 /var/log/auth.log
+RUN echo "local5.* /var/log/sshd.log" >> /etc/rsyslog.conf
+RUN echo "SyslogFacility LOCAL5" >> /etc/ssh/sshd_config
+RUN echo "LogLevel VERBOSE" >> /etc/ssh/sshd_config
+
+
 ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64:$LD_LIBRARY_PATH
 
 # Install NVIDIA Nsight Systems
-RUN apt update \
-    && apt install -y --no-install-recommends gnupg \
-    && echo "deb http://developer.download.nvidia.com/devtools/repos/ubuntu2404/$(dpkg --print-architecture) /" | tee /etc/apt/sources.list.d/nvidia-devtools.list \
-    && apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub \
-    && apt update \
-    && apt install nsight-systems -y
+RUN apt update && \
+    apt install -y --no-install-recommends gnupg && \
+    . /etc/os-release && \
+    UBUNTU_VERSION=$(echo "$VERSION_ID" | tr -d '.') && \
+    ARCH=$(dpkg --print-architecture) && \
+    REPO_URL="https://developer.download.nvidia.com/devtools/repos/ubuntu${UBUNTU_VERSION}/${ARCH}" && \
+    # Descargar clave GPG oficial de CUDA (compatible universalmente)
+    # Configurar repositorio
+    echo "deb ${REPO_URL} /" | tee /etc/apt/sources.list.d/nvidia-devtools.list && \
+    # Usar clave GPG oficial de CUDA (compatible universalmente)
+    apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub && \
+#    # Metodo usando trusted.gpg.d
+#    # Descargar clave manualmente
+#    mkdir -p /etc/apt/keyrings && \
+#    curl -fsSL "${REPO_URL}/nvidia.pub" | gpg --dearmor -o /etc/apt/keyrings/nvidia-dev-tools.gpg && \
+#    # Configurar repositorio seguro
+#    echo "deb [signed-by=/etc/apt/keyrings/nvidia-dev-tools.gpg] ${REPO_URL} /" | tee /etc/apt/sources.list.d/nvidia-devtools.list && \
+    # Instalar
+    apt-get update && \
+    apt-get install -y nsight-systems
 
 # Create directory for profiling scripts
 RUN mkdir -p /app/profiling_scripts /app/profiling_results
@@ -149,14 +172,6 @@ RUN mkdir -p /app/profiling_scripts /app/profiling_results
 COPY ./profiling_scripts/run_profiling.sh /app/profiling_scripts/
 COPY ./profiling_scripts/profile_image_processing.py /app/profiling_scripts/
 RUN chmod +x /app/profiling_scripts/run_profiling.sh
-
-# Install rsyslog for SSH logs
-RUN apt-get update && apt-get install -y rsyslog
-RUN mkdir -p /var/log && touch /var/log/auth.log
-RUN chown syslog:adm /var/log/auth.log && chmod 640 /var/log/auth.log
-RUN echo "local5.* /var/log/sshd.log" >> /etc/rsyslog.conf
-RUN echo "SyslogFacility LOCAL5" >> /etc/ssh/sshd_config
-RUN echo "LogLevel VERBOSE" >> /etc/ssh/sshd_config
 
 # Copy the rest of the code
 WORKDIR /app

@@ -45,6 +45,7 @@ x-common-profiler: &common-profiler
       - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
       - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements_3_12.txt}
   profiles: [ "debug" ]
+  privileged: true
   environment:
     <<: *celery-env
     INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
@@ -231,6 +232,7 @@ services:
       - "/dev/nvmap:/dev/nvmap"
       - "/dev/nvhost-gpu:/dev/nvhost-gpu"
       - "/dev/nvhost-as-gpu:/dev/nvhost-as-gpu"
+      - "/dev/nvhost-dbg-gpu:/dev/nvhost-dbg-gpu"
     volumes:
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
