@@ -1,10 +1,10 @@
 import gc
 import time
 import traceback
-from contextlib import contextmanager
-import nvtx
+
 import cupy as cp
 import numpy as np
+import nvtx
 import pandas as pd
 from astropy.wcs import WCS
 # import tensorflow as tf
@@ -61,7 +61,7 @@ logger = setup_logger(__name__)
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('gen_moff_filter',category='phot.photo_gpu')
+@nvtx.annotate('gen_moff_filter', category='phot.photo_gpu')
 def gen_moff_filter(alpha, beta, **kwargs):
     """
     Generate a Moffat filter.
@@ -89,7 +89,7 @@ def gen_moff_filter(alpha, beta, **kwargs):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('get_sky',category='phot.photo_gpu')
+@nvtx.annotate('get_sky', category='phot.photo_gpu')
 def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool(), **kwargs):
     """
     Estimate the sky background and RMS noise.
@@ -125,7 +125,7 @@ def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool(), **kwargs):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('SP_filter',category='phot.photo_gpu')
+@nvtx.annotate('SP_filter', category='phot.photo_gpu')
 def SP_filter(img, filter_size=3, high_threshold_factor=10,
               low_threshold_factor=5, scaling_factor=1.4826, **kwargs):
     """
@@ -157,7 +157,7 @@ def SP_filter(img, filter_size=3, high_threshold_factor=10,
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('CR_filter',category='phot.photo_gpu')
+@nvtx.annotate('CR_filter', category='phot.photo_gpu')
 def CR_filter(img, thres=3, **kwargs):
     """
     Apply a cosmic ray filter to an image.
@@ -201,7 +201,7 @@ def CR_filter(img, thres=3, **kwargs):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('gen_moff_filter2',category='phot.photo_gpu')
+@nvtx.annotate('gen_moff_filter2', category='phot.photo_gpu')
 def gen_moff_filter2(alpha, beta, **kwargs):
     """
      Generate a Moffat filter with adjusted alpha.
@@ -228,7 +228,7 @@ def gen_moff_filter2(alpha, beta, **kwargs):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('calculate_aperture_corrections',category='phot.photo_gpu')
+@nvtx.annotate('calculate_aperture_corrections', category='phot.photo_gpu')
 def calculate_aperture_corrections(corr: np.ndarray) -> cp.ndarray:
     """
     Calculate aperture corrections for all stars in an optimized way.
@@ -251,7 +251,7 @@ def calculate_aperture_corrections(corr: np.ndarray) -> cp.ndarray:
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('find_aperture_corrections',category='phot.photo_gpu')
+@nvtx.annotate('find_aperture_corrections', category='phot.photo_gpu')
 def find_aperture_corrections(sources: cp.ndarray, corrections: np.ndarray, correction_errors: np.ndarray,
                               cluster_centers: np.ndarray,
                               opt_rad_idx: np.array = None, **kwargs) -> cp.ndarray:
@@ -282,7 +282,7 @@ def find_aperture_corrections(sources: cp.ndarray, corrections: np.ndarray, corr
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('create_aperture_corrections_map',category='phot.photo_gpu')
+@nvtx.annotate('create_aperture_corrections_map', category='phot.photo_gpu')
 def create_aperture_corrections_map(image_shape: tuple, block_size: int, unit_star_dataset: cp.ndarray,
                                     coords: cp.ndarray, radii: np.ndarray, **kwargs):
     """
@@ -334,7 +334,7 @@ def create_aperture_corrections_map(image_shape: tuple, block_size: int, unit_st
 
 @capture_cuda_exception
 @hierarchical_debug(logger)
-@nvtx.annotate('process_image',category='phot.photo_gpu')
+@nvtx.annotate('process_image', category='phot.photo_gpu')
 def process_image(imdata, imheader, header_descriptions=None, **kwargs):
     """
     Process an image using the specified parameters and translate headers.
@@ -400,17 +400,18 @@ def process_image(imdata, imheader, header_descriptions=None, **kwargs):
             raise UnableToAstrometrizeError()
 
         # Update header
-        imheader = update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude, site_elevation, date_obs,
+        imheader = update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude, site_elevation,
+                                                 date_obs,
                                                  header_descriptions)
         imheader = update_header_with_photometry(imheader, dic_calib, header_descriptions)
 
         return dfm, imheader
     finally:
-      reset_cupy_allocators()
+        reset_cupy_allocators()
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('perform_opt_photometry',category='phot.photo_gpu')
+@nvtx.annotate('perform_opt_photometry', category='phot.photo_gpu')
 def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp.ndarray,
                            source_coord: cp.ndarray, isolated_coord: cp.ndarray,
                            tile_section_psf: int, star_dataset: cp.ndarray, fwhm: float,
@@ -453,7 +454,10 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
     # Memory pool
     mempool = cp.get_default_memory_pool()
 
+    # BLOQUE 1: Selección de estrellas centrales
     # Select central stars
+    center_stars_range = nvtx.start_range('perform_opt_photometry.center_stars_selection', category='phot.photo_gpu',
+                                          color='green')
     center_factor = np.min((center_factor, 1))
     xmin = int(img.shape[1] * 0.5 * (1 - center_factor))
     xmax = int(img.shape[1] * 0.5 * (1 + center_factor))
@@ -462,8 +466,12 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
 
     center_mask = (isolated_coord[:, 0] > ymin) & (isolated_coord[:, 0] < ymax) & \
                   (isolated_coord[:, 1] > xmin) & (isolated_coord[:, 1] < xmax)
+    nvtx.end_range(center_stars_range)
 
+    # BLOQUE 2: Procesamiento SNR y validación de fuentes
     # Obtain convolutional SNR
+    snr_processing_range = nvtx.start_range('perform_opt_photometry.snr_source_validation', category='phot.photo_gpu',
+                                            color='green')
     conv_snr = conv_ima_sigma[
         cp.round(source_coord[:, 0]).astype(cp.int32), cp.round(source_coord[:, 1]).astype(cp.int32)]
     pos_conv_snr_mask = conv_snr > 0
@@ -476,34 +484,55 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
         cp.round(isolated_coord[:, 0]).astype(cp.int32), cp.round(isolated_coord[:, 1]).astype(cp.int32)]
     conv_snr_mask = conv_snr_isol > min_conv_snr
     if cp.sum(conv_snr_mask) < 3:
+        nvtx.end_range(snr_processing_range)
         raise InsufficientStarsError(cp.sum(conv_snr_mask))
+    nvtx.end_range(snr_processing_range)
 
+    # BLOQUE 3: Configuración de radios de apertura
     # In case PSF is position-invariant
     # if coeff_map is None or eigen_psfs is None or len(source_coords_matched_idx) < 10:
     #     tile_section_psf = int(1.1 * max(img.shape))
-
+    aperture_setup_range = nvtx.start_range('perform_opt_photometry.aperture_radii_setup', category='phot.photo_gpu',
+                                            color='green')
     max_radii = int(np.ceil(7 * fwhm) + 1)
     min_radii = int(np.ceil(.75 * fwhm))
     radii = np.arange(min_radii, max_radii, 1)
+    nvtx.end_range(aperture_setup_range)
 
+    # BLOQUE 4: Creación de mapa de correcciones de apertura
     # Find aperture corrections
-    corrections, correction_errors, cluster_centers = create_aperture_corrections_map(img.shape, tile_section_psf,
-                                                                                      star_dataset[conv_snr_mask],
-                                                                                      isolated_coord[
-                                                                                          conv_snr_mask].get(), radii)
-    aperture_corrections, aperture_correction_errors = find_aperture_corrections(source_coord, corrections,
-                                                                                 correction_errors, cluster_centers)
+    aper_corr_range = nvtx.start_range('perform_opt_photometry.aperture_corrections_mapping', category='phot.photo_gpu',
+                                       color='green')
+    corrections, correction_errors, cluster_centers = create_aperture_corrections_map(
+        img.shape, tile_section_psf, star_dataset[conv_snr_mask],
+        isolated_coord[conv_snr_mask].get(), radii
+    )
+    aperture_corrections, aperture_correction_errors = find_aperture_corrections(
+        source_coord, corrections, correction_errors, cluster_centers
+    )
+    nvtx.end_range(aper_corr_range)
 
+    # BLOQUE 5: Fotometría por lotes - punto crítico identificado
     # Get batch photometry
+    batch_phot_range = nvtx.start_range('perform_opt_photometry.batch_aperture_photometry', category='phot.photo_gpu',
+                                        color='green')
     source_flux, back_flux, area = batch_aperture_photometry(
         img, back, cp.round(source_coord).astype(cp.int32), radii
     )
+    nvtx.end_range(batch_phot_range)
 
+    # BLOQUE 6: Transferencia de datos GPU→CPU (potencial cudaMemcpy costoso)
     # Calculate photometric parameteres
+    gpu_to_cpu_range = nvtx.start_range('perform_opt_photometry.gpu_to_cpu_transfer', category='phot.photo_gpu',
+                                        color='green')
     center_isolated_flux = np.array(source_flux[:, source_coords_matched_idx].get())
     center_isolated_aper_corr = np.array(aperture_corrections[source_coords_matched_idx].T)
     center_isolated_aper_corr_err = np.array(aperture_correction_errors[source_coords_matched_idx].T)
+    nvtx.end_range(gpu_to_cpu_range)
 
+    # BLOQUE 7: Cálculo de señal y ruido
+    signal_noise_range = nvtx.start_range('perform_opt_photometry.photometric_parameters_calc',
+                                          category='phot.photo_gpu', color='green')
     center_isolated_signal = center_isolated_flux / center_isolated_aper_corr
 
     center_isolated_back_noise_sq = np.abs(back_flux[:, source_coords_matched_idx]).get() * gain
@@ -518,17 +547,26 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
 
     center_isolated_snr = center_isolated_signal / center_isolated_total_noise
     center_conv_snr = conv_snr[source_coords_matched_idx].get()
+    nvtx.end_range(signal_noise_range)
 
+    # BLOQUE 8: Optimización de radio de apertura
     # Find optimal aperture radius
+    opt_radius_range = nvtx.start_range('perform_opt_photometry.optimal_radii_calculation', category='phot.photo_gpu',
+                                        color='green')
     opt_radii_idx = np.argmax(center_isolated_snr, axis=0)
     opt_radii = radii[opt_radii_idx]
 
     if len(center_conv_snr) == 0 or len(opt_radii) == 0:
+        nvtx.end_range(opt_radius_range)
         raise DataValidationError("center_conv_snr or opt_radii is empty. Ensure valid data is provided.")
 
     pov = np.polyfit(np.log10(center_conv_snr), np.log10(opt_radii), 1, cov=False)
+    nvtx.end_range(opt_radius_range)
 
+    # BLOQUE 9: Cálculo de flujo y ruido óptimos
     # Calculate optimal flux and noise
+    opt_flux_range = nvtx.start_range('perform_opt_photometry.optimal_flux_calculation', category='phot.metadata',
+                                      color='green')
     source_opt_rad = np.round(
         np.fmax(np.fmin((10 ** (pov[0] * np.log10(conv_snr.get()) + pov[1])), max_radii), min_radii)).astype(int)
     source_opt_rad_idx = np.searchsorted(radii, source_opt_rad, side='right') - 1
@@ -555,20 +593,25 @@ def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp
                               opt_read_noise_sq / n_images +
                               opt_corr_noise_sq) / gain
     opt_coords = source_coord.get()[mask]
+    nvtx.end_range(opt_flux_range)
 
-    # Obtain aditional information for header purposes 
+    # BLOQUE 10: Información adicional para encabezados
+    # Obtain aditional information for header purposes
+    header_info_range = nvtx.start_range('perform_opt_photometry.extra_info_generation', category='phot.metadata',
+                                         color='green')
     ref_snr = [10, 100, 250, 1000]
     extra_info = {}
     for snr in ref_snr:
         ref_idx = np.argmin(np.abs(opt_signal / opt_total_noise - snr))
         extra_info[f'RAD{snr}'] = int(source_opt_rad[mask][ref_idx])
         extra_info[f'CORR{snr}'] = round(opt_aperture_corrections[mask][ref_idx], 3)
+    nvtx.end_range(header_info_range)
 
     return opt_signal, opt_total_noise, opt_coords, extra_info
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('batch_aperture_photometry',category='phot.photo_gpu')
+@nvtx.annotate('batch_aperture_photometry', category='phot.photo_gpu')
 def batch_aperture_photometry(img, back, positions, radii, **kwargs):
     """
     Perform aperture photometry in batch mode.
@@ -663,7 +706,7 @@ def batch_aperture_photometry(img, back, positions, radii, **kwargs):
 #
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('calibrate_image',category='phot.photo_gpu')
+@nvtx.annotate('calibrate_image', category='phot.photo_gpu')
 def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, rdnoise: float,
                     exptime: float, satlevel: float, target_ra: float, target_dec: float = None, n_images: int = 1,
                     SP_filt: bool = True, CR_filt: bool = False, border: int = 10, center_factor: float = 0.7,
@@ -960,7 +1003,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('aperture_photometry',category='phot.photo_gpu')
+@nvtx.annotate('aperture_photometry', category='phot.photo_gpu')
 def aperture_photometry(img, positions, aper_rad, **kwargs):
     """
     Perform aperture photometry.
@@ -984,7 +1027,7 @@ def aperture_photometry(img, positions, aper_rad, **kwargs):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('get_fwhm_mof',category='phot.photo_gpu')
+@nvtx.annotate('get_fwhm_mof', category='phot.photo_gpu')
 def get_fwhm_mof(model, img, step=50, ns=25, mins=3, **kwargs):
     """
     Get the full width at half maximum using Moffat model.
@@ -1011,7 +1054,7 @@ def get_fwhm_mof(model, img, step=50, ns=25, mins=3, **kwargs):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('cov_nan',category='phot.photo_gpu')
+@nvtx.annotate('cov_nan', category='phot.photo_gpu')
 def cov_nan(img, nc=10, **kwargs):
     """
     Fill NaN values in an image using convolution.
@@ -1198,7 +1241,7 @@ def cov_nan(img, nc=10, **kwargs):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('sample_im',category='phot.photo_gpu')
+@nvtx.annotate('sample_im', category='phot.photo_gpu')
 def sample_im(img, nc=50, ns=100, **kwargs):
     """
     Sample an image.
@@ -1237,7 +1280,7 @@ def sample_im(img, nc=50, ns=100, **kwargs):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('pred_mof',category='phot.photo_gpu')
+@nvtx.annotate('pred_mof', category='phot.photo_gpu')
 def pred_mof(pred, **kwargs):
     """
     Predict Moffat parameters.
@@ -1273,7 +1316,7 @@ def pred_mof(pred, **kwargs):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('sigma_clip',category='phot.photo_gpu')
+@nvtx.annotate('sigma_clip', category='phot.photo_gpu')
 def sigma_clip(img, sclip, **kwargs):
     """
     Perform sigma clipping on an image.
@@ -1297,7 +1340,7 @@ def sigma_clip(img, sclip, **kwargs):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('gen_gauss_filter',category='phot.photo_gpu')
+@nvtx.annotate('gen_gauss_filter', category='phot.photo_gpu')
 def gen_gauss_filter(fw, **kwargs):
     """
     Generate a Gaussian filter.
@@ -1323,7 +1366,7 @@ def gen_gauss_filter(fw, **kwargs):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('detect_gpu',category='phot.photo_gpu')
+@nvtx.annotate('detect_gpu', category='phot.photo_gpu')
 def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
 =4, mincut=10, mem=cp.get_default_pinned_memory_pool(), **kwargs):
     """
@@ -1392,7 +1435,7 @@ def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('get_peak_image',category='phot.photo_gpu')
+@nvtx.annotate('get_peak_image', category='phot.photo_gpu')
 def get_peak_image(img, positions, aper_rad, **kwargs):
     """
     Get peak values in an image at specified positions.

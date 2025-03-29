@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && apt-get upgrade -y && \
     # Instalar dependencias base
     apt-get install --no-install-recommends -y \
-    software-properties-common curl python3 && \
+    software-properties-common curl python3 build-essential gcc g++ && \
     # Verificar versión de Python y actualizar si es necesario
     { \
     current_py_version=$(python3 -c "import sys; print('{}.{}'.format(sys.version_info.major, sys.version_info.minor))" 2>/dev/null || echo "0.0") && \
@@ -173,7 +173,6 @@ RUN if [ "$TARGET_ARCH" = "aarch64" ]; then \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         linux-headers-$(uname -r) \
-        build-essential \
         libncurses-dev && \
     rm -rf /var/lib/apt/lists/* ; \
     fi
