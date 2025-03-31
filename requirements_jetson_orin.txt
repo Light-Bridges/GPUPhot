@@ -19,5 +19,5 @@ scipy~=1.15.2
 setuptools~=78.1.0
 
 # RAPIDS (for GPU crossmatch) - Matches cupy-cuda11x
-pylibraft-cu11~=25.2.*
-cuml-cu11~=25.2.*
+pylibraft-cu11==25.2.*
+cuml-cu11==25.2.*
