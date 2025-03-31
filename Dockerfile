@@ -136,7 +136,6 @@ RUN \
     # --- Final Verification and Venv Creation ---
     echo "Final check of the active Python version:" && \
     python3 --version && \
-    python --version && \
     \
     echo "Ensuring pip is installed for Python $TARGET_PYTHON_VERSION..." && \
     # Use python3 (which now points to TARGET_PYTHON_VERSION) to install/upgrade pip
