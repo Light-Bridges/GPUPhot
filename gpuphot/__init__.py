@@ -14,39 +14,72 @@ def _enhanced_safe_rmtree(cls, name, ignore_errors=False, onerror=None):
     def _rmtree_onerror(func, path, exc_info):
         """
         Error handler for shutil.rmtree.
-        Attempts to remove symbolic links that cause errors.
+        Attempts to remove symbolic links that cause errors. NOW WITH MORE DEBUGGING!
         """
         exc_type, exc_value, tb = exc_info
 
+        # --- NUEVO DEBUGGING ---
+        print(f"DEBUG ONERROR: Triggered for func={func.__name__}, path={repr(path)}", flush=True)
+        print(f"DEBUG ONERROR: Exception type={exc_type.__name__}, value={exc_value}", flush=True)
+
+        path_exists = False
+        path_is_link = False
+        path_is_dir = False
+        path_is_file = False
+
+        try:
+            path_exists = os.path.exists(path)  # Usa os.path.exists (sigue enlaces)
+            path_l_exists = os.path.lexists(path)  # Usa os.path.lexists (NO sigue enlaces)
+            print(f"DEBUG ONERROR: os.path.exists({repr(path)}) = {path_exists}", flush=True)
+            print(f"DEBUG ONERROR: os.path.lexists({repr(path)}) = {path_l_exists}", flush=True)
+            if path_l_exists:  # Solo intenta islink/isdir/isfile si lexists es True
+                path_is_link = os.path.islink(path)
+                path_is_dir = os.path.isdir(path)  # isdir sigue enlaces por defecto
+                path_is_file = os.path.isfile(path)  # isfile sigue enlaces por defecto
+                print(f"DEBUG ONERROR: os.path.islink({repr(path)}) = {path_is_link}", flush=True)
+                print(f"DEBUG ONERROR: os.path.isdir({repr(path)}) = {path_is_dir}", flush=True)
+                print(f"DEBUG ONERROR: os.path.isfile({repr(path)}) = {path_is_file}", flush=True)
+            else:
+                print(f"DEBUG ONERROR: Path {repr(path)} does not lexist.", flush=True)
+
+        except Exception as e_stat:
+            print(f"DEBUG ONERROR: Error checking path status for {repr(path)}: {e_stat}", flush=True)
+        # --- FIN NUEVO DEBUGGING ---
+
         # Check if the error is related to a symbolic link
-        # Often OSError during listdir/remove/rmdir on a link, or if islink fails due to permissions
-        # Let's specifically check if the path is a link when an error occurs
-        if os.path.islink(path):
+        # Let's rely on os.path.islink now that we have debugged it
+        if path_is_link:  # Usamos la variable que ya comprobamos
+            print(f"DEBUG ONERROR: Path {repr(path)} IS a link. Attempting os.unlink().", flush=True)
             try:
                 os.unlink(path)
-                # Important: Return here to indicate the error was handled (if possible)
-                # so shutil.rmtree might continue if ignore_errors=True allows it.
-                # However, standard shutil behavior stops on error unless ignore_errors=True.
-                # We handled *this specific* link error.
-                return  # Signal that we handled this specific error case
+                print(f"DEBUG ONERROR: Successfully unlinked {repr(path)}.", flush=True)
+                # Signal that we handled this specific error case
+                return
             except OSError as e:
-                pass
+                print(f"DEBUG ONERROR: Failed to unlink symlink {repr(path)}: {e}. Propagating original error.",
+                      flush=True)
                 # If unlinking fails, let the original error propagate below.
             except Exception as e:
-                pass
-                # Catch other potential errors during unlink
+                print(
+                    f"DEBUG ONERROR: Unexpected error unlinking symlink {repr(path)}: {e}. Propagating original error.",
+                    flush=True)
+        else:
+            print(f"DEBUG ONERROR: Path {repr(path)} is NOT detected as a link by os.path.islink.", flush=True)
 
         # If the error wasn't handled (not a link, or unlink failed)
-        # and we are NOT ignoring errors, we should let the exception propagate.
-        # The original onerror passed by the user (if any) or the default
-        # behavior of rmtree (raising the exception if ignore_errors=False) should take over.
-        # If the user supplied an 'onerror', we should call it.
-        # Otherwise, if ignore_errors is False, the exception should be raised.
+        print(f"DEBUG ONERROR: Error for {repr(path)} not handled by symlink logic. Checking ignore_errors/onerror.",
+              flush=True)
         if onerror is not None:
+            print(f"DEBUG ONERROR: Calling user-provided onerror.", flush=True)
             onerror(func, path, exc_info)  # Call original onerror if provided
         elif not ignore_errors:
+            print(f"DEBUG ONERROR: ignore_errors is False. Re-raising original exception.", flush=True)
             # Re-raise the original exception correctly
+            # NOTE: In Python 3, just 'raise' might be enough to re-raise the active exception
+            # but explicitly using exc_value.with_traceback(tb) is safer.
             raise exc_value.with_traceback(tb)
+        else:
+            print(f"DEBUG ONERROR: ignore_errors is True. Suppressing error.", flush=True)
 
     # --- Main logic of _enhanced_safe_rmtree ---
     try:
