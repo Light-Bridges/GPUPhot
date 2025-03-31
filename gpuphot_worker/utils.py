@@ -424,7 +424,7 @@ def crop_and_bin_image(fits_file, binning, binning_method='sum',
         # Usar Cutout2D para el recorte
         # origin=0 es la convención por defecto en Python. Si se desea 1, ajustarlo.
         if wcs is not None:
-            cutout = Cutout2D(imdata, center, crop_size, wcs=wcs, mode='trim', origin=0)
+            cutout = Cutout2D(imdata, center, crop_size, wcs=wcs, mode='trim')
             imdata = cutout.data
             wcs = cutout.wcs
         else:
