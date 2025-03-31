@@ -6,45 +6,90 @@ import shutil
 import tempfile
 from types import MethodType
 
-# --- INICIO DEL PARCHE ---
-# Monkeypatch para resolver el error de symbolic links en tempfile.TemporaryDirectory
-# Asegúrate de que este código se ejecuta ANTES de cualquier importación que pueda usar TemporaryDirectory
+def _enhanced_safe_rmtree(cls, name, ignore_errors=False, onerror=None):
+    """
+    Custom _rmtree for tempfile.TemporaryDirectory that handles:
+    1. The top-level directory 'name' being a symbolic link.
+    2. Symbolic links encountered *inside* the directory 'name' during shutil.rmtree.
+    """
+    print(f"DEBUG: _enhanced_safe_rmtree called for: '{name}'")
 
-def _safe_rmtree(cls, name, ignore_errors=False):
-    """Custom _rmtree que maneja enlaces simbólicos correctamente"""
-    print(f"DEBUG: Intentando limpiar '{name}' con _safe_rmtree") # Añade un print para depurar
+    def _rmtree_onerror(func, path, exc_info):
+        """
+        Error handler for shutil.rmtree.
+        Attempts to remove symbolic links that cause errors.
+        """
+        exc_type, exc_value, tb = exc_info
+        print(f"DEBUG: _rmtree_onerror triggered for path '{path}' by function {func.__name__} with error: {exc_value}")
 
-    def onerror(func, path, exc_info):
-        # Podrías añadir logging aquí también
-        print(f"DEBUG: Error en onerror durante la limpieza de '{path}': {exc_info[1]}")
-        if not ignore_errors:
-            raise
+        # Check if the error is related to a symbolic link
+        # Often OSError during listdir/remove/rmdir on a link, or if islink fails due to permissions
+        # Let's specifically check if the path is a link when an error occurs
+        if os.path.islink(path):
+            print(f"DEBUG: Error involves a symbolic link: '{path}'. Attempting os.unlink().")
+            try:
+                os.unlink(path)
+                print(f"DEBUG: Successfully unlinked '{path}'.")
+                # Important: Return here to indicate the error was handled (if possible)
+                # so shutil.rmtree might continue if ignore_errors=True allows it.
+                # However, standard shutil behavior stops on error unless ignore_errors=True.
+                # We handled *this specific* link error.
+                return # Signal that we handled this specific error case
+            except OSError as e:
+                print(f"DEBUG: Failed to unlink symlink '{path}': {e}. Original error will propagate.")
+                # If unlinking fails, let the original error propagate below.
+            except Exception as e:
+                print(f"DEBUG: Unexpected error unlinking symlink '{path}': {e}. Original error will propagate.")
+                # Catch other potential errors during unlink
 
+        # If the error wasn't handled (not a link, or unlink failed)
+        # and we are NOT ignoring errors, we should let the exception propagate.
+        # The original onerror passed by the user (if any) or the default
+        # behavior of rmtree (raising the exception if ignore_errors=False) should take over.
+        # If the user supplied an 'onerror', we should call it.
+        # Otherwise, if ignore_errors is False, the exception should be raised.
+        print(f"DEBUG: Error for '{path}' not handled by symlink logic.")
+        if onerror is not None:
+             print(f"DEBUG: Calling user-provided onerror for '{path}'.")
+             onerror(func, path, exc_info) # Call original onerror if provided
+        elif not ignore_errors:
+            print(f"DEBUG: Re-raising original exception for '{path}' as ignore_errors=False.")
+            # Re-raise the original exception correctly
+            raise exc_value.with_traceback(tb)
+        else:
+            print(f"DEBUG: Suppressing error for '{path}' as ignore_errors=True.")
+            # If ignore_errors is True and we didn't handle it (or user onerror didn't raise),
+            # execution continues within shutil.rmtree
+
+    # --- Main logic of _enhanced_safe_rmtree ---
     try:
         if os.path.islink(name):
-            print(f"DEBUG: '{name}' es un enlace simbólico, usando os.unlink()")
+            print(f"DEBUG: Top-level path '{name}' is a link. Unlinking.")
             os.unlink(name)
+        elif os.path.exists(name): # Only call rmtree if it exists and isn't a link
+             print(f"DEBUG: Top-level path '{name}' is not a link. Calling shutil.rmtree.")
+             # Pass our custom handler to the nested rmtree call
+             shutil.rmtree(name, ignore_errors=ignore_errors, onerror=_rmtree_onerror)
         else:
-            print(f"DEBUG: '{name}' no es un enlace simbólico, usando shutil.rmtree()")
-            shutil.rmtree(name, ignore_errors=ignore_errors, onerror=onerror if not ignore_errors else None) # Pasa ignore_errors y onerror correctamente
-    except FileNotFoundError:
-         print(f"DEBUG: El archivo o directorio '{name}' no fue encontrado durante la limpieza (puede que ya haya sido borrado).")
+             print(f"DEBUG: Top-level path '{name}' does not exist. Nothing to remove.")
+
     except Exception as e:
-        print(f"DEBUG: Excepción inesperada en _safe_rmtree para '{name}': {e}")
-        if not ignore_errors:
-             raise # Relanza la excepción si no debemos ignorar errores
+         print(f"DEBUG: Exception during _enhanced_safe_rmtree for '{name}': {e}")
+         if not ignore_errors:
+             # If errors are not ignored at the top level either, re-raise
+             raise
+         # If ignore_errors is True, suppress the exception at this level too
 
-# Aplicar el parche a TemporaryDirectory
-# Usamos getattr/hasattr por si _rmtree no existe en alguna versión/plataforma, aunque es estándar.
+
+# Apply the enhanced patch
 if hasattr(tempfile.TemporaryDirectory, '_rmtree'):
-    # Guardamos una referencia al original por si acaso (opcional)
+    # Store original for safety, although we don't use it here
     # tempfile.TemporaryDirectory._rmtree_original = tempfile.TemporaryDirectory._rmtree
-    tempfile.TemporaryDirectory._rmtree = MethodType(_safe_rmtree, tempfile.TemporaryDirectory)
-    print("DEBUG: Monkey patch para tempfile.TemporaryDirectory._rmtree aplicado.")
+    tempfile.TemporaryDirectory._rmtree = MethodType(_enhanced_safe_rmtree, tempfile.TemporaryDirectory)
+    print("DEBUG: Enhanced monkey patch for tempfile.TemporaryDirectory._rmtree applied.")
 else:
-    print("DEBUG WARNING: tempfile.TemporaryDirectory no tiene el método _rmtree para parchear.")
+    print("DEBUG WARNING: tempfile.TemporaryDirectory does not have _rmtree method to patch.")
 
-# --- FIN DEL PARCHE ---
 
 
 # Asegúrese de que todas las rutas estén correctamente configuradas
