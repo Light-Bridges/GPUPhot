@@ -438,14 +438,29 @@ def get_target_snr(dfm: pd.DataFrame, target_ra: float, target_dec: float, dist_
     :return: SNR of the target.
     :rtype: float
     """
-    _, idx = crossmatch_sources([[target_ra, target_dec]],
-                                dfm[['RA', 'DEC']].values,
-                                thres_px=dist_thres_px)
-    if idx.size > 0:
-        target_snr = dfm.snr[idx[0]]
-    else:
-        target_snr = 0
-    return target_snr
+    target_coords_np = np.array([[target_ra, target_dec]])
+    if 'RA' not in dfm.columns or 'DEC' not in dfm.columns:
+        logger.error("DataFrame missing 'RA' or 'DEC' columns.");
+        return 0.0
+    ref_coords_np = dfm[['RA', 'DEC']].values
+
+    try:
+        # Call the main wrapper. It will detect NumPy input and use CPU path.
+        _, ref_idx = crossmatch_sources(target_coords_np, ref_coords_np, thres_px=dist_thres_px)
+        # ref_idx will be NumPy array because input was NumPy
+
+        if ref_idx.size > 0:
+            if 'snr' not in dfm.columns:
+                logger.error("DataFrame missing 'snr' column.");
+                return 0.0
+            target_snr = dfm['snr'].iloc[ref_idx[0]]
+        else:
+            target_snr = 0.0
+    except Exception as e:
+        logger.error(f"Error during crossmatch or SNR retrieval in get_target_snr: {e}")
+        target_snr = 0.0
+
+    return float(target_snr)
 
 
 @nvtx.annotate('get_maglim', category='utils.astro')

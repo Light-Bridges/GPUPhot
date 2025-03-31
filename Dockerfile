@@ -9,37 +9,80 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH="/app/venv/bin:$PATH" \
     PYTHONPATH=/app
 
-# Install Python and pip with version check
+# Install system dependencies
 RUN apt-get update && apt-get upgrade -y && \
-    # Instalar dependencias base
     apt-get install --no-install-recommends -y \
-    software-properties-common curl python3 build-essential gcc g++ && \
-    # Verificar versión de Python y actualizar si es necesario
-    { \
+        software-properties-common \
+        curl \
+        wget \
+        build-essential \
+        gcc \
+        g++ \
+        ca-certificates \
+        pkg-config \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Instalar Python y pip
+RUN \
     current_py_version=$(python3 -c "import sys; print('{}.{}'.format(sys.version_info.major, sys.version_info.minor))" 2>/dev/null || echo "0.0") && \
-    if [ "$(printf '%s\n' "3.8" "$current_py_version" | sort -V | head -n1)" != "3.8" ]; then \
-        echo "Instalando Python 3.8"; \
+    echo "Versión actual de Python detectada: $current_py_version" && \
+    \
+    PYTHON_VERSIONS_TO_TRY="3.12 3.11 3.10 3.8" && \
+    MIN_PYTHON_VERSION="3.8" && \
+    TARGET_PYTHON_VERSION="" && \
+    INSTALL_NEEDED=false && \
+    \
+    if [ "$(printf '%s\n' "$MIN_PYTHON_VERSION" "$current_py_version" | sort -V | head -n1)" != "$MIN_PYTHON_VERSION" ]; then \
+        echo "Actual Python $current_py_version is lower than the minimum required $MIN_PYTHON_VERSION. Trying to install a newer version." ; \
+        INSTALL_NEEDED=true ; \
+    else \
+        echo "Actual Python $current_py_version is higher than the minimum required $MIN_PYTHON_VERSION. No se instalará otra versión." ; \
+        TARGET_PYTHON_VERSION=$(echo $current_py_version | cut -d. -f1,2) ; \
+        apt-get update && apt-get install -y --no-install-recommends python3-dev python3-pip python3-venv && apt-get clean && rm -rf /var/lib/apt/lists/* ; \
+    fi && \
+    \
+    if [ "$INSTALL_NEEDED" = true ]; then \
+        echo "Adding deadsnakes PPA and updating apt..." ; \
         add-apt-repository ppa:deadsnakes/ppa -y && \
         apt-get update && \
-        apt-get install -y python3.8 python3.8-dev python3.8-venv && \
-        update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 2 && \
-        update-alternatives --install /usr/bin/python python /usr/bin/python3.8 2 && \
-        ln -sf /usr/bin/python3.8 /usr/bin/python3; \
-    fi; \
-    } && \
-    # Instalar paquetes específicos para Python 3.8
-    apt-get install -y --no-install-recommends \
-    # python3-scipy \
-    # python3-sklearn \
-    # python3-matplotlib \
-    # python3-pytest-astropy \
-    python3-dev \
-    python3-pip \
-    python3-venv && \
-    # Limpiar caché
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    # Configurar entorno virtual
+        \
+        for version in $PYTHON_VERSIONS_TO_TRY; do \
+            echo "Trying to install Python $version..." ; \
+            if apt-cache show "python$version" > /dev/null 2>&1; then \
+                echo "Found Python $version for $(dpkg --print-architecture). Installing..." ; \
+                apt-get install -y --no-install-recommends \
+                    "python$version" \
+                    "python$version-dev" \
+                    "python$version-venv" \
+                    "python$version-distutils" && \
+                if "/usr/bin/python$version" --version > /dev/null 2>&1; then \
+                    echo "Configure alternatives for Python $version." ; \
+                    update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python$version" 2 && \
+                    update-alternatives --install /usr/bin/python python "/usr/bin/python$version" 2 && \
+                    ln -sf "/usr/bin/python$version" /usr/bin/python3 && \
+                    TARGET_PYTHON_VERSION="$version" && \
+                    echo "Python $version instalado y configurado exitosamente." ; \
+                    break ; \
+                else \
+                    echo "ERROR: Failed to install or verify Python $version." ; \
+                    # apt-get remove -y "python$version" "python$version-dev" "python$version-venv" "python$version-distutils"; apt-get autoremove -y;
+                fi \
+            else \
+                echo "Python $version not available in the repositories for $(dpkg --print-architecture)." ; \
+            fi ; \
+        done ; \
+        apt-get clean && rm -rf /var/lib/apt/lists/* ; \
+    fi && \
+    \
+    if [ -z "$TARGET_PYTHON_VERSION" ]; then \
+        echo "ERROR: Impossible install any of the required Python versions ($PYTHON_VERSIONS_TO_TRY) and the base version ($current_py_version) is lower than the minimum ($MIN_PYTHON_VERSION)." >&2 ; \
+        exit 1 ; \
+    fi && \
+    \
+    echo "Verify final of the active Python version:" && \
+    python3 --version && \
+    \
+    echo "Virtual environment creation: $VIRTUAL_ENV with Python $TARGET_PYTHON_VERSION" && \
     python3 -m venv $VIRTUAL_ENV
 
 
@@ -59,7 +102,8 @@ RUN pip install --no-cache-dir -r requirements-worker.txt
 # Copy requirements
 ARG REQUIREMENTS_FILE=requirements_3_12.txt
 COPY ${REQUIREMENTS_FILE} ./
-RUN pip install --no-cache-dir -r ${REQUIREMENTS_FILE}
+RUN pip install --no-cache-dir -r ${REQUIREMENTS_FILE} --extra-index-url=https://pypi.nvidia.com
+
 
 ## Copy application code
 #COPY . .

@@ -18,3 +18,16 @@ python-logstash-async~=2.5.0
 scikit-learn~=1.5.2
 scipy~=1.9.3
 setuptools~=75.1.0
+
+
+# RAPIDS (for GPU crossmatch) - Matches cupy-cuda12x
+# To install these packages, use the flag --extra-index-url=https://pypi.nvidia.com with pip install.
+# If you prefer to use the CPU implementation (KDTree), you can comment out these lines.
+# pylibraft-cu12==25.2.*
+# cuml-cu12==25.2.*
+
+# RAPIDS (for GPU crossmatch) - Matches cupy-cuda11x
+# To install these packages, use the flag --extra-index-url=https://pypi.nvidia.com with pip install.
+# If you prefer to use the CPU implementation (KDTree), you can comment out these lines.
+# pylibraft-cu11==25.2.*
+# cuml-cu11==25.2.*

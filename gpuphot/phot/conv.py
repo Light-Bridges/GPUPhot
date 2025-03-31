@@ -98,39 +98,63 @@ def gaussian_kernel(lk: int, sigma: int, **kwargs) -> cp.ndarray:
     return kernel / cp.sum(kernel)
 
 
+# @nvtx.annotate('get_aper_kernel', category='phot.conv')
+# def get_aper_kernel(radius: int, size: int = None, **kwargs) -> tuple:
+#     """
+#     Generate a circular kernel for aperture photometry.
+#
+#     :param radius: Radius of the circular kernel.
+#     :type radius: int
+#     :param size: Size of the kernel. Default is 2*radius+1.
+#     :type size: int or None
+#     :return: A circular kernel and the area of the kernel.
+#     :rtype: tuple
+#     """
+#     # if size is None:
+#     #     size = 2 * radius + 1
+#     # kernel = cp.zeros((size, size))
+#     # y, x = cp.indices(kernel.shape)
+#     # mask = (x - (size - 1) / 2) ** 2 + (y - (size - 1) / 2) ** 2 <= radius ** 2
+#     # kernel[mask] = 1
+#     # area = cp.sum(kernel)
+#     # return kernel, area
+#
+#     if size is None:
+#         size = 2 * radius + 1
+#     center = (size - 1) / 2.0
+#     y, x = cp.indices((size, size), dtype=cp.float64)
+#     mask = (x - center) ** 2 + (y - center) ** 2 <= float(radius) ** 2
+#     kernel = mask.astype(cp.float64)
+#     area = cp.sum(kernel)
+#     return kernel, area
 @nvtx.annotate('get_aper_kernel', category='phot.conv')
-def get_aper_kernel(radius: int, size: int = None, **kwargs) -> tuple:
+def get_aper_kernel(radius: float, size: int) -> tuple[cp.ndarray, cp.ndarray]:
     """
-    Generate a circular kernel for aperture photometry.
+    Generate a circular kernel for aperture photometry using CuPy.
+    Radius can be float. Size determines the array dimensions.
 
     :param radius: Radius of the circular kernel.
-    :type radius: int
-    :param size: Size of the kernel. Default is 2*radius+1.
-    :type size: int or None
-    :return: A circular kernel and the area of the kernel.
-    :rtype: tuple
+    :type radius: float
+    :param size: Size of the kernel array (must be odd).
+    :type size: int
+    :return: A circular kernel (cupy array) and the area (sum of kernel, cupy scalar).
+    :rtype: tuple(cupy.ndarray, cupy.ndarray)
     """
-    # if size is None:
-    #     size = 2 * radius + 1
-    # kernel = cp.zeros((size, size))
-    # y, x = cp.indices(kernel.shape)
-    # mask = (x - (size - 1) / 2) ** 2 + (y - (size - 1) / 2) ** 2 <= radius ** 2
-    # kernel[mask] = 1
-    # area = cp.sum(kernel)
-    # return kernel, area
-
-    if size is None:
-        size = 2 * radius + 1
+    if size % 2 == 0:
+        # FFT convolution kernels often work best with odd sizes for centering
+        # Or adjust center calculation if even size is needed. Assume odd for simplicity.
+        raise ValueError("Kernel size must be odd for simple centering.")
     center = (size - 1) / 2.0
     y, x = cp.indices((size, size), dtype=cp.float64)
-    mask = (x - center) ** 2 + (y - center) ** 2 <= float(radius) ** 2
-    kernel = mask.astype(cp.float64)
+    # Use squared radius comparison
+    mask = (x - center)**2 + (y - center)**2 <= float(radius)**2
+    kernel = mask.astype(cp.float64) # Use float64 for precision if needed
     area = cp.sum(kernel)
+    # Normalize kernel? Usually not for aperture sum, but depends on convention. Assume sum=area.
     return kernel, area
 
-
 @nvtx.annotate('fill_image', category='phot.conv')
-def fill_image(image_shape: tuple, **kwargs) -> tuple:
+def fill_image(image_shape: tuple) -> tuple[int, int]:
     """
     Calculate the new image shape rounding up to the next power of 2.
 

@@ -1,3 +1,4 @@
+import cupy as cp
 import numpy as np
 import nvtx
 import pandas as pd
@@ -9,27 +10,186 @@ from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
+# Import cuml. Comprobar si está instalado.
+try:
+    import cuml
+    from cuml.neighbors import NearestNeighbors as cuNearestNeighbors
 
+    CUML_AVAILABLE = True
+    logger.debug("RAPIDS cuML found. Using GPU for crossmatch.")
+except ImportError:
+    logger.warning("Warning: RAPIDS cuML not found. Falling back to CPU crossmatch or GPU crossmatch will fail.")
+    CUML_AVAILABLE = False
+
+
+# --- GPU Implementation Detail ---
+@nvtx.annotate('crossmatch_sources_gpu_impl', category='utils.catalog_gpu')
+def _crossmatch_sources_gpu_impl(source_coords: cp.ndarray, ref_coords: cp.ndarray,
+                                 thres_px: float = 2.0) -> tuple[cp.ndarray, cp.ndarray]:
+    """GPU implementation using cuML (Internal use)."""
+    # (Código de crossmatch_sources_gpu anterior, sin la comprobación CUML_AVAILABLE)
+    nvtx_range = nvtx.start_range('_crossmatch_sources_gpu_impl', category='utils.catalog_gpu', color='magenta')
+
+    if not isinstance(source_coords, cp.ndarray) or not isinstance(ref_coords, cp.ndarray):
+        nvtx.end_range(nvtx_range);
+        raise TypeError("Inputs must be CuPy arrays for GPU impl.")
+    if source_coords.ndim != 2 or ref_coords.ndim != 2:
+        nvtx.end_range(nvtx_range);
+        raise ValueError("Input arrays must be 2D for GPU impl.")
+    n_sources, n_refs = source_coords.shape[0], ref_coords.shape[0]
+    if n_sources == 0 or n_refs == 0:
+        nvtx.end_range(nvtx_range);
+        return cp.array([], dtype=cp.int32), cp.array([], dtype=cp.int32)
+
+    source_coords_f32 = source_coords.astype(cp.float32, copy=False)
+    ref_coords_f32 = ref_coords.astype(cp.float32, copy=False)
+
+    try:
+        knn_range = nvtx.start_range('cuml_knn', category='cuml')
+        nn = cuNearestNeighbors(n_neighbors=1, algorithm='auto')
+        nn.fit(ref_coords_f32)
+        distances, indices = nn.kneighbors(source_coords_f32)
+        nvtx.end_range(knn_range)
+
+        filter_range = nvtx.start_range('filter_results_gpu', category='utils.catalog_gpu')
+        distances_sq = distances.squeeze()
+        ref_indices_all = indices.squeeze()
+        thres_px_sq = thres_px ** 2
+        mask = distances_sq < thres_px_sq
+        source_coords_matched_idx = cp.arange(n_sources, dtype=cp.int32)[mask]
+        ref_coords_matched_idx = ref_indices_all[mask]
+        nvtx.end_range(filter_range)
+
+    except Exception as e:
+        logger.error(f"Error during cuML NearestNeighbors operation: {e}")
+        nvtx.end_range(nvtx_range)
+        raise RuntimeError(f"cuML crossmatch failed: {e}") from e
+
+    nvtx.end_range(nvtx_range)
+    return source_coords_matched_idx, ref_coords_matched_idx
+
+
+# --- CPU Implementation Detail ---
+@nvtx.annotate('crossmatch_sources_cpu_impl', category='utils.catalog_cpu')
+def _crossmatch_sources_cpu_impl(source_coords: np.ndarray, ref_coords: np.ndarray,
+                                 thres_px: float = 2.0) -> tuple[np.ndarray, np.ndarray]:
+    """CPU implementation using KDTree (Internal use)."""
+    # (Código de crossmatch_sources_cpu anterior)
+    nvtx_range = nvtx.start_range('_crossmatch_sources_cpu_impl', category='utils.catalog_cpu', color='blue')
+
+    if not isinstance(source_coords, np.ndarray) or not isinstance(ref_coords, np.ndarray):
+        nvtx.end_range(nvtx_range);
+        raise TypeError("Inputs must be NumPy arrays for CPU impl.")
+    if source_coords.ndim != 2 or ref_coords.ndim != 2:
+        nvtx.end_range(nvtx_range);
+        raise ValueError("Input arrays must be 2D for CPU impl.")
+    if source_coords.shape[0] == 0 or ref_coords.shape[0] == 0:
+        nvtx.end_range(nvtx_range);
+        return np.array([], dtype=int), np.array([], dtype=int)
+
+    try:
+        kdtree_range = nvtx.start_range('scipy_kdtree', category='scipy')
+        tree = KDTree(ref_coords)
+        dist, idx = tree.query(source_coords, k=1)
+        nvtx.end_range(kdtree_range)
+
+        filter_range = nvtx.start_range('filter_results_cpu', category='cpu_ops')
+        mask = dist < thres_px
+        source_coords_matched_idx = np.arange(len(source_coords), dtype=int)[mask]
+        ref_coords_matched_idx = idx[mask]
+        nvtx.end_range(filter_range)
+
+    except Exception as e:
+        logger.error(f"Error during KDTree operation: {e}")
+        nvtx.end_range(nvtx_range)
+        raise RuntimeError(f"KDTree crossmatch failed: {e}") from e
+
+    nvtx.end_range(nvtx_range)
+    return source_coords_matched_idx, ref_coords_matched_idx
+
+
+# --- Wrapper Function (La que se debe llamar desde fuera) ---
 @nvtx.annotate('crossmatch_sources', category='utils.catalog')
-def crossmatch_sources(source_coords, ref_coords, thres_px=2):
+def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
     """
     Cross-match source coordinates with reference coordinates.
+    Automatically attempts GPU (cuML) acceleration if available and inputs are CuPy arrays.
+    Falls back to CPU (SciPy KDTree) if cuML is unavailable, inputs are NumPy arrays,
+    or if the GPU method fails.
 
-    :param source_coords: Array of source coordinates.
-    :type source_coords: numpy.ndarray
-    :param ref_coords: Array of reference coordinates.
-    :type ref_coords: numpy.ndarray
-    :param thres_px: Threshold distance in pixels for matching, default is 2.
+    :param source_coords: Array of source coordinates (N, D). Can be NumPy or CuPy.
+    :param ref_coords: Array of reference coordinates (M, D). Can be NumPy or CuPy.
+                       Must be same type as source_coords.
+    :param thres_px: Threshold distance in pixels for matching.
     :type thres_px: float
-    :return: Tuple of matched source and reference indices.
-    :rtype: tuple(numpy.ndarray, numpy.ndarray)
+    :return: Tuple of matched source indices and matched reference indices.
+             Return type (NumPy or CuPy) matches the input type.
+    :rtype: tuple
     """
-    tree = KDTree(ref_coords)
-    dist, idx = tree.query(source_coords, k=1)
-    mask = dist < thres_px
-    source_coords_matched_idx = np.arange(len(source_coords))[mask]
-    ref_coords_matched_idx = idx[mask]
-    return source_coords_matched_idx, ref_coords_matched_idx
+    nvtx_range = nvtx.start_range('crossmatch_sources_wrapper', category='utils.catalog', color='gray')
+
+    is_gpu_input = isinstance(source_coords, cp.ndarray)
+    is_cpu_input = isinstance(source_coords, np.ndarray)
+
+    # Verify input types consistency
+    if type(source_coords) != type(ref_coords):
+        nvtx.end_range(nvtx_range)
+        raise TypeError(
+            f"source_coords ({type(source_coords)}) and ref_coords ({type(ref_coords)}) must be of the same type (both NumPy or both CuPy).")
+
+    if not is_gpu_input and not is_cpu_input:
+        nvtx.end_range(nvtx_range)
+        raise TypeError("Inputs must be NumPy or CuPy arrays.")
+
+    use_gpu = False
+    if CUML_AVAILABLE and is_gpu_input:
+        use_gpu = True
+        logger.debug("Attempting GPU crossmatch.")
+        try:
+            result = _crossmatch_sources_gpu_impl(source_coords, ref_coords, thres_px)
+            nvtx.end_range(nvtx_range)
+            return result
+        except Exception as gpu_e:
+            logger.warning(f"GPU crossmatch failed: {gpu_e}. Falling back to CPU.",
+                           exc_info=False)  # exc_info=False to avoid full traceback in warning
+            # Fallback will happen below
+            use_gpu = False  # Ensure we proceed to CPU path
+
+    # --- CPU Path (or Fallback from GPU failure) ---
+    if not use_gpu:
+        logger.debug("Using CPU crossmatch.")
+        # Prepare NumPy arrays for CPU implementation
+        if is_gpu_input:
+            # Need to transfer data from GPU to CPU for fallback
+            transfer_range = nvtx.start_range('transfer_gpu_to_cpu_fallback', category='transfer', color='red')
+            source_np = source_coords.get()
+            ref_np = ref_coords.get()
+            nvtx.end_range(transfer_range)
+        else:  # Input was already CPU
+            source_np = source_coords
+            ref_np = ref_coords
+
+        # Call CPU implementation
+        try:
+            result_np_src, result_np_ref = _crossmatch_sources_cpu_impl(source_np, ref_np, thres_px)
+        except Exception as cpu_e:
+            logger.error(f"CPU crossmatch failed: {cpu_e}")
+            nvtx.end_range(nvtx_range)
+            raise  # Re-raise the exception from the CPU implementation
+
+        # If the original input was GPU, transfer results back
+        if is_gpu_input:
+            transfer_back_range = nvtx.start_range('transfer_cpu_to_gpu_fallback_result', category='transfer',
+                                                   color='red')
+            result_cp_src = cp.asarray(result_np_src)
+            result_cp_ref = cp.asarray(result_np_ref)
+            nvtx.end_range(transfer_back_range)
+            nvtx.end_range(nvtx_range)
+            return result_cp_src, result_cp_ref
+        else:
+            # Original input was CPU, return NumPy results
+            nvtx.end_range(nvtx_range)
+            return result_np_src, result_np_ref
 
 
 ### # @hierarchical_debug(logger)

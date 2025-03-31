@@ -5,8 +5,16 @@ from cupyx.scipy.ndimage import maximum_filter
 from lmfit import Model
 from scipy.spatial import KDTree
 from scipy.spatial.distance import cdist
-from sklearn.cluster import AgglomerativeClustering
-from sklearn.decomposition import PCA
+
+try:
+    from cuml import AgglomerativeClustering
+except ImportError:
+    from sklearn.cluster import AgglomerativeClustering
+
+try:
+    from cuml.decomposition import PCA
+except ImportError:
+    from sklearn.decomposition import PCA
 
 from .conv import gaussian_kernel, convolve_fft, fill_nan_fft
 from .utils import calculate_tile_nanmean_sigclip, decompose_into_tiles, recompose_from_percentiles
@@ -223,7 +231,6 @@ def group_star_dataset(coords: np.ndarray, avg_group_size: int = 10, min_group_s
     :raises InvalidGroupSizeError: If both avg_group_size and min_group_size are less than or equal to zero.
     """
 
-    # Validar parámetros de entrada
     if avg_group_size <= 0 and min_group_size <= 0:
         raise InvalidGroupSizeError(avg_group_size, min_group_size)
 
@@ -231,43 +238,75 @@ def group_star_dataset(coords: np.ndarray, avg_group_size: int = 10, min_group_s
 
     # Manejar el caso donde no hay estrellas
     if n_stars == 0:
-        return np.array([])  # Devuelve un array vacío si no hay estrellas
+        return np.array([], dtype=int)  # Devuelve un array vacío si no hay estrellas
 
     # Crear clusters
-    avg_group_size = max(min_group_size, avg_group_size)
-    num_clusters = max(1, n_stars // avg_group_size)
+    # Ensure avg_group_size is at least min_group_size, avoids weird num_clusters
+    effective_avg_group_size = max(min_group_size, avg_group_size)
+    # Ensure num_clusters is at least 1, even if n_stars < effective_avg_group_size
+    num_clusters = max(1, n_stars // effective_avg_group_size)
+    # Sklearn requires n_clusters >= 1, handle n_stars=0 case separately? Already done.
+    # Handle case where n_stars < num_clusters (e.g., n_stars=3, avg_size=10 -> num_clusters=1)
+    num_clusters = min(num_clusters, n_stars)  # Cannot have more clusters than points
 
     clustering = AgglomerativeClustering(n_clusters=num_clusters)
     labels = clustering.fit_predict(coords)
 
-    groups = {i: coords[labels == i] for i in np.unique(labels)}
+    unique_labels_initial = np.unique(labels)
+    groups = {i: coords[labels == i] for i in unique_labels_initial}
 
-    # ensure minimum group size
+    # Ensure minimum group size
     valid_groups = {}
-    small_groups = []
+    small_groups_coords = []  # Store coords directly
+    valid_group_ids_list = []  # Keep track of valid group ids
 
     for group_id, stars in groups.items():
         if len(stars) >= min_group_size:
             valid_groups[group_id] = stars
+            valid_group_ids_list.append(group_id)
         else:
-            small_groups.append(stars)
+            # Add all stars from the small group to the list
+            small_groups_coords.extend(list(stars))
 
-    for small_group in small_groups:
-        for star in small_group:
-            valid_group_ids = list(valid_groups.keys())
-            valid_centroids = np.array([np.mean(valid_groups[gid], axis=0) for gid in valid_group_ids])
-            distances = cdist([star], valid_centroids)
-            closest_group_id = valid_group_ids[np.argmin(distances)]
+    # Only proceed if there are valid groups to reassign to
+    if not valid_groups:
+        # If NO group meets min_group_size, maybe return all as one group? Or raise error?
+        # Current logic fails here. Let's assign all to label 0 if this happens.
+        if n_stars > 0:
+            logger.warning(
+                f"Warning: No clusters met min_group_size ({min_group_size}). Assigning all stars to group 0.")
+            return np.zeros(n_stars, dtype=int)
+        else:
+            return np.array([], dtype=int)  # Should be handled earlier
 
-            valid_groups[closest_group_id] = np.vstack([valid_groups[closest_group_id], star])
+    # Create centroids for valid groups ONCE
+    valid_centroids = np.array([np.mean(valid_groups[gid], axis=0) for gid in valid_group_ids_list])
 
-    final_labels = np.zeros(n_stars, dtype=int) - 1
-    for group_id, stars in valid_groups.items():
-        for star in stars:
-            index = np.where((coords == star).all(axis=1))[0][0]
-            final_labels[index] = group_id
+    final_labels = labels.copy()  # Start with initial labels
 
-    return final_labels
+    # Iterate through individual stars from small groups
+    for star in small_groups_coords:
+        # Find the closest valid centroid
+        distances = cdist([star], valid_centroids)
+        closest_valid_idx = np.argmin(distances)
+        closest_group_id = valid_group_ids_list[closest_valid_idx]
+
+        # Find original index of the star to update its label
+        # Using np.where might be slow for many stars. A dictionary lookup might be faster if indices known.
+        # Assuming coords are unique for this to work reliably.
+        indices = np.where((coords == star).all(axis=1))[0]
+        if len(indices) > 0:
+            original_index = indices[0]
+            final_labels[original_index] = closest_group_id  # Reassign label
+
+        # We don't need to physically move stars between groups array here, just update labels
+
+    # Renumber labels to be contiguous starting from 0 (optional but good practice)
+    unique_final_labels = np.unique(final_labels)
+    label_map = {old_label: new_label for new_label, old_label in enumerate(unique_final_labels)}
+    final_labels_contiguous = np.array([label_map[l] for l in final_labels], dtype=int)
+
+    return final_labels_contiguous
 
 
 ### # @hierarchical_debug(logger)
