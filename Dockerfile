@@ -22,68 +22,131 @@ RUN apt-get update && apt-get upgrade -y && \
         pkg-config \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Instalar Python y pip
+# Install Python and pip
 RUN \
-    current_py_version=$(python3 -c "import sys; print('{}.{}'.format(sys.version_info.major, sys.version_info.minor))" 2>/dev/null || echo "0.0") && \
-    echo "Versión actual de Python detectada: $current_py_version" && \
-    \
-    PYTHON_VERSIONS_TO_TRY="3.12 3.11 3.10 3.8" && \
-    MIN_PYTHON_VERSION="3.8" && \
+    # --- Configuration ---
+    PYTHON_VERSIONS_TO_TRY="3.12 3.11 3.10" && \
+    MIN_PYTHON_VERSION="3.10" && \
+    # Define the specific fallback version
+    FALLBACK_PYTHON_VERSION="3.8" && \
     TARGET_PYTHON_VERSION="" && \
     INSTALL_NEEDED=false && \
+    # Ensure software-properties-common is installed for add-apt-repository
+    apt-get update && apt-get install -y --no-install-recommends software-properties-common && \
     \
+    # --- Detect current Python version ---
+    current_py_version=$(python3 -c "import sys; print('{}.{}'.format(sys.version_info.major, sys.version_info.minor))" 2>/dev/null || echo "0.0") && \
+    echo "Detected current Python version: $current_py_version" && \
+    echo "Python versions to try: $PYTHON_VERSIONS_TO_TRY" && \
+    echo "Minimum required Python version: $MIN_PYTHON_VERSION" && \
+    echo "Fallback Python version: $FALLBACK_PYTHON_VERSION" && \
+    \
+    # --- Initial version check ---
     if [ "$(printf '%s\n' "$MIN_PYTHON_VERSION" "$current_py_version" | sort -V | head -n1)" != "$MIN_PYTHON_VERSION" ]; then \
-        echo "Actual Python $current_py_version is lower than the minimum required $MIN_PYTHON_VERSION. Trying to install a newer version." ; \
+        echo "Current Python ($current_py_version) is lower than the minimum required ($MIN_PYTHON_VERSION). Attempting to install a newer version." ; \
         INSTALL_NEEDED=true ; \
     else \
-        echo "Actual Python $current_py_version is higher than the minimum required $MIN_PYTHON_VERSION. No se instalará otra versión." ; \
+        echo "Current Python ($current_py_version) meets or exceeds the minimum required ($MIN_PYTHON_VERSION). Using current version." ; \
         TARGET_PYTHON_VERSION=$(echo $current_py_version | cut -d. -f1,2) ; \
+        # Install dev/pip/venv packages for the current system version
         apt-get update && apt-get install -y --no-install-recommends python3-dev python3-pip python3-venv && apt-get clean && rm -rf /var/lib/apt/lists/* ; \
     fi && \
     \
+    # --- Attempt installation of preferred versions (if needed) ---
     if [ "$INSTALL_NEEDED" = true ]; then \
         echo "Adding deadsnakes PPA and updating apt..." ; \
+        # The PPA should already be added if software-properties-common was installed earlier, but `-y` makes it safe
         add-apt-repository ppa:deadsnakes/ppa -y && \
         apt-get update && \
         \
+        # Loop to try installing preferred versions
         for version in $PYTHON_VERSIONS_TO_TRY; do \
             echo "Trying to install Python $version..." ; \
             if apt-cache show "python$version" > /dev/null 2>&1; then \
-                echo "Found Python $version for $(dpkg --print-architecture). Installing..." ; \
+                echo "Python $version found for $(dpkg --print-architecture). Installing..." ; \
                 apt-get install -y --no-install-recommends \
                     "python$version" \
                     "python$version-dev" \
                     "python$version-venv" \
                     "python$version-distutils" && \
                 if "/usr/bin/python$version" --version > /dev/null 2>&1; then \
-                    echo "Configure alternatives for Python $version." ; \
-                    update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python$version" 2 && \
-                    update-alternatives --install /usr/bin/python python "/usr/bin/python$version" 2 && \
-                    ln -sf "/usr/bin/python$version" /usr/bin/python3 && \
+                    echo "Configuring alternatives for Python $version." ; \
+                    # Give high priority to preferred versions
+                    update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python$version" 100 && \
+                    update-alternatives --install /usr/bin/python python "/usr/bin/python$version" 100 && \
+                    # update-alternatives handles the /usr/bin/python3 link
                     TARGET_PYTHON_VERSION="$version" && \
-                    echo "Python $version instalado y configurado exitosamente." ; \
+                    echo "Python $version installed and configured successfully." ; \
                     break ; \
                 else \
                     echo "ERROR: Failed to install or verify Python $version." ; \
+                    # Optional: Clean up failed attempt
                     # apt-get remove -y "python$version" "python$version-dev" "python$version-venv" "python$version-distutils"; apt-get autoremove -y;
                 fi \
             else \
-                echo "Python $version not available in the repositories for $(dpkg --print-architecture)." ; \
+                echo "Python $version not available in repositories for $(dpkg --print-architecture)." ; \
             fi ; \
         done ; \
+        # Clean apt cache after the installation loop
         apt-get clean && rm -rf /var/lib/apt/lists/* ; \
     fi && \
     \
+    # --- Fallback and Final Error Block (MODIFIED) ---
     if [ -z "$TARGET_PYTHON_VERSION" ]; then \
-        echo "ERROR: Impossible install any of the required Python versions ($PYTHON_VERSIONS_TO_TRY) and the base version ($current_py_version) is lower than the minimum ($MIN_PYTHON_VERSION)." >&2 ; \
-        exit 1 ; \
+        # This condition now means:
+        # 1. The base version was too low (INSTALL_NEEDED=true) AND
+        # 2. None of the versions in PYTHON_VERSIONS_TO_TRY could be installed.
+
+        echo "WARN: Could not install any of the preferred Python versions ($PYTHON_VERSIONS_TO_TRY)." ; \
+        echo "Attempting to install fallback Python version $FALLBACK_PYTHON_VERSION as a last resort..." ; \
+        # Ensure apt is updated before the fallback attempt
+        apt-get update && \
+        version=$FALLBACK_PYTHON_VERSION ; \
+        if apt-cache show "python$version" > /dev/null 2>&1; then \
+            echo "Fallback Python $version found for $(dpkg --print-architecture). Installing..." ; \
+            apt-get install -y --no-install-recommends \
+                "python$version" \
+                "python$version-dev" \
+                "python$version-venv" \
+                "python$version-distutils" && \
+            if "/usr/bin/python$version" --version > /dev/null 2>&1; then \
+                echo "Configuring alternatives for fallback Python $version." ; \
+                # Give the fallback a lower priority than preferred versions
+                update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python$version" 50 && \
+                update-alternatives --install /usr/bin/python python "/usr/bin/python$version" 50 && \
+                # update-alternatives handles the /usr/bin/python3 link
+                TARGET_PYTHON_VERSION="$version" && \
+                echo "Fallback Python $version installed and configured successfully." ; \
+            else \
+                echo "ERROR: Failed to install or verify fallback Python $version." ; \
+            fi \
+        else \
+            echo "Fallback Python $version not available in repositories for $(dpkg --print-architecture)." ; \
+        fi ; \
+        # Clean apt cache after the fallback attempt
+        apt-get clean && rm -rf /var/lib/apt/lists/* ; \
+        # ---> RE-EVALUATE after fallback attempt <---
+        if [ -z "$TARGET_PYTHON_VERSION" ]; then \
+            echo "CRITICAL ERROR: Failed to install any required Python version (${PYTHON_VERSIONS_TO_TRY} or fallback ${FALLBACK_PYTHON_VERSION}). Base version ($current_py_version) is lower than minimum ($MIN_PYTHON_VERSION)." >&2 ; \
+            exit 1 ; \
+        fi \
+        # If we get here, the fallback worked, and TARGET_PYTHON_VERSION is now set.
     fi && \
     \
-    echo "Verify final of the active Python version:" && \
+    # --- Final Verification and Venv Creation ---
+    echo "Final check of the active Python version:" && \
     python3 --version && \
+    python --version && \
     \
-    echo "Virtual environment creation: $VIRTUAL_ENV with Python $TARGET_PYTHON_VERSION" && \
-    python3 -m venv $VIRTUAL_ENV
+    echo "Ensuring pip is installed for Python $TARGET_PYTHON_VERSION..." && \
+    # Use python3 (which now points to TARGET_PYTHON_VERSION) to install/upgrade pip
+    python3 -m ensurepip && \
+    python3 -m pip install --upgrade pip && \
+    \
+    echo "Creating virtual environment: $VIRTUAL_ENV with Python $TARGET_PYTHON_VERSION" && \
+    # Ensure VIRTUAL_ENV variable is defined previously, e.g., ENV VIRTUAL_ENV=/opt/venv
+    python3 -m venv "$VIRTUAL_ENV"
+
 
 
 # Set working directory
