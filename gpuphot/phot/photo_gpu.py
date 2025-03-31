@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import gc
 import time
 import traceback
@@ -357,10 +359,12 @@ def find_aperture_corrections_gpu(sources: cp.ndarray, corrections: cp.ndarray, 
     # tile_idx will be CuPy array if successful GPU or if fallback occurred from GPU input
 
     if len(tile_idx) != len(sources):
-         nvtx.end_range(nvtx_range); raise ValueError(f"Crossmatch returned unexpected indices...")
+        nvtx.end_range(nvtx_range);
+        raise ValueError(f"Crossmatch returned unexpected indices...")
     if not isinstance(tile_idx, cp.ndarray):
-         # This indicates CPU path was used AND original input was CPU - shouldn't happen here
-         nvtx.end_range(nvtx_range); raise TypeError("Crossmatch did not return CuPy array as expected.")
+        # This indicates CPU path was used AND original input was CPU - shouldn't happen here
+        nvtx.end_range(nvtx_range);
+        raise TypeError("Crossmatch did not return CuPy array as expected.")
 
     # Indexing on GPU
     gpu_index_range = nvtx.start_range('gpu_indexing_corrections', category='phot.photo_gpu')
@@ -369,7 +373,9 @@ def find_aperture_corrections_gpu(sources: cp.ndarray, corrections: cp.ndarray, 
         aperture_correction_errors = correction_errors[tile_idx, :]
     else:
         if not isinstance(opt_rad_idx, cp.ndarray):
-             nvtx.end_range(gpu_index_range); nvtx.end_range(nvtx_range); raise TypeError("opt_rad_idx must be CuPy")
+            nvtx.end_range(gpu_index_range);
+            nvtx.end_range(nvtx_range);
+            raise TypeError("opt_rad_idx must be CuPy")
         aperture_corrections = corrections[tile_idx, opt_rad_idx]
         aperture_correction_errors = correction_errors[tile_idx, opt_rad_idx]
     nvtx.end_range(gpu_index_range)

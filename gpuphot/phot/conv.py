@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import cupy as cp
 import numpy as np
 import nvtx
@@ -147,11 +149,12 @@ def get_aper_kernel(radius: float, size: int) -> tuple[cp.ndarray, cp.ndarray]:
     center = (size - 1) / 2.0
     y, x = cp.indices((size, size), dtype=cp.float64)
     # Use squared radius comparison
-    mask = (x - center)**2 + (y - center)**2 <= float(radius)**2
-    kernel = mask.astype(cp.float64) # Use float64 for precision if needed
+    mask = (x - center) ** 2 + (y - center) ** 2 <= float(radius) ** 2
+    kernel = mask.astype(cp.float64)  # Use float64 for precision if needed
     area = cp.sum(kernel)
     # Normalize kernel? Usually not for aperture sum, but depends on convention. Assume sum=area.
     return kernel, area
+
 
 @nvtx.annotate('fill_image', category='phot.conv')
 def fill_image(image_shape: tuple) -> tuple[int, int]:

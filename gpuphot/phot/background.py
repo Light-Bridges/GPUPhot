@@ -1,17 +1,19 @@
+from __future__ import annotations
+
 import cupy as cp
 import nvtx
 from cupyx.scipy.ndimage import gaussian_filter, binary_erosion, binary_dilation
 
 from .conv import get_mean_std, fill_nan_fft
 from .utils import decompose_into_tiles, calculate_tile_percentiles, recompose_from_percentiles
-from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
+from ..logger.hierarchical_logging import setup_logger
 from ..utils.gpu import free_gpu_mem
 
 logger = setup_logger(__name__)
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('get_local_background_fft',category='phot.background')
+@nvtx.annotate('get_local_background_fft', category='phot.background')
 def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper: int = 100,
                              avg_aper: int = 20, tile_section: int = 500, ks: int = 2,
                              get_std: bool = False, **kwargs) -> tuple:
