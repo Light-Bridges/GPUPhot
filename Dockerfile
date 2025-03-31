@@ -31,6 +31,7 @@ RUN \
     FALLBACK_PYTHON_VERSION="3.8" && \
     TARGET_PYTHON_VERSION="" && \
     INSTALL_NEEDED=false && \
+    PIP_INSTALLED_FOR_TARGET=false && \
     # Ensure software-properties-common is installed for add-apt-repository
     apt-get update && apt-get install -y --no-install-recommends software-properties-common && \
     \
@@ -48,8 +49,18 @@ RUN \
     else \
         echo "Current Python ($current_py_version) meets or exceeds the minimum required ($MIN_PYTHON_VERSION). Using current version." ; \
         TARGET_PYTHON_VERSION=$(echo $current_py_version | cut -d. -f1,2) ; \
-        # Install dev/pip/venv packages for the current system version
-        apt-get update && apt-get install -y --no-install-recommends python3-dev python3-pip python3-venv && apt-get clean && rm -rf /var/lib/apt/lists/* ; \
+        # Install required packages for the system's python3
+        echo "Installing supporting packages for system Python $TARGET_PYTHON_VERSION (python3-dev, python3-pip, python3-venv)..." ; \
+        apt-get update && apt-get install -y --no-install-recommends \
+            python3-dev \
+            python3-pip \
+            python3-venv && \
+        PIP_INSTALLED_FOR_TARGET=true && \
+        apt-get clean && rm -rf /var/lib/apt/lists/* ; \
+        # Set system python as the default via alternatives with lower priority
+        echo "Configuring alternatives for system Python $TARGET_PYTHON_VERSION." ; \
+        update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python${TARGET_PYTHON_VERSION}" 40 && \
+        update-alternatives --install /usr/bin/python python "/usr/bin/python${TARGET_PYTHON_VERSION}" 40 ; \
     fi && \
     \
     # --- Attempt installation of preferred versions (if needed) ---
@@ -73,15 +84,15 @@ RUN \
                     echo "Configuring alternatives for Python $version." ; \
                     # Give high priority to preferred versions
                     update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python$version" 100 && \
-                    update-alternatives --install /usr/bin/python python "/usr/bin/python$version" 100 && \
-                    # update-alternatives handles the /usr/bin/python3 link
+                    update-alternatives --install /usr/bin/python python "/usr/bin/python$version" 100 ; \
+                    # Note: pythonX.Y-venv should provide pip implicitly for venv creation
                     TARGET_PYTHON_VERSION="$version" && \
+                    PIP_INSTALLED_FOR_TARGET=true && \
                     echo "Python $version installed and configured successfully." ; \
+                    # Exit loop if a version was installed successfully
                     break ; \
                 else \
                     echo "ERROR: Failed to install or verify Python $version." ; \
-                    # Optional: Clean up failed attempt
-                    # apt-get remove -y "python$version" "python$version-dev" "python$version-venv" "python$version-distutils"; apt-get autoremove -y;
                 fi \
             else \
                 echo "Python $version not available in repositories for $(dpkg --print-architecture)." ; \
@@ -91,12 +102,9 @@ RUN \
         apt-get clean && rm -rf /var/lib/apt/lists/* ; \
     fi && \
     \
-    # --- Fallback and Final Error Block (MODIFIED) ---
-    if [ -z "$TARGET_PYTHON_VERSION" ]; then \
-        # This condition now means:
-        # 1. The base version was too low (INSTALL_NEEDED=true) AND
-        # 2. None of the versions in PYTHON_VERSIONS_TO_TRY could be installed.
-
+    # --- Fallback and Final Error Block ---
+    # This block only runs if INSTALL_NEEDED was true AND the loop above failed
+    if [ "$INSTALL_NEEDED" = true ] && [ -z "$TARGET_PYTHON_VERSION" ]; then \
         echo "WARN: Could not install any of the preferred Python versions ($PYTHON_VERSIONS_TO_TRY)." ; \
         echo "Attempting to install fallback Python version $FALLBACK_PYTHON_VERSION as a last resort..." ; \
         # Ensure apt is updated before the fallback attempt
@@ -111,11 +119,12 @@ RUN \
                 "python$version-distutils" && \
             if "/usr/bin/python$version" --version > /dev/null 2>&1; then \
                 echo "Configuring alternatives for fallback Python $version." ; \
-                # Give the fallback a lower priority than preferred versions
+                # Give the fallback a medium priority
                 update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python$version" 50 && \
-                update-alternatives --install /usr/bin/python python "/usr/bin/python$version" 50 && \
-                # update-alternatives handles the /usr/bin/python3 link
+                update-alternatives --install /usr/bin/python python "/usr/bin/python$version" 50 ; \
+                # Note: pythonX.Y-venv should provide pip implicitly for venv creation
                 TARGET_PYTHON_VERSION="$version" && \
+                PIP_INSTALLED_FOR_TARGET=true && \
                 echo "Fallback Python $version installed and configured successfully." ; \
             else \
                 echo "ERROR: Failed to install or verify fallback Python $version." ; \
@@ -125,27 +134,38 @@ RUN \
         fi ; \
         # Clean apt cache after the fallback attempt
         apt-get clean && rm -rf /var/lib/apt/lists/* ; \
-        # ---> RE-EVALUATE after fallback attempt <---
-        if [ -z "$TARGET_PYTHON_VERSION" ]; then \
-            echo "CRITICAL ERROR: Failed to install any required Python version (${PYTHON_VERSIONS_TO_TRY} or fallback ${FALLBACK_PYTHON_VERSION}). Base version ($current_py_version) is lower than minimum ($MIN_PYTHON_VERSION)." >&2 ; \
-            exit 1 ; \
-        fi \
-        # If we get here, the fallback worked, and TARGET_PYTHON_VERSION is now set.
     fi && \
-    \
+    # --- Final Check ---
+    # This check runs regardless of INSTALL_NEEDED. It ensures we have *some* target version.
+    if [ -z "$TARGET_PYTHON_VERSION" ]; then \
+        # This can only happen now if INSTALL_NEEDED was true, the preferred loop failed, AND the fallback failed.
+        echo "CRITICAL ERROR: Failed to install any required Python version (${PYTHON_VERSIONS_TO_TRY} or fallback ${FALLBACK_PYTHON_VERSION}). Base version ($current_py_version) is lower than minimum ($MIN_PYTHON_VERSION)." >&2 ; \
+        exit 1 ; \
+    fi && \
     # --- Final Verification and Venv Creation ---
-    echo "Final check of the active Python version:" && \
+    echo "Final check of the active Python version pointed to by 'python3':" && \
     python3 --version && \
+    echo "Final check of the active Python version pointed to by 'python':" && \
+    python --version && \
     \
-    echo "Ensuring pip is installed for Python $TARGET_PYTHON_VERSION..." && \
-    # Use python3 (which now points to TARGET_PYTHON_VERSION) to install/upgrade pip
-    python3 -m ensurepip && \
-    python3 -m pip install --upgrade pip && \
+    # Verify pip is *available* via the selected python3, but DO NOT UPGRADE IT GLOBALLY
+    if [ "$PIP_INSTALLED_FOR_TARGET" = true ]; then \
+        echo "Verifying system pip availability for Python $TARGET_PYTHON_VERSION..." ; \
+        if python3 -m pip --version > /dev/null 2>&1; then \
+           echo "System pip command found via 'python3 -m pip'. Proceeding to venv creation." ; \
+           # DO NOT UPGRADE SYSTEM PIP HERE: python3 -m pip install --upgrade pip ; \
+        else \
+           echo "WARN: System pip command not directly found via 'python3 -m pip' even though expected. Venv creation might still succeed using bundled tools." ; \
+        fi \
+    else \
+        echo "Skipping system pip check as it wasn't explicitly installed system-wide for this target." ;\
+    fi && \
     \
     echo "Creating virtual environment: $VIRTUAL_ENV with Python $TARGET_PYTHON_VERSION" && \
     # Ensure VIRTUAL_ENV variable is defined previously, e.g., ENV VIRTUAL_ENV=/opt/venv
-    python3 -m venv "$VIRTUAL_ENV"
-
+    # The 'venv' module, provided by pythonX.Y-venv or python3-venv, will install pip inside the venv.
+    python3 -m venv "$VIRTUAL_ENV" && \
+    echo "Virtual environment created successfully."
 
 
 # Set working directory
