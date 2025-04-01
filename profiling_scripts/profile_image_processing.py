@@ -22,25 +22,19 @@ def main():
 
     start_time = time.time()
     try:
-        print("DEBUG MAIN: Antes de llamar a process_image_task", flush=True)
         result = process_image_task(file_path, instrument_name=instrument_name)
-        print("DEBUG MAIN: process_image_task retornó", flush=True)  # ¿Llega aquí?
         print("Resultado del procesamiento:", flush=True)
         print(result)
     except Exception as e:
-        print("DEBUG MAIN: Dentro del bloque except", flush=True)  # ¿Entra aquí?
         import traceback
         print(f"Error durante process_image_task:", flush=True)
         traceback.print_exc()
         print(f"Mensaje de error resumido: {e}", flush=True)
     finally:
-        print("DEBUG MAIN: Dentro del bloque finally", flush=True)  # ¿Llega aquí?
         end_time = time.time()
         elapsed_time = end_time - start_time
         readable_time = str(timedelta(seconds=elapsed_time))
         print(f"Time elapsed: {readable_time}", flush=True)
-
-    print("DEBUG MAIN: Finalizando main()", flush=True)  # Si no hay crash, debería llegar
 
 
 if __name__ == "__main__":
