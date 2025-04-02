@@ -6,18 +6,28 @@ if [ "$#" -lt 1 ]; then
     exit 1
 fi
 
+# Detección de ruta nsys
+if [ -d "/opt/nsight-systems-host" ]; then
+    NSYS_PATH=$(readlink -f $(which nsys))
+    if [[ "$NSYS_PATH" == /opt/nsight-systems-host/* ]]; then
+        NSYS_CMD="$NSYS_PATH"
+    else
+        NSYS_CMD="nsys"
+    fi
+else
+    NSYS_CMD="nsys"
+fi
+
 IMAGE_PATH=$1
 INSTRUMENT_NAME=${2:-$INSTRUMENT_NAME}
 OUTPUT_DIR="/app/profiling_results"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 OUTPUT_FILE="${OUTPUT_DIR}/profile_${TIMESTAMP}.nsys-rep"
 
-# Crear directorio de salida si no existe
 mkdir -p $OUTPUT_DIR
 
-# Ejecutar perfil con Nsight Systems
 echo "Iniciando perfilado con Nsight Systems..."
-nsys profile -t cuda,nvtx,osrt -o "$OUTPUT_FILE" --stats=true python /app/profiling_scripts/profile_image_processing.py "$IMAGE_PATH" "$INSTRUMENT_NAME"
+$NSYS_CMD profile -t cuda,nvtx,osrt -o "$OUTPUT_FILE" --stats=true python /app/profiling_scripts/profile_image_processing.py "$IMAGE_PATH" "$INSTRUMENT_NAME"
 
 echo "Perfilado completado. Resultados guardados en: $OUTPUT_FILE"
 echo "Para analizar los resultados, puede usar Nsight Systems UI en su máquina local con el archivo generado"
