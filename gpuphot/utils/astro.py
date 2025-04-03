@@ -1,3 +1,4 @@
+import hashlib
 import inspect
 import os
 import re
@@ -29,104 +30,332 @@ logger = setup_logger(__name__)
 class SingletonSolver:
     """
     A singleton class for managing the astrometry solver.
+    Optimized to avoid redundant file existence checks using a marker file.
     """
     _instance = None
     _lock = threading.Lock()
+    _solver_initialized_successfully = False  # Internal flag for success status
+
+    # Marker file name
+    MARKER_FILENAME = ".astrometry_files_ok.hash"
 
     def __new__(cls):
         if cls._instance is None:
             with cls._lock:
+                # Double-checked locking pattern
                 if cls._instance is None:
-                    logger.debug("Creando nueva instancia del solver")
+                    logger.debug("Creating new SingletonSolver instance")
                     cls._instance = super().__new__(cls)
-                    cls._instance.initialize_solver()
+                    # Don't initialize directly here, __init__ is more appropriate
+                    # or call an explicit init method if needed before returning
+                    # the instance if logic requires it.
+                    # In this case, actual initialization happens on the first get_solver() call.
+                    cls._instance._initialized = False  # Flag to control initialization
         return cls._instance
+
+    def __init__(self):
+        """
+        Initializer. Prevents re-initialization if already done.
+        """
+        # Avoid re-running __init__ on the existing singleton instance
+        if hasattr(self, '_initialized') and self._initialized:
+            return
+
+        with self._lock:  # Protect the actual initialization
+            # Double check inside the lock
+            if hasattr(self, '_initialized') and self._initialized:
+                return
+
+            logger.debug("Initializing the SingletonSolver instance...")
+            self.solver = None
+            self.cache_dir = self._determine_cache_dir()
+            self.required_files = self._get_required_files(self.cache_dir)
+            self.required_files_hash = self._calculate_list_hash(self.required_files)
+            self.marker_file_path = os.path.join(self.cache_dir, self.MARKER_FILENAME)
+
+            self.initialize_solver()
+            self._initialized = True  # Mark as initialized
+
+    @nvtx.annotate('_determine_cache_dir', category='utils.astro.SingletonSolver')
+    def _determine_cache_dir(self):
+        """Determines the appropriate cache directory."""
+        default_cache = '/data/astrometry_cache'
+        env_cache = os.getenv('ASTROMETRY_CACHE_PATH')
+        # Be careful with __file__ if using PyInstaller or similar tools
+        try:
+            # Assumes the script is in a subdirectory like 'utils/astro' relative to the cache
+            base_dir = os.path.dirname(os.path.realpath(__file__))
+            fallback_cache = os.path.abspath(os.path.join(base_dir, '..', '..', 'astrometry_cache'))
+        except NameError:  # __file__ is not defined (e.g., in an interactive REPL)
+            fallback_cache = os.path.join(os.getcwd(), 'astrometry_cache')
+            logger.warning(f"__file__ not defined, using fallback relative to CWD: {fallback_cache}")
+
+        if os.path.exists(default_cache):
+            cache = default_cache
+            logger.debug(f"Using default cache directory: {cache}")
+        elif env_cache and os.path.exists(env_cache):  # Check if environment variable points to an existing dir
+            cache = env_cache
+            logger.debug(f"Using cache directory from environment variable: {cache}")
+        elif env_cache and not os.path.exists(env_cache):
+            logger.warning(
+                f"Cache directory from environment variable {env_cache} does not exist. Attempting to create.")
+            try:
+                os.makedirs(env_cache, exist_ok=True)
+                cache = env_cache
+                logger.info(f"Created cache directory from environment variable: {env_cache}")
+            except Exception as e:
+                logger.error(
+                    f"Could not create cache directory from environment variable {env_cache}: {e}. Using fallback.")
+                cache = fallback_cache  # Go to fallback if creating ENV one fails
+                logger.debug(f"Using fallback cache directory: {cache}")
+        else:
+            cache = fallback_cache
+            logger.debug(f"Using fallback cache directory: {cache}")
+
+        # Create the final directory if it doesn't exist (could be the fallback)
+        if not os.path.exists(cache):
+            logger.warning(f"Cache directory not found at {cache}. Attempting to create.")
+            try:
+                os.makedirs(cache, exist_ok=True)
+                logger.info(f"Cache directory created: {cache}")
+            except PermissionError:
+                logger.error(f"Cannot create directory {cache}. Check permissions.")
+                # Use temporary directory as a last resort
+                try:
+                    cache = tempfile.mkdtemp(prefix='astrometry_cache_')
+                    logger.warning(f"Using temporary directory as cache due to permission error: {cache}")
+                except Exception as temp_e:
+                    logger.critical(f"Failed to create even a temporary directory: {temp_e}")
+                    raise RuntimeError(f"Unable to establish a cache directory. Permissions issues likely.") from temp_e
+            except Exception as e:
+                logger.error(f"Unexpected error creating directory {cache}: {e}")
+                # You might raise an exception here if the cache is critical
+                try:
+                    cache = tempfile.mkdtemp(prefix='astrometry_cache_')
+                    logger.warning(f"Using temporary directory as cache due to unexpected error: {cache}")
+                except Exception as temp_e:
+                    logger.critical(f"Failed to create even a temporary directory: {temp_e}")
+                    raise RuntimeError(
+                        f"Unable to establish a cache directory. Unexpected error during creation.") from temp_e
+
+        logger.debug(f"Using final cache directory: {cache}")
+        return cache
+
+    @nvtx.annotate('_get_required_files', category='utils.astro.SingletonSolver')
+    def _get_required_files(self, cache_dir):
+        """Gets the list of required index files."""
+        # Assuming astrometry.series_XXXX.index_files exists and works
+        try:
+            # Make sure the series modules are available in the astrometry package installation
+            # These might be under astrometry.util or directly under astrometry depending on version
+            # Adjust the import if necessary
+            return (
+                    astrometry.series_5200.index_files(cache_directory=cache_dir, scales={0, 1, 2, 3, 4, 5, 6})
+                    +
+                    astrometry.series_4100.index_files(cache_directory=cache_dir, scales={7, 8, 9, 10, 11})
+            )
+        except AttributeError as e:
+            logger.error(
+                f"Error getting file list from astrometry. Ensure the library is installed and accessible: {e}")
+            # Decide how to handle this: empty list, raise exception?
+            # Raising an exception is safer to avoid undefined behavior.
+            raise RuntimeError("Could not get the list of required files from astrometry.") from e
+        except Exception as e:
+            logger.error(f"Unexpected error getting file list from astrometry: {e}")
+            raise RuntimeError("Unexpected error getting required files.") from e
+
+    @staticmethod
+    @nvtx.annotate('_calculate_list_hash', category='utils.astro.SingletonSolver')
+    def _calculate_list_hash(file_list):
+        """Calculates a SHA256 hash for a list of file paths."""
+        hasher = hashlib.sha256()
+        # Sort to ensure the hash is consistent regardless of order
+        # Convert Path objects to strings if they exist in the list
+        sorted_files = sorted([str(f) for f in file_list])
+        for file_path in sorted_files:
+            hasher.update(file_path.encode('utf-8'))
+        return hasher.hexdigest()
+
+    @nvtx.annotate('_check_marker_file', category='utils.astro.SingletonSolver')
+    def _check_marker_file(self):
+        """Checks if the marker file exists and contains the correct hash."""
+        if not os.path.exists(self.marker_file_path):
+            logger.debug("Marker file not found.")
+            return False
+        try:
+            with open(self.marker_file_path, 'r') as f:
+                stored_hash = f.read().strip()
+            if stored_hash == self.required_files_hash:
+                logger.debug("Marker file hash matches. Assuming files exist and are valid.")
+                return True
+            else:
+                logger.warning("Marker file hash MISMATCH. Re-verification of files required.")
+                # Delete old/invalid marker
+                try:
+                    os.remove(self.marker_file_path)
+                except OSError as e:
+                    logger.error(f"Could not delete invalid marker file {self.marker_file_path}: {e}")
+                return False
+        except Exception as e:
+            logger.error(f"Error reading marker file {self.marker_file_path}: {e}")
+            # If there's an error reading, better verify everything again
+            return False
+
+    @nvtx.annotate('_create_marker_file', category='utils.astro.SingletonSolver')
+    def _create_marker_file(self):
+        """Creates the marker file with the current required files hash."""
+        try:
+            with open(self.marker_file_path, 'w') as f:
+                f.write(self.required_files_hash)
+            logger.debug(f"Marker file created/updated: {self.marker_file_path}")
+        except Exception as e:
+            logger.error(f"Error creating marker file {self.marker_file_path}: {e}")
+
+    @nvtx.annotate('_remove_marker_file', category='utils.astro.SingletonSolver')
+    def _remove_marker_file(self):
+        """Removes the marker file if it exists."""
+        if os.path.exists(self.marker_file_path):
+            try:
+                os.remove(self.marker_file_path)
+                logger.debug(f"Marker file removed: {self.marker_file_path}")
+            except OSError as e:
+                logger.error(f"Error removing marker file {self.marker_file_path}: {e}")
 
     @nvtx.annotate('initialize_solver', category='utils.astro.SingletonSolver')
     def initialize_solver(self):
         """
-        Initialize the astrometry solver with appropriate index files.
+        Initialize the astrometry solver, using the marker file for optimization.
         """
+        # We already have self.cache_dir, self.required_files, self.required_files_hash, self.marker_file_path from __init__
 
-        default_cache = '/data/astrometry_cache'
-        env_cache = os.getenv('ASTROMETRY_CACHE_PATH')
-        fallback_cache = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..', 'astrometry_cache')
-
-        if os.path.exists(default_cache):
-            cache = default_cache
-        elif env_cache:
-            cache = env_cache
-        else:
-            cache = fallback_cache
-
-        if not os.path.exists(cache):
+        # 1. Quick check using the marker file
+        if self._check_marker_file():
+            # Assume files are okay, try initializing directly
             try:
-                os.makedirs(cache, exist_ok=True)
-                logger.warning(f"Cache directory not found. Created directory: {cache}")
-            except PermissionError:
-                logger.error(f"Unable to create directory {cache}. Check permissions.")
-                cache = tempfile.mkdtemp(prefix='astrometry_cache_')
-                logger.warning(f"Using temporary directory as cache: {cache}")
+                logger.debug("Attempting to initialize solver based on marker file.")
+                # Pass the list of required file paths (strings or Path objects)
+                self.solver = astrometry.Solver(self.required_files)
+                logger.info("Solver initialized successfully.")
+                # Mark that initialization succeeded globally for the instance
+                SingletonSolver._solver_initialized_successfully = True
+                return  # Success
+            except Exception as e:
+                logger.error(
+                    f"Error initializing solver even though marker existed: {e}. Proceeding to full verification.")
+                # The marker was wrong (maybe files got corrupted without list changing)
+                self._remove_marker_file()  # Remove incorrect marker
+                # Continue to full verification below...
+        else:
+            logger.debug("Marker file invalid or not found. Performing full file verification.")
 
-        logger.debug(f"Using cache directory: {cache}")
-
-        required_files = (
-                astrometry.series_5200.index_files(cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6})
-                +
-                astrometry.series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10, 11})
-        )
-
-        index_files_exist = self.check_index_files_exist(required_files)
+        # 2. Full verification (if marker check failed or didn't exist)
+        index_files_exist = self.check_index_files_exist(self.required_files)
         if not index_files_exist:
             logger.warning(
-                "Unable to locate astrometry index files. Starting the download of index files now. "
-                "This process may take up to an hour, depending on your internet speed. "
-                "If calling this from within a Celery worker with a soft or hard time limit, this may cause issues. "
-                "It is recommended to call `from gpuphot.utils.astro import get_solver; solver = get_solver()` "
-                "outside the worker to download the index files beforehand."
+                "Unable to locate all astrometry index files. The solver will attempt to download them now. "
+                "This process may take up to an hour or more, depending on your internet speed and the number of missing files (total ~34GB). "
+                "If calling this from within a Celery worker (or similar) with a short time limit, this may cause timeouts. "
+                "It is recommended to run the initialization (`from gpuphot.utils.astro import get_solver; solver = get_solver()`) "
+                "once outside the time-sensitive process to download the index files beforehand."
             )
+            # astrometry.Solver initialization will handle the download
+            # if the files are missing.
 
+        # 3. Try to initialize the solver (this might trigger downloads)
         try:
-            self.solver = astrometry.Solver(required_files)
+            logger.debug(f"Initializing astrometry.Solver with {len(self.required_files)} index files listed.")
+            self.solver = astrometry.Solver(self.required_files)
+            logger.info("Solver initialized successfully.")
+            # If we got here, initialization (and potential download) was successful
+            self._create_marker_file()  # Create the marker for future runs
+            SingletonSolver._solver_initialized_successfully = True
+
         except Exception as e:
+            SingletonSolver._solver_initialized_successfully = False  # Mark failure
             error_message = str(e)
             logger.error(f"Error initializing the solver: {error_message}")
+            self._remove_marker_file()  # Remove marker if initialization failed
 
-            match = re.search(r'loading "(.*?)" failed', error_message)
+            # Attempt to handle corrupted files mentioned in the error
+            match = re.search(r'loading\s+"(.*?)"\s+failed', error_message, re.IGNORECASE)
             if match:
                 problematic_file = match.group(1)
-                logger.warning(f"Attempting to remove problematic file: {problematic_file}")
-                try:
-                    os.remove(problematic_file)
-                    logger.debug(f"Removed file: {problematic_file}")
-                    self.initialize_solver()
-                except OSError as remove_error:
-                    logger.error(f"Error removing file: {remove_error}")
+                # Ensure the file path is absolute if it's relative in the error message
+                if not os.path.isabs(problematic_file):
+                    problematic_file = os.path.join(self.cache_dir,
+                                                    os.path.basename(problematic_file))  # Make a best guess
+
+                logger.warning(f"Error message suggests a problem loading: {problematic_file}")
+                if os.path.exists(problematic_file):  # Check if it actually exists before trying to remove
+                    logger.warning(f"Attempting to remove potentially problematic file: {problematic_file}")
+                    try:
+                        os.remove(problematic_file)
+                        logger.info(
+                            f"Problematic file removed: {problematic_file}. Re-running initialization might be necessary.")
+                        # You could retry here, but beware of infinite loops.
+                        # Maybe it's better to fail and let the user retry the operation.
+                        # raise RuntimeError(f"Removed a potentially corrupt file ({problematic_file}). Please retry the operation.") from e
+                    except OSError as remove_error:
+                        logger.error(f"Error removing the problematic file {problematic_file}: {remove_error}")
+                else:
+                    logger.warning(
+                        f"The reported problematic file '{problematic_file}' was not found on disk at the expected location.")
+
+            # Re-raise or handle the error more specifically if needed
+            # raise RuntimeError("Astrometry.net solver initialization failed.") from e # Optional: re-raise a cleaner error
 
     @staticmethod
     @nvtx.annotate('check_index_files_exist', category='utils.astro.SingletonSolver')
     def check_index_files_exist(required_files):
         """
-        Check if the required index files exist.
+        Check if the required index files exist (the potentially slow check).
 
-        :param required_files: List of required index files.
+        :param required_files: List of required index file paths (expecting Path objects or strings).
         :type required_files: list
-        :return: True if all files exist, False otherwise.
+        :return: True if all files exist and none are partial downloads, False otherwise.
         :rtype: bool
         """
+        logger.debug(f"Performing existence check for {len(required_files)} files...")
+        all_exist = True
         try:
-            for file_path in required_files:
-                fp = str(file_path)
-                if not os.path.exists(fp):
-                    logger.debug(f"Archivo faltante: {fp}")
+            for file_path_obj in required_files:
+                file_path = str(file_path_obj)  # Ensure it's a string
+                # Check for the main file
+                if not os.path.exists(file_path):
                     return False
-                if os.path.exists(f"{fp}.download"):
-                    logger.debug(f"Descarga en curso: {fp}")
+                # Check if a partial download file exists for it
+                # Adjust if astrometry uses a different temporary file naming scheme
+                elif os.path.exists(f"{file_path}.download"):
                     return False
-            return True
+            return all_exist
+
         except Exception as e:
-            logger.error(f"Error durante la verificación: {e}")
-            return False
+            logger.error(f"Error during file verification check: {e}")
+            return False  # Assume failure if there's an exception
+
+    @nvtx.annotate('get_solver_instance', category='utils.astro.SingletonSolver')
+    def get_solver_instance(self):
+        """
+        Returns the initialized solver instance.
+        Raises RuntimeError if initialization failed or hasn't completed successfully.
+        """
+        # Check the instance variable `solver` AND the class variable tracking success
+        if not self.solver or not SingletonSolver._solver_initialized_successfully:
+            # You could attempt re-initialization here if it makes sense, or just fail.
+            # logger.warning("Solver is not initialized successfully. Attempting re-initialization.")
+            # try:
+            #    self.initialize_solver() # Careful with recursion/loops if it fails consistently
+            # except Exception as e:
+            #    logger.error(f"Re-initialization attempt failed: {e}")
+            #    raise RuntimeError("Astrometry solver could not be initialized correctly after retry.") from e
+
+            # Check again after attempting re-initialization
+            # if not self.solver or not SingletonSolver._solver_initialized_successfully:
+            #    raise RuntimeError("Astrometry solver could not be initialized correctly.")
+
+            # Simpler approach: just raise if not ready.
+            raise RuntimeError("Astrometry solver could not be initialized correctly or is not ready.")
+        return self.solver
 
 
 ### # @hierarchical_debug(logger)
