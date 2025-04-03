@@ -362,23 +362,15 @@ class SingletonSolver:
 @nvtx.annotate('get_solver', category='utils.astro')
 def get_solver():
     """
-    Get the astrometry solver with index files.
+    Gets the singleton instance of the astrometry solver.
+    Initialization occurs the first time this function is called.
 
-    :return: Configured astrometry solver instance.
-    :rtype: astrometry.Solver
+    :return: The initialized astrometry.Solver instance.
+    :raises RuntimeError: If the solver fails to initialize.
     """
-    return SingletonSolver().solver
-    # if os.path.exists('/data'):
-    #     cache = '/data/astrometry_cache'
-    # else:
-    #     cache = '/mnt/data/astrometry_cache'
-    #
-    # solver = (astrometry.Solver(
-    #     astrometry.series_5200.index_files(cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6}) +
-    #     astrometry.series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10, 11}))
-    # )
-    #
-    # return solver
+    instance = SingletonSolver()
+    return instance.get_solver_instance()
+
 
 
 @nvtx.annotate('get_astrometry_params', category='utils.astro')
