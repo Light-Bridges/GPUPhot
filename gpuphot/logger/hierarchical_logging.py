@@ -335,6 +335,7 @@ class SingletonLogger:
     @classmethod
     def _setup_logger(cls, name):
         logger = logging.getLogger(name)
+        logger.propagate = False
 
         if cls._initialized:
             return logger
