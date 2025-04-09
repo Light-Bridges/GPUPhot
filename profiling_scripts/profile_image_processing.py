@@ -3,10 +3,16 @@ import sys
 import time
 from datetime import timedelta
 
+from dotenv import load_dotenv
+
 # Asegúrese de que todas las rutas estén correctamente configuradas
 sys.path.append('/app')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 
-# Importe su función principal DESPUÉS del parche
+load_dotenv(dotenv_path=os.path.join(parent_dir, '.env'))
+sys.path.append(parent_dir)
+
 from gpuphot_worker.tasks import process_image_task
 
 

@@ -1,8 +1,9 @@
 import os
+from typing import Optional, Tuple, Union
 
 import numpy as np
 from astropy.io import fits
-from astropy.nddata import Cutout2D
+from astropy.nddata import block_reduce, Cutout2D
 from astropy.wcs import WCS
 from skimage.measure import block_reduce
 
@@ -29,38 +30,120 @@ def get_processor(instrument_name=None):
     return create_processor(instrument_name, config_base_path)
 
 
-def open_image_file(file_path):
+def open_image_file(file_path: str) -> Tuple[np.ndarray, fits.Header]:
     """
     Opens an astronomical image file (FITS or NPY) and returns the data and header.
 
-    :param file_path: Path to the image file.
-    :type file_path: str
-    :return: Tuple containing image data and header.
-    :rtype: tuple(numpy.ndarray, astropy.io.fits.Header)
-    :raises ValueError: If the file format is not supported or if the header file is missing for NPY.
-    """
+    For NPY files, it first attempts to load metadata from a corresponding '.txt'
+    file (same basename). If the '.txt' file is not found or cannot be parsed,
+    a minimal FITS header is generated with basic dimension information,
+    and a warning is logged.
 
-    if file_path.endswith('.fits'):
+    :param file_path: Path to the image file (.fits or .npy).
+    :return: Tuple containing image data (as float32) and FITS header object.
+    :raises FileNotFoundError: If the specified file_path does not exist.
+    :raises ValueError: If the file format is not supported (.fits, .npy).
+    :raises IOError: If there's an error reading the FITS file or NPY data.
+    """
+    logger.debug(f"Attempting to open image file: {file_path}")
+
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    file_lower = file_path.lower()
+
+    if file_lower.endswith(('.fits', '.fit')):
         try:
+            # Prefer using fits.open context manager
             with fits.open(file_path) as hdul:
-                imdata = hdul[0].data.astype(np.float32)
-                imheader = hdul[0].header
+                if not hdul:
+                    raise IOError("FITS file is empty or corrupt.")
+                # Try common locations for primary data
+                hdu_index = 0
+                if len(hdul) > 1 and hdul[0].data is None:
+                    # Might be in the second HDU (e.g., MEF files)
+                    logger.debug("Primary HDU data is None, trying HDU 1.")
+                    hdu_index = 1
+                if hdul[hdu_index].data is None:
+                    raise IOError(f"No image data found in HDU {hdu_index}.")
+
+                imdata = hdul[hdu_index].data
+                imheader = hdul[hdu_index].header
+                # Ensure data is float32 for processing consistency
+                if imdata.dtype != np.float32:
+                    imdata = imdata.astype(np.float32)
+                logger.debug(f"Successfully opened FITS file: {file_path}")
+                return imdata, imheader
         except Exception as e:
-            imdata = fits.getdata(file_path).astype(np.float32)
-            imheader = fits.getheader(file_path)
-    elif file_path.endswith('.npy'):
-        imdata = np.load(file_path)
-        header_file = file_path.rsplit('.', 1)[0] + '.txt'
-        if os.path.exists(header_file):
+            # Catch more specific errors if possible, but keep a general fallback
+            logger.error(f"Error opening FITS file {file_path} with fits.open: {e}. "
+                         f"Attempting fallback with getdata/getheader.")
+            try:
+                # Fallback (less efficient, reads file twice)
+                imdata = fits.getdata(file_path).astype(np.float32)
+                imheader = fits.getheader(file_path)
+                logger.debug(f"Successfully opened FITS file (using fallback): {file_path}")
+                return imdata, imheader
+            except Exception as e_fallback:
+                raise IOError(f"Failed to open FITS file {file_path} even with fallback: {e_fallback}") from e_fallback
+
+    elif file_lower.endswith('.npy'):
+        try:
+            imdata = np.load(file_path)
+            # Ensure data is float32
+            if imdata.dtype != np.float32:
+                imdata = imdata.astype(np.float32)
+        except Exception as e:
+            raise IOError(f"Error loading NPY data from {file_path}: {e}") from e
+
+        header_file = os.path.splitext(file_path)[0] + '.txt'
+        imheader = None
+        logger.debug(f"Looking for associated header file: {header_file}")
+
+        try:
+            # Try to read the associated text header file
             with open(header_file, 'r') as f:
                 header_content = f.read()
-            imheader = fits.Header.fromstring(header_content)
-        else:
-            raise ValueError(f"Header file not found for NPY file: {file_path}, expected header file: {header_file}")
-    else:
-        raise ValueError(f"Unsupported file format: {file_path}. Only FITS and NPY files are supported.")
+            imheader = fits.Header.fromstring(header_content, sep='\n')
+            logger.debug(f"Successfully loaded header from associated file: {header_file}")
+        except FileNotFoundError:
+            logger.warning(f"Header file '{header_file}' not found for NPY file '{file_path}'. "
+                           f"Generating minimal default header.")
+        except Exception as e:
+            logger.warning(f"Error reading or parsing header file '{header_file}': {e}. "
+                           f"Generating minimal default header.")
 
-    return imdata, imheader
+        if imheader is None:
+            # Create a minimal header if .txt wasn't found or failed to parse
+            imheader = fits.Header()
+            imheader['SIMPLE'] = True
+            imheader['BITPIX'] = -32  # FITS code for float32
+            imheader['NAXIS'] = imdata.ndim
+            if imdata.ndim == 2:
+                imheader['NAXIS1'] = imdata.shape[1]  # Columns
+                imheader['NAXIS2'] = imdata.shape[0]  # Rows
+            elif imdata.ndim == 1:
+                imheader['NAXIS1'] = imdata.shape[0]
+            # Add more axes if needed, though unlikely for typical images
+            imheader['EXTEND'] = True  # Standard practice
+            imheader.add_comment("Minimal header generated for NPY file.")
+            imheader.add_comment(f"Original file: {os.path.basename(file_path)}")
+
+        # Basic validation: Check if header dimensions match data dimensions (if header came from .txt)
+        if 'NAXIS1' in imheader and 'NAXIS2' in imheader and imdata.ndim == 2:
+            if imheader['NAXIS1'] != imdata.shape[1] or imheader['NAXIS2'] != imdata.shape[0]:
+                logger.warning(f"Header dimensions ({imheader.get('NAXIS2', 'N/A')}x{imheader.get('NAXIS1', 'N/A')}) "
+                               f"do not match NPY data dimensions ({imdata.shape[0]}x{imdata.shape[1]}). "
+                               f"Using NPY data dimensions.")
+                # Correct the header to match the actual data
+                imheader['NAXIS1'] = imdata.shape[1]
+                imheader['NAXIS2'] = imdata.shape[0]
+
+        logger.debug(f"Successfully processed NPY file: {file_path}")
+        return imdata, imheader
+
+    else:
+        raise ValueError(f"Unsupported file format: {file_path}. Only FITS (.fits, .fit) and NPY (.npy) are supported.")
 
 
 def save_processed_image(file_path, base_path, imdata, hwcs):
@@ -255,49 +338,85 @@ def save_processed_image(file_path, base_path, imdata, hwcs):
 #     logger.debug(f"Binned and/or cropped image saved to: {output_file}")
 #
 #     return output_file
-def crop_and_bin_image(fits_file, binning, binning_method='sum',
-                       crop_size=None, center=None):
-    """
-    Procesa un archivo FITS o NPY: aplica binning y luego, opcionalmente, recorta
-    una región de interés. Actualiza el header FITS para reflejar todos los cambios.
 
-    :param fits_file: Ruta al archivo FITS o NPY a procesar.
-    :param binning: Factor de binning. Si es 1, no se aplica binning.
-    :param binning_method: 'sum' o 'median'.
-    :param crop_size: Tamaño del recorte en píxeles (None = sin recorte).
-                      Puede ser int (cuadrado) o tuple (ancho, alto).
-    :param center: Centro del recorte (x, y) en coordenadas de píxel (no WCS).
-                   Si None, se asume el centro de la imagen resultante.
-    :return: Ruta al archivo resultante (FITS).
+def crop_and_bin_image(image_file: str,
+                       binning: int,
+                       binning_method: str = 'sum',
+                       crop_size: Optional[Union[int, Tuple[int, int]]] = None,
+                       center: Optional[Tuple[float, float]] = None) -> str:
     """
-    logger.debug(f"Cropping and binning file: {os.path.relpath(fits_file, BASE_IMAGES_PATH)}, binning: {binning}, "
-                 f"binning_method: {binning_method}, crop_size: {crop_size}, center: {center}")
+    Processes a FITS or NPY file: applies binning and then optionally crops
+    a region of interest. Updates/creates a FITS header to reflect all changes.
+    The output file is always in FITS format.
 
-    # 1) Abrir la imagen
+    :param image_file: Path to the FITS or NPY file to process.
+    :param binning: Binning factor (int >= 1). If 1, no binning is applied.
+    :param binning_method: 'sum' or 'median'. Method for combining pixels during binning.
+    :param crop_size: Desired output size in pixels after cropping.
+                      None = no cropping. Int = square crop. Tuple = (width, height).
+    :param center: Center of the crop region (x, y) in pixel coordinates of the
+                   image *after* any binning (0-based index). If None, the center
+                   of the (potentially binned) image is used. Floats are allowed.
+    :return: Path to the resulting FITS file.
+    :raises ValueError: If parameters are invalid or the crop region is out of bounds.
+    :raises IOError: If there are problems reading/writing files.
+    :raises FileNotFoundError: If the input file does not exist.
+    """
+    print(f"BASE_IMAGES_PATH = {BASE_IMAGES_PATH}")
+    relative_path = os.path.relpath(image_file, BASE_IMAGES_PATH) if 'BASE_IMAGES_PATH' in globals() else image_file
+    logger.debug(f"Processing file: {relative_path}, "
+                 f"binning: {binning}, method: {binning_method}, "
+                 f"crop: {crop_size}, center: {center}")
+
+    # 1) Open the image using the updated function
+    # This will return data and a header (either from FITS, .txt, or minimal)
     try:
-        imdata, imheader = open_image_file(fits_file)
-    except Exception as e:
-        raise ValueError(f"Error opening file {fits_file}: {str(e)}") from e
+        imdata, imheader = open_image_file(image_file)
+    except (FileNotFoundError, ValueError, IOError) as e:
+        logger.error(f"Failed to open or read image file {image_file}: {e}")
+        raise e  # Re-raise the specific error
 
-    # Guardamos forma original como referencia
+    # # Determine if the original header was likely minimal (generated for NPY)
+    # # Heuristic: check for more than just the basic keys we add
+    # basic_keys = {'SIMPLE', 'BITPIX', 'NAXIS', 'NAXIS1', 'NAXIS2', 'EXTEND'}
+    # is_minimal_header = all(
+    #     key in basic_keys or imheader.comments[key].strip().startswith(('Minimal header generated', 'Original file:'))
+    #     for key in imheader) and file_lower.endswith('.npy')
+
+    # if is_minimal_header:
+    #     logger.warning(f"Processing NPY file '{relative_path}' with a minimal header. "
+    #                    f"WCS, pixel scale, and photometric keywords (GAIN, RDNOISE, etc.) "
+    #                    f"are likely missing. Related header updates will be skipped.")
+
     original_shape = imdata.shape
-    # Construimos WCS a partir del header, si existe
-    wcs = WCS(imheader) if len(imheader) > 0 else None
+    was_originally_fits = image_file.lower().endswith(('.fits', '.fit'))
 
-    # 2) Validar el factor de binning
+    # Try to build WCS from header, fail gracefully
+    wcs = None
+    if 'CTYPE1' in imheader:  # A common basic check for WCS presence
+        try:
+            wcs = WCS(imheader)
+            if not wcs.is_celestial:
+                logger.debug("WCS found but is not celestial. Ignoring for cropping/updates.")
+                wcs = None  # Treat non-celestial WCS as absent for this purpose
+        except Exception as e:
+            logger.warning(f"Could not build WCS for {relative_path}: {e}. Proceeding without WCS updates.")
+            wcs = None
+
+    # 2) Validate binning factor
     if not isinstance(binning, int) or binning < 1:
         raise ValueError("Binning factor must be an integer >= 1.")
 
-    # 3) Comprobamos si no hay que hacer nada
-    if binning == 1 and crop_size is None:
-        # Si no hay binning ni recorte, devolvemos tal cual
-        return fits_file
+    # 3) Check if nothing needs to be done (only if input was FITS and no ops)
+    if binning == 1 and crop_size is None and was_originally_fits:
+        logger.debug(f"No processing needed for FITS file {relative_path}. Returning original path.")
+        return image_file
 
-    # Preparamos algunos comentarios en el header
-    imheader['COMINIT'] = 'e'
-    imheader.insert('COMINIT', ('COMMENT', '***************************'))
-    imheader.insert('COMINIT', ('COMMENT', '       IMAGE PROCESSING    '))
-    imheader.insert('COMINIT', ('COMMENT', '***************************'))
+    # Add initial processing comment to header
+    imheader.set('HISTORY', f"Processed by crop_and_bin_image function.")
+
+    processed_data = imdata.copy()  # Work on a copy
+    processed_wcs = wcs
 
     # -------------------------------------------------------------------------
     # BINNING
@@ -306,171 +425,308 @@ def crop_and_bin_image(fits_file, binning, binning_method='sum',
         valid_methods = {'sum', 'median'}
         binning_method = binning_method.lower()
         if binning_method not in valid_methods:
-            raise ValueError(f"Invalid binning method {binning_method}. "
-                             f"Valid are {valid_methods}")
+            raise ValueError(f"Invalid binning method '{binning_method}'. "
+                             f"Valid options are: {valid_methods}")
 
-        # Elegimos función de binning
+        # *** Check for divisibility ***
+        original_rows, original_cols = processed_data.shape
+        if original_rows % binning != 0 or original_cols % binning != 0:
+            new_rows = (original_rows // binning) * binning
+            new_cols = (original_cols // binning) * binning
+            discarded_rows = original_rows - new_rows
+            discarded_cols = original_cols - new_cols
+            logger.warning(f"Image dimensions ({original_rows}x{original_cols}) are not perfectly "
+                           f"divisible by binning factor {binning}. "
+                           f"block_reduce will effectively use the top-left "
+                           f"{new_rows}x{new_cols} region, discarding {discarded_rows} row(s) "
+                           f"and {discarded_cols} column(s) from the bottom/right edges.")
+        # ******************************
+
         bin_func = np.sum if binning_method == 'sum' else np.nanmedian
-        # Aplicar binning con block_reduce
-        binned_data = block_reduce(imdata, block_size=(binning, binning),
-                                   func=bin_func)
 
+        try:
+            binned_data = block_reduce(processed_data,
+                                       block_size=(binning, binning),
+                                       func=bin_func,
+                                       cval=np.nan)  # Use nan for padding if func handles it
+        except Exception as e:
+            raise RuntimeError(f"Error during block_reduce binning: {e}") from e
 
-        imdata = binned_data
+        processed_data = binned_data
+        logger.debug(f"Applied {binning}x{binning} binning using '{binning_method}'.")
+        imheader.set('HISTORY', f"Applied {binning}x{binning} binning using '{binning_method}'.")
 
         # ---------------------------------------------------------------------
-        # Actualizar encabezado y WCS
+        # Update Header and WCS (if possible)
         # ---------------------------------------------------------------------
-        # -- 1) Actualizar tamaño de píxel en el header (si se usa PXSIZE en arcsec)
-        #    Asumiendo que PXSIZE era el tamaño en arcsec/píxel, ahora cada
-        #    píxel representa binning veces más tamaño angular.
-        pxsize_original = imheader.get('PXSIZE', 1.0)
-        imheader['PXSIZE'] = pxsize_original * binning
+        # These updates only make sense if the original header had the info
 
-        # -- 2) Ajuste del WCS si existe
-        if wcs is not None and wcs.wcs.naxis >= 2:
-            # Si el header posee una matriz CD, PC o cdelt, hay que ampliarla
-            if wcs.wcs.has_cd():
-                # Multiplicamos la matriz CD por el factor
-                wcs.wcs.cd *= binning
-            elif wcs.wcs.has_pc():
-                wcs.wcs.pc *= binning
-                if hasattr(wcs.wcs, 'cdelt'):
-                    wcs.wcs.cdelt *= binning
-            else:
-                # Asumimos que usa CDELT si no hay ni CD ni PC
-                if hasattr(wcs.wcs, 'cdelt'):
-                    wcs.wcs.cdelt *= binning
+        # -- 1) Update pixel scale keywords (if they exist)
+        pxsize_updated = False
+        if 'PIXSCALE' in imheader:  # Common keyword
+            try:
+                original_pixscale = float(imheader['PIXSCALE'])
+                imheader['PIXSCALE'] = original_pixscale * binning
+                imheader.comments['PIXSCALE'] = f"Original pixel scale: {original_pixscale}"
+                pxsize_updated = True
+            except (ValueError, TypeError):
+                logger.warning("Could not parse PIXSCALE value for update.")
+        elif 'SECPIX' in imheader:  # Another common one
+            try:
+                original_secpix = float(imheader['SECPIX'])
+                imheader['SECPIX'] = original_secpix * binning
+                imheader.comments['SECPIX'] = f"Original pixel scale: {original_secpix}"
+                pxsize_updated = True
+            except (ValueError, TypeError):
+                logger.warning("Could not parse SECPIX value for update.")
+        # Add checks for CDELT if no explicit scale keyword found and WCS not present/updated below?
+        # Be careful not to double-update if WCS handles CDELT.
 
-            # IMPORTANTE: Ajustar CRPIX para que la referencia en el cielo
-            # siga apuntando al mismo lugar. Después de binning NxN,
-            # la crpix debe escalarse.
-            # wcs.wcs.crpix /= binning
-            wcs.wcs.crpix = (wcs.wcs.crpix - 0.5) / binning + 0.5
+        # -- 2) Adjust WCS if it exists and is celestial
+        if processed_wcs is not None:  # Already checked for is_celestial earlier
+            try:
+                # Use WCS slicing for updates - handles CRPIX, CD/PC/CDELT
+                processed_wcs = processed_wcs[::binning, ::binning]
+                logger.debug("WCS updated for binning using slicing.")
+                # WCS object is updated, will be written to header later
+            except Exception as e:
+                logger.error(f"Failed to update WCS after binning: {e}. WCS info might be incorrect.")
+                processed_wcs = None  # Invalidate WCS if update fails
 
-        # -- 3) Actualizar ganancias y ruidos
-        imheader['BIN-FCTR'] = (binning, 'Binning factor applied')
-        imheader['BIN_ALG'] = (binning_method.upper(), 'Pixel combination method')
-        imheader['BINSTAT'] = ('LINEAR' if binning_method == 'sum' else 'NONLINEAR',
-                               'Linearity of binning operation')
-        imheader['BINFCTR'] = (binning, 'Binning factor in both axes')
-        imheader['BINTYPE'] = ('LINEAR' if binning_method == 'sum' else 'NON_LINEAR')
+        # -- 3) Update photometric keywords (GAIN, RDNOISE, SATLEVEL) if they exist
+        imheader['BINNING'] = (binning, 'Binning factor applied (may differ from detector binning)')
+        imheader['BIN_ALG'] = (binning_method.upper(), 'Pixel combination method used in software')
+
+        gain_key = imheader.cards['GAIN'].keyword if 'GAIN' in imheader else None  # Find exact case
+        rdnoise_key = imheader.cards['RDNOISE'].keyword if 'RDNOISE' in imheader else None
+        sat_key = next((k for k in ['SATURATE', 'SATLEVEL', 'MAXLIN'] if k in imheader),
+                       None)  # Try common saturation keys
+
+        bin_sq = binning ** 2
 
         if binning_method == 'sum':
-            # Ajuste de GAIN, RDNOISE, SATLEVEL, etc. para sum binning
-            old_gain = imheader.get('GAIN', 1.0)
-            old_rdnoise = imheader.get('RDNOISE', 0.0)
-            old_satlevel = imheader.get('SATLEVEL', 65535)
-
-            # Si GAIN estaba en e-/ADU, con sum binning la nueva "ganancia" en e-/ADU
-            # se reduce en factor binning^2
-            imheader['GAIN'] = old_gain / (binning**2)
-            # RDNOISE aumenta ~ N en e- (suponiendo se mide en e-)
-            imheader['RDNOISE'] = old_rdnoise * binning
-            # Nivel de saturación escala con el total de electrones sumados
-            imheader['SATLEVEL'] = old_satlevel * (binning**2)
-
-        else:
-            # Ajuste aproximado para median binning (hay variantes)
-            old_gain = imheader.get('GAIN', 1.0)
-            old_rdnoise = imheader.get('RDNOISE', 0.0)
-
-            # Ajuste recomendado (muy aproximado):
-            # Reference: https://iraf.net/forum/viewtopic.php?showtopic=146351
-            imheader['GAIN'] = old_gain * np.sqrt(np.pi/2) / (binning**2)
-            # Ruido efectivo tras la mediana ~ sigma / sqrt(Npix)
-            # Hay estimaciones analíticas más elaboradas, pero sirva de ejemplo
-            Npix = binning**2
-            imheader['RDNOISE'] = old_rdnoise / np.sqrt(Npix)
-
-            imheader.insert('COMINIT', (
-                'COMMENT',
-                f"WARNING: Median binning alters photometric linearity (~12% at 2x2)."
-            ))
-
-        imheader.insert('COMINIT', (
-            'COMMENT', f"BINNING APPLIED - Factor: {binning}, Method: {binning_method}"
-        ))
+            if gain_key and isinstance(imheader.get(gain_key), (int, float)):
+                imheader[gain_key] /= bin_sq
+                imheader.comments[gain_key] = f"Adjusted for {binning}x{binning} sum binning"
+            if rdnoise_key and isinstance(imheader.get(rdnoise_key), (int, float)):
+                imheader[
+                    rdnoise_key] *= binning  # Assuming RDNOISE is in e-, variance adds, std dev adds in quadrature -> sqrt(N)*sigma_pix = binning*sigma_pix
+                imheader.comments[rdnoise_key] = f"Adjusted for {binning}x{binning} sum binning (sqrt({bin_sq}) factor)"
+            if sat_key and isinstance(imheader.get(sat_key), (int, float)):
+                imheader[sat_key] *= bin_sq
+                imheader.comments[sat_key] = f"Adjusted for {binning}x{binning} sum binning"
+        else:  # median
+            if gain_key:
+                # Gain adjustment for median is complex and often non-linear
+                imheader.add_comment(
+                    f"Original {gain_key}={imheader.get(gain_key)} may not be accurate after median binning.")
+            if rdnoise_key and isinstance(imheader.get(rdnoise_key), (int, float)):
+                # Median reduces noise approx by sqrt(N), where N=bin_sq
+                imheader[rdnoise_key] /= binning  # rdnoise / sqrt(bin_sq) = rdnoise / binning
+                imheader.comments[
+                    rdnoise_key] = f"Adjusted for {binning}x{binning} median binning (approx /sqrt({bin_sq}) factor)"
+            if sat_key:
+                imheader.add_comment(
+                    f"Original {sat_key}={imheader.get(sat_key)} may not be accurate after median binning.")
+            imheader.add_comment(f"WARNING: Median binning affects photometric linearity.")
 
     # -------------------------------------------------------------------------
-    # RECORTE (CROP)
+    # CROPPING
     # -------------------------------------------------------------------------
     if crop_size is not None:
+        current_shape = processed_data.shape
+        current_h, current_w = current_shape
+
+        # Validate and normalize crop_size
+        crop_w: int
+        crop_h: int
         if isinstance(crop_size, int):
-            crop_size = (crop_size, crop_size)
-        elif (isinstance(crop_size, (tuple, list)) and len(crop_size) == 2):
-            crop_size = tuple(crop_size)
+            if crop_size <= 0: raise ValueError("Crop size must be a positive integer.")
+            crop_w, crop_h = crop_size, crop_size
+        elif isinstance(crop_size, (tuple, list)) and len(crop_size) == 2:
+            crop_w, crop_h = int(crop_size[0]), int(crop_size[1])
+            if crop_w <= 0 or crop_h <= 0:
+                raise ValueError("Crop width and height must be positive integers.")
         else:
-            raise ValueError("crop_size must be None, an integer, or a tuple of two integers")
+            raise ValueError(
+                "crop_size must be None, a positive integer, or a tuple/list of two positive integers (width, height).")
 
-        # Centro de recorte: si no se da, usar el centro de la imagen resultante
+        # Validate crop_size against current image dimensions
+        if crop_w > current_w or crop_h > current_h:
+            raise ValueError(f"Requested crop size ({crop_w}x{crop_h}) is larger than "
+                             f"the current image dimensions ({current_w}x{current_h}) after binning.")
+
+        # Validate and determine center coordinates (using 0-based image coordinates X, Y)
+        center_x: float
+        center_y: float
         if center is None:
-            center = (imdata.shape[1] // 2, imdata.shape[0] // 2)
-        elif (isinstance(center, (tuple, list)) and len(center) == 2):
-            center = tuple(center)
+            # Default to the center of the current image
+            center_x = (current_w - 1) / 2.0  # Center pixel coordinate X
+            center_y = (current_h - 1) / 2.0  # Center pixel coordinate Y
+            logger.debug(f"No center provided, using image center: ({center_x:.2f}, {center_y:.2f})")
+        elif isinstance(center, (tuple, list)) and len(center) == 2:
+            try:
+                center_x, center_y = float(center[0]), float(center[1])
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Invalid center coordinates: {center}. Must be numbers.") from e
+            # Check if center is within bounds (0 <= coord < dim)
+            if not (0 <= center_x < current_w and 0 <= center_y < current_h):
+                raise ValueError(f"Provided center ({center_x:.2f}, {center_y:.2f}) is outside "
+                                 f"the current image boundaries (W={current_w}, H={current_h}).")
         else:
-            raise ValueError("Center must be a tuple/list of two integers (x, y).")
+            raise ValueError("Center must be None or a tuple/list of two numbers (x, y).")
 
-        # Validar que el recorte sea posible
-        half_w, half_h = crop_size[0] // 2, crop_size[1] // 2
-        x_min = center[0] - half_w
-        x_max = center[0] + half_w
-        y_min = center[1] - half_h
-        y_max = center[1] + half_h
+        # Perform cropping
+        # Cutout2D expects center=(y, x) and size=(h, w) for numpy array indexing
+        cutout_center_yx = (center_y, center_x)
+        cutout_size_hw = (crop_h, crop_w)
 
-        if x_min < 0 or y_min < 0 or x_max > imdata.shape[1] or y_max > imdata.shape[0]:
-            raise ValueError("Crop region is out of image boundaries.")
+        try:
+            if processed_wcs is not None:  # Use Cutout2D if we have a valid WCS
+                logger.debug(f"Cropping using Cutout2D with WCS: center={cutout_center_yx}, size={cutout_size_hw}")
+                cutout = Cutout2D(processed_data, position=cutout_center_yx, size=cutout_size_hw,
+                                  wcs=processed_wcs, mode='trim', copy=True)  # mode='trim' handles edges
+                processed_data = cutout.data
+                processed_wcs = cutout.wcs  # WCS is automatically updated
+                logger.debug(f"Cropped image to {processed_data.shape[1]}x{processed_data.shape[0]} using Cutout2D.")
+            else:
+                # Manual slicing if no WCS is available
+                logger.debug(
+                    f"Cropping using numpy slicing: center=({center_x:.1f},{center_y:.1f}), size=({crop_w},{crop_h})")
+                # Calculate integer slice indices (0-based)
+                y_min = int(np.round(center_y - crop_h / 2.0))
+                y_max = y_min + crop_h  # Slice upper bound is exclusive
+                x_min = int(np.round(center_x - crop_w / 2.0))
+                x_max = x_min + crop_w  # Slice upper bound is exclusive
 
-        # Usar Cutout2D para el recorte
-        # origin=0 es la convención por defecto en Python. Si se desea 1, ajustarlo.
-        if wcs is not None:
-            cutout = Cutout2D(imdata, center, crop_size, wcs=wcs, mode='trim')
-            imdata = cutout.data
-            wcs = cutout.wcs
-        else:
-            # Si no hay WCS, se hace un recorte básico con slicing
-            imdata = imdata[y_min:y_max, x_min:x_max]
+                # Clip indices to be within the image bounds (important!)
+                y_min = max(0, y_min)
+                y_max = min(current_h, y_max)
+                x_min = max(0, x_min)
+                x_max = min(current_w, x_max)
 
-        crop_size_str = f"{crop_size[0]}x{crop_size[1]}"
-        imheader.insert('COMINIT', (
-            'COMMENT', f"CROP APPLIED - Size: {crop_size_str}, Center: {center}"
-        ))
+                # Check if the resulting slice has the correct size (it might be smaller if center was near edge)
+                actual_h = y_max - y_min
+                actual_w = x_max - x_min
+                if actual_h != crop_h or actual_w != crop_w:
+                    logger.warning(f"Requested crop size was {crop_h}x{crop_w}, but resulting crop "
+                                   f"is {actual_h}x{actual_w} due to image boundaries or centering.")
+
+                if actual_h <= 0 or actual_w <= 0:
+                    raise ValueError("Calculated crop region has zero or negative size. Check center and crop_size.")
+
+                processed_data = processed_data[y_min:y_max, x_min:x_max]
+                # WCS remains None
+                logger.debug(f"Cropped image to {processed_data.shape[1]}x{processed_data.shape[0]} using slicing.")
+
+            # Add cropping info to header
+            crop_size_str = f"{processed_data.shape[1]}x{processed_data.shape[0]}"  # Use actual final size
+            center_str = f"({center_x:.2f}, {center_y:.2f})"  # Use requested center
+            imheader.set('HISTORY',
+                         f"Cropped to {crop_size_str} around requested center pix {center_str} (X,Y; 0-based)")
+            # Optionally add CRPIX adjustment comment if only slicing was done? No, too complex without WCS.
+
+        except Exception as e:
+            # Catch errors from Cutout2D or slicing logic
+            logger.error(f"Error during cropping operation: {e}")
+            raise ValueError(f"Error during cropping: {e}") from e
 
     # -------------------------------------------------------------------------
-    # ACTUALIZAR HEADER FINAL
+    # FINAL HEADER UPDATES & SAVE (Always as FITS)
     # -------------------------------------------------------------------------
-    imheader['NAXIS1'] = imdata.shape[1]
-    imheader['NAXIS2'] = imdata.shape[0]
+    final_shape = processed_data.shape
 
-    # Si existe WCS actualizado, volcar sus claves al header
-    if wcs is not None:
-        imheader.update(wcs.to_header())
+    # Update NAXIS keywords to final dimensions
+    imheader['NAXIS'] = 2  # Assuming 2D image data
+    imheader['NAXIS1'] = final_shape[1]  # Width
+    imheader['NAXIS2'] = final_shape[0]  # Height
 
-    # Actualizar valores estadísticos
-    imheader['DATAMIN'] = float(np.nanmin(imdata))
-    imheader['DATAMAX'] = float(np.nanmax(imdata))
+    # Write the updated WCS object to the header (if it exists)
+    if processed_wcs is not None:
+        try:
+            # Remove potentially conflicting old WCS keywords before updating
+            # This is safer than just `imheader.update(processed_wcs.to_header())`
+            # which might leave obsolete keywords
+            header_keys_to_remove = []
+            wcs_keywords_obj = processed_wcs.to_header()
+            for key in imheader:
+                # Standard WCS keywords + potentially related (like EQUINOX, RADESYS)
+                if key.startswith(('CRVAL', 'CRPIX', 'CDELT', 'CTYPE', 'CUNIT', 'CD', 'PC', 'PV', 'LONGPOLE', 'LATPOLE',
+                                   'EQUINOX', 'RADESYS', 'WCSAXES')):
+                    # Only remove if not present in the new WCS header to avoid removing unrelated keywords
+                    # if key not in wcs_keywords_obj: # Be careful, this might keep old PC if new uses CD
+                    header_keys_to_remove.append(key)
 
-    # Dejar constancia del tamaño original
-    imheader.insert('COMINIT', ('COMMENT', 'Original dimensions before any processing:'))
-    imheader.insert('COMINIT', ('O_NAXIS1', original_shape[1]))
-    imheader.insert('COMINIT', ('O_NAXIS2', original_shape[0]))
+            # A safer approach might be to always remove known WCS keyword patterns
+            known_wcs_patterns = ('CRVAL', 'CRPIX', 'CDELT', 'CTYPE', 'CUNIT', 'CD1_', 'CD2_', 'PC1_', 'PC2_', 'PV')
+            header_keys_to_remove = [k for k in imheader if k.startswith(known_wcs_patterns)]
+            # Add specific keys
+            for k in ['EQUINOX', 'RADESYS', 'WCSAXES', 'LONGPOLE', 'LATPOLE']:
+                if k in imheader: header_keys_to_remove.append(k)
 
-    # Limpiar bandera auxiliar
-    del imheader['COMINIT']
+            logger.debug(f"Removing old WCS keys: {header_keys_to_remove}")
+            for key in set(header_keys_to_remove):  # Use set for uniqueness
+                try:
+                    del imheader[key]
+                except KeyError:
+                    pass  # Ignore if already removed
 
-    # Guardar la nueva imagen FITS
-    hdu = fits.PrimaryHDU(imdata, imheader)
-    base_name = os.path.splitext(os.path.basename(fits_file))[0]
+            # Now update with the new WCS information
+            imheader.update(wcs_keywords_obj)
+            logger.debug("WCS keywords updated in header.")
+
+        except Exception as e:
+            logger.error(f"Failed to write updated WCS to header: {e}. Header WCS might be inconsistent.")
+            imheader.add_comment("ERROR: Failed to update WCS keywords in header during processing.")
+
+    # Update data statistics (handle all-NaN case)
+    if np.any(np.isfinite(processed_data)):
+        imheader['DATAMIN'] = float(np.nanmin(processed_data))
+        imheader['DATAMAX'] = float(np.nanmax(processed_data))
+    else:
+        logger.warning("Final image data contains only NaNs or infinite values.")
+        imheader['DATAMIN'] = 0.0  # Or np.nan? FITS standard doesn't specify behavior here well.
+        imheader['DATAMAX'] = 0.0  # Or np.nan?
+
+    # Record original dimensions
+    imheader.set('O_NAXIS1', original_shape[1], 'Original NAXIS1 before processing')
+    imheader.set('O_NAXIS2', original_shape[0], 'Original NAXIS2 before processing')
+    imheader.set('O_FILENA', os.path.basename(image_file), 'Original input filename')
+
+    # Add comment if input was NPY
+    if not was_originally_fits:
+        imheader.set('HISTORY', f'Input file was NPY: {os.path.basename(image_file)}')
+        # if is_minimal_header:
+        #     imheader.set('HISTORY', 'A minimal FITS header was generated for the NPY input.')
+
+    # Construct output filename
+    base_name = os.path.splitext(os.path.basename(image_file))[0]
     output_filename = base_name
     if binning > 1:
         output_filename += f"_bin{binning}_{binning_method}"
     if crop_size:
-        w_str, h_str = str(crop_size[0]), str(crop_size[1])
-        output_filename += f"_crop{w_str}x{h_str}"
+        # Use the actual final dimensions for the filename crop tag
+        output_filename += f"_crop{final_shape[1]}x{final_shape[0]}"  # WxH
+
     output_filename += ".fits"
+    output_path = os.path.join(os.path.dirname(image_file), output_filename)
 
-    output_path = os.path.join(os.path.dirname(fits_file), output_filename)
-    hdu.writeto(output_path, overwrite=True)
+    # Create the primary HDU with the processed data and header
+    # Ensure data type is float32 for saving
+    if processed_data.dtype != np.float32:
+        processed_data = processed_data.astype(np.float32)
+        imheader['BITPIX'] = -32  # Ensure BITPIX matches data type
 
-    logger.debug(f"Cropped and binned image file saved to: {os.path.relpath(output_path, BASE_IMAGES_PATH)}")
+    hdu = fits.PrimaryHDU(processed_data, header=imheader)
+
+    # Save the new FITS file
+    try:
+        hdu.writeto(output_path, overwrite=True, output_verify='fix')
+        output_relative_path = os.path.relpath(output_path,
+                                               BASE_IMAGES_PATH) if 'BASE_IMAGES_PATH' in globals() else output_path
+        logger.debug(f"Processed image saved successfully to: {output_relative_path}")
+    except Exception as e:
+        logger.error(f"Error writing processed FITS file to {output_path}: {e}")
+        raise IOError(f"Error writing processed FITS file to {output_path}: {e}") from e
+
     return output_path
