@@ -3,9 +3,9 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 from astropy.io import fits
-from astropy.nddata import block_reduce, Cutout2D
+# from astropy.nddata import block_reduce
 from astropy.wcs import WCS
-from skimage.measure import block_reduce
+from skimage.measure import block_reduce as skimage_block_reduce  # Keep skimage if preferred
 
 from gpuphot.image_processor import create_processor
 from gpuphot.logger.hierarchical_logging import setup_logger
@@ -338,6 +338,7 @@ def save_processed_image(file_path, base_path, imdata, hwcs):
 #     logger.debug(f"Binned and/or cropped image saved to: {output_file}")
 #
 #     return output_file
+
 def transform_coords(coord: float, binning: int) -> float:
     """Transforms a 0-based coordinate from original to binned frame."""
     if binning <= 1:
@@ -355,7 +356,8 @@ def crop_and_bin_image(image_file: str,
                        center: Optional[Tuple[float, float]] = None) -> str:
     """
     Processes a FITS or NPY file: applies binning and then optionally crops
-    a region of interest. Updates/creates a FITS header to reflect all changes.
+    a region of interest. Updates/creates a FITS header to reflect all changes,
+    manually updating WCS for crops to ensure correctness.
     The output file is always in FITS format.
 
     :param image_file: Path to the FITS or NPY file to process.
@@ -392,60 +394,90 @@ def crop_and_bin_image(image_file: str,
     original_h, original_w = original_shape
     was_originally_fits = image_file.lower().endswith(('.fits', '.fit'))
 
-    # Try to build WCS from the original header (needed for header updates, not centering)
-    original_wcs = None
+    # Try to build WCS from the original header
+    original_wcs_obj = None
     try:
-        temp_wcs = WCS(imheader, relax=True)
+        temp_wcs = WCS(imheader, naxis=2, relax=True)
         if temp_wcs.is_celestial:
-            original_wcs = temp_wcs
+            original_wcs_obj = temp_wcs
             logger.debug("Valid original WCS found.")
         else:
             logger.debug("Original WCS not celestial.")
-    except Exception:
-        logger.debug("No valid original WCS found.")
+    except Exception as e:
+        logger.debug(f"No valid original WCS found or error parsing: {e}")
 
     # 2) Validate binning factor
     if not isinstance(binning, int) or binning < 1: raise ValueError("Binning factor must be an integer >= 1.")
 
     # 3) Check if nothing needs to be done
     if binning == 1 and crop_size is None and was_originally_fits:
-        logger.debug("No processing needed.")
+        logger.debug("No processing needed (Input is FITS, binning=1, no crop).")
         return image_file
+    elif binning == 1 and crop_size is None and not was_originally_fits:
+        logger.debug("No processing needed (Input is NPY, binning=1, no crop), but saving as FITS.")
 
-    # Add header comments & history
+    # Add header comments & history (use a copy to modify)
+    output_header = imheader.copy()
     temp_key = 'COMINIT'
-    imheader[temp_key] = 'e'
-    imheader.insert(temp_key, ('COMMENT', '*' * 27))
-    imheader.insert(temp_key, ('COMMENT', '    IMAGE PROCESSING HISTORY   '))
-    imheader.insert(temp_key, ('COMMENT', '*' * 27))
-    imheader.insert(temp_key, ('COMMENT', ' '))
-    imheader.set('HISTORY', f"Processed by crop_and_bin_image function.")
+    output_header[temp_key] = 'e'
+    output_header.insert(temp_key, ('COMMENT', '*' * 27))
+    output_header.insert(temp_key, ('COMMENT', '    IMAGE PROCESSING HISTORY   '))
+    output_header.insert(temp_key, ('COMMENT', '*' * 27))
+    output_header.insert(temp_key, ('COMMENT', ' '))
+    output_header.set('HISTORY', f"Processed by crop_and_bin_image function.")
 
     processed_data = imdata.copy()
-    processed_wcs = original_wcs  # Will be updated by binning if needed
+    current_wcs_obj = original_wcs_obj  # WCS object corresponding to processed_data
 
     # -------------------------------------------------------------------------
     # BINNING
     # -------------------------------------------------------------------------
     if binning > 1:
-        # ... (Binning logic: block_reduce, check divisibility, update data etc.) ...
         logger.debug(f"Applying {binning}x{binning} binning ({binning_method}). Original shape: {original_shape}")
-        # (Assume block_reduce updates processed_data)
-        processed_data = block_reduce(processed_data, (binning, binning),
-                                      func=np.sum if binning_method == 'sum' else np.nanmedian)  # Simplified example
+        bin_func = np.sum if binning_method == 'sum' else np.nanmedian
+        processed_data = skimage_block_reduce(processed_data, (binning, binning), func=bin_func, cval=np.nan)
+        processed_data = processed_data.astype(np.float32)
         logger.debug(f"Shape after binning: {processed_data.shape}")
 
-        # --- Update WCS object AFTER binning ---
-        if processed_wcs:
+        # --- Update WCS object AND header AFTER binning ---
+        if current_wcs_obj:
             try:
-                processed_wcs = processed_wcs[::binning, ::binning]
+                current_wcs_obj = current_wcs_obj[::binning, ::binning]  # Update WCS object
                 logger.debug("WCS object updated for binning.")
+                # Update header from this binned WCS object
+                current_wcs_hdr = current_wcs_obj.to_header(relax=True)  # Use relax for SIP etc.
+                # Clean potentially conflicting old keys before update? Safer.
+                wcs_keys_to_delete = [k for k in output_header if
+                                      k.startswith(('CRPIX', 'CRVAL', 'CTYPE', 'CUNIT', 'CDELT', 'CD', 'PC'))]
+                for k in wcs_keys_to_delete:
+                    try:
+                        del output_header[k]
+                    except KeyError:
+                        pass
+                # Now update with all keys from the modified WCS object
+                output_header.update(current_wcs_hdr)
+                logger.debug("Header WCS keywords updated from binned WCS object.")
             except Exception as e:
-                logger.error(f"Failed to update WCS object after binning: {e}. WCS is now invalid.")
-                processed_wcs = None
-        # Update header keywords (BINNING, GAIN, RDNOISE, PIXSCALE, etc.)
-        imheader.set('HISTORY', f"Applied {binning}x{binning} binning using '{binning_method}'.")
-        # (Keyword update code omitted for brevity)
+                logger.error(f"Failed to update WCS object/header after binning: {e}. WCS is now invalid.")
+                # Remove potentially inconsistent WCS keys from header
+                wcs_keys_to_delete = [k for k in output_header if k.startswith(
+                    ('CRPIX', 'CRVAL', 'CTYPE', 'CUNIT', 'CDELT', 'CD', 'PC', 'PV', 'A_', 'B_', 'AP_', 'BP_'))]
+                for k in wcs_keys_to_delete:
+                    try:
+                        del output_header[k]
+                    except KeyError:
+                        pass
+                current_wcs_obj = None  # Mark WCS as invalid
+
+        # Update other header keywords (GAIN, RDNOISE, PIXSCALE etc.)
+        output_header.set('HISTORY', f"Applied {binning}x{binning} binning using '{binning_method}'.")
+        output_header.set('BINNING', binning, 'Binning factor applied')
+        output_header.set('BIN_METH', binning_method, 'Binning method')
+        # (Other keyword updates...)
+
+        # Ensure NAXIS are correct for binned data
+        output_header['NAXIS1'] = processed_data.shape[1]
+        output_header['NAXIS2'] = processed_data.shape[0]
 
     # -------------------------------------------------------------------------
     # CROPPING
@@ -456,100 +488,129 @@ def crop_and_bin_image(image_file: str,
         # --- Validate and normalize crop_size (W, H) ---
         crop_w: int
         crop_h: int
-        if isinstance(crop_size, int):  # Square crop
+        # (Validation logic is ok)
+        if isinstance(crop_size, int):
             if crop_size <= 0: raise ValueError("Crop size must be > 0.")
             crop_w, crop_h = crop_size, crop_size
-        elif isinstance(crop_size, (tuple, list)) and len(crop_size) == 2:  # Rectangular crop (W, H)
+        elif isinstance(crop_size, (tuple, list)) and len(crop_size) == 2:
             crop_w, crop_h = int(crop_size[0]), int(crop_size[1])
             if crop_w <= 0 or crop_h <= 0: raise ValueError("Crop W & H must be > 0.")
         else:
             raise ValueError("crop_size must be None, int, or tuple (W, H).")
-
-        # Check if requested crop is larger than the current image
         if crop_w > current_w or crop_h > current_h:
             raise ValueError(f"Crop size ({crop_w}x{crop_h}) > current image ({current_w}x{current_h}).")
 
-        # --- Determine the ORIGIN coordinates (X, Y) for the center parameter ---
-        # These are the coordinates in the *original* image frame that the user wants at the center.
+        # --- Determine ORIGIN center coordinates ---
         origin_center_x: float
         origin_center_y: float
-        center_input_description = ""  # For logging/history
-
+        center_input_description = ""
+        # (Center calculation logic is ok)
         if center is None:
-            # Default: Use the geometric center of the original image
             origin_center_x = (original_w - 1) / 2.0
             origin_center_y = (original_h - 1) / 2.0
             center_input_description = "original geometric center"
             logger.debug(
                 f"Center is None. Using {center_input_description}: (X={origin_center_x:.3f}, Y={origin_center_y:.3f})")
-        else:
-            # User provided center (X, Y) relative to the *original* image
+        else:  # User provided center
             try:
                 user_x_orig, user_y_orig = float(center[0]), float(center[1])
                 center_input_description = f"provided original pixel (X={user_x_orig:.2f}, Y={user_y_orig:.2f})"
                 logger.debug(f"User provided center relative to original: (X={user_x_orig:.3f}, Y={user_y_orig:.3f})")
+                if not (0 <= user_x_orig < original_w and 0 <= user_y_orig < original_h): raise ValueError(
+                    "Center outside original bounds.")
+                origin_center_x, origin_center_y = user_x_orig, user_y_orig
+            except Exception as e:
+                raise ValueError(f"Invalid center format: {center}") from e
 
-                # Validate user coords against ORIGINAL dimensions
-                if not (0 <= user_x_orig < original_w and 0 <= user_y_orig < original_h):
-                    raise ValueError(
-                        f"Provided center {center} is outside original image bounds (W={original_w}, H={original_h}).")
-                origin_center_x = user_x_orig
-                origin_center_y = user_y_orig
-            except (ValueError, TypeError, IndexError) as e:
-                raise ValueError(
-                    f"Invalid center format or value: {center}. Must be (number, number) for original X, Y.") from e
-
-        # --- Transform the ORIGIN center coordinates to the TARGET center coordinates in the CURRENT frame ---
+        # --- Transform ORIGIN center to TARGET center in CURRENT frame ---
         target_center_x = transform_coords(origin_center_x, binning)
         target_center_y = transform_coords(origin_center_y, binning)
         logger.debug(
             f"Transformed center to current frame (bin={binning}): (Target X={target_center_x:.3f}, Target Y={target_center_y:.3f})")
 
-        # --- Validate the TARGET coordinates against the CURRENT image dimensions ---
-        # This is crucial! The target point might be outside the binned image if it was near an edge discarded by non-divisible binning.
+        # --- Validate TARGET coordinates against CURRENT dimensions ---
         if not (0 <= target_center_x < current_w and 0 <= target_center_y < current_h):
-            raise ValueError(f"The target center point (X={target_center_x:.2f}, Y={target_center_y:.2f}) "
-                             f"corresponding to {center_input_description} falls outside the "
-                             f"current image boundaries (W={current_w}, H={current_h}) after binning. "
-                             f"Cannot perform crop.")
+            raise ValueError(f"Target center point (X={target_center_x:.2f}, Y={target_center_y:.2f}) "
+                             f"falls outside current image boundaries (W={current_w}, H={current_h}). Cannot crop.")
 
-        # --- Perform cropping using the validated TARGET center ---
-        cutout_position_yx = (target_center_y, target_center_x)  # Order for Cutout2D: (Y, X)
-        cutout_size_hw = (crop_h, crop_w)  # Order for Cutout2D: (H, W)
-
+        # --- Perform cropping ---
         try:
-            if processed_wcs:  # Use Cutout2D if WCS is valid *now*
-                logger.debug(f"Cropping using Cutout2D: position(Y,X)={cutout_position_yx}, size(H,W)={cutout_size_hw}")
-                cutout = Cutout2D(processed_data, position=cutout_position_yx, size=cutout_size_hw,
-                                  wcs=processed_wcs, mode='trim', copy=True)
-                processed_data = cutout.data
-                processed_wcs = cutout.wcs  # Get updated WCS from cutout
-            else:
-                # Manual slicing if no valid WCS
-                logger.debug(
-                    f"Cropping using numpy slicing: center(X,Y)=({target_center_x:.3f},{target_center_y:.3f}), size(W,H)=({crop_w},{crop_h})")
-                # Calculate slice boundaries (0-based integer indices)
-                y_min = int(np.round(target_center_y - crop_h / 2.0))
-                y_max = y_min + crop_h
-                x_min = int(np.round(target_center_x - crop_w / 2.0))
-                x_max = x_min + crop_w
-                # Clip slices
-                y_min_clip = max(0, y_min)
-                y_max_clip = min(current_h, y_max)
-                x_min_clip = max(0, x_min)
-                x_max_clip = min(current_w, x_max)
-                actual_h = y_max_clip - y_min_clip
-                actual_w = x_max_clip - x_min_clip
-                if actual_h != crop_h or actual_w != crop_w: logger.warning(
-                    f"Requested crop {crop_h}x{crop_w} resulted in {actual_h}x{actual_w} due to image boundaries.")
-                if actual_h <= 0 or actual_w <= 0: raise ValueError("Calculated crop region has zero size.")
-                # Apply slicing array[Y, X]
-                processed_data = processed_data[y_min_clip:y_max_clip, x_min_clip:x_max_clip]
+            # Use the WCS object corresponding to the *current* state of processed_data
+            # This WCS object should be consistent with the current output_header WCS keywords
+            wcs_before_crop = current_wcs_obj  # This might be None if original WCS failed or binning failed
+
+            # --- Calculate cutout slices/indices ---
+            # Use the logic Cutout2D uses to find the 0-based start index
+            # jmin = floor(position[axis] - size[axis]/2 + 0.5)
+            y_min_idx = int(np.floor(target_center_y - crop_h / 2.0 + 0.5))
+            x_min_idx = int(np.floor(target_center_x - crop_w / 2.0 + 0.5))
+            # Calculate end indices (exclusive)
+            y_max_idx = y_min_idx + crop_h
+            x_max_idx = x_min_idx + crop_w
+
+            # Ensure slices are within bounds of the current data array
+            y_start = max(0, y_min_idx)
+            y_end = min(current_h, y_max_idx)
+            x_start = max(0, x_min_idx)
+            x_end = min(current_w, x_max_idx)
+
+            # Check if the actual crop size matches the requested size
+            actual_h = y_end - y_start
+            actual_w = x_end - x_start
+            if actual_h != crop_h or actual_w != crop_w:
+                logger.warning(f"Requested crop {crop_h}x{crop_w} resulted in {actual_h}x{actual_w} "
+                               f"due to image boundaries. WCS adjusted for actual cutout origin.")
+                # We MUST use the *actual* start indices for WCS adjustment
+                x_min_idx = x_start
+                y_min_idx = y_start
+
+            if actual_h <= 0 or actual_w <= 0:
+                raise ValueError(f"Calculated crop region has zero size ({actual_w}x{actual_h}).")
+
+            # --- Perform the data slicing ---
+            processed_data = processed_data[y_start:y_end, x_start:x_end]
+            logger.debug(f"Cropped data using numpy slicing from Y=[{y_start}:{y_end}), X=[{x_start}:{x_end})")
+
+            # --- Update WCS Header Manually ---
+            if wcs_before_crop and wcs_before_crop.is_celestial and 'CRPIX1' in output_header and 'CRPIX2' in output_header:
+                logger.debug("Calculating CRPIX shift manually.")
+                old_crpix1 = output_header['CRPIX1']
+                old_crpix2 = output_header['CRPIX2']
+
+                # The new CRPIX is the old CRPIX relative to the start of the cutout
+                new_crpix1 = old_crpix1 - x_min_idx
+                new_crpix2 = old_crpix2 - y_min_idx
+
+                logger.debug(f"  Old CRPIX: ({old_crpix1}, {old_crpix2})")
+                logger.debug(f"  Cutout Start Index (X, Y): ({x_min_idx}, {y_min_idx})")
+                logger.debug(f"  New CRPIX calculated: ({new_crpix1}, {new_crpix2})")
+
+                # Update ONLY CRPIX in the header. Keep original CRVAL, CD/PC, SIP etc.
+                output_header['CRPIX1'] = new_crpix1
+                output_header['CRPIX2'] = new_crpix2
+                logger.debug("Header CRPIX updated manually.")
+
+            elif not (wcs_before_crop and wcs_before_crop.is_celestial):
+                logger.debug("No valid WCS before crop, no WCS keywords to update.")
+                # Ensure WCS keywords are removed if cropping happened without WCS
+                wcs_keys_to_delete = [k for k in output_header if k.startswith(
+                    ('CRPIX', 'CRVAL', 'CTYPE', 'CUNIT', 'CDELT', 'CD', 'PC', 'PV', 'A_', 'B_', 'AP_', 'BP_'))]
+                if wcs_keys_to_delete:
+                    logger.debug(f"Removing WCS keywords: {wcs_keys_to_delete}")
+                    for k in wcs_keys_to_delete:
+                        try:
+                            del output_header[k]
+                        except KeyError:
+                            pass
+
+            # --- Update NAXIS in header ---
+            final_w, final_h = processed_data.shape[1], processed_data.shape[0]
+            output_header['NAXIS1'] = final_w
+            output_header['NAXIS2'] = final_h
 
             # Log success and add history
-            final_w, final_h = processed_data.shape[1], processed_data.shape[0]
-            logger.info(f"Cropped image to {final_w}x{final_h}. Centered based on: {center_input_description}")
-            imheader.set('HISTORY', f"Cropped to {final_w}x{final_h} based on {center_input_description}")
+            logger.debug(f"Cropped image to {final_w}x{final_h}. Centered based on: {center_input_description}")
+            output_header.set('HISTORY', f"Cropped to {final_w}x{final_h} based on {center_input_description}")
 
         except Exception as e:
             logger.error(f"Error during cropping operation: {e}", exc_info=True)
@@ -561,40 +622,25 @@ def crop_and_bin_image(image_file: str,
     final_shape = processed_data.shape  # Numpy shape (H, W)
     final_w, final_h = final_shape[1], final_shape[0]
 
-    imheader['NAXIS'] = 2
-    imheader['NAXIS1'] = final_w
-    imheader['NAXIS2'] = final_h
-
-    # Update WCS in header if it exists and is valid
-    if processed_wcs:
-        try:
-            # Clean old WCS keys before updating
-            known_wcs_patterns = ('CRVAL', 'CRPIX', 'CDELT', 'CTYPE', 'CUNIT', 'CD1_', 'CD2_', 'PC1_', 'PC2_', 'PV')
-            keys_to_remove = [k for k in imheader if k.startswith(known_wcs_patterns)]
-            for k in ['EQUINOX', 'RADESYS', 'WCSAXES', 'LONGPOLE', 'LATPOLE']:
-                if k in imheader: keys_to_remove.append(k)
-            for key in set(keys_to_remove):
-                try:
-                    del imheader[key]
-                except KeyError:
-                    pass
-            imheader.update(processed_wcs.to_header())
-            logger.debug("WCS keywords updated in header for cropping.")
-        except Exception as e:
-            logger.error(f"Failed to write updated WCS to header: {e}.")
-            imheader.add_comment("ERROR: Failed to update WCS keywords after cropping.")
+    # Final check on NAXIS (should be redundant now)
+    if output_header.get('NAXIS1') != final_w or output_header.get('NAXIS2') != final_h:
+        logger.warning(
+            f"Header NAXIS ({output_header.get('NAXIS1')},{output_header.get('NAXIS2')}) mismatch final data shape ({final_w},{final_h}). Correcting.")
+        output_header['NAXIS'] = 2
+        output_header['NAXIS1'] = final_w
+        output_header['NAXIS2'] = final_h
 
     # Update DATAMIN/MAX, O_NAXIS, O_FILENA etc.
-    # (Code omitted for brevity - same as previous version)
     if np.any(np.isfinite(processed_data)):
-        imheader['DATAMIN'], imheader['DATAMAX'] = float(np.nanmin(processed_data)), float(np.nanmax(processed_data))
+        output_header['DATAMIN'] = float(np.nanmin(processed_data))
+        output_header['DATAMAX'] = float(np.nanmax(processed_data))
     else:
-        logger.warning("Final image data NaN/inf.")
-        imheader['DATAMIN'], imheader['DATAMAX'] = 0.0, 0.0
-    imheader.set('O_NAXIS1', original_w, 'Original NAXIS1')
-    imheader.set('O_NAXIS2', original_h, 'Original NAXIS2')
-    imheader.set('O_FILENA', os.path.basename(image_file)[:68], 'Original input filename')
-    if not was_originally_fits: imheader.set('HISTORY', f'Input was NPY: {os.path.basename(image_file)}')
+        logger.warning("Final image data contains only NaN/inf.")
+        output_header['DATAMIN'], output_header['DATAMAX'] = 0.0, 0.0
+    output_header.set('O_NAXIS1', original_w, 'Original NAXIS1')
+    output_header.set('O_NAXIS2', original_h, 'Original NAXIS2')
+    output_header.set('O_FILENA', os.path.basename(image_file)[:68], 'Original input filename')
+    if not was_originally_fits: output_header.set('HISTORY', f'Input was NPY: {os.path.basename(image_file)}')
 
     # Construct output filename
     base_name = os.path.splitext(os.path.basename(image_file))[0]
@@ -606,18 +652,18 @@ def crop_and_bin_image(image_file: str,
 
     # Ensure data type and BITPIX
     if processed_data.dtype != np.float32: processed_data = processed_data.astype(np.float32)
-    if 'BITPIX' not in imheader or imheader['BITPIX'] != -32: imheader['BITPIX'] = -32
+    output_header['BITPIX'] = -32  # FITS code for float32
 
     # Clean up temp key
-    if temp_key in imheader: del imheader[temp_key]
+    if temp_key in output_header: del output_header[temp_key]
 
     # Create Primary HDU and save
-    hdu = fits.PrimaryHDU(processed_data, header=imheader)
+    hdu = fits.PrimaryHDU(processed_data, header=output_header)
     try:
         hdu.writeto(output_path, overwrite=True, output_verify='fix')
         output_relative_path = os.path.relpath(output_path,
                                                BASE_IMAGES_PATH) if 'BASE_IMAGES_PATH' in globals() else output_path
-        logger.info(f"Processed image saved successfully to: {output_relative_path}")
+        logger.debug(f"Processed image saved successfully to: {output_relative_path}")
     except Exception as e:
         logger.error(f"Error writing processed FITS file to {output_path}: {e}")
         raise IOError(f"Error writing FITS to {output_path}: {e}") from e
