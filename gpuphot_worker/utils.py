@@ -349,7 +349,7 @@ def transform_coords(coord: float, binning: int) -> float:
     return (coord + 0.5) / binning - 0.5
 
 
-def crop_and_bin_image(image_file: str,
+def crop_and_bin_image(fits_file: str,
                        binning: int,
                        binning_method: str = 'sum',
                        crop_size: Optional[Union[int, Tuple[int, int]]] = None,
@@ -360,7 +360,7 @@ def crop_and_bin_image(image_file: str,
     manually updating WCS for crops to ensure correctness.
     The output file is always in FITS format.
 
-    :param image_file: Path to the FITS or NPY file to process.
+    :param fits_file: Path to the FITS or NPY file to process.
     :param binning: Binning factor (int >= 1). If 1, no binning is applied.
     :param binning_method: 'sum' or 'median'. Method for combining pixels during binning.
     :param crop_size: Desired output size in pixels after cropping.
@@ -379,20 +379,20 @@ def crop_and_bin_image(image_file: str,
     :raises IOError: If there are problems reading/writing files.
     :raises FileNotFoundError: If the input file does not exist.
     """
-    relative_path = os.path.relpath(image_file, BASE_IMAGES_PATH) if 'BASE_IMAGES_PATH' in globals() else image_file
+    relative_path = os.path.relpath(fits_file, BASE_IMAGES_PATH) if 'BASE_IMAGES_PATH' in globals() else fits_file
     logger.debug(
         f"Processing file: {relative_path}, binning: {binning}, method: {binning_method}, crop: {crop_size}, center(Original X,Y): {center}")
 
     # 1) Open the image
     try:
-        imdata, imheader = open_image_file(image_file)
+        imdata, imheader = open_image_file(fits_file)
     except (FileNotFoundError, ValueError, IOError) as e:
-        logger.error(f"Failed to open or read image file {image_file}: {e}")
+        logger.error(f"Failed to open or read image file {fits_file}: {e}")
         raise e
 
     original_shape = imdata.shape  # Numpy shape (rows, cols) -> (H, W)
     original_h, original_w = original_shape
-    was_originally_fits = image_file.lower().endswith(('.fits', '.fit'))
+    was_originally_fits = fits_file.lower().endswith(('.fits', '.fit'))
 
     # Try to build WCS from the original header
     original_wcs_obj = None
@@ -412,7 +412,7 @@ def crop_and_bin_image(image_file: str,
     # 3) Check if nothing needs to be done
     if binning == 1 and crop_size is None and was_originally_fits:
         logger.debug("No processing needed (Input is FITS, binning=1, no crop).")
-        return image_file
+        return fits_file
     elif binning == 1 and crop_size is None and not was_originally_fits:
         logger.debug("No processing needed (Input is NPY, binning=1, no crop), but saving as FITS.")
 
@@ -639,16 +639,16 @@ def crop_and_bin_image(image_file: str,
         output_header['DATAMIN'], output_header['DATAMAX'] = 0.0, 0.0
     output_header.set('O_NAXIS1', original_w, 'Original NAXIS1')
     output_header.set('O_NAXIS2', original_h, 'Original NAXIS2')
-    output_header.set('O_FILENA', os.path.basename(image_file)[:68], 'Original input filename')
-    if not was_originally_fits: output_header.set('HISTORY', f'Input was NPY: {os.path.basename(image_file)}')
+    output_header.set('O_FILENA', os.path.basename(fits_file)[:68], 'Original input filename')
+    if not was_originally_fits: output_header.set('HISTORY', f'Input was NPY: {os.path.basename(fits_file)}')
 
     # Construct output filename
-    base_name = os.path.splitext(os.path.basename(image_file))[0]
+    base_name = os.path.splitext(os.path.basename(fits_file))[0]
     output_filename = base_name
     if binning > 1: output_filename += f"_bin{binning}_{binning_method}"
     if crop_size: output_filename += f"_crop{final_w}x{final_h}"  # Use actual WxH
     output_filename += ".fits"
-    output_path = os.path.join(os.path.dirname(image_file), output_filename)
+    output_path = os.path.join(os.path.dirname(fits_file), output_filename)
 
     # Ensure data type and BITPIX
     if processed_data.dtype != np.float32: processed_data = processed_data.astype(np.float32)
