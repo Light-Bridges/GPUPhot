@@ -27,7 +27,7 @@ OUTPUT_FILE="${OUTPUT_DIR}/profile_${TIMESTAMP}.nsys-rep"
 mkdir -p $OUTPUT_DIR
 
 echo "Iniciando perfilado con Nsight Systems..."
-$NSYS_CMD profile profile --trace=cuda,nvtx,osrt --sample=process-tree --stats=true --cuda-memory-usage=true --gpu-metrics-devices=all -o "$OUTPUT_FILE" --stats=true python3 /app/profiling_scripts/profile_image_processing.py "$IMAGE_PATH" "$INSTRUMENT_NAME"
+$NSYS_CMD profile --trace=cuda,nvtx,osrt --sample=process-tree --stats=true --cuda-memory-usage=true --gpu-metrics-devices=all -o "$OUTPUT_FILE" python3 /app/profiling_scripts/profile_image_processing.py "$IMAGE_PATH" "$INSTRUMENT_NAME"
 
 echo "Perfilado completado. Resultados guardados en: $OUTPUT_FILE"
 echo "Para analizar los resultados, puede usar Nsight Systems UI en su máquina local con el archivo generado"
