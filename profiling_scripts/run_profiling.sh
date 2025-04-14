@@ -41,17 +41,20 @@ fi
 OUTPUT_DIR="/app/profiling_results"
 mkdir -p $OUTPUT_DIR
 
-# Configurar el parámetro para GPU metrics
-# Por defecto se asigna el parámetro con el valor de GPU_ID
+# Configurar el parámetro para GPU metrics por defecto
 EXTRA_PARAMS="--gpu-metrics-devices=$GPU_ID"
 
-# Si se detecta que el dispositivo es Jetson, se omite este parámetro
+# Intentar detectar si se trata de un dispositivo Jetson
 if [ -f /proc/device-tree/model ]; then
     MODEL=$(tr -d '\0' </proc/device-tree/model)
     if echo "$MODEL" | grep -qi "jetson"; then
         echo "Dispositivo Jetson detectado ($MODEL). Se omitirá el parámetro --gpu-metrics-devices."
         EXTRA_PARAMS=""
     fi
+elif [ -n "$JETSON_TYPE" ]; then
+    # Si la variable de entorno JETSON_TYPE está definida, se asume que es un dispositivo Jetson
+    echo "Variable de entorno JETSON_TYPE detectada ($JETSON_TYPE). Se omitirá el parámetro --gpu-metrics-devices."
+    EXTRA_PARAMS=""
 fi
 
 # Bucle para ejecutar el perfilado COUNT veces
