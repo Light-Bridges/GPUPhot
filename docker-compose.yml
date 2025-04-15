@@ -215,7 +215,7 @@ services:
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
       - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
       - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
-      - /opt/nvidia/nsight-systems/2024.2.2/:/opt/nsight-systems-host         #readlink -f $(which nsys)
+      - ${NSYS_PATH:-/opt/nvidia/nsight-systems/2024.2.2/}:/opt/nsight-systems-host         #readlink -f $(which nsys)
     deploy:
       resources:
         reservations:
@@ -240,7 +240,7 @@ services:
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
       - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
       - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
-      - /opt/nvidia/nsight-systems/2023.2.4/:/opt/nsight-systems-host         #readlink -f $(which nsys)
+      - ${NSYS_PATH:-/opt/nvidia/nsight-systems/2023.2.4/}:/opt/nsight-systems-host         #readlink -f $(which nsys)
     deploy:
       resources:
         reservations:
