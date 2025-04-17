@@ -31,6 +31,28 @@ def crossmatch_sources(source_coords, ref_coords, thres_px=2):
     return source_coords_matched_idx, ref_coords_matched_idx
 
 
+def _is_valid_result(result: pd.DataFrame, expected_columns: list):
+    """
+    Validate the result of a catalog query.
+
+    :param result: The query result to validate.
+    :type result: pandas.DataFrame or None
+    :param expected_columns: List of expected column names in the result.
+    :type expected_columns: list or None
+    :return: True if the result is valid, False otherwise.
+    :rtype: bool
+    """
+    if result is None:
+        return False
+    if isinstance(result, pd.DataFrame):
+        checks = [
+            not result.empty,
+            expected_columns is None or all(col in result.columns for col in expected_columns)
+        ]
+        return all(checks)
+    return False
+
+
 @hierarchical_debug(logger)
 def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                 vizier_timeout=60, vizier_row_limit=-1,
@@ -64,6 +86,7 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                                        - ref_filter: The reference filter used for magnitude filtering.
                                        - row_limit: Maximum number of rows to return from the query.
                                        - expected_columns: List of expected column names in the results.
+                                       This function should return a DataFrame or None.
     :type custom_vizier_search_func: callable or None
     :param expected_columns: List of expected column names in the results.
     :type expected_columns: list or None
@@ -72,6 +95,10 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
     """
     if custom_vizier_search_func is not None:
         try:
+            logger.debug(
+                f'Using custom Vizier search function: {custom_vizier_search_func.__name__} for catalog: {catalog}')
+            if expected_columns is None:
+                expected_columns = []
             executor = TimeoutExecutor(timeout=vizier_timeout)
             result = executor.execute(
                 custom_vizier_search_func,
@@ -83,14 +110,18 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                 row_limit=int(vizier_row_limit),
                 expected_columns=list(set(expected_columns))
             )
-            return result
+            if _is_valid_result(result, expected_columns):
+                return result
+
+            logger.warning(f'Custom Vizier search function returned invalid result for catalog: {catalog}')
         except TimeoutExecutor.TimeoutError as e:
             logger.error(f'Timeout error in custom Vizier search function: {e}')
-            return None
+            # return None
         except Exception as e:
             logger.error(f'Error in custom Vizier search function: {e}')
-            return None
+            # return None
 
+    logger.debug(f'Using Vizier catalog: {catalog}')
     Vizier.ROW_LIMIT = vizier_row_limit
     timeout = vizier_timeout
     vizier_results = Vizier(timeout=timeout, row_limit=vizier_row_limit) \
@@ -140,12 +171,14 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     :param maglimit: The magnitude limit for filtering results (default is 23).
     :type maglimit: float
     :param kwargs: Additional keyword arguments passed to __getVizier, including luminosity coefficients.
-    :return: A tuple containing:
-             - result: A DataFrame with calculated magnitudes and associated parameters.
-             - catalog: The name of the catalog used in the query.
-             - ref_filter: The reference filter used in calculations.
-    :rtype: tuple(pandas.DataFrame, str, str)
+    :return:
+        - result (pandas.DataFrame): A DataFrame with calculated magnitudes and associated parameters.
+        - catalog (str): The name of the catalog used in the query.
+        - ref_filter (str): The reference filter used in calculations.
+    :rtype:
+        tuple(pandas.DataFrame, str, str)
     """
+
     if coocenter.dec.deg < -30:
         def get_filter(_filter):
             filter_map = {
