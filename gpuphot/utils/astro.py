@@ -661,7 +661,7 @@ def get_target_snr(dfm: pd.DataFrame, target_ra: float, target_dec: float, dist_
     """
     target_coords_np = np.array([[target_ra, target_dec]])
     if 'RA' not in dfm.columns or 'DEC' not in dfm.columns:
-        logger.error("DataFrame missing 'RA' or 'DEC' columns.");
+        logger.error("DataFrame missing 'RA' or 'DEC' columns.")
         return 0.0
     ref_coords_np = dfm[['RA', 'DEC']].values
 
@@ -672,7 +672,7 @@ def get_target_snr(dfm: pd.DataFrame, target_ra: float, target_dec: float, dist_
 
         if ref_idx.size > 0:
             if 'snr' not in dfm.columns:
-                logger.error("DataFrame missing 'snr' column.");
+                logger.error("DataFrame missing 'snr' column.")
                 return 0.0
             target_snr = dfm['snr'].iloc[ref_idx[0]]
         else:

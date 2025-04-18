@@ -48,7 +48,7 @@ def _crossmatch_sources_gpu_impl(source_coords: cp.ndarray, ref_coords: cp.ndarr
 
     try:
         knn_range = nvtx.start_range('cuml_knn', category='cuml')
-        nn = cuNearestNeighbors(n_neighbors=1, algorithm='auto')
+        nn = cuNearestNeighbors(n_neighbors=1, algorithm='rbc')
         nn.fit(ref_coords_f32)
         distances, indices = nn.kneighbors(source_coords_f32)
         nvtx.end_range(knn_range)
