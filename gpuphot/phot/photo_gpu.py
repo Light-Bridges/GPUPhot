@@ -727,7 +727,7 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
     if radii.size == 0:
         nvtx.end_range(block3_range)
         nvtx.end_range(overall_range)
-        raise DataValidationError(...)
+        raise DataValidationError("Input data is invalid or insufficient")
     nvtx.end_range(block3_range)
 
     # BLOQUE 4: Mapa de correcciones (Llama a helpers que usan GPU crossmatch internamente)
@@ -799,7 +799,7 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
     if np.sum(valid_fit_mask_np) < 2:
         nvtx.end_range(block8_range)
         nvtx.end_range(overall_range)
-        raise DataValidationError(...)
+        raise DataValidationError("Not enough valid points for polyfit")
     center_conv_snr_fit = center_conv_snr_np[valid_fit_mask_np]
     opt_radii_fit = opt_radii_np[valid_fit_mask_np]
     polyfit_range = nvtx.start_range('polyfit_cpu', category='cpu_ops', color='blue')
@@ -811,7 +811,7 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
         nvtx.end_range(polyfit_range)
         nvtx.end_range(block8_range)
         nvtx.end_range(overall_range)
-        raise DataValidationError(...) from e
+        raise DataValidationError(f"Polyfit failed: {e}")
     nvtx.end_range(polyfit_range)
     nvtx.end_range(block8_range)
 
@@ -851,7 +851,7 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
     if cp.sum(positive_flux_mask) == 0:
         nvtx.end_range(block9_range)
         nvtx.end_range(overall_range)
-        raise DataValidationError(...)
+        raise DataValidationError("Input data is invalid or insufficient")
     opt_flux_final = opt_flux[positive_flux_mask]
     opt_aper_corr_final = opt_aperture_corrections[positive_flux_mask]
     opt_corr_err_final = opt_aperture_correction_errors[positive_flux_mask]
@@ -910,7 +910,8 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
 
     # Cleanup opcional
     # ... del ...
-    # mempool.free_all_blocks() gc.collect()
+    # mempool.free_all_blocks()
+    # gc.collect()
 
     nvtx.end_range(overall_range)
     return opt_signal_np, opt_total_noise_np, opt_coords_np, extra_info
