@@ -143,55 +143,60 @@ def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
         nvtx.end_range(nvtx_range)
         raise TypeError("Inputs must be NumPy or CuPy arrays.")
 
-    use_gpu = False
+    use_gpu_attempt = False  # Flag to track if we even try GPU
     if CUML_AVAILABLE and is_gpu_input:
-        use_gpu = True
+        use_gpu_attempt = True
         logger.debug("Attempting GPU crossmatch.")
         try:
             result = _crossmatch_sources_gpu_impl(source_coords, ref_coords, thres_px)
+            logger.debug("GPU crossmatch successful.")
             nvtx.end_range(nvtx_range)
-            return result
+            return result  # Return GPU result directly
         except Exception as gpu_e:
-            logger.warning(f"GPU crossmatch failed: {gpu_e}. Falling back to CPU.",
-                           exc_info=False)  # exc_info=False to avoid full traceback in warning
-            # Fallback will happen below
-            use_gpu = False  # Ensure we proceed to CPU path
+            logger.warning(f"GPU crossmatch failed: {gpu_e}. Falling back to CPU.", exc_info=False)
+            # Fallback will happen below, no need to set use_gpu_attempt back to False
 
-    # --- CPU Path (or Fallback from GPU failure) ---
-    if not use_gpu:
-        logger.debug("Using CPU crossmatch.")
-        # Prepare NumPy arrays for CPU implementation
-        if is_gpu_input:
-            # Need to transfer data from GPU to CPU for fallback
-            transfer_range = nvtx.start_range('transfer_gpu_to_cpu_fallback', category='transfer', color='red')
-            source_np = source_coords.get()
-            ref_np = ref_coords.get()
-            nvtx.end_range(transfer_range)
-        else:  # Input was already CPU
-            source_np = source_coords
-            ref_np = ref_coords
+    # --- CPU Path (if GPU not attempted, GPU failed, or input was CPU) ---
+    # This block executes if:
+    # 1. CUML_AVAILABLE is False
+    # 2. is_gpu_input is False
+    # 3. GPU was attempted but failed (Exception caught above)
+    logger.debug("Using CPU crossmatch.")
+    # Prepare NumPy arrays for CPU implementation
+    if is_gpu_input:
+        # Need to transfer data from GPU to CPU for fallback
+        transfer_range = nvtx.start_range('transfer_gpu_to_cpu_fallback', category='transfer', color='red')
+        source_np = source_coords.get()
+        ref_np = ref_coords.get()
+        nvtx.end_range(transfer_range)
+    else:  # Input was already CPU
+        source_np = source_coords
+        ref_np = ref_coords
 
-        # Call CPU implementation
-        try:
-            result_np_src, result_np_ref = _crossmatch_sources_cpu_impl(source_np, ref_np, thres_px)
-        except Exception as cpu_e:
-            logger.error(f"CPU crossmatch failed: {cpu_e}")
-            nvtx.end_range(nvtx_range)
-            raise  # Re-raise the exception from the CPU implementation
+    # Call CPU implementation
+    try:
+        result_np_src, result_np_ref = _crossmatch_sources_cpu_impl(source_np, ref_np, thres_px)
+        logger.debug("CPU crossmatch successful.")
+    except Exception as cpu_e:
+        logger.error(f"CPU crossmatch failed: {cpu_e}")
+        nvtx.end_range(nvtx_range)
+        raise  # Re-raise the exception from the CPU implementation
 
-        # If the original input was GPU, transfer results back
-        if is_gpu_input:
-            transfer_back_range = nvtx.start_range('transfer_cpu_to_gpu_fallback_result', category='transfer',
-                                                   color='red')
-            result_cp_src = cp.asarray(result_np_src)
-            result_cp_ref = cp.asarray(result_np_ref)
-            nvtx.end_range(transfer_back_range)
-            nvtx.end_range(nvtx_range)
-            return result_cp_src, result_cp_ref
-        else:
-            # Original input was CPU, return NumPy results
-            nvtx.end_range(nvtx_range)
-            return result_np_src, result_np_ref
+    # Determine final return type based on ORIGINAL input type
+    if is_gpu_input:
+        # Original input was GPU, transfer results back
+        transfer_back_range = nvtx.start_range('transfer_cpu_to_gpu_fallback_result', category='transfer', color='red')
+        result_cp_src = cp.asarray(result_np_src)
+        result_cp_ref = cp.asarray(result_np_ref)
+        nvtx.end_range(transfer_back_range)
+        logger.debug("Returning fallback results transferred back to GPU.")
+        nvtx.end_range(nvtx_range)
+        return result_cp_src, result_cp_ref
+    else:
+        # Original input was CPU, return NumPy results
+        logger.debug("Returning CPU results (original input was CPU).")
+        nvtx.end_range(nvtx_range)
+        return result_np_src, result_np_ref
 
 
 ### # @hierarchical_debug(logger)
