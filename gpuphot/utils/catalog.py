@@ -33,14 +33,14 @@ def _crossmatch_sources_gpu_impl(source_coords: cp.ndarray, ref_coords: cp.ndarr
     nvtx_range = nvtx.start_range('_crossmatch_sources_gpu_impl', category='utils.catalog_gpu', color='magenta')
 
     if not isinstance(source_coords, cp.ndarray) or not isinstance(ref_coords, cp.ndarray):
-        nvtx.end_range(nvtx_range);
+        nvtx.end_range(nvtx_range)
         raise TypeError("Inputs must be CuPy arrays for GPU impl.")
     if source_coords.ndim != 2 or ref_coords.ndim != 2:
-        nvtx.end_range(nvtx_range);
+        nvtx.end_range(nvtx_range)
         raise ValueError("Input arrays must be 2D for GPU impl.")
     n_sources, n_refs = source_coords.shape[0], ref_coords.shape[0]
     if n_sources == 0 or n_refs == 0:
-        nvtx.end_range(nvtx_range);
+        nvtx.end_range(nvtx_range)
         return cp.array([], dtype=cp.int32), cp.array([], dtype=cp.int32)
 
     source_coords_f32 = source_coords.astype(cp.float32, copy=False)
@@ -80,13 +80,13 @@ def _crossmatch_sources_cpu_impl(source_coords: np.ndarray, ref_coords: np.ndarr
     nvtx_range = nvtx.start_range('_crossmatch_sources_cpu_impl', category='utils.catalog_cpu', color='blue')
 
     if not isinstance(source_coords, np.ndarray) or not isinstance(ref_coords, np.ndarray):
-        nvtx.end_range(nvtx_range);
+        nvtx.end_range(nvtx_range)
         raise TypeError("Inputs must be NumPy arrays for CPU impl.")
     if source_coords.ndim != 2 or ref_coords.ndim != 2:
-        nvtx.end_range(nvtx_range);
+        nvtx.end_range(nvtx_range)
         raise ValueError("Input arrays must be 2D for CPU impl.")
     if source_coords.shape[0] == 0 or ref_coords.shape[0] == 0:
-        nvtx.end_range(nvtx_range);
+        nvtx.end_range(nvtx_range)
         return np.array([], dtype=int), np.array([], dtype=int)
 
     try:

@@ -359,11 +359,11 @@ def find_aperture_corrections_gpu(sources: cp.ndarray, corrections: cp.ndarray, 
     # tile_idx will be CuPy array if successful GPU or if fallback occurred from GPU input
 
     if len(tile_idx) != len(sources):
-        nvtx.end_range(nvtx_range);
+        nvtx.end_range(nvtx_range)
         raise ValueError(f"Crossmatch returned unexpected indices...")
     if not isinstance(tile_idx, cp.ndarray):
         # This indicates CPU path was used AND original input was CPU - shouldn't happen here
-        nvtx.end_range(nvtx_range);
+        nvtx.end_range(nvtx_range)
         raise TypeError("Crossmatch did not return CuPy array as expected.")
 
     # Indexing on GPU
@@ -373,8 +373,8 @@ def find_aperture_corrections_gpu(sources: cp.ndarray, corrections: cp.ndarray, 
         aperture_correction_errors = correction_errors[tile_idx, :]
     else:
         if not isinstance(opt_rad_idx, cp.ndarray):
-            nvtx.end_range(gpu_index_range);
-            nvtx.end_range(nvtx_range);
+            nvtx.end_range(gpu_index_range)
+            nvtx.end_range(nvtx_range)
             raise TypeError("opt_rad_idx must be CuPy")
         aperture_corrections = corrections[tile_idx, opt_rad_idx]
         aperture_correction_errors = correction_errors[tile_idx, opt_rad_idx]
@@ -713,7 +713,7 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
     if num_good_isolated < 3:
         nvtx.end_range(block2_range)
         nvtx.end_range(overall_range)
-        raise InsufficientStarsError(f"Need at least 3 isolated stars..., found {num_good_isolated.item()}")
+        raise InsufficientStarsError(num_stars=num_good_isolated.item())
     isolated_coord_for_map = isolated_coord[final_isolated_mask]
     star_dataset_for_map = star_dataset[final_isolated_mask]
     nvtx.end_range(block2_range)
@@ -725,8 +725,8 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
     min_radii = float(np.ceil(0.75 * fwhm))
     radii = cp.arange(int(min_radii), int(max_radii) + 1, 1, dtype=cp.float64)
     if radii.size == 0:
-        nvtx.end_range(block3_range);
-        nvtx.end_range(overall_range);
+        nvtx.end_range(block3_range)
+        nvtx.end_range(overall_range)
         raise DataValidationError(...)
     nvtx.end_range(block3_range)
 
@@ -797,8 +797,8 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
     valid_fit_mask_np = (center_conv_snr_np > 0) & (opt_radii_np > 0) & np.isfinite(center_conv_snr_np) & np.isfinite(
         opt_radii_np)
     if np.sum(valid_fit_mask_np) < 2:
-        nvtx.end_range(block8_range);
-        nvtx.end_range(overall_range);
+        nvtx.end_range(block8_range)
+        nvtx.end_range(overall_range)
         raise DataValidationError(...)
     center_conv_snr_fit = center_conv_snr_np[valid_fit_mask_np]
     opt_radii_fit = opt_radii_np[valid_fit_mask_np]
@@ -808,9 +808,9 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
         log10_opt_radii_fit = np.log10(opt_radii_fit)
         pov = np.polyfit(log10_conv_snr_fit, log10_opt_radii_fit, 1, cov=False)
     except Exception as e:
-        nvtx.end_range(polyfit_range);
-        nvtx.end_range(block8_range);
-        nvtx.end_range(overall_range);
+        nvtx.end_range(polyfit_range)
+        nvtx.end_range(block8_range)
+        nvtx.end_range(overall_range)
         raise DataValidationError(...) from e
     nvtx.end_range(polyfit_range)
     nvtx.end_range(block8_range)
@@ -819,13 +819,13 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
     block9_range = nvtx.start_range('optimal_flux_calculation', category='phot.metadata', color='lime')
     # ... (lógica igual que antes, opera en GPU) ...
     valid_conv_snr_mask = (conv_snr_filt > 0) & cp.isfinite(conv_snr_filt)
-    source_opt_rad = cp.full_like(conv_snr_filt, cp.nan);
+    source_opt_rad = cp.full_like(conv_snr_filt, cp.nan)
     source_opt_rad_idx = cp.full_like(source_opt_rad, -1, dtype=cp.int32)
     if cp.any(valid_conv_snr_mask):
         log10_conv_snr_valid = cp.log10(conv_snr_filt[valid_conv_snr_mask])
         log10_opt_rad_valid = pov[0] * log10_conv_snr_valid + pov[1]
         opt_rad_intermediate_valid = cp.power(10, log10_opt_rad_valid)
-        max_radii_val = radii[-1].item();
+        max_radii_val = radii[-1].item()
         min_radii_val = radii[0].item()
         source_opt_rad_valid = cp.rint(cp.clip(opt_rad_intermediate_valid, min_radii_val, max_radii_val)).astype(
             radii.dtype)
@@ -837,11 +837,11 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
         indices_valid = cp.clip(indices_valid, 0, len(radii) - 1)
         source_opt_rad_idx[valid_opt_rad_mask] = indices_valid
     final_valid_mask = (source_opt_rad_idx != -1)
-    opt_aperture_corrections = cp.full_like(source_opt_rad, cp.nan);
-    opt_aperture_correction_errors = cp.full_like(source_opt_rad, cp.nan);
+    opt_aperture_corrections = cp.full_like(source_opt_rad, cp.nan)
+    opt_aperture_correction_errors = cp.full_like(source_opt_rad, cp.nan)
     opt_flux = cp.full_like(source_opt_rad, cp.nan)
     if cp.any(final_valid_mask):
-        indices_for_final = source_opt_rad_idx[final_valid_mask];
+        indices_for_final = source_opt_rad_idx[final_valid_mask]
         source_indices_final = cp.where(final_valid_mask)[0]
         opt_aperture_corrections[final_valid_mask] = aperture_corrections[source_indices_final, indices_for_final]
         opt_aperture_correction_errors[final_valid_mask] = aperture_correction_errors[
@@ -849,27 +849,27 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
         opt_flux[final_valid_mask] = source_flux[indices_for_final, source_indices_final]
     positive_flux_mask = final_valid_mask & (opt_flux > 0)
     if cp.sum(positive_flux_mask) == 0:
-        nvtx.end_range(block9_range);
-        nvtx.end_range(overall_range);
+        nvtx.end_range(block9_range)
+        nvtx.end_range(overall_range)
         raise DataValidationError(...)
-    opt_flux_final = opt_flux[positive_flux_mask];
-    opt_aper_corr_final = opt_aperture_corrections[positive_flux_mask];
+    opt_flux_final = opt_flux[positive_flux_mask]
+    opt_aper_corr_final = opt_aperture_corrections[positive_flux_mask]
     opt_corr_err_final = opt_aperture_correction_errors[positive_flux_mask]
-    source_opt_rad_final = source_opt_rad[positive_flux_mask];
-    source_opt_rad_idx_final = source_opt_rad_idx[positive_flux_mask];
+    source_opt_rad_final = source_opt_rad[positive_flux_mask]
+    source_opt_rad_idx_final = source_opt_rad_idx[positive_flux_mask]
     final_source_indices = cp.where(positive_flux_mask)[0]
     opt_signal_final = cp.divide(opt_flux_final, opt_aper_corr_final + epsilon)
     opt_back_flux_final = cp.zeros_like(opt_flux_final)
     if back_flux is not None: opt_back_flux_final = back_flux[source_opt_rad_idx_final, final_source_indices]
     opt_area_final = area[source_opt_rad_idx_final]
-    opt_back_noise_sq = cp.abs(opt_back_flux_final) * gain;
-    opt_read_noise_sq = opt_area_final * rdnoise ** 2;
+    opt_back_noise_sq = cp.abs(opt_back_flux_final) * gain
+    opt_read_noise_sq = opt_area_final * rdnoise ** 2
     opt_corr_sq = opt_aper_corr_final ** 2
-    opt_source_noise_sq = cp.divide(opt_flux_final * gain, opt_corr_sq + epsilon);
+    opt_source_noise_sq = cp.divide(opt_flux_final * gain, opt_corr_sq + epsilon)
     opt_corr_noise_sq = cp.power(cp.divide(opt_flux_final * gain * opt_corr_err_final, opt_corr_sq + epsilon), 2)
     opt_total_noise_sq_sum = (
             opt_source_noise_sq / n_images + opt_back_noise_sq / n_images + opt_read_noise_sq / n_images + opt_corr_noise_sq)
-    opt_total_noise_sq_sum = cp.maximum(opt_total_noise_sq_sum, 0);
+    opt_total_noise_sq_sum = cp.maximum(opt_total_noise_sq_sum, 0)
     opt_total_noise_final = cp.sqrt(opt_total_noise_sq_sum) / gain
     opt_coords_final = source_coord_filt[final_source_indices]
     nvtx.end_range(block9_range)
@@ -877,26 +877,28 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
     # BLOQUE 10: Info extra (Transferencia escalares)
     block10_range = nvtx.start_range('extra_info_generation', category='phot.metadata', color='yellow')
     # ... (igual que antes, usa cp.argmin, .item()) ...
-    extra_info = {};
+    extra_info = {}
     ref_snr_values = [10, 100, 250, 1000]
     opt_final_snr = cp.divide(opt_signal_final, opt_total_noise_final + epsilon)
     if opt_final_snr.size > 0:
         for snr_ref in ref_snr_values:
-            diff_snr = cp.abs(opt_final_snr - snr_ref);
+            diff_snr = cp.abs(opt_final_snr - snr_ref)
             ref_idx_cp = cp.argmin(diff_snr)
             tx4_range = nvtx.start_range(f'transfer_extra_info_snr{snr_ref}', category='transfer_scalar', color='pink')
             ref_idx_np = ref_idx_cp.item()
             try:
-                rad_val = source_opt_rad_final[ref_idx_np].item();
+                rad_val = source_opt_rad_final[ref_idx_np].item()
                 corr_val = opt_aper_corr_final[ref_idx_np].item()
-                extra_info[f'RAD{snr_ref}'] = int(np.round(rad_val));
+                extra_info[f'RAD{snr_ref}'] = int(np.round(rad_val))
                 extra_info[f'CORR{snr_ref}'] = round(corr_val, 3)
             except IndexError:
-                extra_info[f'RAD{snr_ref}'] = -1;
+                extra_info[f'RAD{snr_ref}'] = -1
                 extra_info[f'CORR{snr_ref}'] = -1.0
             nvtx.end_range(tx4_range)
     else:
-        for snr_ref in ref_snr_values: extra_info[f'RAD{snr_ref}'] = -1; extra_info[f'CORR{snr_ref}'] = -1.0
+        for snr_ref in ref_snr_values:
+            extra_info[f'RAD{snr_ref}'] = -1
+            extra_info[f'CORR{snr_ref}'] = -1.0
     nvtx.end_range(block10_range)
 
     # Transferencia final GPU -> CPU para return
@@ -908,7 +910,7 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
 
     # Cleanup opcional
     # ... del ...
-    # mempool.free_all_blocks(); gc.collect()
+    # mempool.free_all_blocks() gc.collect()
 
     nvtx.end_range(overall_range)
     return opt_signal_np, opt_total_noise_np, opt_coords_np, extra_info
