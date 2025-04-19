@@ -24,25 +24,42 @@ def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, do_pad: bool = True, **k
     :return: The convolved image.
     :rtype: cupy.ndarray
     """
-
+    nvtx_range = nvtx.start_range('initialization', category='phot.conv', color='blue')
     image_shape = image.shape
     kernel_shape = kernel.shape
     padding = int((kernel_shape[0] - 1) / 2)
+    nvtx.end_range(nvtx_range)
 
-    if do_pad: image = cp.pad(image, pad_width=padding,
-                              mode='reflect')  # esto está provocando un aumento terrible de memoria
+    if do_pad:
+        nvtx_range = nvtx.start_range('padding', category='phot.conv', color='yellow')
+        image = (
+            cp.pad(image, pad_width=padding, mode='reflect')
+        )  # esto está provocando un aumento terrible de memoria
+        nvtx.end_range(nvtx_range)
+
+    nvtx_range = nvtx.start_range('fft_calculation', category='phot.conv', color='green')
     new_image_shape = image.shape
     F_image = cp.fft.rfft2(image, s=new_image_shape)
     F_kernel = cp.fft.rfft2(kernel, s=new_image_shape)
+    nvtx.end_range(nvtx_range)
 
     del image, kernel
 
+    nvtx_range = nvtx.start_range('frequency_multiplication', category='phot.conv', color='red')
     cp.multiply(F_image, F_kernel.conj(), out=F_image)
+    nvtx.end_range(nvtx_range)
+
     del F_kernel
 
+    nvtx_range = nvtx.start_range('inverse_fft_and_postprocessing', category='phot.conv', color='magenta')
     F_image = cp.fft.irfft2(F_image, s=new_image_shape)
     F_image = cp.roll(F_image, shift=[padding, padding], axis=[0, 1])
-    if do_pad: F_image = F_image[padding:padding + image_shape[0], padding:padding + image_shape[1]]
+    nvtx.end_range(nvtx_range)
+
+    if do_pad:
+        nvtx_range = nvtx.start_range('crop_padding', category='phot.conv', color='purple')
+        F_image = F_image[padding:padding + image_shape[0], padding:padding + image_shape[1]]
+        nvtx.end_range(nvtx_range)
 
     # cp.get_default_memory_pool().free_all_blocks()
 
