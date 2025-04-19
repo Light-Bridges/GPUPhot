@@ -490,8 +490,9 @@ def astrometrice2(df: pd.DataFrame, scale: float,
         logger.warning("Input DataFrame lacks 'snr' column, sorting by 'flux' descending instead.")
         df_sorted = df.sort_values(by='flux', ascending=False)
     else:
-        logger.warning(f"Input DataFrame lacks both 'snr' and 'flux' columns. Selecting top {n_max} sources without explicit sorting. Astrometry quality may be affected.")
-        df_sorted = df # No sort possible, proceed with original df
+        logger.warning(
+            f"Input DataFrame lacks both 'snr' and 'flux' columns. Selecting top {n_max} sources without explicit sorting. Astrometry quality may be affected.")
+        df_sorted = df  # No sort possible, proceed with original df
 
     df_proc = df_sorted.head(n_max).copy()
 
@@ -504,8 +505,17 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     logger.info(f"Starting astrometry using top {len(df_proc)} sources.")
 
     # Prepare inputs for the local solver based on its signature
+
+    solver = get_solver()
+
+    common_params_local = {
+        'solution_parameters': astrometry.SolutionParameters(
+            logodds_callback=logodds_callback_100,
+            sip_order=sip_order
+        )
+    }
+
     try:
-        solver = get_solver()
         solve_params = inspect.signature(solver.solve).parameters
         if 'stars_xs' in solve_params and 'stars_ys' in solve_params:
             star_data_local = {'stars_xs': df_proc['xcentroid'], 'stars_ys': df_proc['ycentroid']}
@@ -518,12 +528,7 @@ def astrometrice2(df: pd.DataFrame, scale: float,
                 "Unexpected local solver signature: solver.solve() method parameters not recognized. Skipping local attempts.")
             star_data_local = None  # Flag to skip local attempts
 
-        common_params_local = {
-            'solution_parameters': astrometry.SolutionParameters(
-                logodds_callback=logodds_callback_100,
-                sip_order=sip_order
-            )
-        }
+
     except Exception as e:
         logger.error(f"Failed to initialize local solver or parameters: {e}", exc_info=True)
         star_data_local = None  # Ensure local attempts are skipped
@@ -541,7 +546,7 @@ def astrometrice2(df: pd.DataFrame, scale: float,
                     **star_data_local,
                     size_hint=astrometry.SizeHint(
                         lower_arcsec_per_pixel=scale * 0.8,  # Consider making margins configurable
-                        upper_arcsec_per_pixel=scale * 1. # Consider making margins configurable
+                        upper_arcsec_per_pixel=scale * 1.  # Consider making margins configurable
                     ),
                     position_hint=astrometry.PositionHint(
                         ra_deg=central_ra,
