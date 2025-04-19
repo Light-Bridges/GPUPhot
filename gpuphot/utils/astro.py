@@ -17,6 +17,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
 from astropy.time import Time
 from astropy.wcs import WCS
+from astroquery.astrometry_net import AstrometryNet
 from sklearn.linear_model import RANSACRegressor
 
 from .catalog import crossmatch_sources
@@ -372,7 +373,6 @@ def get_solver():
     return instance.get_solver_instance()
 
 
-
 @nvtx.annotate('get_astrometry_params', category='utils.astro')
 def get_astrometry_params(h_wcs, image_shape):
     """
@@ -387,8 +387,14 @@ def get_astrometry_params(h_wcs, image_shape):
     """
     w = WCS(h_wcs)
     ra, dec = w.all_pix2world(image_shape[1] // 2, image_shape[0] // 2, 1)
-    cd11 = float(h_wcs['CD1_1'][0])
-    cd12 = float(h_wcs[HeaderKey.CD1_2.value][0])
+    try:
+        cd11 = float(h_wcs['CD1_1'][0])
+    except:
+        cd11 = float(h_wcs['CD1_1'])
+    try:
+        cd12 = float(h_wcs[HeaderKey.CD1_2.value][0])
+    except:
+        cd12 = float(h_wcs[HeaderKey.CD1_2.value])
     scale = np.sqrt(cd11 ** 2 + cd12 ** 2) * 3600
     coocenter = SkyCoord(ra=ra, dec=dec, unit=(u.deg, u.deg), frame='icrs')
     npx = max(image_shape)
@@ -430,7 +436,8 @@ def handler(signum, frame):
 @nvtx.annotate('astrometrice2', category='utils.astro')
 def astrometrice2(df: pd.DataFrame, scale: float,
                   central_ra: float, central_dec: float,
-                  sip_order: int = 3) -> dict:
+                  image_shape: tuple,
+                  sip_order: int = 3, n_max=500) -> dict:
     """
     Perform astrometry on an image.
 
@@ -442,16 +449,17 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     :type central_ra: float
     :param central_dec: Central declination in degrees.
     :type central_dec: float
+    :param image_shape: Shape of the image.
+    :type image_shape: tuple
     :param sip_order: SIP (Simple Imaging Polynomial) order, default is 3.
     :type sip_order: int
     :return: Updated WCS header.
     :rtype: dict
     """
 
-    signal.signal(signal.SIGALRM, handler)
-    signal.alarm(60)
-
     try:
+        df = df.head(n_max)
+
         solver = get_solver()
         solve_params = inspect.signature(solver.solve).parameters
 
@@ -460,9 +468,8 @@ def astrometrice2(df: pd.DataFrame, scale: float,
         elif 'stars' in solve_params:
             star_data = {'stars': df[['xcentroid', 'ycentroid']].values.tolist()}
         else:
-            raise ValueError("Unexpected solver.solve() signature")
+            raise AstrometrizationTimeoutError("Unexpected solver.solve() signature")
 
-        # Common parameters for both solve attempts
         common_params = {
             'solution_parameters': astrometry.SolutionParameters(
                 logodds_callback=logodds_callback_100,
@@ -470,44 +477,70 @@ def astrometrice2(df: pd.DataFrame, scale: float,
             )
         }
 
-        solution = solver.solve(
-            **star_data,
-            size_hint=astrometry.SizeHint(
-                lower_arcsec_per_pixel=scale * 0.8,
-                upper_arcsec_per_pixel=scale * 1.2
-            ),
-            position_hint=astrometry.PositionHint(
-                ra_deg=central_ra,
-                dec_deg=central_dec,
-                radius_deg=0.5,
-            ),
-            **common_params
-        )
-        nmatches = len(solution.matches)
-        logger.debug(f'Total matches: {nmatches}')
-        if nmatches > 0:
-            h_wcs = solution.best_match().wcs_fields
-        else:
+        # Try solving locally with position hint
+        try:
+            logger.info("Starting local astrometry with position hint")
+            signal.signal(signal.SIGALRM, handler)
             signal.alarm(60)
-            logger.warning('No matches found. Trying without position hint.')
+            solution = solver.solve(
+                **star_data,
+                size_hint=astrometry.SizeHint(
+                    lower_arcsec_per_pixel=scale * 0.8,
+                    upper_arcsec_per_pixel=scale * 1.
+                ),
+                position_hint=astrometry.PositionHint(
+                    ra_deg=central_ra,
+                    dec_deg=central_dec,
+                    radius_deg=1,
+                ),
+                **common_params
+            )
+            if solution.matches:
+                return solution.best_match().wcs_fields
+        except Exception as e:
+            logger.warning(f"Local astrometry with position hint failed: {e}")
+
+        # Try solving locally without position hint
+        try:
+            # xmin, xmax = int(image_shape[1] * 0.25), int(image_shape[1] * 0.75)
+            # ymin, ymax = int(image_shape[0] * 0.25), int(image_shape[0] * 0.75)
+            # df_trim = df[(df['xcentroid'] > xmin) & (df['xcentroid'] < xmax) & (df['ycentroid'] > ymin) & (df['ycentroid'] < ymax)]
+            # star_data = {'stars_xs': df_trim['xcentroid'], 'stars_ys': df_trim['ycentroid']}
+
+            logger.info("Starting local astrometry without position hint")
+            signal.alarm(60)
             solution = solver.solve(
                 **star_data,
                 size_hint=None,
                 position_hint=None,
                 **common_params
             )
-            nmatches = len(solution.matches)
-            logger.debug(f'Total matches: {nmatches}')
-            if nmatches > 0:
-                h_wcs = solution.best_match().wcs_fields
-            else:
-                h_wcs = {}
-                logger.warning('No matches found.')
-    except Exception as e:
-        logger.error(e)
-        h_wcs = {}
-    signal.alarm(0)
-    return h_wcs
+            if solution.matches:
+                return solution.best_match().wcs_fields
+        except Exception as e:
+            logger.warning(f"Local astrometry without position hint failed: {e}")
+
+        # Try solving online
+        try:
+            logger.info("Starting online astrometry")
+            signal.alarm(60)
+            logger.info("Starting online astrometry with AstrometryNet")
+            ast = AstrometryNet()
+            ast.api_key = 'ruavrmwepqfvhdqm'
+            image_width, image_height = image_shape
+            h_wcs = ast.solve_from_source_list(star_data['stars_xs'], star_data['stars_ys'],
+                                               image_width, image_height,
+                                               solve_timeout=90)
+            if h_wcs:
+                return h_wcs
+        except Exception as e:
+            logger.error(f"Online astrometry failed: {e}")
+            raise AstrometrizationTimeoutError("Astrometry failed")
+
+    finally:
+        signal.alarm(0)  # Disable alarm
+
+    return {}
 
 
 @nvtx.annotate('get_zeropoint', category='utils.astro')

@@ -127,7 +127,7 @@ def stack_sigmaclip(data, it=5, n=3):
 ### # @hierarchical_debug(logger)
 @nvtx.annotate('register_shift_frames',category='stats.reduction')
 def register_shift_frames(frames_list, upsample_factor=100, center_size=
-1000, shift_limit_pix=300):
+6000, shift_limit_pix=300):
     """
     Register and shift frames from a list of file paths.
 
