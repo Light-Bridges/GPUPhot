@@ -484,15 +484,17 @@ def _attempt_online_solve(df_proc, image_width, image_height, online_timeout, as
     attempt_name = "Online astrometry with Astrometry.net"
     logger.debug(f"{attempt_name} (overall timeout: {online_timeout}s, internal timeout: {astrometry_net_timeout}s)")
     wcs_header = None
-    api_key = os.getenv('ASTROMETRY_API_KEY')
-
-    if not api_key:
-        logger.warning(f"{attempt_name} skipped: ASTROMETRY_API_KEY environment variable not found.")
-        return None
 
     try:
         ast_client = AstrometryNet()
-        ast_client.api_key = api_key
+
+        api_key = os.getenv('ASTROMETRY_API_KEY', None)
+        if not api_key:
+            logger.warning(
+                f"{attempt_name} skipped: ASTROMETRY_API_KEY environment variable not set. Astrometry.net will attempt using other configurations.")
+        else:
+            ast_client.api_key = api_key
+            logger.debug(f"{attempt_name}: Using API key from ASTROMETRY_API_KEY environment variable.")
 
         signal.alarm(online_timeout)  # Set overall timeout for this attempt
         online_wcs_header = ast_client.solve_from_source_list(
