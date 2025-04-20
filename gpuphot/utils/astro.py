@@ -433,6 +433,93 @@ def handler(signum, frame):
     raise AstrometrizationTimeoutError("Astrometry step exceeded the time limit")
 
 
+@nvtx.annotate('_extract_wcs_from_solution', category='utils.astro')
+def _extract_wcs_from_solution(solution):
+    """Helper to safely extract WCS fields from a local astrometry solution."""
+    if solution and solution.matches:
+        best_match = solution.best_match()
+        if hasattr(best_match, 'wcs_fields'):
+            # Check if it's callable (method) or attribute
+            if callable(best_match.wcs_fields):
+                return best_match.wcs_fields()
+            else:
+                return best_match.wcs_fields
+        else:
+            logger.warning("Local solution.best_match() object has no 'wcs_fields'.")
+            return None
+    return None
+
+
+@nvtx.annotate('_attempt_local_solve', category='utils.astro')
+def _attempt_local_solve(solver, star_data_local, size_hint, position_hint, common_params_local, timeout):
+    """Helper function to perform a single local solver attempt with timeout."""
+    logger.debug(f"Local astrometry (timeout: {timeout}s)")
+    wcs_header = None
+    try:
+        signal.alarm(timeout)
+        solution = solver.solve(
+            **star_data_local,
+            size_hint=size_hint,
+            position_hint=position_hint,
+            **common_params_local
+        )
+        signal.alarm(0)  # Disable alarm on successful return
+        wcs_header = _extract_wcs_from_solution(solution)
+        if wcs_header:
+            logger.debug(f"Local astrometry successful: Match found.")
+
+    except AstrometrizationTimeoutError:
+        logger.warning(f"Local astrometry failed: Timed out.")
+    except Exception as e:
+        signal.alarm(0)  # Ensure the alarm is off
+        logger.warning(f"Local astrometry failed: An error occurred: {e}",
+                       exc_info=False)  # Keep exc_info=False unless debugging specific errors here
+
+    return wcs_header
+
+
+@nvtx.annotate('_attempt_online_solve', category='utils.astro')
+def _attempt_online_solve(df_proc, image_width, image_height, online_timeout, astrometry_net_timeout):
+    """Helper function to perform the online Astrometry.net attempt with timeout."""
+    attempt_name = "Online astrometry with Astrometry.net"
+    logger.debug(f"{attempt_name} (overall timeout: {online_timeout}s, internal timeout: {astrometry_net_timeout}s)")
+    wcs_header = None
+    api_key = os.getenv('ASTROMETRY_API_KEY')
+
+    if not api_key:
+        logger.warning(f"{attempt_name} skipped: ASTROMETRY_API_KEY environment variable not found.")
+        return None
+
+    try:
+        ast_client = AstrometryNet()
+        ast_client.api_key = api_key
+
+        signal.alarm(online_timeout)  # Set overall timeout for this attempt
+        online_wcs_header = ast_client.solve_from_source_list(
+            x=df_proc['xcentroid'],
+            y=df_proc['ycentroid'],
+            image_width=image_width,
+            image_height=image_height,
+            solve_timeout=astrometry_net_timeout,
+        )
+        signal.alarm(0)  # Disable alarm on successful return
+
+        if online_wcs_header:
+            logger.debug(f"{attempt_name} successful: Solution found online.")
+            wcs_header = online_wcs_header
+        else:
+            logger.debug(f"{attempt_name} completed: No solution found online.")
+
+    except AstrometrizationTimeoutError:
+        logger.warning(f"{attempt_name} failed: Timed out (overall signal timeout).")
+    except Exception as e:
+        signal.alarm(0)  # Ensure the alarm is off
+        logger.error(f"{attempt_name} failed: An error occurred: {e}",
+                     exc_info=True)  # Log full traceback for online errors
+
+    return wcs_header
+
+
 ### # @hierarchical_debug(logger)
 @nvtx.annotate('astrometrice2', category='utils.astro')
 def astrometrice2(df: pd.DataFrame, scale: float,
@@ -447,8 +534,7 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     via Astrometry.net. Uses signal.alarm for timeouts (UNIX only).
 
     :param df: DataFrame containing detected sources (must include
-               'xcentroid' and 'ycentroid' columns). Assumes sources are
-               sorted by preference (e.g., brightness/SNR descending).
+               'xcentroid' and 'ycentroid' columns).
     :type df: pd.DataFrame
     :param scale: Approximate image scale in arcseconds per pixel (for hints).
     :type scale: float
@@ -473,30 +559,31 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     :return: Dictionary containing the WCS header fields if successful,
              otherwise an empty dictionary.
     :rtype: dict
+    :raises AstrometrizationTimeoutError: If astrometry fails to find a solution after all attempts.
     """
     wcs_header = None
     start_time = time.time()
 
-    # Ensure we work with a limited number of top sources
     if not isinstance(df, pd.DataFrame) or df.empty:
         logger.warning("Input DataFrame is not valid or empty. Cannot perform astrometry.")
+        # Original code returned {}, let's stick to that for no-sources case
+        # even though the failure path below raises error for failed attempts.
+        # This is a distinction between no sources vs sources but no solution.
         return {}
 
     # Select top n_max sources, prioritizing by SNR or Flux if available
     if 'snr' in df.columns:
         logger.debug(f"Sorting input DataFrame by 'snr' descending before selecting top {n_max}.")
-        df_sorted = df.sort_values(by='snr', ascending=False)
+        df_sorted = df.sort_values(by='snr', ascending=False).dropna().reset_index(drop=True)
     elif 'flux' in df.columns:
         logger.warning("Input DataFrame lacks 'snr' column, sorting by 'flux' descending instead.")
-        df_sorted = df.sort_values(by='flux', ascending=False)
+        df_sorted = df.sort_values(by='flux', ascending=False).dropna().reset_index(drop=True)
     else:
         logger.warning(
             f"Input DataFrame lacks both 'snr' and 'flux' columns. Selecting top {n_max} sources without explicit sorting. Astrometry quality may be affected.")
-        df_sorted = df  # No sort possible, proceed with original df
+        df_sorted = df
 
     df_proc = df_sorted.head(n_max).copy()
-
-    # df_proc = df.head(n_max).copy()
 
     if df_proc.empty:
         logger.warning("DataFrame is empty after selecting top n_max sources. Cannot perform astrometry.")
@@ -504,9 +591,12 @@ def astrometrice2(df: pd.DataFrame, scale: float,
 
     logger.info(f"Starting astrometry using top {len(df_proc)} sources.")
 
-    # Prepare inputs for the local solver based on its signature
-
-    solver = get_solver()
+    try:
+        solver = get_solver()
+    except RuntimeError as e:
+        logger.error(f"Failed to obtain solver instance: {e}")
+        # If solver initialization failed completely, we cannot proceed.
+        raise AstrometrizationTimeoutError("Failed to initialize astrometry solver.") from e
 
     common_params_local = {
         'solution_parameters': astrometry.SolutionParameters(
@@ -515,7 +605,9 @@ def astrometrice2(df: pd.DataFrame, scale: float,
         )
     }
 
+    star_data_local = None
     try:
+        # Check solver signature once to prepare star data
         solve_params = inspect.signature(solver.solve).parameters
         if 'stars_xs' in solve_params and 'stars_ys' in solve_params:
             star_data_local = {'stars_xs': df_proc['xcentroid'], 'stars_ys': df_proc['ycentroid']}
@@ -526,131 +618,70 @@ def astrometrice2(df: pd.DataFrame, scale: float,
         else:
             logger.error(
                 "Unexpected local solver signature: solver.solve() method parameters not recognized. Skipping local attempts.")
-            star_data_local = None  # Flag to skip local attempts
-
+            star_data_local = None  # Ensure local attempts are skipped
 
     except Exception as e:
-        logger.error(f"Failed to initialize local solver or parameters: {e}", exc_info=True)
+        logger.error(f"Failed to inspect local solver parameters: {e}", exc_info=True)
         star_data_local = None  # Ensure local attempts are skipped
 
     # Set up a signal handler (outside the loop, done once)
+    # This handler needs to be defined in the global/module scope or
+    # made accessible here. The provided handler is already at module level.
     signal.signal(signal.SIGALRM, handler)
 
     try:
         # --- Attempt 1: Local solving with a position hint ---
-        if star_data_local:
-            logger.info(f"Attempt 1: Local astrometry with position hint (timeout: {local_timeout}s)")
-            try:
-                signal.alarm(local_timeout)
-                solution = solver.solve(
-                    **star_data_local,
-                    size_hint=astrometry.SizeHint(
-                        lower_arcsec_per_pixel=scale * 0.8,  # Consider making margins configurable
-                        upper_arcsec_per_pixel=scale * 1.  # Consider making margins configurable
-                    ),
-                    position_hint=astrometry.PositionHint(
-                        ra_deg=central_ra,
-                        dec_deg=central_dec,
-                        radius_deg=1,  # Consider making radius configurable
-                    ),
-                    **common_params_local
-                )
-                signal.alarm(0)  # Disable alarm immediately after a successful call return
-                if solution and solution.matches:
-                    logger.info("Attempt 1 successful: Match found.")
-                    # Access wcs_fields safely
-                    best_match = solution.best_match()
-                    if hasattr(best_match, 'wcs_fields'):
-                        # Check if it's callable (method) or attribute
-                        if callable(best_match.wcs_fields):
-                            wcs_header = best_match.wcs_fields()
-                        else:
-                            wcs_header = best_match.wcs_fields
-                    else:
-                        logger.warning("Attempt 1: solution.best_match() object has no 'wcs_fields'.")
+        if star_data_local:  # Only attempt if star data preparation was successful
+            logger.info(f"Attempt 1: Local astrometry with position hint")
+            wcs_header = _attempt_local_solve(
+                solver,
+                star_data_local,
+                size_hint=astrometry.SizeHint(
+                    lower_arcsec_per_pixel=scale * 0.8,
+                    upper_arcsec_per_pixel=scale * 1.
+                ),
+                position_hint=astrometry.PositionHint(
+                    ra_deg=central_ra,
+                    dec_deg=central_dec,
+                    radius_deg=1,
+                ),
+                common_params_local=common_params_local,
+                timeout=local_timeout
+            )
 
-            except AstrometrizationTimeoutError:
-                logger.warning("Attempt 1 failed: Timed out.")
-            except Exception as e:
-                signal.alarm(0)  # Ensure the alarm is off if other exception occurred
-                logger.warning(f"Attempt 1 failed: An error occurred: {e}",
-                               exc_info=False)  # Set exc_info=True for full traceback
         # --- Attempt 2: Local solving without a position hint ---
-        if not wcs_header and star_data_local:
-            logger.info(f"Attempt 2: Local astrometry without position hint (timeout: {local_timeout}s)")
-            try:
-                signal.alarm(local_timeout)
-                solution = solver.solve(
-                    **star_data_local,
-                    size_hint=None,
-                    position_hint=None,
-                    **common_params_local
-                )
-                signal.alarm(0)  # Disable alarm
-                if solution and solution.matches:
-                    logger.info("Attempt 2 successful: Match found.")
-                    best_match = solution.best_match()
-                    if hasattr(best_match, 'wcs_fields'):
-                        if callable(best_match.wcs_fields):
-                            wcs_header = best_match.wcs_fields()
-                        else:
-                            wcs_header = best_match.wcs_fields
-                    else:
-                        logger.warning("Attempt 2: solution.best_match() object has no 'wcs_fields'.")
+        if not wcs_header and star_data_local:  # Only attempt if previously failed AND local attempts are possible
+            logger.info(f"Attempt 2: Local astrometry without position hint")
+            wcs_header = _attempt_local_solve(
+                solver,
+                star_data_local,
+                size_hint=None,
+                position_hint=None,
+                common_params_local=common_params_local,
+                timeout=local_timeout
+            )
 
-            except AstrometrizationTimeoutError:
-                logger.warning("Attempt 2 failed: Timed out.")
-            except Exception as e:
-                signal.alarm(0)  # Ensure the alarm is off
-                logger.warning(f"Attempt 2 failed: An error occurred: {e}", exc_info=False)
         # --- Attempt 3: Online solving with Astrometry.net ---
-        if not wcs_header:
-            logger.info(
-                f"Attempt 3: Online astrometry with Astrometry.net (overall timeout: {online_timeout}s, internal timeout: {astrometry_net_timeout}s)")
-            api_key = os.getenv('ASTROMETRY_API_KEY')
-            if not api_key:
-                logger.warning("Attempt 3 skipped: ASTROMETRY_API_KEY environment variable not found.")
-            else:
-                try:
-                    ast_client = AstrometryNet()
-                    ast_client.api_key = api_key
+        if not wcs_header:  # Only attempt if local attempts failed
+            logger.info(f"Attempt 3: Online astrometry with Astrometry.net")
 
-                    # Ensure correct image dimensions order if needed (astroquery expects width, height)
-                    # Assuming image_shape = (height, width) from docstring
-                    image_height, image_width = image_shape
-                    logger.debug(
-                        f"Using image dimensions for Astrometry.net: width={image_width}, height={image_height}")
+            # Ensure correct image dimensions order (astroquery expects width, height)
+            image_height, image_width = image_shape
+            logger.debug(f"Using image dimensions for Astrometry.net: width={image_width}, height={image_height}")
 
-                    signal.alarm(online_timeout)  # Set overall timeout for this attempt
-                    # Note: solve_from_source_list might block longer than online_timeout
-                    # if astrometry_net_timeout is larger, but the signal will interrupt.
-                    online_wcs_header = ast_client.solve_from_source_list(
-                        x=df_proc['xcentroid'],  # Use the processed dataframe
-                        y=df_proc['ycentroid'],  # Use the processed dataframe
-                        image_width=image_width,
-                        image_height=image_height,
-                        solve_timeout=astrometry_net_timeout,  # Internal timeout for the service
-                        # Displays all the allowed settings with: AstrometryNet.show_allowed_settings()
-                    )
-                    signal.alarm(0)  # Disable alarm
-                    if online_wcs_header:
-                        logger.info("Attempt 3 successful: Solution found online.")
-                        wcs_header = online_wcs_header
-                    else:
-                        # This covers case where it returns empty dict or None
-                        logger.info("Attempt 3 completed: No solution found online.")
+            wcs_header = _attempt_online_solve(
+                df_proc=df_proc,
+                image_width=image_width,
+                image_height=image_height,
+                online_timeout=online_timeout,
+                astrometry_net_timeout=astrometry_net_timeout
+            )
 
-                except AstrometrizationTimeoutError:
-                    logger.warning("Attempt 3 failed: Timed out (overall signal timeout).")
-                    # online_wcs_header might be partially populated or None, ignore it.
-                except Exception as e:
-                    signal.alarm(0)  # Ensure the alarm is off
-                    logger.error(f"Attempt 3 failed: An error occurred during online solving: {e}",
-                                 exc_info=True)  # Log full traceback for online errors
 
     finally:
         signal.alarm(0)  # Final safety net to disable any pending alarm
-        # Restore default signal handler if desired (optional)
+        # Consider restoring the default handler if this function is called frequently,
+        # and you want to avoid potential side effects on other parts of the application.
         # signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
     # --- Return Result ---
@@ -660,8 +691,11 @@ def astrometrice2(df: pd.DataFrame, scale: float,
         return wcs_header
     else:
         logger.warning(f"Astrometry finished: All attempts failed to find a solution after {elapsed_time:.2f} seconds.")
-        raise AstrometrizationTimeoutError("Astrometry failed to find a solution.")
-        # return {}
+        # The original code returned {}, but also had a signal timeout raise AstrometrizationTimeoutError.
+        # The refactored helpers catch and log the timeouts and other errors, returning None.
+        # The final failure state should probably rise for consistency with timeout handling.
+        # If no WCS is found after all attempts (whether due to timeout, error, or no match), it's a failure.
+        raise AstrometrizationTimeoutError("Astrometry failed to find a solution after all attempts.")
 
 
 @nvtx.annotate('get_zeropoint', category='utils.astro')
@@ -1060,6 +1094,43 @@ def plate_scale_mm(focal):
 
 
 if __name__ == '__main__':
-    df = pd.read_csv('/tmp/df.csv')
-    # Parameters: 0.5081345802919708, 255.0, 51.0, (2048, 2048), 1, 500, 60, 70, 90
-    print(astrometrice2(df, 0.5081345802919708, 255.0, 51.0, (2048, 2048), 1, 500, 1, 70, 90, 3))
+    # Example usage (requires df.csv and potentially GPU context)
+    # Ensure you have ASTROMETRY_API_KEY set for online attempt
+    # and astrometry.net index files accessible for local attempts.
+    try:
+        df_example = pd.read_csv('/tmp/df.csv')
+        # Assume image_shape is known, e.g., (2048, 2048)
+        image_shape_example = (2048, 2048)
+
+        # Example parameters (replace with real values)
+        example_scale = 0.5081345802919708  # arcsec/px
+        example_ra = 255.0  # degrees
+        example_dec = 51.0  # degrees
+
+        print("Attempting astrometry...")
+        wcs_result = astrometrice2(
+            df=df_example,
+            scale=example_scale,
+            central_ra=example_ra,
+            central_dec=example_dec,
+            image_shape=image_shape_example,
+            sip_order=1,
+            n_max=500,
+            local_timeout=1000,  # Or a smaller value for testing timeouts
+            online_timeout=70,
+            astrometry_net_timeout=90
+        )
+        print("\nAstrometry Result:")
+        if wcs_result:
+            print("WCS Header Found:")
+            for key, value in wcs_result.items():
+                print(f"  {key}: {value}")
+        else:
+            print("No WCS solution found.")
+
+    except AstrometrizationTimeoutError as e:
+        print(f"\nAstrometry failed due to timeout or no solution: {e}")
+    except FileNotFoundError:
+        print("\nError: '/tmp/df.csv' not found. Cannot run example.")
+    except Exception as e:
+        print(f"\nAn unexpected error occurred during example run: {e}", exc_info=True)
