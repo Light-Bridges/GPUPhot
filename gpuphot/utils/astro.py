@@ -16,6 +16,7 @@ import nvtx
 import pandas as pd
 from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
+from astropy.io import fits
 from astropy.time import Time
 from astropy.wcs import WCS
 from astroquery.astrometry_net import AstrometryNet
@@ -508,7 +509,19 @@ def _attempt_online_solve(df_proc, image_width, image_height, online_timeout, as
 
         if online_wcs_header:
             logger.debug(f"{attempt_name} successful: Solution found online.")
-            wcs_header = online_wcs_header
+
+            logger.debug(f"{attempt_name}: Cleaning COMMENT and HISTORY cards from obtained header.")
+            keys_to_remove = ['COMMENT', 'HISTORY']
+
+            clean_header = fits.Header()
+            for result_key in online_wcs_header.keys():
+                if result_key not in keys_to_remove:
+                    clean_header[result_key] = online_wcs_header[result_key]
+
+            try:
+                wcs_header = dict(clean_header)
+            except Exception:
+                wcs_header = clean_header
         else:
             logger.debug(f"{attempt_name} completed: No solution found online.")
 
