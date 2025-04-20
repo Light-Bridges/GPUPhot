@@ -270,7 +270,25 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
     return vizier_results[0]
 
 
-def calculate_solar_index(gmag: pd.Series, rmag: pd.Series) -> pd.Series:
+def calculate_gaia_solar_index(bprp_color: pd.Series) -> pd.Series:
+    """
+    Calculate a solar index using a specific quadratic transformation
+    from Gaia DR3 BP-RP color.
+
+    :param bprp_color: Gaia DR3 BP-RP color index (BPmag - RPmag).
+    :type bprp_color: pd.Series
+    :return: Calculated solar index based on the transformation.
+    :rtype: pd.Series
+    """
+
+    solar_index = (0.01760 - 0.003226) + \
+                  (0.3833 + 0.00686) * bprp_color + \
+                  (-0.1345 + 0.1732) * bprp_color ** 2 - 0.36
+
+    return solar_index
+
+
+def calculate_ps1_solar_index(gmag: pd.Series, rmag: pd.Series) -> pd.Series:
     """
     Calculate the solar color index using Pan-STARRS photometric transformations.
 
@@ -335,7 +353,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
 
-        solar_index = calculate_solar_index(vizier_results['gPSF'], vizier_results['rPSF'])
+        solar_index = calculate_ps1_solar_index(vizier_results['gPSF'], vizier_results['rPSF'])
 
         result = pd.DataFrame({'ID': vizier_results['SMSS'],
                                'RA': vizier_results['RAICRS'],
@@ -352,8 +370,9 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
                             f'e_F{ref_filter[:2]}', ref_filter]  # Columnas para Gaia DR3
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
-        solar_index = 0.01760 - 0.003226 + (0.3833 + 0.00686) * vizier_results['BP-RP'] + (-0.1345 + 0.1732) * \
-                      vizier_results['BP-RP'] ** 2 - 0.36
+        # solar_index = 0.01760 - 0.003226 + (0.3833 + 0.00686) * vizier_results['BP-RP'] + (-0.1345 + 0.1732) * \
+        #               vizier_results['BP-RP'] ** 2 - 0.36
+        solar_index = calculate_gaia_solar_index(vizier_results['BP-RP'])
         magerr = -2.5 * np.log10(vizier_results['F' + ref_filter[:2]] / (
                 vizier_results['F' + ref_filter[:2]] + vizier_results['e_F' + ref_filter[:2]]))
         result = pd.DataFrame({'ID': vizier_results['Source'],
@@ -386,7 +405,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
 
-        solar_index = calculate_solar_index(vizier_results['gmag'], vizier_results['rmag'])
+        solar_index = calculate_ps1_solar_index(vizier_results['gmag'], vizier_results['rmag'])
 
         lum_gmag_coeff = kwargs.get('lum_gmag_coeff', 0.5)
         lum_rmag_coeff = kwargs.get('lum_rmag_coeff', 0.5)
@@ -420,7 +439,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
 
-        solar_index = calculate_solar_index(vizier_results['gmag'], vizier_results['rmag'])
+        solar_index = calculate_ps1_solar_index(vizier_results['gmag'], vizier_results['rmag'])
 
         result = pd.DataFrame({'ID': vizier_results['objID'],
                                'RA': vizier_results['RAJ2000'],
