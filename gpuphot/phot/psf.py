@@ -198,36 +198,103 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
     :return: A tuple containing the star dataset, the coordinates of the stars, and the scaling dataset.
     :rtype: tuple(cupy.ndarray, cupy.ndarray, cupy.ndarray)
     """
+    if not isinstance(coords, cp.ndarray):
+        coords = cp.asarray(coords)
+    if not isinstance(img, cp.ndarray):
+        img = cp.asarray(img)
+
+    # Determine cutout half-size 'f' (size = 2*f + 1)
+    # Ensure minimum size (e.g., 13x13 if f=6)
     f = max(int(10 / pxscale), 6)
+    # Determine peak location tolerance 'n' (max distance from center)
+    # Ensure minimum tolerance (e.g., +/- 2 pixels if n=2)
     n = max(int(1 / pxscale), 2)
-    star_dataset = cp.zeros((len(coords), 2 * f + 1, 2 * f + 1), dtype=cp.float32)
-    scaling_dataset = cp.zeros((len(coords), 4), dtype=cp.float32)  # Solo necesitamos el pico
-    valid_coords = []  # Lista para almacenar las coordenadas válidas
 
-    for i, (y, x) in enumerate(coords):
-        x_min = int(x - f)
-        x_max = int(x + f + 1)
-        y_min = int(y - f)
-        y_max = int(y + f + 1)
+    num_coords = len(coords)
+    cutout_size = 2 * f + 1
 
-        # Comprobar límites *antes* de acceder a la imagen.
-        if 0 <= x_min < x_max <= img.shape[1] and 0 <= y_min < y_max <= img.shape[0]:
-            subima = img[y_min:y_max, x_min:x_max]
-            peak_pos = cp.unravel_index(cp.argmax(subima), subima.shape)
-            if abs(peak_pos[0] - f) <= n and abs(peak_pos[1] - f) <= n:
-                peak = subima[peak_pos]
-                star_dataset[i, :] = subima / peak  # Normalizar por el pico
-                scaling_dataset[i, 0] = peak
-                scaling_dataset[i, 1] = cp.mean(subima)
-                scaling_dataset[i, 2] = cp.var(subima)
-                scaling_dataset[i, 3] = cp.sum(subima)
-                valid_coords.append(coords[i])  # Usamos una lista
+    # Pre-allocate arrays large enough for *all* input coordinates.
+    # We will filter them at the end.
+    # Using float32 for memory efficiency on GPU.
+    star_dataset_full = cp.zeros((num_coords, cutout_size, cutout_size), dtype=cp.float32)
+    # Stores [peak, mean, var, sum] for each potential star
+    scaling_dataset_full = cp.zeros((num_coords, 4), dtype=cp.float32)
 
-    valid_coords = cp.array(valid_coords)  # Convertimos a array
-    N = min(N, len(valid_coords))
-    # Usar slicing para seleccionar los primeros N elementos *después* de filtrar.
-    return star_dataset[:N], valid_coords[:N], scaling_dataset[:N]
+    # Use a Python list to efficiently collect indices of *valid* stars.
+    valid_indices = []
 
+    # --- Main Loop ---
+    for i in range(num_coords):
+        # If coords can be float, they should be rounded/casted appropriately *before* this function
+        # or cast here: y, x = int(coords[i, 0]), int(coords[i, 1])
+        y, x = coords[i, 0], coords[i, 1]  # Direct use assuming integer input
+
+        # Calculate cutout boundaries (exclusive end index for slicing)
+        y_min = y - f
+        y_max = y + f + 1
+        x_min = x - f
+        x_max = x + f + 1
+
+        # --- Filter 1: Boundary Check ---
+        # Check if the entire cutout is within the image bounds
+        if y_min < 0 or x_min < 0 or y_max > img.shape[0] or x_max > img.shape[1]:
+            continue  # Skip this coordinate if cutout goes out of bounds
+
+        # Extract the sub-image (cutout)
+        subima_orig = img[y_min:y_max, x_min:x_max]
+
+        # All subsequent calculations (peak, stats) use this flipped version.
+        subima = subima_orig[::-1, :]
+        # Ensure subima is C-contiguous if needed by subsequent operations,
+        # though CuPy usually handles this. Explicit copy can guarantee it:
+        # subima = cp.ascontiguousarray(subima_orig[::-1, :])
+
+        # --- Filter 2: Peak Location Check ---
+        # Find the brightest pixel's position within the *flipped* cutout
+        peak_pos_y, peak_pos_x = cp.unravel_index(cp.argmax(subima), subima.shape)
+
+        # Check if the peak is within 'n' pixels of the cutout center (f, f)
+        if abs(peak_pos_y - f) > n or abs(peak_pos_x - f) > n:
+            continue  # Skip if peak is too far from the center
+
+        # --- Valid Star Found ---
+        # If both filters passed, record the index and calculate data.
+        valid_indices.append(i)
+
+        # Get the peak value (brightest pixel in the flipped cutout)
+        peak = subima[peak_pos_y, peak_pos_x]  # Accessing the flipped subima
+
+        # Store the *flipped* cutout in the pre-allocated array
+        star_dataset_full[i] = subima
+
+        # Calculate statistics on the *flipped* cutout
+        scaling_dataset_full[i, 0] = peak
+        scaling_dataset_full[i, 1] = cp.mean(subima)
+        scaling_dataset_full[i, 2] = cp.var(subima)
+        scaling_dataset_full[i, 3] = cp.sum(subima)
+
+    # --- Post-Loop Filtering ---
+
+    # Convert the list of valid indices to a CuPy array for efficient indexing
+    # Use intp for index arrays
+    valid_idx_arr = cp.array(valid_indices, dtype=cp.intp)
+
+    # Determine the number of stars to return (cannot exceed N or the number found)
+    num_to_return = min(N, len(valid_idx_arr))
+
+    # Select the first 'num_to_return' valid indices
+    final_idx = valid_idx_arr[:num_to_return]
+
+    # Use the final indices to select the corresponding data
+    selected_star_dataset = star_dataset_full[final_idx]
+    selected_coords = coords[final_idx]
+    selected_scaling_dataset = scaling_dataset_full[final_idx]
+
+    # No explicit del needed for loop variables like subima, peak etc. Python GC handles it.
+    # Clear potentially large intermediate arrays if memory is critical, though often not required.
+    del star_dataset_full, scaling_dataset_full, valid_idx_arr
+
+    return selected_star_dataset, selected_coords, selected_scaling_dataset
 
 @nvtx.annotate('_group_star_dataset_cpu_impl', category='phot.psf_cpu')
 def _group_star_dataset_cpu_impl(coords: np.ndarray, avg_group_size: int = 10, min_group_size: int = 5) -> np.ndarray:
