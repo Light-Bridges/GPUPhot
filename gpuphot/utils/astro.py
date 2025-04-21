@@ -454,7 +454,11 @@ def _extract_wcs_from_solution(solution):
 @nvtx.annotate('_attempt_local_solve', category='utils.astro')
 def _attempt_local_solve(solver, star_data_local, size_hint, position_hint, common_params_local, timeout):
     """Helper function to perform a single local solver attempt with timeout."""
+
+    timeout = os.getenv("GPUPHOT_ASTROMETRY_TIMEOUT", 60)
+
     logger.debug(f"Local astrometry (timeout: {timeout}s)")
+
     wcs_header = None
     try:
         signal.alarm(timeout)
@@ -480,10 +484,13 @@ def _attempt_local_solve(solver, star_data_local, size_hint, position_hint, comm
 
 
 @nvtx.annotate('_attempt_online_solve', category='utils.astro')
-def _attempt_online_solve(df_proc, image_width, image_height, online_timeout, astrometry_net_timeout):
+def _attempt_online_solve(df_proc, image_width, image_height, online_timeout, astrometry_net_timeout1):
     """Helper function to perform the online Astrometry.net attempt with timeout."""
+
+    online_timeout = os.getenv("GPUPHOT_ASTROMETRY_ONLINE_TIMEOUT", 70)
+
     attempt_name = "Online astrometry with Astrometry.net"
-    logger.debug(f"{attempt_name} (overall timeout: {online_timeout}s, internal timeout: {astrometry_net_timeout}s)")
+    logger.debug(f"{attempt_name} (overall timeout: {online_timeout}s)")
     wcs_header = None
 
     try:
@@ -503,7 +510,7 @@ def _attempt_online_solve(df_proc, image_width, image_height, online_timeout, as
             y=df_proc['ycentroid'],
             image_width=image_width,
             image_height=image_height,
-            solve_timeout=astrometry_net_timeout,
+            solve_timeout=online_timeout,
         )
         signal.alarm(0)  # Disable alarm on successful return
 
@@ -540,9 +547,7 @@ def _attempt_online_solve(df_proc, image_width, image_height, online_timeout, as
 def astrometrice2(df: pd.DataFrame, scale: float,
                   central_ra: float, central_dec: float,
                   image_shape: tuple,
-                  sip_order: int = 3, n_max: int = 500,
-                  local_timeout: int = 60, online_timeout: int = 70,
-                  astrometry_net_timeout: int = 90) -> dict:
+                  sip_order: int = 3, n_max: int = 500) -> dict:
     """
     Performs astrometry by attempting multiple strategies: local solving
     with position hints, local solving without hints, and online solving
@@ -660,8 +665,7 @@ def astrometrice2(df: pd.DataFrame, scale: float,
                     dec_deg=central_dec,
                     radius_deg=1,
                 ),
-                common_params_local=common_params_local,
-                timeout=local_timeout
+                common_params_local=common_params_local
             )
 
         # --- Attempt 2: Local solving without a position hint ---
@@ -672,8 +676,7 @@ def astrometrice2(df: pd.DataFrame, scale: float,
                 star_data_local,
                 size_hint=None,
                 position_hint=None,
-                common_params_local=common_params_local,
-                timeout=local_timeout
+                common_params_local=common_params_local
             )
 
         # --- Attempt 3: Online solving with Astrometry.net ---
@@ -688,8 +691,6 @@ def astrometrice2(df: pd.DataFrame, scale: float,
                 df_proc=df_proc,
                 image_width=image_width,
                 image_height=image_height,
-                online_timeout=online_timeout,
-                astrometry_net_timeout=astrometry_net_timeout
             )
 
 
