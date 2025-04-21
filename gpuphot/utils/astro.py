@@ -452,10 +452,10 @@ def _extract_wcs_from_solution(solution):
 
 
 @nvtx.annotate('_attempt_local_solve', category='utils.astro')
-def _attempt_local_solve(solver, star_data_local, size_hint, position_hint, common_params_local, timeout):
+def _attempt_local_solve(solver, star_data_local, size_hint, position_hint, common_params_local):
     """Helper function to perform a single local solver attempt with timeout."""
 
-    timeout = os.getenv("GPUPHOT_ASTROMETRY_TIMEOUT", 60)
+    timeout = int(os.getenv("GPUPHOT_ASTROMETRY_TIMEOUT", 60))
 
     logger.debug(f"Local astrometry (timeout: {timeout}s)")
 
@@ -484,10 +484,10 @@ def _attempt_local_solve(solver, star_data_local, size_hint, position_hint, comm
 
 
 @nvtx.annotate('_attempt_online_solve', category='utils.astro')
-def _attempt_online_solve(df_proc, image_width, image_height, online_timeout, astrometry_net_timeout1):
+def _attempt_online_solve(df_proc, image_width, image_height):
     """Helper function to perform the online Astrometry.net attempt with timeout."""
 
-    online_timeout = os.getenv("GPUPHOT_ASTROMETRY_ONLINE_TIMEOUT", 70)
+    online_timeout = int(os.getenv("GPUPHOT_ASTROMETRY_ONLINE_TIMEOUT", 70))
 
     attempt_name = "Online astrometry with Astrometry.net"
     logger.debug(f"{attempt_name} (overall timeout: {online_timeout}s)")
