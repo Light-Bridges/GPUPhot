@@ -17,10 +17,23 @@ try:
     from cuml.decomposition import PCA
 except ImportError:
     from sklearn.decomposition import PCA
+try:
+    import cuml
+    from cuml.cluster import AgglomerativeClustering as cuAgglomerativeClustering
+    from cuml.metrics import pairwise_distances as cu_pairwise_distances
+
+    CUML_CLUSTERING_AVAILABLE = True
+    # logger.debug("RAPIDS cuML Clustering & Metrics found.")
+except ImportError:
+    # logger.warning("Warning: RAPIDS cuML Clustering/Metrics not found. Grouping will use CPU (sklearn/scipy).")
+    CUML_CLUSTERING_AVAILABLE = False
+
+# Import CPU libraries unconditionally for fallback
+from sklearn.cluster import AgglomerativeClustering as skAgglomerativeClustering
 
 from .conv import gaussian_kernel, convolve_fft, fill_nan_fft
 from .utils import calculate_tile_nanmean_sigclip, decompose_into_tiles, recompose_from_percentiles
-from ..exceptions import InsufficientStarsError, InvalidGroupSizeError
+from ..exceptions import InsufficientStarsError
 from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
@@ -216,11 +229,158 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
     return star_dataset[:N], valid_coords[:N], scaling_dataset[:N]
 
 
+@nvtx.annotate('_group_star_dataset_cpu_impl', category='phot.psf_cpu')
+def _group_star_dataset_cpu_impl(coords: np.ndarray, avg_group_size: int = 10, min_group_size: int = 5) -> np.ndarray:
+    """CPU implementation using sklearn/scipy."""
+    if avg_group_size <= 0 and min_group_size <= 0:
+        # raise InvalidGroupSizeError(avg_group_size, min_group_size)
+        raise ValueError("avg_group_size and min_group_size must be positive")
+
+    n_stars = len(coords)
+    if n_stars == 0: return np.array([], dtype=int)
+    if n_stars <= min_group_size: return np.zeros(n_stars, dtype=int)
+
+    effective_avg_group_size = max(min_group_size, avg_group_size)
+    num_clusters = max(1, n_stars // effective_avg_group_size)
+    num_clusters = min(num_clusters, n_stars)
+
+    # Initial Clustering (Scikit-learn)
+    clustering = skAgglomerativeClustering(n_clusters=num_clusters)
+    labels = clustering.fit_predict(coords)
+
+    unique_labels_initial, counts = np.unique(labels, return_counts=True)
+
+    # Identify valid/small groups
+    valid_mask = counts >= min_group_size
+    valid_group_ids_list = unique_labels_initial[valid_mask].tolist()
+    small_group_labels = unique_labels_initial[~valid_mask]
+
+    # Check if any valid groups exist
+    if not valid_group_ids_list:
+        # logger.warning(f"Warning: No CPU clusters met min_group_size ({min_group_size}). Assigning all stars to group 0.")
+        return np.zeros(n_stars, dtype=int)
+
+    # Get coords and original indices for small groups
+    small_groups_mask = np.isin(labels, small_group_labels)
+    small_groups_coords = coords[small_groups_mask]
+    small_groups_orig_indices = np.where(small_groups_mask)[0]
+
+    # Only proceed if there are stars to reassign
+    if small_groups_coords.shape[0] == 0:
+        # No small groups, initial labels are final (maybe renumber)
+        pass  # Skip reassignment if no small groups
+    else:
+        # Calculate centroids ONCE
+        valid_centroids = np.array([np.mean(coords[labels == gid], axis=0) for gid in valid_group_ids_list])
+
+        # Calculate distances (SciPy cdist)
+        # Note: cdist calculates all pairs, slightly different from pairwise_distances
+        distances = cdist(small_groups_coords, valid_centroids)  # Shape (n_small, n_valid)
+
+        # Find closest valid centroid indices
+        closest_valid_idx = np.argmin(distances, axis=1)  # Index into valid_centroids/valid_group_ids_list
+
+        # Get the actual labels of the closest groups
+        closest_group_ids = np.array(valid_group_ids_list)[closest_valid_idx]
+
+        # Update labels
+        final_labels = labels.copy()
+        final_labels[small_groups_orig_indices] = closest_group_ids
+        labels = final_labels  # Use updated labels from here
+
+    # Renumber labels (Optional but good practice)
+    unique_final_labels = np.unique(labels)
+    label_map = {old_label: new_label for new_label, old_label in enumerate(unique_final_labels)}
+    final_labels_contiguous = np.array([label_map[l] for l in labels], dtype=int)
+
+    return final_labels_contiguous
+
+
+# --- Implementación GPU ---
+@nvtx.annotate('_group_star_dataset_gpu_impl', category='phot.psf_gpu')
+def _group_star_dataset_gpu_impl(coords: cp.ndarray, avg_group_size: int = 10, min_group_size: int = 5) -> cp.ndarray:
+    """GPU implementation using CuPy/cuML."""
+    if avg_group_size <= 0 and min_group_size <= 0:
+        # raise InvalidGroupSizeError(avg_group_size, min_group_size)
+        raise ValueError("avg_group_size and min_group_size must be positive")
+
+    n_stars = len(coords)
+    if n_stars == 0: return cp.array([], dtype=cp.int32)
+    if n_stars <= min_group_size: return cp.zeros(n_stars, dtype=cp.int32)
+
+    # Ensure coords are float32 for cuML
+    coords_f32 = coords.astype(cp.float32, copy=False)
+
+    effective_avg_group_size = max(min_group_size, avg_group_size)
+    num_clusters = max(1, n_stars // effective_avg_group_size)
+    num_clusters = min(num_clusters, n_stars)
+
+    # Initial Clustering (cuML)
+    clustering = cuAgglomerativeClustering(n_clusters=num_clusters)
+    labels = clustering.fit_predict(coords_f32)
+    labels = labels.astype(cp.int32, copy=False)  # Ensure int type
+
+    unique_labels_initial, counts = cp.unique(labels, return_counts=True)
+
+    # Identify valid/small groups
+    valid_mask = counts >= min_group_size
+    valid_group_ids = unique_labels_initial[valid_mask]  # Keep on GPU
+    small_group_labels = unique_labels_initial[~valid_mask]
+
+    # Check if any valid groups exist
+    if valid_group_ids.size == 0:
+        # logger.warning(f"Warning: No GPU clusters met min_group_size ({min_group_size}). Assigning all stars to group 0.")
+        return cp.zeros(n_stars, dtype=cp.int32)
+
+    # Get coords and original indices for small groups
+    small_groups_mask = cp.isin(labels, small_group_labels)
+    small_groups_coords = coords_f32[small_groups_mask]
+    small_groups_orig_indices = cp.where(small_groups_mask)[0]
+
+    # Only proceed if there are stars to reassign
+    if small_groups_coords.shape[0] == 0:
+        pass  # Skip reassignment if no small groups
+    else:
+        # Calculate centroids ONCE (GPU)
+        # Loop might be necessary here, or more complex vectorized approach
+        valid_centroids_list = []
+        for gid in valid_group_ids:
+            valid_centroids_list.append(cp.mean(coords_f32[labels == gid], axis=0))
+        valid_centroids = cp.stack(valid_centroids_list)  # Shape (n_valid, n_features)
+
+        # Calculate distances (cuML pairwise_distances)
+        distances = cu_pairwise_distances(small_groups_coords, valid_centroids)  # Shape (n_small, n_valid)
+
+        # Find closest valid centroid indices
+        closest_valid_idx = cp.argmin(distances, axis=1)  # Index into valid_centroids/valid_group_ids
+
+        # Get the actual labels of the closest groups
+        closest_group_ids = valid_group_ids[closest_valid_idx]
+
+        # Update labels
+        final_labels = labels.copy()
+        final_labels[small_groups_orig_indices] = closest_group_ids
+        labels = final_labels  # Use updated labels from here
+
+    # Renumber labels (GPU version)
+    unique_final_labels = cp.unique(labels)
+    # Creating map on CPU might be easier unless n_clusters is huge
+    label_map_cpu = {old_label.item(): new_label for new_label, old_label in enumerate(unique_final_labels)}
+    # Apply map using CuPy (can be slow if map is large and called elementwise)
+    # A more advanced approach might use cp.searchsorted or custom kernels
+    # Simple approach (potentially slow for millions of stars/labels):
+    final_labels_contiguous = cp.array([label_map_cpu[l.item()] for l in labels], dtype=cp.int32)
+
+    return final_labels_contiguous
+
+
 ### # @hierarchical_debug(logger)
+# --- Wrapper Function ---
 @nvtx.annotate('group_star_dataset', category='phot.psf')
-def group_star_dataset(coords: np.ndarray, avg_group_size: int = 10, min_group_size: int = 5) -> np.ndarray:
+def group_star_dataset(coords, avg_group_size: int = 10, min_group_size: int = 5) -> np.ndarray | cp.ndarray:
     """
-    Group a set of star coordinates into clusters, ensuring no group has fewer stars than min_group_size.
+    Wrapper to group stars, attempting GPU (cuML) first if available and input is CuPy,
+    falling back to CPU (sklearn/scipy).
 
     :param coords: Coordinates of the stars (n_stars, n_features).
     :type coords: numpy.ndarray
@@ -232,85 +392,60 @@ def group_star_dataset(coords: np.ndarray, avg_group_size: int = 10, min_group_s
     :rtype: numpy.ndarray
     :raises InvalidGroupSizeError: If both avg_group_size and min_group_size are less than or equal to zero.
     """
+    nvtx_range = nvtx.start_range('group_star_dataset_wrapper', category='phot.psf', color='cyan')
 
-    if avg_group_size <= 0 and min_group_size <= 0:
-        raise InvalidGroupSizeError(avg_group_size, min_group_size)
+    is_gpu_input = isinstance(coords, cp.ndarray)
 
-    n_stars = len(coords)
+    if is_gpu_input and CUML_CLUSTERING_AVAILABLE:
+        # --- Attempt GPU Path ---
+        nvtx_gpu_attempt = nvtx.start_range('attempt_gpu_grouping', category='phot.psf_gpu')
+        # logger.debug("Attempting GPU grouping.")
+        try:
+            result = _group_star_dataset_gpu_impl(coords, avg_group_size, min_group_size)
+            # logger.debug("GPU grouping successful.")
+            nvtx.end_range(nvtx_gpu_attempt)
+            nvtx.end_range(nvtx_range)
+            return result  # Return CuPy array
+        except Exception as gpu_e:
+            # logger.warning(f"GPU grouping failed: {gpu_e}. Falling back to CPU.", exc_info=False)
+            nvtx.end_range(nvtx_gpu_attempt)
+            # Fallback happens below
 
-    # Manejar el caso donde no hay estrellas
-    if n_stars == 0:
-        return np.array([])  # Devuelve un array vacío si no hay estrellas
-    if n_stars <= min_group_size:
-        return np.zeros(n_stars, dtype=int)
+    # --- CPU Path (Fallback or Original Input) ---
+    nvtx_cpu_path = nvtx.start_range('cpu_grouping_path', category='phot.psf_cpu')
+    # logger.debug("Using CPU grouping.")
 
-    # Crear clusters
-    # Ensure avg_group_size is at least min_group_size, avoids weird num_clusters
-    effective_avg_group_size = max(min_group_size, avg_group_size)
-    # Ensure num_clusters is at least 1, even if n_stars < effective_avg_group_size
-    num_clusters = max(1, n_stars // effective_avg_group_size)
-    # Sklearn requires n_clusters >= 1, handle n_stars=0 case separately? Already done.
-    # Handle case where n_stars < num_clusters (e.g., n_stars=3, avg_size=10 -> num_clusters=1)
-    num_clusters = min(num_clusters, n_stars)  # Cannot have more clusters than points
+    # Ensure coords are NumPy for CPU implementation
+    if is_gpu_input:  # This means GPU failed, need to transfer
+        tx_range = nvtx.start_range('transfer_gpu_to_cpu_group_fallback', category='transfer', color='red')
+        coords_np = coords.get()
+        nvtx.end_range(tx_range)
+    else:  # Input was already NumPy
+        coords_np = coords
 
-    clustering = AgglomerativeClustering(n_clusters=num_clusters)
-    labels = clustering.fit_predict(coords)
+    # Call CPU implementation
+    try:
+        result_np = _group_star_dataset_cpu_impl(coords_np, avg_group_size, min_group_size)
+        # logger.debug("CPU grouping successful.")
+    except Exception as cpu_e:
+        # logger.error(f"CPU grouping failed: {cpu_e}")
+        nvtx.end_range(nvtx_cpu_path)
+        nvtx.end_range(nvtx_range)
+        raise  # Re-raise the CPU exception
 
-    unique_labels_initial = np.unique(labels)
-    groups = {i: coords[labels == i] for i in unique_labels_initial}
+    nvtx.end_range(nvtx_cpu_path)
 
-    # Ensure minimum group size
-    valid_groups = {}
-    small_groups_coords = []  # Store coords directly
-    valid_group_ids_list = []  # Keep track of valid group ids
-
-    for group_id, stars in groups.items():
-        if len(stars) >= min_group_size:
-            valid_groups[group_id] = stars
-            valid_group_ids_list.append(group_id)
-        else:
-            # Add all stars from the small group to the list
-            small_groups_coords.extend(list(stars))
-
-    # Only proceed if there are valid groups to reassign to
-    if not valid_groups:
-        # If NO group meets min_group_size, maybe return all as one group? Or raise error?
-        # Current logic fails here. Let's assign all to label 0 if this happens.
-        if n_stars > 0:
-            logger.warning(
-                f"Warning: No clusters met min_group_size ({min_group_size}). Assigning all stars to group 0.")
-            return np.zeros(n_stars, dtype=int)
-        else:
-            return np.array([], dtype=int)  # Should be handled earlier
-
-    # Create centroids for valid groups ONCE
-    valid_centroids = np.array([np.mean(valid_groups[gid], axis=0) for gid in valid_group_ids_list])
-
-    final_labels = labels.copy()  # Start with initial labels
-
-    # Iterate through individual stars from small groups
-    for star in small_groups_coords:
-        # Find the closest valid centroid
-        distances = cdist([star], valid_centroids)
-        closest_valid_idx = np.argmin(distances)
-        closest_group_id = valid_group_ids_list[closest_valid_idx]
-
-        # Find original index of the star to update its label
-        # Using np.where might be slow for many stars. A dictionary lookup might be faster if indices known.
-        # Assuming coords are unique for this to work reliably.
-        indices = np.where((coords == star).all(axis=1))[0]
-        if len(indices) > 0:
-            original_index = indices[0]
-            final_labels[original_index] = closest_group_id  # Reassign label
-
-        # We don't need to physically move stars between groups array here, just update labels
-
-    # Renumber labels to be contiguous starting from 0 (optional but good practice)
-    unique_final_labels = np.unique(final_labels)
-    label_map = {old_label: new_label for new_label, old_label in enumerate(unique_final_labels)}
-    final_labels_contiguous = np.array([label_map[l] for l in final_labels], dtype=int)
-
-    return final_labels_contiguous
+    # Determine return type based on ORIGINAL input type
+    if is_gpu_input:  # Original was GPU, but we used CPU (fallback)
+        tx_back_range = nvtx.start_range('transfer_cpu_to_gpu_group_fallback_result', category='transfer', color='red')
+        # logger.debug("Transferring CPU fallback result back to GPU.")
+        result_cp = cp.asarray(result_np)
+        nvtx.end_range(tx_back_range)
+        nvtx.end_range(nvtx_range)
+        return result_cp  # Return CuPy array
+    else:  # Original was CPU, return NumPy
+        nvtx.end_range(nvtx_range)
+        return result_np  # Return NumPy array
 
 
 ### # @hierarchical_debug(logger)

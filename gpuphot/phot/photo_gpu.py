@@ -240,43 +240,66 @@ def calculate_aperture_corrections_gpu(corr: cp.ndarray) -> tuple[cp.ndarray, cp
     :return: Aperture correction factors and errors for the cluster.
     :rtype: tuple(cupy.ndarray, cupy.ndarray) Both shape (n_radii,)
     """
+    # Ensure input is float for calculations involving NaN/Inf
+    if not cp.issubdtype(corr.dtype, cp.floating):
+        corr = corr.astype(cp.float64)  # Use float64 for precision
+
     if corr.size == 0 or corr.shape[0] == 0:
-        # Handle empty input case gracefully, return arrays of NaNs with correct shape if possible
-        # Need to know the expected number of radii if corr is empty but has shape (0, n_radii)
-        # If shape is truly (0, 0) or size is 0, we might need a default n_radii or raise error.
-        # Assuming we can infer n_radii from context or pass it, else return empty/error.
-        # Let's assume for now it has shape (0, n_radii) if empty.
+        # Handle empty input case gracefully
         if corr.ndim == 2 and corr.shape[1] > 0:
             n_radii = corr.shape[1]
-            return cp.full(n_radii, cp.nan), cp.full(n_radii, cp.nan)
+            # Ensure output dtype matches potential input dtype if float
+            dtype_out = corr.dtype if cp.issubdtype(corr.dtype, cp.floating) else cp.float64
+            return cp.full(n_radii, cp.nan, dtype=dtype_out), cp.full(n_radii, cp.nan, dtype=dtype_out)
         else:
-            # Cannot determine n_radii, return empty or raise
-            return cp.array([]), cp.array([])  # Or raise appropriate error
+            # Cannot determine n_radii, return empty
+            return cp.array([]), cp.array([])
 
-    # Normalize each curve by its own max (avoids issues if max is NaN or zero)
-    # Add epsilon to avoid division by zero/NaN if max is 0
-    max_vals = cp.nanmax(corr, axis=1, keepdims=True)
-    corr_normalized = cp.divide(corr, max_vals, where=(max_vals != 0))
-    corr_normalized[max_vals == 0] = cp.nan  # Set rows with max=0 to NaN
+    # Normalize each curve by its own max
+    max_vals = cp.nanmax(corr, axis=1, keepdims=True)  # Shape (n_stars, 1)
+
+    # --- FIXED NORMALIZATION APPROACH ---
+    # First broadcast the mask to match output shape
+    mask_broadcasted = cp.broadcast_to(max_vals != 0, corr.shape)
+    # Then use cp.where() function instead of 'where' parameter
+    corr_normalized = cp.where(mask_broadcasted,
+                               corr / max_vals,  # Division with implicit broadcasting
+                               cp.nan)
+    # --- END FIXED NORMALIZATION ---
 
     # Iterative outlier rejection (using median and std dev)
-    corr_fa = cp.nanmedian(corr_normalized, axis=0)  # Median across stars for each radius
-    corr_e = cp.nanstd(corr_normalized, axis=0)  # Std dev across stars for each radius
+    corr_fa = cp.nanmedian(corr_normalized, axis=0)  # Shape (n_radii,)
+    corr_e = cp.nanstd(corr_normalized, axis=0)  # Shape (n_radii,)
+
+    # Add epsilon to std dev if it's zero
+    epsilon = 1e-9
+    # Ensure corr_e is float before comparison if input wasn't
+    if not cp.issubdtype(corr_e.dtype, cp.floating):
+        corr_e = corr_e.astype(cp.float64)
+    corr_e = cp.where(corr_e == 0, epsilon, corr_e)
 
     # Expand dims for broadcasting comparison against (n_stars, n_radii) array
-    corr_fa_bc = corr_fa[cp.newaxis, :]
-    corr_e_bc = corr_e[cp.newaxis, :]
+    corr_fa_bc = corr_fa[cp.newaxis, :]  # Shape (1, n_radii)
+    corr_e_bc = corr_e[cp.newaxis, :]  # Shape (1, n_radii)
 
-    cmask = cp.abs(corr_normalized - corr_fa_bc) > corr_e_bc
-    corr_cleaned = cp.where(cmask, cp.nan, corr_normalized)  # Replace outliers with NaN
+    # Identify outliers (comparison broadcasts correctly)
+    cmask = cp.abs(corr_normalized - corr_fa_bc) > corr_e_bc  # Shape (n_stars, n_radii)
+    # Replace outliers with NaN using cp.where (function, not argument)
+    corr_cleaned = cp.where(cmask, cp.nan, corr_normalized)
 
     # Final correction factor and error
-    corr_fact = cp.nanmean(corr_cleaned, axis=0)  # Mean across stars for each radius
-    corr_err = cp.nanstd(corr_cleaned, axis=0)  # Std dev across stars for each radius
+    corr_fact = cp.nanmean(corr_cleaned, axis=0)  # Shape (n_radii,)
+    corr_err = cp.nanstd(corr_cleaned, axis=0)  # Shape (n_radii,)
 
     # Handle cases where all values for a radius became NaN
-    corr_fact = cp.where(cp.isnan(corr_fact), 0.0, corr_fact)  # Replace NaN result with 0 or other default
-    corr_err = cp.where(cp.isnan(corr_err), 0.0, corr_err)  # Replace NaN result with 0 or other default
+    # Ensure outputs are float before isnan check
+    if not cp.issubdtype(corr_fact.dtype, cp.floating):
+        corr_fact = corr_fact.astype(cp.float64)
+    if not cp.issubdtype(corr_err.dtype, cp.floating):
+        corr_err = corr_err.astype(cp.float64)
+
+    corr_fact = cp.where(cp.isnan(corr_fact), 0.0, corr_fact)
+    corr_err = cp.where(cp.isnan(corr_err), 0.0, corr_err)
 
     return corr_fact, corr_err
 
@@ -421,8 +444,9 @@ def create_aperture_corrections_map_gpu(image_shape: tuple, block_size: int, uni
                                         coords: cp.ndarray, radii: cp.ndarray, **kwargs) -> tuple[
     cp.ndarray, cp.ndarray, cp.ndarray]:
     """
-    Calculate aperture corrections map, minimizing GPU work where possible,
-    but accepting CPU steps due to group_star_dataset.
+    Calculates aperture corrections map, attempting GPU acceleration for grouping
+    and correction calculation, with fallback to CPU where necessary.
+
     Returns results on GPU.
 
     :param image_shape: Tuple (height, width) of the image.
@@ -438,82 +462,167 @@ def create_aperture_corrections_map_gpu(image_shape: tuple, block_size: int, uni
     :return: Aperture corrections, errors, and cluster centers (GPU).
     :rtype: tuple(cupy.ndarray, cupy.ndarray, cupy.ndarray)
     """
-    nvtx_range = nvtx.start_range('create_aperture_corrections_map_gpu', category='phot.photo_gpu', color='purple')
+    nvtx_range = nvtx.start_range('create_aperture_corrections_map_gpu_v3', category='phot.photo_gpu', color='purple')
+    mempool = cp.get_default_memory_pool()
 
-    # 1. Calculate aperture photometry curves (GPU)
+    # 1. Calculate aperture photometry curves (GPU) - No changes
     phot_range = nvtx.start_range('photometry_curves', category='phot.photo_gpu')
-    # Assuming unit_star_dataset has shape (n_stars, psf_h, psf_w)
     n_stars_psf, psf_h, psf_w = unit_star_dataset.shape
-    positions_psf = cp.array([[psf_h // 2, psf_w // 2]])  # Center of PSF stamp
-    # Need to call batch_aperture_photometry for each star's PSF stamp? Or does it handle 3D input?
-    # Assuming batch_aperture_photometry handles the 3D input (n_stars, h, w)
-    # If not, needs a loop here. Let's assume it handles 3D based on its code.
+    positions_psf = cp.array([[psf_h // 2, psf_w // 2]], dtype=cp.int32)
     aperture_curves_cp, _, _ = batch_aperture_photometry(unit_star_dataset, None, positions_psf, radii)
-    # Output shape might be (n_stars_psf, n_radii, n_positions=1) - squeeze last dim
     aperture_curves_cp = aperture_curves_cp.squeeze(axis=-1)  # Shape (n_stars_psf, n_radii)
+    n_radii = aperture_curves_cp.shape[1]
     nvtx.end_range(phot_range)
 
-    # --- Transfer Point: Coords GPU -> CPU ---
-    transfer_coords_range = nvtx.start_range('transfer_coords_for_grouping', category='transfer', color='red')
-    coords_np = coords.get()
-    nvtx.end_range(transfer_coords_range)
-
-    # 2. Cluster stars (CPU)
-    grouping_range = nvtx.start_range('group_star_dataset_cpu', category='cpu_ops', color='blue')
+    # --- KEY STEP: CALL THE GROUPING WRAPPER ---
+    # Pass the GPU coordinates directly. The wrapper will decide whether to use GPU or CPU.
+    grouping_range = nvtx.start_range('group_star_dataset_dispatch', category='phot.psf')
     avg_group_size = int(
-        max(len(coords_np), len(coords_np) / (np.prod(image_shape) / min(max(image_shape), block_size) ** 2)))
-    # Ensure min_group_size >= 1, default 5 seems reasonable.
-    labels_np = group_star_dataset(coords_np, avg_group_size=avg_group_size,
-                                   min_group_size=max(1, min(avg_group_size // 2, 5)))
+        max(coords.shape[0], coords.shape[0] / (np.prod(image_shape) / min(max(image_shape), block_size) ** 2)))
+    min_group_size_val = max(1, min(avg_group_size // 2, 5))
+
+    # This function NOW can return cp.ndarray or np.ndarray
+    labels = group_star_dataset(coords, avg_group_size=avg_group_size,
+                                min_group_size=min_group_size_val)
     nvtx.end_range(grouping_range)
 
-    # --- Transfer Point: Aperture Curves GPU -> CPU ---
-    # Needed because labels_np is required to index/group the curves on CPU
-    transfer_curves_range = nvtx.start_range('transfer_curves_for_calc', category='transfer', color='red')
-    aperture_curves_np = aperture_curves_cp.get()
-    nvtx.end_range(transfer_curves_range)
-    # Explicitly free GPU memory for the curves if large
-    del aperture_curves_cp
-    mempool = cp.get_default_memory_pool()
+    # --- KEY STEP: CHECK THE TYPE OF LABELS TO DECIDE THE PATH ---
+
+    if isinstance(labels, cp.ndarray):
+        # ----- SUCCESSFUL GPU PATH -----
+        # Labels is on GPU, aperture_curves_cp is on GPU, coords is on GPU.
+        # Goal: Calculate corrections and centers (if possible) on GPU.
+        nvtx_gpu_path = nvtx.start_range('correction_path_gpu', category='phot.photo_gpu', color='lime')
+        # logger.debug("Grouping successful on GPU. Proceeding with GPU correction calculation.")
+
+        # We don't need to transfer coords or aperture_curves to CPU.
+
+        unique_labels_gpu = cp.unique(labels)
+        n_clusters = len(unique_labels_gpu)
+
+        # Pre-allocate result arrays on GPU
+        aperture_corrections_final_gpu = cp.full((n_clusters, n_radii), cp.nan, dtype=aperture_curves_cp.dtype)
+        aperture_correction_errors_final_gpu = cp.full((n_clusters, n_radii), cp.nan, dtype=aperture_curves_cp.dtype)
+
+        # Map numpy labels to output array index
+        # Doing the mapping on CPU is simpler
+        unique_labels_np_for_map = unique_labels_gpu.get()
+        label_to_idx_map = {label_val: idx for idx, label_val in enumerate(unique_labels_np_for_map)}
+
+        # Calculate centers - Option A: GPU (preferred to avoid transfers)
+        cluster_centers_gpu = cp.full((n_clusters, coords.shape[1]), cp.nan, dtype=coords.dtype)
+
+        calc_corr_range = nvtx.start_range('calculate_corrections_gpu_loop', category='phot.photo_gpu')
+        for idx, label_val_gpu in enumerate(unique_labels_gpu):  # Iterate using GPU labels
+            label_val_np = label_val_gpu.item()  # Value for the map
+
+            # --- GPU Operations inside the loop ---
+            gpu_inner_range = nvtx.start_range(f'gpu_calc_cluster_{label_val_np}', category='phot.photo_gpu')
+            mask_gpu = (labels == label_val_gpu)
+            n_in_cluster = cp.sum(mask_gpu)
+
+            if n_in_cluster > 0:
+                cluster_curves_gpu = aperture_curves_cp[mask_gpu]
+
+                # *** CALL THE GPU VERSION OF CORRECTIONS ***
+                aper_corr_gpu, aperr_corr_err_gpu = calculate_aperture_corrections_gpu(cluster_curves_gpu)
+
+                aperture_corrections_final_gpu[idx, :] = aper_corr_gpu
+                aperture_correction_errors_final_gpu[idx, :] = aperr_corr_err_gpu
+
+                # Calculate center on GPU
+                cluster_centers_gpu[idx, :] = cp.mean(coords[mask_gpu], axis=0)
+            # else: Empty cluster, already pre-filled with NaN
+            nvtx.end_range(gpu_inner_range)
+
+        nvtx.end_range(calc_corr_range)
+
+        # No final CPU->GPU transfer needed for corrections/errors/centers
+
+        nvtx.end_range(nvtx_gpu_path)
+
+    else:  # isinstance(labels, np.ndarray)
+        # ----- CPU PATH (Fallback or original CPU input if it existed) -----
+        # Labels is NumPy (labels_np = labels).
+        # aperture_curves_cp is on GPU. coords is on GPU.
+        # We need to transfer curves to CPU and use coords_np (which the wrapper already got if it fell back).
+        nvtx_cpu_path = nvtx.start_range('correction_path_cpu', category='cpu_ops', color='orange')
+        # logger.debug("Grouping fell back to CPU or input was CPU. Proceeding with CPU correction calculation.")
+
+        labels_np = labels  # Rename for clarity
+
+        # --- Required Transfer: Curves GPU -> CPU ---
+        transfer_curves_range = nvtx.start_range('transfer_curves_for_cpu_calc', category='transfer', color='red')
+        aperture_curves_np = aperture_curves_cp.get()
+        nvtx.end_range(transfer_curves_range)
+        # Free GPU memory for curves if large
+        del aperture_curves_cp
+        mempool.free_all_blocks()
+        gc.collect()
+
+        # --- Required Transfer: Coords GPU -> CPU (if not already done in wrapper fallback) ---
+        # To be safe, get coords_np here if the wrapper didn't (although it should)
+        # Or better, assume that if labels is np.ndarray, coords_np exists internally in the wrapper
+        # For center calculation, we need coords_np
+        transfer_coords_range = nvtx.start_range('get_coords_for_cpu_center_calc', category='transfer', color='red')
+        coords_np = coords.get()  # Transfer to calculate centers
+        nvtx.end_range(transfer_coords_range)
+
+        # --- CPU Code (very similar to the original) ---
+        calc_corr_range = nvtx.start_range('calculate_corrections_cpu_loop', category='cpu_ops')
+        unique_labels_np = np.unique(labels_np)
+        n_clusters = len(unique_labels_np)
+
+        # Use lists to aggregate CPU results
+        cluster_centers_list = []
+        aperture_corrections_list = []
+        aperture_correction_errors_list = []
+
+        for label in unique_labels_np:
+            mask_np = (labels_np == label)
+            n_in_cluster = np.sum(mask_np)
+
+            if n_in_cluster > 0:
+                cluster_coords_np = coords_np[mask_np]
+                cluster_curves_np = aperture_curves_np[mask_np]
+
+                # *** CALL THE NUMPY VERSION OF CORRECTIONS ***
+                aper_corr_np, aperr_corr_err_np = calculate_aperture_corrections(cluster_curves_np)
+
+                aperture_corrections_list.append(aper_corr_np)
+                aperture_correction_errors_list.append(aperr_corr_err_np)
+                cluster_centers_list.append(np.mean(cluster_coords_np, axis=0))
+            else:
+                # Append NaNs if the cluster is empty
+                aperture_corrections_list.append(np.full(n_radii, np.nan))
+                aperture_correction_errors_list.append(np.full(n_radii, np.nan))
+                cluster_centers_list.append(np.full(coords_np.shape[1], np.nan))
+
+        # Aggregate results (NumPy)
+        aperture_corrections_np = np.array(aperture_corrections_list)
+        aperture_correction_errors_np = np.array(aperture_correction_errors_list)
+        cluster_centers_np = np.array(cluster_centers_list)
+        nvtx.end_range(calc_corr_range)
+
+        # --- Required Final Transfer: Results CPU -> GPU ---
+        transfer_results_range = nvtx.start_range('transfer_cpu_results_to_gpu', category='transfer', color='red')
+        aperture_corrections_final_gpu = cp.asarray(aperture_corrections_np)
+        aperture_correction_errors_final_gpu = cp.asarray(aperture_correction_errors_np)
+        cluster_centers_gpu = cp.asarray(cluster_centers_np)
+        nvtx.end_range(transfer_results_range)
+
+        nvtx.end_range(nvtx_cpu_path)
+
+    # --- End of Conditional Block ---
+
+    # Free memory that is no longer needed (coords could be freed earlier if centers are calculated on GPU)
+    # Deliberately not deleting coords here in case it's needed outside
     mempool.free_all_blocks()
     gc.collect()
 
-    # 3. Calculate corrections per cluster (CPU loop, using NumPy version)
-    calc_corr_range = nvtx.start_range('calculate_corrections_cpu_loop', category='cpu_ops', color='blue')
-    unique_labels_np = np.unique(labels_np)
-    cluster_centers_list = []
-    aperture_corrections_list = []
-    aperture_correction_errors_list = []
-
-    for label in unique_labels_np:
-        label_mask_np = (labels_np == label)
-        if np.sum(label_mask_np) == 0:  # Should not happen with unique_labels, but safe check
-            continue
-        cluster_coords_np = coords_np[label_mask_np]
-        cluster_aperture_curves_np = aperture_curves_np[label_mask_np]
-
-        # Use the NumPy version of the calculation function here
-        aper_corr_np, aperr_corr_err_np = calculate_aperture_corrections(cluster_aperture_curves_np)
-
-        aperture_corrections_list.append(aper_corr_np)
-        aperture_correction_errors_list.append(aperr_corr_err_np)
-        cluster_centers_list.append(np.mean(cluster_coords_np, axis=0))  # Keep centers CPU for now
-
-    # Aggregate results (still NumPy)
-    aperture_corrections_np = np.array(aperture_corrections_list)
-    aperture_correction_errors_np = np.array(aperture_correction_errors_list)
-    cluster_centers_np = np.array(cluster_centers_list)
-    nvtx.end_range(calc_corr_range)
-
-    # --- Transfer Point: Final Results CPU -> GPU ---
-    transfer_results_range = nvtx.start_range('transfer_final_corrections_to_gpu', category='transfer', color='red')
-    aperture_corrections_gpu = cp.asarray(aperture_corrections_np)
-    aperture_correction_errors_gpu = cp.asarray(aperture_correction_errors_np)
-    cluster_centers_gpu = cp.asarray(cluster_centers_np)
-    nvtx.end_range(transfer_results_range)
-
     nvtx.end_range(nvtx_range)  # End overall function range
-    return aperture_corrections_gpu, aperture_correction_errors_gpu, cluster_centers_gpu
+    # Always return GPU arrays
+    return aperture_corrections_final_gpu, aperture_correction_errors_final_gpu, cluster_centers_gpu
 
 
 ### # @hierarchical_debug(logger)
@@ -894,7 +1003,7 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
             try:
                 rad_val = source_opt_rad_final[ref_idx_np].item()
                 corr_val = opt_aper_corr_final[ref_idx_np].item()
-                extra_info[f'RAD{snr_ref}'] = int(np.round(rad_val))
+                extra_info[f'RAD{snr_ref}'] = int(rad_val)
                 extra_info[f'CORR{snr_ref}'] = round(corr_val, 3)
             except IndexError:
                 extra_info[f'RAD{snr_ref}'] = -1
@@ -920,6 +1029,7 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
 
     nvtx.end_range(overall_range)
     return opt_signal_np, opt_total_noise_np, opt_coords_np, extra_info
+
 
 #
 # @nvtx.annotate('perform_opt_photometry_optimized', category='phot.photo_gpu')
@@ -1335,7 +1445,7 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
 #                 # .item() transfers scalar value efficiently
 #                 rad_val = source_opt_rad_final[ref_idx_np].item()
 #                 corr_val = opt_aper_corr_final[ref_idx_np].item()
-#                 extra_info[f'RAD{snr_ref}'] = int(np.round(rad_val))  # Round radius before int
+#                 extra_info[f'RAD{snr_ref}'] = int(rad_val)  # Round radius before int
 #                 extra_info[f'CORR{snr_ref}'] = round(corr_val, 3)
 #             except IndexError:
 #                 # Handle case where index might be invalid (shouldn't happen with argmin on non-empty)
