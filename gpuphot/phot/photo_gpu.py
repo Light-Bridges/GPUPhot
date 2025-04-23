@@ -25,7 +25,7 @@ from ..stats.reduction import stack_sigmaclip
 from ..utils.astro import astrometrice2, get_astrometry_params, get_maglim, get_target_snr, get_zeropoint, \
     plate_scale_px
 from ..utils.catalog import catalog_results, crossmatch_sources
-from ..utils.gpu import free_gpu_mem, reset_cupy_allocators, maybe_free_arrays
+from ..utils.gpu import free_gpu_mem, reset_cupy_allocators, maybe_free_arrays, adaptive_memory_management
 from ..utils.headers import update_header_with_astrometry, update_header_with_photometry
 
 logger = setup_logger(__name__)
@@ -1680,13 +1680,142 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
 #
 
 ### # @hierarchical_debug(logger)
+# @nvtx.annotate('batch_aperture_photometry', category='phot.photo_gpu')
+# def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
+#                               positions: cp.ndarray, radii: cp.ndarray, **kwargs) -> tuple[
+#     cp.ndarray, cp.ndarray | None, cp.ndarray]:
+#     """
+#     Perform aperture photometry in batch mode using CuPy FFT.
+#     Accepts radii as CuPy array. Calculates area vectorially.
+#
+#     :param img: Image data (GPU). Can be 2D (h, w) or 3D (n_images, h, w).
+#     :type img: cupy.ndarray
+#     :param back: Background image (GPU, optional). Must match img dimensions if provided.
+#     :type back: cupy.ndarray or None
+#     :param positions: Positions of sources (GPU) (n_sources, 2) -> [[row, col], ...].
+#                       Must be integer type for indexing.
+#     :type positions: cupy.ndarray (int32/64)
+#     :param radii: Aperture radii (GPU).
+#     :type radii: cupy.ndarray
+#     :return: Tuple containing flux, background flux (or None), and aperture area per radius.
+#              Flux/BackFlux shape: (n_images, n_radii, n_sources) or (n_radii, n_sources)
+#              Area shape: (n_radii,)
+#     :rtype: tuple(cupy.ndarray, cupy.ndarray or None, cupy.ndarray)
+#     """
+#     nvtx_range = nvtx.start_range('batch_aperture_photometry', category='phot.photo_gpu', color='green')
+#     mempool = cp.get_default_memory_pool()
+#
+#     if radii.size == 0:
+#         raise ValueError("Radii array cannot be empty.")
+#
+#     # --- Calculate Area vectorially (GPU) ---
+#     # Determine max size needed for kernel based on largest radius
+#     max_radius = cp.max(radii).item()  # Get scalar value
+#     # Kernel size needs to be odd and large enough for largest radius
+#     kernel_size = int(2 * np.ceil(max_radius) + 1)
+#     if kernel_size % 2 == 0: kernel_size += 1  # Ensure odd size
+#
+#     # Calculate area for each radius using the kernel generation function
+#     areas = cp.zeros(len(radii), dtype=cp.float64)
+#     # Small loop here is okay, or could vectorize kernel generation if complex
+#     for i, r in enumerate(radii):
+#         # We only need the area here, kernel is generated inside the main loop
+#         _, areas[i] = get_aper_kernel(r.item(), size=kernel_size)
+#     # --- End Area Calculation ---
+#
+#     image_shape_orig = img.shape
+#     is_3d = img.ndim == 3
+#     n_images = image_shape_orig[0] if is_3d else 1
+#     img_h = image_shape_orig[1] if is_3d else image_shape_orig[0]
+#     img_w = image_shape_orig[2] if is_3d else image_shape_orig[1]
+#
+#     padding = (kernel_size - 1) // 2  # Integer division
+#
+#     # Calculate padded shape for FFT
+#     fft_shape = fill_image((img_h + 2 * padding, img_w + 2 * padding))
+#
+#     # Pre-allocate output arrays
+#     n_radii = len(radii)
+#     n_positions = len(positions)
+#     flux_shape = (n_images, n_radii, n_positions) if is_3d else (n_radii, n_positions)
+#     flux = cp.zeros(flux_shape, dtype=cp.float64)  # Use float64 for precision
+#     back_flux = cp.zeros(flux_shape, dtype=cp.float64) if back is not None else None
+#
+#     # --- FFT and Convolution Loop ---
+#     fft_loop_range = nvtx.start_range('fft_convolution_loop', category='phot.photo_gpu')
+#
+#     # Function to process a single 2D image (or image plane)
+#     def process_plane(plane_idx, img_plane, back_plane):
+#         img_c = cp.fft.rfft2(img_plane, s=fft_shape)
+#         back_c = cp.fft.rfft2(back_plane, s=fft_shape) if back_plane is not None else None
+#         plane_flux = cp.zeros((n_radii, n_positions), dtype=cp.float64)
+#         plane_back_flux = cp.zeros((n_radii, n_positions), dtype=cp.float64) if back_plane is not None else None
+#
+#         for i, r in enumerate(radii):
+#             kernel_range = nvtx.start_range(f'kernel_fft_r={r}', category='phot.conv')
+#             kernel, _ = get_aper_kernel(r.item(), size=kernel_size)  # Generate kernel for this radius
+#             # FFT kernel (conj needed for correlation via convolution theorem)
+#             kernel_c = cp.conj(cp.fft.rfft2(kernel, s=fft_shape))
+#             nvtx.end_range(kernel_range)
+#
+#             conv_range = nvtx.start_range(f'ifft_roll_index_r={r}', category='phot.conv')
+#             # Convolve image
+#             convolved_img = cp.fft.irfft2(img_c * kernel_c, s=fft_shape)
+#             # Shift result to align, crop to original size
+#             convolved_img = cp.roll(convolved_img, shift=[padding, padding], axis=[0, 1])
+#             convolved_img = convolved_img[:img_h, :img_w]
+#             # Index at source positions
+#             plane_flux[i, :] = convolved_img[positions[:, 0], positions[:, 1]]
+#
+#             # Convolve background if exists
+#             if back_c is not None:
+#                 convolved_back = cp.fft.irfft2(back_c * kernel_c, s=fft_shape)
+#                 convolved_back = cp.roll(convolved_back, shift=[padding, padding], axis=[0, 1])
+#                 convolved_back = convolved_back[:img_h, :img_w]
+#                 plane_back_flux[i, :] = convolved_back[positions[:, 0], positions[:, 1]]
+#             nvtx.end_range(conv_range)
+#
+#             # Modest memory cleanup inside loop if kernels are large
+#             del kernel, kernel_c
+#             # mempool.free_all_blocks() # Maybe too frequent, causes overhead
+#
+#         del img_c, back_c  # Cleanup FFTs for the plane
+#         # mempool.free_all_blocks()
+#         # gc.collect()
+#         return plane_flux, plane_back_flux
+#
+#     if is_3d:
+#         for c in range(n_images):
+#             img_plane = img[c]
+#             back_plane = back[c] if back is not None else None
+#             plane_flux, plane_back_flux = process_plane(c, img_plane, back_plane)
+#             flux[c, :, :] = plane_flux
+#             if back_flux is not None:
+#                 back_flux[c, :, :] = plane_back_flux
+#     else:
+#         # Process the single 2D image
+#         plane_flux, plane_back_flux = process_plane(0, img, back)
+#         flux = plane_flux
+#         back_flux = plane_back_flux
+#
+#     nvtx.end_range(fft_loop_range)
+#     # --- End FFT Loop ---
+#
+#     # Final cleanup (optional)
+#     mempool.free_all_blocks()
+#     gc.collect()
+#
+#     nvtx.end_range(nvtx_range)  # End overall batch photometry range
+#     return flux, back_flux, areas  # Return calculated areas
+#
+
 @nvtx.annotate('batch_aperture_photometry', category='phot.photo_gpu')
 def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
                               positions: cp.ndarray, radii: cp.ndarray, **kwargs) -> tuple[
     cp.ndarray, cp.ndarray | None, cp.ndarray]:
     """
-    Perform aperture photometry in batch mode using CuPy FFT.
-    Accepts radii as CuPy array. Calculates area vectorially.
+    Perform aperture photometry with aggressive memory management.
+    Calculates kernel FFT inside the loop, frees memory actively.
 
     :param img: Image data (GPU). Can be 2D (h, w) or 3D (n_images, h, w).
     :type img: cupy.ndarray
@@ -1697,31 +1826,60 @@ def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
     :type positions: cupy.ndarray (int32/64)
     :param radii: Aperture radii (GPU).
     :type radii: cupy.ndarray
+    :param kwargs: Potential memory thresholds: 'mem_warning_ratio' (default 0.7), 'mem_critical_ratio' (default 0.85)
     :return: Tuple containing flux, background flux (or None), and aperture area per radius.
-             Flux/BackFlux shape: (n_images, n_radii, n_sources) or (n_radii, n_sources)
-             Area shape: (n_radii,)
     :rtype: tuple(cupy.ndarray, cupy.ndarray or None, cupy.ndarray)
     """
-    nvtx_range = nvtx.start_range('batch_aperture_photometry', category='phot.photo_gpu', color='green')
+    nvtx_range = nvtx.start_range('batch_aperture_photometry_mem_optimized', category='phot.photo_gpu', color='red')
     mempool = cp.get_default_memory_pool()
+
+    # --- Configuration ---
+    mem_warning_ratio = kwargs.get('mem_warning_ratio', 0.7)  # Liberar bloques no usados si uso > 70%
+    mem_critical_ratio = kwargs.get('mem_critical_ratio', 0.85)  # Liberar + GC si uso > 85%
+    free_inside_loop_level = kwargs.get('free_inside_loop_level',
+                                        1)  # Nivel de presión (1=Warn, 2=Crit) para forzar free_all_blocks dentro del loop de radios
 
     if radii.size == 0:
         raise ValueError("Radii array cannot be empty.")
+    if positions.size == 0:
+        logger.warning("Positions array is empty. Returning empty results.")
+        # Calculate areas even if no positions
+        max_radius_areas = cp.max(radii).item() if radii.size > 0 else 1
+        kernel_size_areas = int(2 * np.ceil(max_radius_areas) + 1)
+        if kernel_size_areas % 2 == 0: kernel_size_areas += 1
+        areas = cp.zeros(len(radii), dtype=cp.float64)
+        for i, r in enumerate(radii):
+            try:
+                # Need a dummy kernel potentially to get area, ensure size is sufficient
+                _, areas[i] = get_aper_kernel(r.item(), size=kernel_size_areas)
+            except Exception as e:
+                logger.error(f"Error calculating area for radius {r.item()}: {e}")
+                areas[i] = cp.nan  # Or some indicator of failure
 
-    # --- Calculate Area vectorially (GPU) ---
-    # Determine max size needed for kernel based on largest radius
-    max_radius = cp.max(radii).item()  # Get scalar value
-    # Kernel size needs to be odd and large enough for largest radius
+        n_images_out = img.shape[0] if img.ndim == 3 else 1
+        out_shape = (n_images_out, len(radii), 0) if img.ndim == 3 else (len(radii), 0)
+        return cp.zeros(out_shape, dtype=cp.float64), \
+            cp.zeros(out_shape, dtype=cp.float64) if back is not None else None, \
+            areas
+
+    # --- Calculate Area & Determine Kernel/FFT Params ---
+    area_calc_range = nvtx.start_range('area_kernel_params', category='phot.setup')
+    max_radius = cp.max(radii).item()
     kernel_size = int(2 * np.ceil(max_radius) + 1)
-    if kernel_size % 2 == 0: kernel_size += 1  # Ensure odd size
+    if kernel_size % 2 == 0: kernel_size += 1
 
-    # Calculate area for each radius using the kernel generation function
     areas = cp.zeros(len(radii), dtype=cp.float64)
-    # Small loop here is okay, or could vectorize kernel generation if complex
     for i, r in enumerate(radii):
-        # We only need the area here, kernel is generated inside the main loop
-        _, areas[i] = get_aper_kernel(r.item(), size=kernel_size)
-    # --- End Area Calculation ---
+        # Nota: Generamos el kernel aquí solo para el área. Se regenerará dentro del bucle principal.
+        # Podríamos optimizar esto si get_aper_kernel es muy costoso,
+        # pero priorizamos la memoria sobre el re-cálculo del kernel.
+        try:
+            temp_kernel, areas[i] = get_aper_kernel(r.item(), size=kernel_size)
+            del temp_kernel  # Liberar el kernel temporal inmediatamente
+        except Exception as e:
+            logger.error(f"Error calculating area for radius {r.item()}: {e}")
+            areas[i] = cp.nan  # Marcar como inválido si falla
+    nvtx.end_range(area_calc_range)
 
     image_shape_orig = img.shape
     is_3d = img.ndim == 3
@@ -1729,84 +1887,261 @@ def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
     img_h = image_shape_orig[1] if is_3d else image_shape_orig[0]
     img_w = image_shape_orig[2] if is_3d else image_shape_orig[1]
 
-    padding = (kernel_size - 1) // 2  # Integer division
-
-    # Calculate padded shape for FFT
+    padding = (kernel_size - 1) // 2
     fft_shape = fill_image((img_h + 2 * padding, img_w + 2 * padding))
+    logger.info(
+        f"Using FFT shape: {fft_shape} for image shape {img_h, img_w} and max radius {max_radius} (kernel size {kernel_size})")
 
-    # Pre-allocate output arrays
+    # --- Pre-allocate output arrays ---
+    alloc_out_range = nvtx.start_range('allocate_outputs', category='phot.setup')
     n_radii = len(radii)
     n_positions = len(positions)
     flux_shape = (n_images, n_radii, n_positions) if is_3d else (n_radii, n_positions)
-    flux = cp.zeros(flux_shape, dtype=cp.float64)  # Use float64 for precision
+    flux = cp.zeros(flux_shape, dtype=cp.float64)
     back_flux = cp.zeros(flux_shape, dtype=cp.float64) if back is not None else None
+    nvtx.end_range(alloc_out_range)
 
     # --- FFT and Convolution Loop ---
     fft_loop_range = nvtx.start_range('fft_convolution_loop', category='phot.photo_gpu')
 
     # Function to process a single 2D image (or image plane)
     def process_plane(plane_idx, img_plane, back_plane):
-        img_c = cp.fft.rfft2(img_plane, s=fft_shape)
-        back_c = cp.fft.rfft2(back_plane, s=fft_shape) if back_plane is not None else None
+        plane_nvtx = nvtx.start_range(f'process_plane_{plane_idx}', category='phot.plane')
+        logger.debug(f"Processing plane {plane_idx}")
+
+        # --- FFT of Image and Background ---
+        # Check memory *before* large FFT allocations
+        mem_pressure = adaptive_memory_management(mempool, mem_warning_ratio, mem_critical_ratio)
+        if mem_pressure >= 2:  # Critical before starting
+            logger.error(
+                f"Critical memory pressure ({mem_pressure}) before processing plane {plane_idx}. Aborting plane.")
+            # Return NaNs or raise error? Returning NaNs might hide issues. Let's raise.
+            raise cp.cuda.MemoryError(f"Insufficient memory before FFTing plane {plane_idx}")
+
+        img_c = None
+        back_c = None
+        try:
+            fft_img_range = nvtx.start_range(f'fft_plane_{plane_idx}', category='phot.fft')
+            img_c = cp.fft.rfft2(img_plane, s=fft_shape)
+            if back_plane is not None:
+                back_c = cp.fft.rfft2(back_plane, s=fft_shape)
+            nvtx.end_range(fft_img_range)
+            logger.debug(f"FFT calculation successful for plane {plane_idx}")
+        except cp.cuda.MemoryError as e:
+            logger.error(f"OOM Error during FFT for plane {plane_idx}: {e}")
+            # Clean up whatever might have been allocated
+            del img_c, back_c
+            mempool.free_all_blocks()
+            gc.collect()
+            nvtx.end_range(fft_img_range)  # Ensure range is ended on error
+            nvtx.end_range(plane_nvtx)
+            raise e  # Re-raise the error to signal failure
+
+        # Pre-allocate plane results (smaller arrays)
         plane_flux = cp.zeros((n_radii, n_positions), dtype=cp.float64)
         plane_back_flux = cp.zeros((n_radii, n_positions), dtype=cp.float64) if back_plane is not None else None
 
+        # --- Loop over Radii ---
         for i, r in enumerate(radii):
-            kernel_range = nvtx.start_range(f'kernel_fft_r={r}', category='phot.conv')
-            kernel, _ = get_aper_kernel(r.item(), size=kernel_size)  # Generate kernel for this radius
-            # FFT kernel (conj needed for correlation via convolution theorem)
-            kernel_c = cp.conj(cp.fft.rfft2(kernel, s=fft_shape))
-            nvtx.end_range(kernel_range)
+            radius_nvtx = nvtx.start_range(f'radius_{r.item():.2f}', category='phot.radius_iter')
+            logger.debug(f"Plane {plane_idx}, Radius {i + 1}/{n_radii} (r={r.item()})")
 
-            conv_range = nvtx.start_range(f'ifft_roll_index_r={r}', category='phot.conv')
-            # Convolve image
-            convolved_img = cp.fft.irfft2(img_c * kernel_c, s=fft_shape)
-            # Shift result to align, crop to original size
-            convolved_img = cp.roll(convolved_img, shift=[padding, padding], axis=[0, 1])
-            convolved_img = convolved_img[:img_h, :img_w]
-            # Index at source positions
-            plane_flux[i, :] = convolved_img[positions[:, 0], positions[:, 1]]
+            # --- Kernel Generation and FFT ---
+            kernel = None
+            kernel_c = None
+            try:
+                kernel_range = nvtx.start_range(f'kernel_fft_r={r.item():.2f}', category='phot.conv')
+                # Check memory before kernel FFT
+                # Optional: More aggressive check inside the loop if needed
+                # adaptive_memory_management(mempool, mem_warning_ratio, mem_critical_ratio)
 
-            # Convolve background if exists
+                kernel, _ = get_aper_kernel(r.item(), size=kernel_size)
+                kernel_c = cp.conj(cp.fft.rfft2(kernel, s=fft_shape))
+                del kernel  # Free kernel immediately after FFT
+                nvtx.end_range(kernel_range)
+            except cp.cuda.MemoryError as e:
+                logger.error(f"OOM Error during Kernel FFT for r={r.item()}: {e}")
+                del kernel, kernel_c  # Cleanup
+                mempool.free_all_blocks()
+                gc.collect()
+                nvtx.end_range(kernel_range)
+                nvtx.end_range(radius_nvtx)
+                # Option: Continue to next radius (results for this radius will be 0/NaN) or raise
+                # Let's raise for now, as partial results can be misleading.
+                raise e
+
+            # --- Convolution (Image) ---
+            convolved_img = None
+            convolved_img_rolled = None
+            convolved_img_cropped = None
+            try:
+                conv_range = nvtx.start_range(f'ifft_roll_index_img_r={r.item():.2f}', category='phot.conv')
+                prod_img = img_c * kernel_c  # Multiplication - check potential memory spike here
+                convolved_img = cp.fft.irfft2(prod_img, s=fft_shape)
+                del prod_img  # Free intermediate product ASAP
+
+                convolved_img_rolled = cp.roll(convolved_img, shift=[padding, padding], axis=[0, 1])
+                del convolved_img  # Free original irfft result
+
+                convolved_img_cropped = convolved_img_rolled[:img_h, :img_w]  # View
+                del convolved_img_rolled  # Free rolled array
+
+                # Indexing - creates the copy for plane_flux
+                plane_flux[i, :] = convolved_img_cropped[positions[:, 0], positions[:, 1]]
+                del convolved_img_cropped  # Free cropped view/copy
+                nvtx.end_range(conv_range)
+            except cp.cuda.MemoryError as e:
+                logger.error(f"OOM Error during Image Convolution/Indexing for r={r.item()}: {e}")
+                # Cleanup intermediate steps
+                del prod_img, convolved_img, convolved_img_rolled, convolved_img_cropped
+                del kernel_c  # Also free the kernel FFT for this radius
+                mempool.free_all_blocks()
+                gc.collect()
+                nvtx.end_range(conv_range)  # Ensure end on error
+                nvtx.end_range(radius_nvtx)
+                raise e
+
+            # --- Convolution (Background) ---
             if back_c is not None:
-                convolved_back = cp.fft.irfft2(back_c * kernel_c, s=fft_shape)
-                convolved_back = cp.roll(convolved_back, shift=[padding, padding], axis=[0, 1])
-                convolved_back = convolved_back[:img_h, :img_w]
-                plane_back_flux[i, :] = convolved_back[positions[:, 0], positions[:, 1]]
-            nvtx.end_range(conv_range)
+                convolved_back = None
+                convolved_back_rolled = None
+                convolved_back_cropped = None
+                try:
+                    conv_back_range = nvtx.start_range(f'ifft_roll_index_back_r={r.item():.2f}', category='phot.conv')
+                    prod_back = back_c * kernel_c  # Multiplication
+                    convolved_back = cp.fft.irfft2(prod_back, s=fft_shape)
+                    del prod_back
 
-            # Modest memory cleanup inside loop if kernels are large
-            del kernel, kernel_c
-            # mempool.free_all_blocks() # Maybe too frequent, causes overhead
+                    convolved_back_rolled = cp.roll(convolved_back, shift=[padding, padding], axis=[0, 1])
+                    del convolved_back
 
-        del img_c, back_c  # Cleanup FFTs for the plane
-        # mempool.free_all_blocks()
-        # gc.collect()
+                    convolved_back_cropped = convolved_back_rolled[:img_h, :img_w]  # View
+                    del convolved_back_rolled
+
+                    plane_back_flux[i, :] = convolved_back_cropped[positions[:, 0], positions[:, 1]]
+                    del convolved_back_cropped
+                    nvtx.end_range(conv_back_range)
+                except cp.cuda.MemoryError as e:
+                    logger.error(f"OOM Error during Background Convolution/Indexing for r={r.item()}: {e}")
+                    del prod_back, convolved_back, convolved_back_rolled, convolved_back_cropped
+                    del kernel_c  # Free kernel FFT
+                    mempool.free_all_blocks()
+                    gc.collect()
+                    nvtx.end_range(conv_back_range)
+                    nvtx.end_range(radius_nvtx)
+                    raise e
+
+            # --- Cleanup for this Radius ---
+            del kernel_c  # Crucial: free kernel FFT before next iteration
+            # Check memory pressure *after* completing a radius iteration
+            mem_pressure_intra_loop = adaptive_memory_management(mempool, mem_warning_ratio, mem_critical_ratio)
+            if mem_pressure_intra_loop >= free_inside_loop_level:
+                logger.info(f"Forcing memory pool cleanup inside radius loop (level {mem_pressure_intra_loop})")
+                # Already freed by adaptive_memory_management if level > 0
+                # mempool.free_all_blocks() # Call explicitly if adaptive doesn't always
+                # gc.collect() # Optionally add gc collect here too if critical
+
+            nvtx.end_range(radius_nvtx)
+            # --- End of Radius Iteration ---
+
+        # --- Cleanup after processing all radii for the plane ---
+        logger.debug(f"Finished all radii for plane {plane_idx}. Cleaning up plane FFTs.")
+        del img_c, back_c
+        # Force cleanup before returning from plane processing
+        mempool.free_all_blocks()
+        gc.collect()
+
+        nvtx.end_range(plane_nvtx)
         return plane_flux, plane_back_flux
+        # --- End of process_plane ---
 
+    # --- Main Processing Loop (3D or 2D) ---
     if is_3d:
         for c in range(n_images):
             img_plane = img[c]
             back_plane = back[c] if back is not None else None
-            plane_flux, plane_back_flux = process_plane(c, img_plane, back_plane)
-            flux[c, :, :] = plane_flux
-            if back_flux is not None:
-                back_flux[c, :, :] = plane_back_flux
+            try:
+                plane_flux_res, plane_back_flux_res = process_plane(c, img_plane, back_plane)
+                flux[c, :, :] = plane_flux_res
+                if back_flux is not None and plane_back_flux_res is not None:
+                    back_flux[c, :, :] = plane_back_flux_res
+                # Cleanup results from process_plane call if they are distinct objects
+                # (Assignment above should be efficient if types match)
+                del plane_flux_res, plane_back_flux_res
+
+                # Optional: Add a less frequent cleanup between planes if needed
+                # if c % 5 == 0: # Example: Every 5 planes
+                #      logger.debug(f"Periodic cleanup between planes (after plane {c})")
+                #      mempool.free_all_blocks()
+                #      gc.collect()
+
+            except cp.cuda.MemoryError as e:
+                logger.critical(f"MemoryError processing plane {c}. Aborting further processing.", exc_info=True)
+                nvtx.end_range(fft_loop_range)
+                nvtx.end_range(nvtx_range)
+                # Return partially filled arrays or raise? Raising is cleaner.
+                # Consider filling remaining parts of flux/back_flux with NaN if partial results are acceptable.
+                flux[c:, :, :] = cp.nan
+                if back_flux is not None:
+                    back_flux[c:, :, :] = cp.nan
+                # Return what we have, but signal error clearly might be better
+                # For now, let's return partially filled + areas
+                return flux, back_flux, areas
+                # Alternatively: raise RuntimeError(f"Failed processing plane {c} due to memory") from e
+
+            except Exception as e:
+                logger.critical(f"Unexpected error processing plane {c}: {e}", exc_info=True)
+                nvtx.end_range(fft_loop_range)
+                nvtx.end_range(nvtx_range)
+                flux[c:, :, :] = cp.nan
+                if back_flux is not None:
+                    back_flux[c:, :, :] = cp.nan
+                return flux, back_flux, areas  # Or raise
+
     else:
         # Process the single 2D image
-        plane_flux, plane_back_flux = process_plane(0, img, back)
-        flux = plane_flux
-        back_flux = plane_back_flux
+        try:
+            plane_flux_res, plane_back_flux_res = process_plane(0, img, back)
+            # Assign directly to flux/back_flux (no outer dimension)
+            flux = plane_flux_res
+            back_flux = plane_back_flux_res
+            # del plane_flux_res, plane_back_flux_res # Not needed as assigned directly
+        except cp.cuda.MemoryError as e:
+            logger.critical(f"MemoryError processing the 2D image. Aborting.", exc_info=True)
+            nvtx.end_range(fft_loop_range)
+            nvtx.end_range(nvtx_range)
+            # Return empty/NaN arrays of the correct shape
+            flux = cp.full(flux_shape, cp.nan, dtype=cp.float64)
+            if back is not None:
+                back_flux = cp.full(flux_shape, cp.nan, dtype=cp.float64)
+            else:
+                back_flux = None
+            return flux, back_flux, areas  # Return NaNs + areas
+            # Alternatively: raise RuntimeError("Failed processing 2D image due to memory") from e
+        except Exception as e:
+            logger.critical(f"Unexpected error processing 2D image: {e}", exc_info=True)
+            nvtx.end_range(fft_loop_range)
+            nvtx.end_range(nvtx_range)
+            flux = cp.full(flux_shape, cp.nan, dtype=cp.float64)
+            if back is not None:
+                back_flux = cp.full(flux_shape, cp.nan, dtype=cp.float64)
+            else:
+                back_flux = None
+            return flux, back_flux, areas  # Or raise
 
     nvtx.end_range(fft_loop_range)
     # --- End FFT Loop ---
 
-    # Final cleanup (optional)
+    # Final cleanup (mostly redundant if cleanup inside loop is effective, but safe)
+    final_cleanup_range = nvtx.start_range('final_cleanup', category='phot.cleanup')
+    logger.debug("Performing final memory cleanup.")
     mempool.free_all_blocks()
     gc.collect()
+    nvtx.end_range(final_cleanup_range)
 
-    nvtx.end_range(nvtx_range)  # End overall batch photometry range
-    return flux, back_flux, areas  # Return calculated areas
+    nvtx.end_range(nvtx_range)
+    logger.info("Batch aperture photometry completed successfully.")
+    return flux, back_flux, areas
 
 
 # @contextmanager

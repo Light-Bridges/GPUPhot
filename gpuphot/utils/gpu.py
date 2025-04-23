@@ -155,3 +155,32 @@ def maybe_free_arrays(arrays, mempool, threshold=0.2):
             del arr
         mempool.free_all_blocks()
         cp.cuda.Stream.null.synchronize()
+
+@nvtx.annotate('adaptive_memory_management', category='utils.gpu')
+def adaptive_memory_management(mempool, threshold_warning=0.6, threshold_critical=0.8):
+    """Retorna nivel de presión: 0 (normal), 1 (advertencia), 2 (crítico)"""
+    try:
+        free_mem, total_mem = cp.cuda.Device().mem_info
+        if total_mem == 0: return 0 # Evitar división por cero si no hay memoria
+        used_mem = total_mem - free_mem
+        memory_usage_ratio = used_mem / total_mem
+
+        if memory_usage_ratio > threshold_critical:
+            logger.warning(f"Memory Pressure CRITICAL: Usage {memory_usage_ratio:.2%} > {threshold_critical:.0%}. "
+                           f"Used: {human_readable_size(used_mem)}, Free: {human_readable_size(free_mem)}. Aggressive cleanup.")
+            mempool.free_all_blocks()
+            # cp.cuda.Stream.null.synchronize() # Sincronizar puede ser costoso, usar con cautela
+            gc.collect()
+            # Considerar limpiar cache FFT si OOM persiste: cp.fft.config.get_plan_cache().clear()
+            return 2
+        elif memory_usage_ratio > threshold_warning:
+            logger.info(f"Memory Pressure WARNING: Usage {memory_usage_ratio:.2%} > {threshold_warning:.0%}. "
+                        f"Used: {human_readable_size(used_mem)}, Free: {human_readable_size(free_mem)}. Moderate cleanup.")
+            mempool.free_all_blocks() # Liberar bloques no usados
+            return 1
+        # logger.debug(f"Memory Pressure NORMAL: Usage {memory_usage_ratio:.2%}. "
+        #              f"Used: {human_readable_size(used_mem)}, Free: {human_readable_size(free_mem)}")
+        return 0
+    except cp.cuda.runtime.CUDARuntimeError as e:
+        logger.error(f"Error getting CUDA memory info: {e}")
+        return 0 # Asumir normal si no se puede obtener info
