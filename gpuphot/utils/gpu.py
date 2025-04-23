@@ -160,27 +160,42 @@ def maybe_free_arrays(arrays, mempool, threshold=0.2):
 def adaptive_memory_management(mempool, threshold_warning=0.6, threshold_critical=0.8):
     """Retorna nivel de presión: 0 (normal), 1 (advertencia), 2 (crítico)"""
     try:
-        free_mem, total_mem = cp.cuda.Device().mem_info
-        if total_mem == 0: return 0 # Evitar división por cero si no hay memoria
-        used_mem = total_mem - free_mem
-        memory_usage_ratio = used_mem / total_mem
+        dev = cp.cuda.Device()
+        free_physical, total_physical_mem = dev.mem_info
+        used_mem = mempool.used_bytes() # Memoria usada por el pool de CuPy
+
+        if total_physical_mem == 0: return 0
+        memory_usage_ratio = used_mem / total_physical_mem if total_physical_mem > 0 else 0
+
+        action_taken = False
+        level = 0
 
         if memory_usage_ratio > threshold_critical:
             logger.warning(f"Memory Pressure CRITICAL: Usage {memory_usage_ratio:.2%} > {threshold_critical:.0%}. "
-                           f"Used: {human_readable_size(used_mem)}, Free: {human_readable_size(free_mem)}. Aggressive cleanup.")
+                           f"Used: {human_readable_size(used_mem)}, Free Phys: {human_readable_size(free_physical)}. Aggressive cleanup.")
             mempool.free_all_blocks()
-            # cp.cuda.Stream.null.synchronize() # Sincronizar puede ser costoso, usar con cautela
             gc.collect()
-            # Considerar limpiar cache FFT si OOM persiste: cp.fft.config.get_plan_cache().clear()
-            return 2
+            # cp.cuda.Stream.null.synchronize() # Evitar sync si no es estrictamente necesario por rendimiento
+            action_taken = True
+            level = 2
         elif memory_usage_ratio > threshold_warning:
             logger.info(f"Memory Pressure WARNING: Usage {memory_usage_ratio:.2%} > {threshold_warning:.0%}. "
-                        f"Used: {human_readable_size(used_mem)}, Free: {human_readable_size(free_mem)}. Moderate cleanup.")
+                        f"Used: {human_readable_size(used_mem)}, Free Phys: {human_readable_size(free_physical)}. Moderate cleanup.")
             mempool.free_all_blocks() # Liberar bloques no usados
-            return 1
-        # logger.debug(f"Memory Pressure NORMAL: Usage {memory_usage_ratio:.2%}. "
-        #              f"Used: {human_readable_size(used_mem)}, Free: {human_readable_size(free_mem)}")
-        return 0
+            action_taken = True
+            level = 1
+
+        # Log final state after potential cleanup
+        # if action_taken:
+        #    free_after, _ = dev.mem_info
+        #    logger.info(f"Memory state after cleanup: Used={human_readable_size(mempool.used_bytes())}, Free Phys={human_readable_size(free_after)}")
+        # else:
+        #    logger.debug(f"Memory Pressure NORMAL: Usage {memory_usage_ratio:.2%}. ")
+
+        return level
     except cp.cuda.runtime.CUDARuntimeError as e:
         logger.error(f"Error getting CUDA memory info: {e}")
-        return 0 # Asumir normal si no se puede obtener info
+        return 0
+    except Exception as e:
+         logger.error(f"Unexpected error in adaptive_memory_management: {e}", exc_info=True)
+         return 0

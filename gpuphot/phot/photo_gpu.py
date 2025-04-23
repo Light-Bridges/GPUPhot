@@ -1811,10 +1811,9 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
 @nvtx.annotate('batch_aperture_photometry', category='phot.photo_gpu')
 def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
                               positions: cp.ndarray, radii: cp.ndarray, **kwargs) -> tuple[
-    cp.ndarray, cp.ndarray | None, cp.ndarray]:
+    cp.ndarray | None, cp.ndarray | None, cp.ndarray]:
     """
-    Perform aperture photometry with aggressive memory management.
-    Calculates kernel FFT inside the loop, frees memory actively.
+    Perform aperture photometry with delayed output allocation and aggressive memory management (v3).
 
     :param img: Image data (GPU). Can be 2D (h, w) or 3D (n_images, h, w).
     :type img: cupy.ndarray
@@ -1827,9 +1826,10 @@ def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
     :type radii: cupy.ndarray
     :param kwargs: Potential memory thresholds: 'mem_warning_ratio' (default 0.7), 'mem_critical_ratio' (default 0.85)
     :return: Tuple containing flux, background flux (or None), and aperture area per radius.
-    :rtype: tuple(cupy.ndarray, cupy.ndarray or None, cupy.ndarray)
+             Flux/BackFlux can be None if an OOM error occurred during processing or stacking.
+    :rtype: tuple(cupy.ndarray | None, cupy.ndarray | None, cupy.ndarray)
     """
-    nvtx_range = nvtx.start_range('batch_aperture_photometry_mem_optimized', category='phot.photo_gpu', color='red')
+    nvtx_range = nvtx.start_range('batch_aperture_photometry_mem_optimized_v3', category='phot.photo_gpu', color='blue') # Changed color
     mempool = cp.get_default_memory_pool()
 
     # --- Configuration ---
@@ -1837,277 +1837,296 @@ def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
     mem_critical_ratio = kwargs.get('mem_critical_ratio', 0.85)
     free_inside_loop_level = kwargs.get('free_inside_loop_level', 1)
 
-    # --- Validations and Area Calculation (igual que antes) ---
+    # --- Validations and Area Calculation ---
     if radii.size == 0:
         raise ValueError("Radii array cannot be empty.")
-    if positions.size == 0:
-        logger.warning("Positions array is empty. Returning empty results.")
-        max_radius_areas = cp.max(radii).item() if radii.size > 0 else 1
-        kernel_size_areas = int(2 * np.ceil(max_radius_areas) + 1)
-        if kernel_size_areas % 2 == 0: kernel_size_areas += 1
-        areas = cp.zeros(len(radii), dtype=cp.float64)
-        for i, r in enumerate(radii):
-            try:
-                _, area_val = get_aper_kernel(r.item(), size=kernel_size_areas)
-                areas[i] = area_val
-            except Exception as e:
-                logger.error(f"Error calculating area for radius {r.item()}: {e}")
-                areas[i] = cp.nan
-        n_images_out = img.shape[0] if img.ndim == 3 else 1
-        out_shape = (n_images_out, len(radii), 0) if img.ndim == 3 else (len(radii), 0)
-        return cp.zeros(out_shape, dtype=cp.float64), \
-            cp.zeros(out_shape, dtype=cp.float64) if back is not None else None, \
-            areas
 
+    # Calculate areas first (less memory intensive)
     area_calc_range = nvtx.start_range('area_kernel_params', category='phot.setup')
-    max_radius = cp.max(radii).item()
-    kernel_size = int(2 * np.ceil(max_radius) + 1)
-    if kernel_size % 2 == 0: kernel_size += 1
-
     areas = cp.zeros(len(radii), dtype=cp.float64)
-    for i, r in enumerate(radii):
-        try:
+    try:
+        max_radius = cp.max(radii).item()
+        kernel_size = int(2 * np.ceil(max_radius) + 1)
+        if kernel_size % 2 == 0: kernel_size += 1
+        for i, r in enumerate(radii):
             temp_kernel, areas[i] = get_aper_kernel(r.item(), size=kernel_size)
             del temp_kernel
-        except Exception as e:
-            logger.error(f"Error calculating area for radius {r.item()}: {e}")
-            areas[i] = cp.nan
+    except Exception as e:
+        logger.error(f"Error calculating areas: {e}", exc_info=True)
+        # Decide how to handle: raise error or return NaNs? Let's fill areas with NaN
+        areas.fill(cp.nan)
+        # Maybe return early if areas are essential and failed? For now, continue.
     nvtx.end_range(area_calc_range)
 
+    # Handle empty positions *after* area calculation
+    if positions.size == 0:
+        logger.warning("Positions array is empty. Returning empty flux results.")
+        n_radii_out = len(radii)
+        n_images_out = img.shape[0] if img.ndim == 3 else 1
+        # Determine output shape for empty flux arrays
+        if img.ndim == 3:
+             out_shape = (n_images_out, n_radii_out, 0)
+        else:
+             out_shape = (n_radii_out, 0)
+        nvtx.end_range(nvtx_range)
+        return cp.zeros(out_shape, dtype=cp.float64), \
+               cp.zeros(out_shape, dtype=cp.float64) if back is not None else None, \
+               areas
+
+    # --- FFT Setup ---
     image_shape_orig = img.shape
     is_3d = img.ndim == 3
     n_images = image_shape_orig[0] if is_3d else 1
     img_h = image_shape_orig[1] if is_3d else image_shape_orig[0]
     img_w = image_shape_orig[2] if is_3d else image_shape_orig[1]
+    n_radii = len(radii)
+    n_positions = len(positions)
+
+    # Recalculate kernel size if max_radius failed earlier
+    try:
+        max_radius = cp.nanmax(radii).item() # Use nanmax just in case
+        kernel_size = int(2 * np.ceil(max_radius) + 1)
+        if kernel_size % 2 == 0: kernel_size += 1
+    except ValueError: # Handles case where radii might be all NaN if area calc failed badly
+         logger.error("Could not determine valid kernel size from radii. Aborting.")
+         nvtx.end_range(nvtx_range)
+         # Return None for flux/back_flux to signal failure clearly
+         return None, None, areas
 
     padding = (kernel_size - 1) // 2
-    fft_shape = fill_image((img_h + 2 * padding, img_w + 2 * padding))
+    try:
+         fft_shape = fill_image((img_h + 2 * padding, img_w + 2 * padding))
+    except Exception as e:
+        logger.error(f"Error calculating FFT shape: {e}", exc_info=True)
+        nvtx.end_range(nvtx_range)
+        return None, None, areas # Abort if FFT shape calculation fails
+
     logger.info(
         f"Using FFT shape: {fft_shape} for image shape {img_h, img_w} and max radius {max_radius} (kernel size {kernel_size})")
 
-    # --- Pre-allocate output arrays (igual que antes) ---
-    alloc_out_range = nvtx.start_range('allocate_outputs', category='phot.setup')
-    n_radii = len(radii)
-    n_positions = len(positions)
-    flux_shape = (n_images, n_radii, n_positions) if is_3d else (n_radii, n_positions)
-    flux = cp.zeros(flux_shape, dtype=cp.float64)
-    back_flux = cp.zeros(flux_shape, dtype=cp.float64) if back is not None else None
-    nvtx.end_range(alloc_out_range)
-
-    # --- FFT and Convolution Loop ---
-    fft_loop_range = nvtx.start_range('fft_convolution_loop', category='phot.photo_gpu')
+    # --- DELAYED ALLOCATION: Use lists to store results per plane ---
+    all_plane_flux = [] if is_3d else None
+    all_plane_back_flux = [] if is_3d and back is not None else None
 
     # --- Function to process a single 2D image (or image plane) ---
     def process_plane(plane_idx, img_plane, back_plane):
         plane_nvtx = nvtx.start_range(f'process_plane_{plane_idx}', category='phot.plane')
         logger.debug(f"Processing plane {plane_idx}")
 
-        # --- Check memory *before* large FFT allocations ---
+        # Check memory *before* FFTs
         mem_pressure = adaptive_memory_management(mempool, mem_warning_ratio, mem_critical_ratio)
-        if mem_pressure >= 2:  # Critical before starting
-            logger.error(
-                f"Critical memory pressure ({mem_pressure}) before processing plane {plane_idx}. Aborting plane.")
+        if mem_pressure >= 2:
+            logger.error(f"Critical memory pressure ({mem_pressure}) before FFTing plane {plane_idx}. Aborting plane.")
             raise MemoryError(f"Insufficient memory before FFTing plane {plane_idx}")
 
-        img_c = None
-        back_c = None
+        img_c, back_c = None, None
+        plane_flux = None # Initialize to None
         try:
+            # Perform FFTs
             fft_img_range = nvtx.start_range(f'fft_plane_{plane_idx}', category='phot.fft')
             img_c = cp.fft.rfft2(img_plane, s=fft_shape)
             if back_plane is not None:
                 back_c = cp.fft.rfft2(back_plane, s=fft_shape)
             nvtx.end_range(fft_img_range)
             logger.debug(f"FFT calculation successful for plane {plane_idx}")
-        except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e:
-            logger.error(f"OOM Error during FFT for plane {plane_idx}: {e}", exc_info=True)
-            del img_c, back_c
-            mempool.free_all_blocks()
-            gc.collect()
-            nvtx.end_range(fft_img_range)  # Ensure range is ended on error
-            nvtx.end_range(plane_nvtx)
-            raise e  # Re-raise the error
 
-        plane_flux = cp.zeros((n_radii, n_positions), dtype=cp.float64)
-        plane_back_flux = cp.zeros((n_radii, n_positions), dtype=cp.float64) if back_plane is not None else None
+            # Allocate output for *this plane* (smaller)
+            plane_flux = cp.zeros((n_radii, n_positions), dtype=cp.float64)
+            plane_back_flux = cp.zeros((n_radii, n_positions), dtype=cp.float64) if back_plane is not None else None
 
-        # --- Loop over Radii ---
-        for i, r in enumerate(radii):
-            radius_nvtx = nvtx.start_range(f'radius_{r.item():.2f}', category='phot.radius_iter')
-            logger.debug(f"Plane {plane_idx}, Radius {i + 1}/{n_radii} (r={r.item()})")
-
-            kernel = None
-            kernel_c = None
-            try:
-                kernel_range = nvtx.start_range(f'kernel_fft_r={r.item():.2f}', category='phot.conv')
-                kernel, _ = get_aper_kernel(r.item(), size=kernel_size)
-                kernel_c = cp.conj(cp.fft.rfft2(kernel, s=fft_shape))
-                del kernel
-                nvtx.end_range(kernel_range)
-            except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e:
-                logger.error(f"OOM Error during Kernel FFT for r={r.item()}: {e}", exc_info=True)
-                del kernel, kernel_c
-                mempool.free_all_blocks()
-                gc.collect()
-                nvtx.end_range(kernel_range)  # Ensure range is ended
-                nvtx.end_range(radius_nvtx)
-                raise e
-
-            # --- Convolution (Image) ---
-            convolved_img = None
-            convolved_img_rolled = None
-            convolved_img_cropped = None
-            prod_img = None  # Define before try block
-            try:
-                conv_range = nvtx.start_range(f'ifft_roll_index_img_r={r.item():.2f}', category='phot.conv')
-                prod_img = img_c * kernel_c
-                convolved_img = cp.fft.irfft2(prod_img, s=fft_shape)
-                del prod_img
-                prod_img = None  # Clear reference
-
-                convolved_img_rolled = cp.roll(convolved_img, shift=[padding, padding], axis=[0, 1])
-                del convolved_img
-
-                convolved_img_cropped = convolved_img_rolled[:img_h, :img_w]
-                del convolved_img_rolled
-
-                plane_flux[i, :] = convolved_img_cropped[positions[:, 0], positions[:, 1]]
-                del convolved_img_cropped
-                nvtx.end_range(conv_range)
-            except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e:
-                logger.error(f"OOM Error during Image Convolution/Indexing for r={r.item()}: {e}", exc_info=True)
-                del prod_img, convolved_img, convolved_img_rolled, convolved_img_cropped
-                del kernel_c  # Also free the kernel FFT for this radius
-                mempool.free_all_blocks()
-                gc.collect()
-                if 'conv_range' in locals() and conv_range.is_active():  # Check if range was started
-                    nvtx.end_range(conv_range)
-                nvtx.end_range(radius_nvtx)
-                raise e
-
-            # --- Convolution (Background) ---
-            if back_c is not None:
-                convolved_back = None
-                convolved_back_rolled = None
-                convolved_back_cropped = None
-                prod_back = None  # Define before try block
+            # Loop over radii (aggressive memory management inside)
+            for i, r in enumerate(radii):
+                radius_nvtx = nvtx.start_range(f'radius_{r.item():.2f}', category='phot.radius_iter')
+                # --- Kernel FFT ---
+                kernel, kernel_c = None, None
                 try:
-                    conv_back_range = nvtx.start_range(f'ifft_roll_index_back_r={r.item():.2f}', category='phot.conv')
-                    prod_back = back_c * kernel_c
-                    convolved_back = cp.fft.irfft2(prod_back, s=fft_shape)
-                    del prod_back
-                    prod_back = None  # Clear reference
-
-                    convolved_back_rolled = cp.roll(convolved_back, shift=[padding, padding], axis=[0, 1])
-                    del convolved_back
-
-                    convolved_back_cropped = convolved_back_rolled[:img_h, :img_w]
-                    del convolved_back_rolled
-
-                    plane_back_flux[i, :] = convolved_back_cropped[positions[:, 0], positions[:, 1]]
-                    del convolved_back_cropped
-                    nvtx.end_range(conv_back_range)
-                except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e:
-                    logger.error(f"OOM Error during Background Convolution/Indexing for r={r.item()}: {e}",
-                                 exc_info=True)
-                    del prod_back, convolved_back, convolved_back_rolled, convolved_back_cropped
-                    del kernel_c  # Free kernel FFT
-                    mempool.free_all_blocks()
-                    gc.collect()
-                    if 'conv_back_range' in locals() and conv_back_range.is_active():  # Check if range was started
-                        nvtx.end_range(conv_back_range)
+                    kernel_range = nvtx.start_range(f'kernel_fft_r={r.item():.2f}', category='phot.conv')
+                    kernel, _ = get_aper_kernel(r.item(), size=kernel_size)
+                    kernel_c = cp.conj(cp.fft.rfft2(kernel, s=fft_shape))
+                    del kernel
+                    nvtx.end_range(kernel_range)
+                except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e_fft:
+                    logger.error(f"OOM Error during Kernel FFT for r={r.item()}: {e_fft}", exc_info=True)
+                    del kernel, kernel_c; mempool.free_all_blocks(); gc.collect()
+                    if 'kernel_range' in locals() and kernel_range.is_active(): nvtx.end_range(kernel_range)
                     nvtx.end_range(radius_nvtx)
-                    raise e
+                    raise e_fft # Propagate error
 
-            # --- Cleanup for this Radius ---
-            del kernel_c
-            mem_pressure_intra_loop = adaptive_memory_management(mempool, mem_warning_ratio, mem_critical_ratio)
-            # (adaptive_memory_management already calls free_all_blocks if needed)
-            # No extra calls needed here unless policy changes
+                # --- Convolutions & Indexing (Image) ---
+                # (Wrap each major step in try/except for OOM, similar to previous version)
+                prod_img, convolved_img, convolved_img_rolled, convolved_img_cropped = None, None, None, None
+                try:
+                    conv_range = nvtx.start_range(f'ifft_roll_index_img_r={r.item():.2f}', category='phot.conv')
+                    prod_img = img_c * kernel_c
+                    convolved_img = cp.fft.irfft2(prod_img, s=fft_shape)
+                    del prod_img; prod_img = None
 
-            nvtx.end_range(radius_nvtx)
-            # --- End of Radius Iteration ---
+                    convolved_img_rolled = cp.roll(convolved_img, shift=[padding, padding], axis=[0, 1])
+                    del convolved_img
 
-        # --- Cleanup after processing all radii for the plane ---
-        logger.debug(f"Finished all radii for plane {plane_idx}. Cleaning up plane FFTs.")
-        del img_c, back_c
-        mempool.free_all_blocks()
-        gc.collect()
+                    convolved_img_cropped = convolved_img_rolled[:img_h, :img_w]
+                    del convolved_img_rolled
 
-        nvtx.end_range(plane_nvtx)
-        return plane_flux, plane_back_flux
-        # --- End of process_plane ---
+                    plane_flux[i, :] = convolved_img_cropped[positions[:, 0], positions[:, 1]]
+                    del convolved_img_cropped
+                    nvtx.end_range(conv_range)
+                except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e_conv_img:
+                    logger.error(f"OOM Error during Image Conv/Index r={r.item()}: {e_conv_img}", exc_info=True)
+                    del prod_img, convolved_img, convolved_img_rolled, convolved_img_cropped, kernel_c
+                    mempool.free_all_blocks(); gc.collect()
+                    if 'conv_range' in locals() and conv_range.is_active(): nvtx.end_range(conv_range)
+                    nvtx.end_range(radius_nvtx)
+                    raise e_conv_img
 
-    # --- Main Processing Loop (3D or 2D) ---
+                # --- Convolutions & Indexing (Background) ---
+                if back_c is not None:
+                    prod_back, convolved_back, convolved_back_rolled, convolved_back_cropped = None, None, None, None
+                    try:
+                        conv_back_range = nvtx.start_range(f'ifft_roll_index_back_r={r.item():.2f}', category='phot.conv')
+                        prod_back = back_c * kernel_c
+                        convolved_back = cp.fft.irfft2(prod_back, s=fft_shape)
+                        del prod_back; prod_back = None
+
+                        convolved_back_rolled = cp.roll(convolved_back, shift=[padding, padding], axis=[0, 1])
+                        del convolved_back
+
+                        convolved_back_cropped = convolved_back_rolled[:img_h, :img_w]
+                        del convolved_back_rolled
+
+                        plane_back_flux[i, :] = convolved_back_cropped[positions[:, 0], positions[:, 1]]
+                        del convolved_back_cropped
+                        nvtx.end_range(conv_back_range)
+                    except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e_conv_back:
+                        logger.error(f"OOM Error during Back Conv/Index r={r.item()}: {e_conv_back}", exc_info=True)
+                        del prod_back, convolved_back, convolved_back_rolled, convolved_back_cropped, kernel_c
+                        mempool.free_all_blocks(); gc.collect()
+                        if 'conv_back_range' in locals() and conv_back_range.is_active(): nvtx.end_range(conv_back_range)
+                        nvtx.end_range(radius_nvtx)
+                        raise e_conv_back
+
+                # --- Radius Cleanup ---
+                del kernel_c
+                # Call adaptive management *inside* the loop if configured
+                mem_pressure_intra_loop = adaptive_memory_management(mempool, mem_warning_ratio, mem_critical_ratio)
+                # Adaptive management already calls free_all_blocks if pressure detected
+
+                nvtx.end_range(radius_nvtx)
+            # --- End Radii Loop ---
+
+            # --- Plane Cleanup ---
+            logger.debug(f"Finished radii for plane {plane_idx}. Cleaning up.")
+            del img_c, back_c
+            mempool.free_all_blocks() # Cleanup after successful plane
+            gc.collect()
+            nvtx.end_range(plane_nvtx)
+            return plane_flux, plane_back_flux
+
+        except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e_plane:
+            # Catch errors originating from within the plane processing
+            logger.error(f"OOM Error processing plane {plane_idx}: {e_plane}", exc_info=True)
+            # Clean up anything allocated in this scope
+            del img_c, back_c, plane_flux # plane_back_flux might not exist
+            # Ensure NVTX ranges are closed
+            if 'fft_img_range' in locals() and fft_img_range.is_active(): nvtx.end_range(fft_img_range)
+            if 'radius_nvtx' in locals() and radius_nvtx.is_active(): nvtx.end_range(radius_nvtx)
+            if 'kernel_range' in locals() and kernel_range.is_active(): nvtx.end_range(kernel_range)
+            if 'conv_range' in locals() and conv_range.is_active(): nvtx.end_range(conv_range)
+            if 'conv_back_range' in locals() and conv_back_range.is_active(): nvtx.end_range(conv_back_range)
+            nvtx.end_range(plane_nvtx)
+            # Propagate the error to the main loop
+            raise e_plane
+        except Exception as e_gen_plane:
+             logger.error(f"Unexpected error processing plane {plane_idx}: {e_gen_plane}", exc_info=True)
+             del img_c, back_c, plane_flux
+             # Ensure NVTX ranges are closed (similar cleanup as above)
+             # ...
+             nvtx.end_range(plane_nvtx)
+             raise e_gen_plane
+
+    # --- Main Processing Loop ---
+    fft_loop_range = nvtx.start_range('fft_convolution_loop', category='phot.photo_gpu')
+    final_flux = None
+    final_back_flux = None
+    success = True # Flag to track overall success
+
     if is_3d:
         for c in range(n_images):
             logger.info(f"Starting processing for image plane {c + 1}/{n_images}")
             img_plane = img[c]
             back_plane = back[c] if back is not None else None
             try:
-                plane_flux_res, plane_back_flux_res = process_plane(c, img_plane, back_plane)
-                flux[c, :, :] = plane_flux_res
-                if back_flux is not None and plane_back_flux_res is not None:
-                    back_flux[c, :, :] = plane_back_flux_res
-                del plane_flux_res, plane_back_flux_res
+                 plane_flux_res, plane_back_flux_res = process_plane(c, img_plane, back_plane)
+                 all_plane_flux.append(plane_flux_res)
+                 if all_plane_back_flux is not None:
+                      all_plane_back_flux.append(plane_back_flux_res)
+                 # Explicitly delete plane results after appending
+                 del plane_flux_res, plane_back_flux_res
 
             except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e:
-                logger.critical(f"MemoryError processing plane {c}. Aborting further processing.", exc_info=True)
-                # Fill remaining parts of flux/back_flux with NaN
-                flux[c:, :, :] = cp.nan
-                if back_flux is not None:
-                    back_flux[c:, :, :] = cp.nan
-                # Return partial results
-                nvtx.end_range(fft_loop_range)  # Ensure ranges are closed
-                nvtx.end_range(nvtx_range)
-                logger.warning("Returning partially filled results due to memory error.")
-                return flux, back_flux, areas
+                 logger.critical(f"MemoryError processing plane {c}. Aborting loop.", exc_info=True)
+                 success = False
+                 # Clean up lists from potentially partial results
+                 del all_plane_flux, all_plane_back_flux
+                 all_plane_flux, all_plane_back_flux = [], [] # Reset lists
+                 mempool.free_all_blocks(); gc.collect()
+                 break # Exit the loop
 
             except Exception as e:
-                logger.critical(f"Unexpected error processing plane {c}: {e}", exc_info=True)
-                flux[c:, :, :] = cp.nan
-                if back_flux is not None:
-                    back_flux[c:, :, :] = cp.nan
-                nvtx.end_range(fft_loop_range)  # Ensure ranges are closed
-                nvtx.end_range(nvtx_range)
-                logger.error("Returning partially filled results due to unexpected error.")
-                # Optionally re-raise here depending on desired behavior for non-memory errors
-                # raise e
-                return flux, back_flux, areas
+                 logger.critical(f"Unexpected error processing plane {c}: {e}", exc_info=True)
+                 success = False
+                 del all_plane_flux, all_plane_back_flux
+                 all_plane_flux, all_plane_back_flux = [], []
+                 mempool.free_all_blocks(); gc.collect()
+                 break # Exit the loop
 
-    else:
-        # Process the single 2D image
+        # Stack results *after* the loop if successful
+        if success and all_plane_flux:
+            stack_range = nvtx.start_range('stack_results', category='phot.postproc')
+            logger.info(f"Stacking results from {len(all_plane_flux)} planes...")
+            try:
+                final_flux = cp.stack(all_plane_flux, axis=0)
+                if all_plane_back_flux:
+                     final_back_flux = cp.stack(all_plane_back_flux, axis=0)
+                logger.info("Stacking successful.")
+            except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e_stack:
+                 logger.error(f"OOM Error during final stacking: {e_stack}", exc_info=True)
+                 success = False # Mark as failed if stack fails
+                 final_flux, final_back_flux = None, None # Set results to None
+            except Exception as e_stack_gen:
+                 logger.error(f"Unexpected error during stacking: {e_stack_gen}", exc_info=True)
+                 success = False
+                 final_flux, final_back_flux = None, None
+            finally:
+                 # Clean up the list memory regardless of stack success
+                 del all_plane_flux, all_plane_back_flux
+                 mempool.free_all_blocks(); gc.collect()
+                 nvtx.end_range(stack_range)
+        elif not success: # If loop failed
+             logger.warning("Processing loop failed, returning None for flux arrays.")
+             final_flux, final_back_flux = None, None
+        else: # If successful but no planes processed (n_images=0?) or list empty
+             logger.warning("No planes processed or list empty after loop, returning None.")
+             final_flux, final_back_flux = None, None
+
+
+    else: # Case 2D
         try:
-            plane_flux_res, plane_back_flux_res = process_plane(0, img, back)
-            flux = plane_flux_res
-            back_flux = plane_back_flux_res
+            # process_plane directly returns the result arrays
+            final_flux, final_back_flux = process_plane(0, img, back)
+            success = True
         except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e:
-            logger.critical(f"MemoryError processing the 2D image. Aborting.", exc_info=True)
-            flux = cp.full(flux_shape, cp.nan, dtype=cp.float64)
-            if back is not None:
-                back_flux = cp.full(flux_shape, cp.nan, dtype=cp.float64)
-            else:
-                back_flux = None
-            nvtx.end_range(fft_loop_range)  # Ensure ranges are closed
-            nvtx.end_range(nvtx_range)
-            logger.warning("Returning NaN results due to memory error.")
-            return flux, back_flux, areas
+            logger.critical(f"MemoryError processing the 2D image.", exc_info=True)
+            final_flux, final_back_flux = None, None # Return None on failure
+            success = False
         except Exception as e:
             logger.critical(f"Unexpected error processing 2D image: {e}", exc_info=True)
-            flux = cp.full(flux_shape, cp.nan, dtype=cp.float64)
-            if back is not None:
-                back_flux = cp.full(flux_shape, cp.nan, dtype=cp.float64)
-            else:
-                back_flux = None
-            nvtx.end_range(fft_loop_range)  # Ensure ranges are closed
-            nvtx.end_range(nvtx_range)
-            logger.error("Returning NaN results due to unexpected error.")
-            # raise e # Optionally re-raise
-            return flux, back_flux, areas
+            final_flux, final_back_flux = None, None
+            success = False
 
     nvtx.end_range(fft_loop_range)
     # --- End FFT Loop ---
 
-    # Final cleanup (igual que antes)
+    # Final cleanup
     final_cleanup_range = nvtx.start_range('final_cleanup', category='phot.cleanup')
     logger.debug("Performing final memory cleanup.")
     mempool.free_all_blocks()
@@ -2115,9 +2134,13 @@ def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
     nvtx.end_range(final_cleanup_range)
 
     nvtx.end_range(nvtx_range)
-    logger.info("Batch aperture photometry completed successfully.")
-    return flux, back_flux, areas
+    if success:
+        logger.info("Batch aperture photometry completed successfully.")
+    else:
+        logger.error("Batch aperture photometry failed due to errors.")
 
+    # Return final results (could be None if failed)
+    return final_flux, final_back_flux, areas
 
 # @contextmanager
 # @nvtx.annotate('gpu_array_manager',category='phot.photo_gpu')
