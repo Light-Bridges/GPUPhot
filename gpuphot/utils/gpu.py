@@ -1,5 +1,6 @@
 import gc
 import time
+from typing import Dict, Optional
 
 import cupy as cp
 import nvtx
@@ -7,6 +8,14 @@ import nvtx
 from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
+
+# Define constants for clarity and maintainability
+SAFE_LEVEL = 0
+WARNING_LEVEL = 1
+CRITICAL_LEVEL = 2
+
+# Define default thresholds in a single place
+DEFAULT_THRESHOLDS = {'warning': 0.75, 'critical': 0.85}
 
 
 @nvtx.annotate('human_readable_size', category='utils.gpu')
@@ -162,51 +171,134 @@ def maybe_free_arrays(arrays, mempool, threshold=0.2):
 
 
 @nvtx.annotate('get_memory_usage_ratio', category='utils.gpu')
-def get_memory_usage_ratio(mempool):
+def get_memory_usage_ratio(mempool: cp.cuda.MemoryPool) -> float:
     """Returns the ratio of used GPU memory to total GPU memory."""
     try:
-        return mempool.used_bytes() / mempool.total_bytes()
-    except ZeroDivisionError:
-        return 0.0
+        used = mempool.used_bytes()
+        total = mempool.total_bytes()
+        # Handle case where total_bytes might be 0 initially or after reset
+        return used / total if total > 0 else 0.0
+    except Exception as e:
+        logger.error(f"Error getting memory usage ratio: {e}", exc_info=True)
+        # Return a value indicating potential issue, e.g., 1.0 to trigger cleanup
+        return 1.0
 
 
 @nvtx.annotate('adaptive_memory_management', category='utils.gpu')
-def adaptive_memory_management(mempool, thresholds=None,
-                               force_free: bool = False):
+def adaptive_memory_management(
+        mempool: cp.cuda.MemoryPool,
+        thresholds: Optional[Dict[str, float]] = None,
+        force_free: bool = False
+) -> int:
     """
-    Checks memory usage against thresholds.
+    Checks GPU memory usage against thresholds and potentially frees memory.
 
-    :param mempool: CuPy memory pool.
-    :param thresholds: Dict with keys 'safe', 'warning', 'critical' and ratio values.
-    :param force_free: If True, always call free_all_blocks.
-    :return: Cleanup level (0: safe, 1: warning, 2: critical).
+    Determines the memory pressure level based on the ratio of used bytes to
+    total bytes in the provided CuPy memory pool. If the 'critical' threshold
+    is exceeded or `force_free` is True, it attempts to free all blocks
+    in the memory pool, runs garbage collection, and synchronizes the default stream.
+
+    Args:
+        mempool: The CuPy memory pool to monitor (e.g., cp.get_default_memory_pool()).
+        thresholds: A dictionary with optional keys 'warning' and 'critical', mapping
+                    to memory usage ratios (0.0 to 1.0). If None or keys are missing,
+                    defaults defined in DEFAULT_THRESHOLDS are used.
+                    Values must be between 0.0 and 1.0, and warning < critical.
+        force_free: If True, always trigger the memory freeing process,
+                    regardless of the current usage ratio.
+
+    Returns:
+        An integer representing the determined memory pressure level:
+        - SAFE_LEVEL (0): Usage is below the 'warning' threshold.
+        - WARNING_LEVEL (1): Usage is at or above 'warning' but below 'critical'.
+        - CRITICAL_LEVEL (2): Usage is at or above the 'critical' threshold.
+
+    Raises:
+        ValueError: If the provided threshold values are invalid (e.g., outside [0,1]
+                    or warning >= critical).
     """
-    if thresholds is None:
-        thresholds = {'safe': 0.6, 'warning': 0.75, 'critical': 0.85}
+    # Establish effective thresholds, validating inputs
+    effective_thresholds = DEFAULT_THRESHOLDS.copy()
+    if thresholds is not None:
+        for key, value in thresholds.items():
+            if key in effective_thresholds:
+                if not 0.0 <= value <= 1.0:
+                    raise ValueError(
+                        f"Invalid threshold value for '{key}': {value}. Must be between 0.0 and 1.0."
+                    )
+                effective_thresholds[key] = value
+            else:
+                logger.warning(f"Ignoring unknown threshold key: '{key}'")
+        # Validate relationship between thresholds after merging
+        if effective_thresholds['warning'] >= effective_thresholds['critical']:
+            raise ValueError(
+                f"Invalid thresholds: 'warning' ({effective_thresholds['warning']:.2f}) "
+                f"must be less than 'critical' ({effective_thresholds['critical']:.2f})."
+            )
 
-    ratio = get_memory_usage_ratio(mempool)
-    level = 0
-    if ratio >= thresholds['critical']:
-        level = 2
-    elif ratio >= thresholds['warning']:
-        level = 1
+    # Get current memory usage ratio
+    try:
+        ratio = get_memory_usage_ratio(mempool)
+    except Exception:
+        # Error already logged in get_memory_usage_ratio
+        # Assume critical state if ratio cannot be determined
+        ratio = 1.0  # Force critical level
 
-    logger.debug(f"AMM Memory Check: Ratio={ratio:.3f} (Allocated/Total), Determined Level={level}")
+    # Determine memory pressure level
+    level = SAFE_LEVEL
+    if ratio >= effective_thresholds['critical']:
+        level = CRITICAL_LEVEL
+    elif ratio >= effective_thresholds['warning']:
+        level = WARNING_LEVEL
 
-    if force_free or level >= 2:
-        if level >= 2:
-            logger.warning(f"AMM CRITICAL memory pressure (Ratio={ratio:.3f}). Forcing free_all_blocks.")
-        else:
-            logger.info(f"AMM Forcing free_all_blocks (force_free=True).")
+    log_prefix = "AMM"  # Adaptive Memory Management prefix for logs
+    logger.debug(
+        f"{log_prefix} Check: Ratio={ratio:.3f}, Level={level} "
+        f"(Thresholds: W={effective_thresholds['warning']:.2f}, C={effective_thresholds['critical']:.2f})"
+    )
 
-        start_free = time.time()
-        mempool.free_all_blocks()
-        gc.collect()
-        end_free = time.time()
-        ratio_after = get_memory_usage_ratio(mempool)
-        logger.info(
-            f"AMM free_all_blocks took {end_free - start_free:.2f}s. Memory after: Ratio={ratio_after:.3f}")
-    # elif level == 1:
-    #     logger.warning(f"{log_prefix} WARNING memory pressure (Ratio={ratio:.3f}). Consider targeted cleanup/offload.")
+    # Log specific warnings if threshold is breached but not critical yet
+    if level == WARNING_LEVEL:
+        logger.warning(
+            f"{log_prefix} WARNING memory pressure detected (Ratio={ratio:.3f}). "
+            f"Usage exceeds threshold {effective_thresholds['warning']:.2f}."
+        )
+
+    # Decide whether to perform cleanup
+    perform_cleanup = force_free or level >= CRITICAL_LEVEL
+
+    if perform_cleanup:
+        if level >= CRITICAL_LEVEL:
+            logger.warning(
+                f"{log_prefix} CRITICAL memory pressure (Ratio={ratio:.3f} >= "
+                f"{effective_thresholds['critical']:.2f}). Forcing free_all_blocks."
+            )
+        else:  # force_free must be True
+            logger.info(f"{log_prefix} Forcing free_all_blocks (force_free=True). Current Ratio={ratio:.3f}.")
+
+        try:
+            start_time = time.monotonic()
+            # Free CuPy memory blocks
+            mempool.free_all_blocks()
+            # Run Python garbage collector to release references
+            gc.collect()
+            # Ensure GPU operations related to freeing are complete before proceeding
+            # or measuring memory again. This helps get a more accurate "after" state.
+            cp.cuda.Stream.null.synchronize()
+            end_time = time.monotonic()
+
+            # Measure and log memory state *after* cleanup
+            ratio_after = get_memory_usage_ratio(mempool)
+            duration = end_time - start_time
+            logger.info(
+                f"{log_prefix} free_all_blocks completed in {duration:.3f}s. "
+                f"Memory ratio after cleanup: {ratio_after:.3f}"
+            )
+        except Exception as e:
+            logger.error(f"{log_prefix} Error during memory cleanup: {e}", exc_info=True)
+            # Even if cleanup failed, the level remains critical or was forced
+            # Return the determined level, but the state might be uncertain.
+            # Consider re-raising if cleanup failure is fatal for the application.
+            # raise e # Optional: re-raise the exception
 
     return level

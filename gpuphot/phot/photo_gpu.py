@@ -2032,8 +2032,8 @@ def batch_aperture_photometry(
 
             # --- Adaptive Memory Check within Plane ---
             mem_level = adaptive_memory_management(mempool)
-            if mem_level >= 2:
-                raise MemoryError(f"Insufficient memory before FFTing plane {plane_idx}")
+            # if mem_level >= 2:
+            #     raise MemoryError(f"Insufficient memory before FFTing plane {plane_idx}")
 
             # Perform FFTs (on subtracted image and original background)
             fft_img_range = nvtx.start_range(f'fft_plane_{plane_idx}', category='phot.fft')
