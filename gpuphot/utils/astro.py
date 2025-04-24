@@ -7,6 +7,7 @@ import tempfile
 import threading
 import time
 from datetime import datetime
+from functools import lru_cache
 
 import astrometry
 import ephem
@@ -962,6 +963,15 @@ def radec_to_moon_sun(ra, dec, site_latitude, site_longitude, site_elevation, da
         sun_az, 2)
 
 
+@lru_cache(maxsize=32)
+@nvtx.annotate('get_observer_and_frame', category='utils.astro')
+def get_observer_and_frame(SITELAT, SITELON, SITEELEV, Date):
+    """Create and cache location and AltAz frame objects"""
+    Observatory = EarthLocation(lat=SITELAT * u.deg, lon=SITELON * u.deg, height=SITEELEV * u.m)
+    aa = AltAz(location=Observatory, obstime=Date)
+    return Observatory, aa
+
+
 @nvtx.annotate('radec_to_altaz', category='utils.astro')
 def radec_to_altaz(RA, DEC, SITELAT, SITELON, SITEELEV, Date):
     """
@@ -982,13 +992,20 @@ def radec_to_altaz(RA, DEC, SITELAT, SITELON, SITEELEV, Date):
     :return: Tuple of azimuth, altitude, airmass, and zenith distance.
     :rtype: tuple
     """
-    coords_deg = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs', unit='deg')
-    Observatory = EarthLocation(lat=SITELAT * u.deg, lon=SITELON * u.deg, height=SITEELEV * u.m)
-    aa = AltAz(location=Observatory, obstime=Date)
+    # Get cached objects
+    _, aa = get_observer_and_frame(SITELAT, SITELON, SITEELEV, Date)
+
+    # Create SkyCoord and transform
+    coords_deg = SkyCoord(RA * u.deg, DEC * u.deg, frame='icrs')
     coords_altaz = coords_deg.transform_to(aa)
+
+    # Extract values directly
+    az = coords_altaz.az.deg
+    alt = coords_altaz.alt.deg
     airmass = float(coords_altaz.secz)
-    zen = coords_altaz.zen
-    return round(coords_altaz.az.deg, 6), round(coords_altaz.alt.deg, 6), round(airmass, 6), round(zen.deg, 6)
+    zen = coords_altaz.zen.deg
+
+    return round(az, 6), round(alt, 6), round(airmass, 6), round(zen, 6)
 
 
 @nvtx.annotate('radec_to_gal', category='utils.astro')

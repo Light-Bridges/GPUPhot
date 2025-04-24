@@ -1,11 +1,12 @@
 import gc
-
+import time
 import cupy as cp
 import nvtx
 
 from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
+
 
 @nvtx.annotate('human_readable_size', category='utils.gpu')
 def human_readable_size(bytes_size):
@@ -61,6 +62,7 @@ def force_free_gpu_memory():
 
     # Forzar la limpieza de caché de kernels
     cp.fft.config.get_plan_cache().clear()
+
 
 @nvtx.annotate('use_gpu', category='utils.gpu')
 def use_gpu(gpu_id=0):
@@ -144,6 +146,7 @@ def reset_cupy_allocators():
     # Clear kernel caches
     cp.fft.config.get_plan_cache().clear()
 
+
 @nvtx.annotate('maybe_free_arrays', category='utils.gpu')
 def maybe_free_arrays(arrays, mempool, threshold=0.2):
     """
@@ -156,46 +159,49 @@ def maybe_free_arrays(arrays, mempool, threshold=0.2):
         mempool.free_all_blocks()
         cp.cuda.Stream.null.synchronize()
 
-@nvtx.annotate('adaptive_memory_management', category='utils.gpu')
-def adaptive_memory_management(mempool, threshold_warning=0.6, threshold_critical=0.8):
-    """Retorna nivel de presión: 0 (normal), 1 (advertencia), 2 (crítico)"""
+
+@nvtx.annotate('get_memory_usage_ratio', category='utils.gpu')
+def get_memory_usage_ratio(mempool):
+    """Returns the ratio of used GPU memory to total GPU memory."""
     try:
-        dev = cp.cuda.Device()
-        free_physical, total_physical_mem = dev.mem_info
-        used_mem = mempool.used_bytes() # Memoria usada por el pool de CuPy
+        return mempool.used_bytes() / mempool.total_bytes()
+    except ZeroDivisionError:
+        return 0.0
 
-        if total_physical_mem == 0: return 0
-        memory_usage_ratio = used_mem / total_physical_mem if total_physical_mem > 0 else 0
 
-        action_taken = False
-        level = 0
+@nvtx.annotate('adaptive_memory_management', category='utils.gpu')
+def adaptive_memory_management(mempool, thresholds: dict, log_prefix: str = "", force_free: bool = False):
+    """
+    Checks memory usage against thresholds.
 
-        if memory_usage_ratio > threshold_critical:
-            logger.warning(f"Memory Pressure CRITICAL: Usage {memory_usage_ratio:.2%} > {threshold_critical:.0%}. "
-                           f"Used: {human_readable_size(used_mem)}, Free Phys: {human_readable_size(free_physical)}. Aggressive cleanup.")
-            mempool.free_all_blocks()
-            gc.collect()
-            # cp.cuda.Stream.null.synchronize() # Evitar sync si no es estrictamente necesario por rendimiento
-            action_taken = True
-            level = 2
-        elif memory_usage_ratio > threshold_warning:
-            logger.info(f"Memory Pressure WARNING: Usage {memory_usage_ratio:.2%} > {threshold_warning:.0%}. "
-                        f"Used: {human_readable_size(used_mem)}, Free Phys: {human_readable_size(free_physical)}. Moderate cleanup.")
-            mempool.free_all_blocks() # Liberar bloques no usados
-            action_taken = True
-            level = 1
+    :param mempool: CuPy memory pool.
+    :param thresholds: Dict with keys 'safe', 'warning', 'critical' and ratio values.
+    :param log_prefix: String to prepend to log messages.
+    :param force_free: If True, always call free_all_blocks.
+    :return: Cleanup level (0: safe, 1: warning, 2: critical).
+    """
+    ratio = get_memory_usage_ratio(mempool)
+    level = 0
+    if ratio >= thresholds['critical']:
+        level = 2
+    elif ratio >= thresholds['warning']:
+        level = 1
 
-        # Log final state after potential cleanup
-        # if action_taken:
-        #    free_after, _ = dev.mem_info
-        #    logger.info(f"Memory state after cleanup: Used={human_readable_size(mempool.used_bytes())}, Free Phys={human_readable_size(free_after)}")
-        # else:
-        #    logger.debug(f"Memory Pressure NORMAL: Usage {memory_usage_ratio:.2%}. ")
+    logger.debug(f"{log_prefix} Memory Check: Ratio={ratio:.3f} (Allocated/Total), Determined Level={level}")
 
-        return level
-    except cp.cuda.runtime.CUDARuntimeError as e:
-        logger.error(f"Error getting CUDA memory info: {e}")
-        return 0
-    except Exception as e:
-         logger.error(f"Unexpected error in adaptive_memory_management: {e}", exc_info=True)
-         return 0
+    if force_free or level >= 2:
+        if level >= 2:
+            logger.warning(f"{log_prefix} CRITICAL memory pressure (Ratio={ratio:.3f}). Forcing free_all_blocks.")
+        else:
+            logger.info(f"{log_prefix} Forcing free_all_blocks (force_free=True).")
+
+        start_free = time.time()
+        mempool.free_all_blocks()
+        gc.collect()
+        end_free = time.time()
+        ratio_after = get_memory_usage_ratio(mempool)
+        logger.info(f"{log_prefix} free_all_blocks took {end_free - start_free:.2f}s. Memory after: Ratio={ratio_after:.3f}")
+    # elif level == 1:
+    #     logger.warning(f"{log_prefix} WARNING memory pressure (Ratio={ratio:.3f}). Consider targeted cleanup/offload.")
+
+    return level
