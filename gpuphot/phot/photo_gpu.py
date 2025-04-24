@@ -800,12 +800,10 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: c
     overall_range = nvtx.start_range('perform_opt_photometry_optimized_gpu_crossmatch', category='phot.photo_gpu',
                                      color='cyan')
 
-    mem_thresholds = {'safe': 0.6, 'warning': 0.75, 'critical': 0.85}
     mempool = cp.get_default_memory_pool()
-    pid_log = f"[PID:{os.getpid()}]"  # Add process ID for clarity in logs if needed
-    logger.info(f"{pid_log} Starting adaptive photometry. Initial GPU Memory: Used={mempool.used_bytes() / 1e9:.2f} GB")
+    logger.info(f"Starting adaptive photometry. Initial GPU Memory: Used={mempool.used_bytes() / 1e9:.2f} GB")
 
-    initial_mem_level = adaptive_memory_management(mempool, mem_thresholds, f"{pid_log} Initial Check:")
+    adaptive_memory_management(mempool)
 
     # BLOQUE 1: Selección de estrellas centrales (GPU mask, CPU limits)
     block1_range = nvtx.start_range('center_stars_selection', category='phot.photo_gpu', color='yellow')
@@ -1882,14 +1880,7 @@ def batch_aperture_photometry(
     """
     nvtx_range = nvtx.start_range('batch_aperture_photometry', category='phot.photo_gpu', color='blue')
     mempool = cp.get_default_memory_pool()
-    pid_log = f"[PID:{os.getpid()}]"  # Optional process ID logging
 
-    # --- Configuration ---
-    mem_thresholds: dict = {
-        'safe': kwargs.get('mem_safe_ratio', 0.6),
-        'warning': kwargs.get('mem_warning_ratio', 0.75),
-        'critical': kwargs.get('mem_critical_ratio', 0.85)
-    }
     # Preferred processing dtype (float32 saves memory)
     processing_dtype = cp.float32
 
@@ -1900,19 +1891,19 @@ def batch_aperture_photometry(
 
     # Validate and transfer Image
     if isinstance(img_ori_input, np.ndarray):
-        logger.info(f"{pid_log} batch_photometry received NumPy image, transferring to GPU.")
+        logger.info(f"batch_photometry received NumPy image, transferring to GPU.")
         transfer_start = time.time()
         try:
             img_gpu = cp.asarray(img_ori_input, dtype=processing_dtype)
             del img_ori_input  # Free CPU memory
         except Exception as e:
-            logger.error(f"{pid_log} Failed to transfer input image to GPU: {e}", exc_info=True)
+            logger.error(f"Failed to transfer input image to GPU: {e}", exc_info=True)
             nvtx.end_range(transfer_nvtx)
             nvtx.end_range(nvtx_range)
             raise MemoryError("Failed to allocate image on GPU") from e
         transfer_end = time.time()
         logger.info(
-            f"{pid_log} Image transfer took {transfer_end - transfer_start:.2f}s. Mem: {mempool.used_bytes() / 1e9:.2f} GB")
+            f"Image transfer took {transfer_end - transfer_start:.2f}s. Mem: {mempool.used_bytes() / 1e9:.2f} GB")
     elif isinstance(img_ori_input, cp.ndarray):
         img_gpu = img_ori_input.astype(processing_dtype, copy=False)  # Ensure correct dtype
     else:
@@ -1923,13 +1914,13 @@ def batch_aperture_photometry(
         if isinstance(back_input, np.ndarray):
             if back_input.shape != img_gpu.shape:  # Check shape against GPU image
                 raise ValueError("Background shape mismatch with image shape.")
-            logger.info(f"{pid_log} batch_photometry received NumPy background, transferring to GPU.")
+            logger.info(f"batch_photometry received NumPy background, transferring to GPU.")
             transfer_start = time.time()
             try:
                 back_gpu = cp.asarray(back_input, dtype=processing_dtype)
                 del back_input  # Free CPU memory
             except Exception as e:
-                logger.error(f"{pid_log} Failed to transfer input background to GPU: {e}", exc_info=True)
+                logger.error(f"Failed to transfer input background to GPU: {e}", exc_info=True)
                 del img_gpu  # Clean up already transferred image
                 mempool.free_all_blocks()
                 gc.collect()
@@ -1938,7 +1929,7 @@ def batch_aperture_photometry(
                 raise MemoryError("Failed to allocate background on GPU") from e
             transfer_end = time.time()
             logger.info(
-                f"{pid_log} Background transfer took {transfer_end - transfer_start:.2f}s. Mem: {mempool.used_bytes() / 1e9:.2f} GB")
+                f"Background transfer took {transfer_end - transfer_start:.2f}s. Mem: {mempool.used_bytes() / 1e9:.2f} GB")
         elif isinstance(back_input, cp.ndarray):
             if back_input.shape != img_gpu.shape:
                 raise ValueError("Background shape mismatch with image shape.")
@@ -1956,7 +1947,7 @@ def batch_aperture_photometry(
     radii = radii.astype(processing_dtype, copy=False)  # Ensure correct dtype
 
     nvtx.end_range(transfer_nvtx)
-    logger.info(f"{pid_log} Inputs transferred/validated. GPU Memory: Used={mempool.used_bytes() / 1e9:.2f} GB")
+    logger.info(f"Inputs transferred/validated. GPU Memory: Used={mempool.used_bytes() / 1e9:.2f} GB")
 
     # --- Validations and Area Calculation ---
     if radii.size == 0:
@@ -2037,10 +2028,10 @@ def batch_aperture_photometry(
 
         try:
             plane_nvtx = nvtx.start_range(f'process_plane_{plane_idx}', category='phot.plane')
-            logger.debug(f"{pid_log} Processing plane {plane_idx}. Mem: {mempool.used_bytes() / 1e9:.2f} GB")
+            logger.debug(f"Processing plane {plane_idx}. Mem: {mempool.used_bytes() / 1e9:.2f} GB")
 
             # --- Adaptive Memory Check within Plane ---
-            mem_level = adaptive_memory_management(mempool, mem_thresholds, f"{pid_log} Plane {plane_idx} Pre-FFT:")
+            mem_level = adaptive_memory_management(mempool)
             if mem_level >= 2:
                 raise MemoryError(f"Insufficient memory before FFTing plane {plane_idx}")
 
@@ -2137,10 +2128,10 @@ def batch_aperture_photometry(
                     del kernel_c
                     kernel_c = None
                     # Optional: check memory within loop if many radii and high pressure
-                    # adaptive_memory_management(mempool, mem_thresholds, f"{pid_log} Plane {plane_idx} Radius {i} Post:")
+                    # adaptive_memory_management(mempool, mem_thresholds, f"Plane {plane_idx} Radius {i} Post:")
 
                 except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e_radius:
-                    logger.error(f"{pid_log} OOM Error during radius r={r.item()} in plane {plane_idx}: {e_radius}",
+                    logger.error(f"OOM Error during radius r={r.item()} in plane {plane_idx}: {e_radius}",
                                  exc_info=True)
                     # ... (cleanup local radius variables: kernel_c, prod_img, etc.) ...
                     mempool.free_all_blocks()
@@ -2151,18 +2142,18 @@ def batch_aperture_photometry(
             # --- End Radii Loop ---
 
             # --- Successful Plane Cleanup ---
-            logger.debug(f"{pid_log} Finished radii for plane {plane_idx}. Cleaning up FFT data.")
+            logger.debug(f"Finished radii for plane {plane_idx}. Cleaning up FFT data.")
             del img_c, back_c  # Delete FFT transforms for the plane
             mempool.free_all_blocks()
             gc.collect()  # Free memory after each plane
             return plane_flux, plane_back_flux
 
         except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e_plane:
-            logger.error(f"{pid_log} OOM Error processing plane {plane_idx}: {e_plane}", exc_info=True)
+            logger.error(f"OOM Error processing plane {plane_idx}: {e_plane}", exc_info=True)
             del img_c, back_c, plane_flux, kernel_c  # Ensure cleanup
             return None, None  # Signal failure
         except Exception as e_gen_plane:
-            logger.error(f"{pid_log} Unexpected error processing plane {plane_idx}: {e_gen_plane}", exc_info=True)
+            logger.error(f"Unexpected error processing plane {plane_idx}: {e_gen_plane}", exc_info=True)
             del img_c, back_c, plane_flux, kernel_c
             return None, None  # Signal failure
         finally:
@@ -2178,7 +2169,7 @@ def batch_aperture_photometry(
 
     if is_3d:
         for c in range(n_images):
-            logger.info(f"{pid_log} Starting processing for image plane {c + 1}/{n_images}")
+            logger.info(f"Starting processing for image plane {c + 1}/{n_images}")
             img_plane_gpu = img_gpu[c]
             back_plane_gpu = back_gpu[c] if back_gpu is not None else None
             # Perform subtraction for this plane
@@ -2188,7 +2179,7 @@ def batch_aperture_photometry(
             del img_plane_subtracted  # Delete the temporary subtracted plane
 
             if plane_flux_res is None:
-                logger.critical(f"{pid_log} Processing failed for plane {c}. Aborting loop.")
+                logger.critical(f"Processing failed for plane {c}. Aborting loop.")
                 success = False
                 del all_plane_flux, all_plane_back_flux
                 all_plane_flux, all_plane_back_flux = [], []
@@ -2203,13 +2194,13 @@ def batch_aperture_photometry(
         # Stack results *after* the loop
         if success and all_plane_flux:
             stack_range = nvtx.start_range('stack_results', category='phot.postproc')
-            logger.info(f"{pid_log} Stacking results from {len(all_plane_flux)} planes...")
+            logger.info(f"Stacking results from {len(all_plane_flux)} planes...")
             try:
                 final_flux = cp.stack(all_plane_flux, axis=0)
                 if all_plane_back_flux:
                     final_back_flux = cp.stack(all_plane_back_flux, axis=0)
             except Exception as e_stack:  # Catch MemoryError too
-                logger.error(f"{pid_log} Error during final stacking: {e_stack}", exc_info=True)
+                logger.error(f"Error during final stacking: {e_stack}", exc_info=True)
                 success = False
                 final_flux, final_back_flux = None, None
             finally:
@@ -2220,12 +2211,12 @@ def batch_aperture_photometry(
         # ... (handle other failure/empty cases) ...
 
     else:  # Case 2D
-        logger.info(f"{pid_log} Processing 2D image.")
+        logger.info(f"Processing 2D image.")
         img_subtracted = img_gpu - back_gpu if back_gpu is not None else img_gpu
         final_flux, final_back_flux = process_plane(0, img_subtracted, back_gpu)
         del img_subtracted  # Delete temporary subtraction
         if final_flux is None:
-            logger.critical(f"{pid_log} Processing failed for the 2D image.")
+            logger.critical(f"Processing failed for the 2D image.")
             success = False
 
     nvtx.end_range(fft_loop_range)
@@ -2241,9 +2232,9 @@ def batch_aperture_photometry(
     nvtx.end_range(nvtx_range)  # End overall function range
 
     if success:
-        logger.info(f"{pid_log} Batch aperture photometry completed successfully.")
+        logger.info(f"Batch aperture photometry completed successfully.")
     else:
-        logger.error(f"{pid_log} Batch aperture photometry failed due to errors.")
+        logger.error(f"Batch aperture photometry failed due to errors.")
 
     return final_flux, final_back_flux, areas
 

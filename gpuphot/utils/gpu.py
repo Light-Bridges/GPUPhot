@@ -1,5 +1,6 @@
 import gc
 import time
+
 import cupy as cp
 import nvtx
 
@@ -170,16 +171,19 @@ def get_memory_usage_ratio(mempool):
 
 
 @nvtx.annotate('adaptive_memory_management', category='utils.gpu')
-def adaptive_memory_management(mempool, thresholds: dict, log_prefix: str = "", force_free: bool = False):
+def adaptive_memory_management(mempool, thresholds=None,
+                               force_free: bool = False):
     """
     Checks memory usage against thresholds.
 
     :param mempool: CuPy memory pool.
     :param thresholds: Dict with keys 'safe', 'warning', 'critical' and ratio values.
-    :param log_prefix: String to prepend to log messages.
     :param force_free: If True, always call free_all_blocks.
     :return: Cleanup level (0: safe, 1: warning, 2: critical).
     """
+    if thresholds is None:
+        thresholds = {'safe': 0.6, 'warning': 0.75, 'critical': 0.85}
+
     ratio = get_memory_usage_ratio(mempool)
     level = 0
     if ratio >= thresholds['critical']:
@@ -187,20 +191,21 @@ def adaptive_memory_management(mempool, thresholds: dict, log_prefix: str = "", 
     elif ratio >= thresholds['warning']:
         level = 1
 
-    logger.debug(f"{log_prefix} Memory Check: Ratio={ratio:.3f} (Allocated/Total), Determined Level={level}")
+    logger.debug(f"AMM Memory Check: Ratio={ratio:.3f} (Allocated/Total), Determined Level={level}")
 
     if force_free or level >= 2:
         if level >= 2:
-            logger.warning(f"{log_prefix} CRITICAL memory pressure (Ratio={ratio:.3f}). Forcing free_all_blocks.")
+            logger.warning(f"AMM CRITICAL memory pressure (Ratio={ratio:.3f}). Forcing free_all_blocks.")
         else:
-            logger.info(f"{log_prefix} Forcing free_all_blocks (force_free=True).")
+            logger.info(f"AMM Forcing free_all_blocks (force_free=True).")
 
         start_free = time.time()
         mempool.free_all_blocks()
         gc.collect()
         end_free = time.time()
         ratio_after = get_memory_usage_ratio(mempool)
-        logger.info(f"{log_prefix} free_all_blocks took {end_free - start_free:.2f}s. Memory after: Ratio={ratio_after:.3f}")
+        logger.info(
+            f"AMM free_all_blocks took {end_free - start_free:.2f}s. Memory after: Ratio={ratio_after:.3f}")
     # elif level == 1:
     #     logger.warning(f"{log_prefix} WARNING memory pressure (Ratio={ratio:.3f}). Consider targeted cleanup/offload.")
 
