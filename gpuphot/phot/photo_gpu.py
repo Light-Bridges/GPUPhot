@@ -754,7 +754,7 @@ def process_image(imdata, imheader, header_descriptions=None, **kwargs):
 
 
 @nvtx.annotate('perform_opt_photometry_optimized_gpu_crossmatch', category='phot.photo_gpu')
-def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp.ndarray,
+def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp.ndarray,
                                                     source_coord: cp.ndarray, isolated_coord: cp.ndarray,
                                                     tile_section_psf: int, star_dataset: cp.ndarray, fwhm: float,
                                                     gain: float, rdnoise: float, n_images: int = 1,
@@ -762,7 +762,39 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
                                                     min_conv_snr: float = 300.0) -> tuple[
     np.ndarray, np.ndarray, np.ndarray, dict]:
     """
-    Optimized aperture photometry process (GPU-focused, Option B with cuML crossmatch).
+    Optimize the aperture photometry process to find the best radii for signal-to-noise ratio (SNR) for each star.
+    (GPU-focused, Option B with cuML crossmatch).
+
+    :param img_ori: Input image. Without back subtraction.
+    :type img_ori: cupy.ndarray
+    :param back: Background image.
+    :type back: cupy.ndarray
+    :param conv_ima_sigma: Convolution sigma map.
+    :type conv_ima_sigma: cupy.ndarray
+    :param source_coord: Coordinates of sources.
+    :type source_coord: cupy.ndarray
+    :param isolated_coord: Coordinates of isolated stars.
+    :type isolated_coord: cupy.ndarray
+    :param tile_section_psf: Size of PSF tiles.
+    :type tile_section_psf: int
+    :param star_dataset: Dataset of stars.
+    :type star_dataset: cupy.ndarray
+    :param fwhm: Full-width at half-maximum of the PSF.
+    :type fwhm: float
+    :param gain: Gain value for flux conversion.
+    :type gain: float
+    :param rdnoise: Read noise value of the detector.
+    :type rdnoise: float
+    :param n_images: Number of images (default is 1).
+    :type n_images: int
+    :param center_factor: Fraction defining the central region for selecting isolated stars (default is 1.0).
+    :type center_factor: float
+    :param min_conv_snr: Minimum convolutional SNR for selecting isolated stars (default is 300.0).
+    :type min_conv_snr: float
+    :return: Tuple containing the optimized fluxes, noise, coordinates, and extra information.
+    :rtype: tuple(numpy.ndarray, numpy.ndarray, numpy.ndarray, dict)
+    :raises InsufficientStarsError: If there are not enough isolated stars for processing.
+    :raises DataValidationError: If input data is invalid or insufficient.
     """
     overall_range = nvtx.start_range('perform_opt_photometry_optimized_gpu_crossmatch', category='phot.photo_gpu',
                                      color='cyan')
@@ -772,7 +804,7 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
     block1_range = nvtx.start_range('center_stars_selection', category='phot.photo_gpu', color='yellow')
     # ... (Sin cambios respecto a la versión anterior) ...
     center_factor = min(center_factor, 1.0)
-    h, w = img.shape[-2:]
+    h, w = img_ori.shape[-2:]
     xmin = int(w * 0.5 * (1 - center_factor))
     xmax = int(w * 0.5 * (1 + center_factor))
     ymin = int(h * 0.5 * (1 - center_factor))
@@ -862,8 +894,9 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
     source_coord_int = cp.rint(source_coord_filt).astype(cp.int32)
     source_coord_int[:, 0] = cp.clip(source_coord_int[:, 0], 0, h - 1)
     source_coord_int[:, 1] = cp.clip(source_coord_int[:, 1], 0, w - 1)
-    source_flux, back_flux, area = batch_aperture_photometry(img, back, source_coord_int, radii)
-    if img.ndim == 3:  # Handle averaging if needed
+    source_flux, back_flux, area = batch_aperture_photometry(img_ori, back, source_coord_int, radii)
+
+    if img_ori.ndim == 3:  # Handle averaging if needed
         source_flux = cp.mean(source_flux, axis=0)
         if back_flux is not None: back_flux = cp.mean(back_flux, axis=0)
     nvtx.end_range(block5_range)
@@ -1809,13 +1842,13 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img: cp.ndarray, back: cp.nd
 #
 
 @nvtx.annotate('batch_aperture_photometry', category='phot.photo_gpu')
-def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
+def batch_aperture_photometry(img_ori: cp.ndarray, back: cp.ndarray | None,
                               positions: cp.ndarray, radii: cp.ndarray, **kwargs) -> tuple[
     cp.ndarray | None, cp.ndarray | None, cp.ndarray]:
     """
     Perform aperture photometry with delayed output allocation and aggressive memory management (v3).
 
-    :param img: Image data (GPU). Can be 2D (h, w) or 3D (n_images, h, w).
+    :param img: Image data (GPU). Can be 2D (h, w) or 3D (n_images, h, w) Without back subtraction.
     :type img: cupy.ndarray
     :param back: Background image (GPU, optional). Must match img dimensions if provided.
     :type back: cupy.ndarray or None
@@ -1829,7 +1862,8 @@ def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
              Flux/BackFlux can be None if an OOM error occurred during processing or stacking.
     :rtype: tuple(cupy.ndarray | None, cupy.ndarray | None, cupy.ndarray)
     """
-    nvtx_range = nvtx.start_range('batch_aperture_photometry_mem_optimized_v3', category='phot.photo_gpu', color='blue') # Changed color
+    nvtx_range = nvtx.start_range('batch_aperture_photometry_mem_optimized_v3', category='phot.photo_gpu',
+                                  color='blue')  # Changed color
     mempool = cp.get_default_memory_pool()
 
     # --- Configuration ---
@@ -1862,20 +1896,20 @@ def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
     if positions.size == 0:
         logger.warning("Positions array is empty. Returning empty flux results.")
         n_radii_out = len(radii)
-        n_images_out = img.shape[0] if img.ndim == 3 else 1
+        n_images_out = img_ori.shape[0] if img_ori.ndim == 3 else 1
         # Determine output shape for empty flux arrays
-        if img.ndim == 3:
-             out_shape = (n_images_out, n_radii_out, 0)
+        if img_ori.ndim == 3:
+            out_shape = (n_images_out, n_radii_out, 0)
         else:
-             out_shape = (n_radii_out, 0)
+            out_shape = (n_radii_out, 0)
         nvtx.end_range(nvtx_range)
         return cp.zeros(out_shape, dtype=cp.float64), \
-               cp.zeros(out_shape, dtype=cp.float64) if back is not None else None, \
-               areas
+            cp.zeros(out_shape, dtype=cp.float64) if back is not None else None, \
+            areas
 
     # --- FFT Setup ---
-    image_shape_orig = img.shape
-    is_3d = img.ndim == 3
+    image_shape_orig = img_ori.shape
+    is_3d = img_ori.ndim == 3
     n_images = image_shape_orig[0] if is_3d else 1
     img_h = image_shape_orig[1] if is_3d else image_shape_orig[0]
     img_w = image_shape_orig[2] if is_3d else image_shape_orig[1]
@@ -1884,22 +1918,22 @@ def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
 
     # Recalculate kernel size if max_radius failed earlier
     try:
-        max_radius = cp.nanmax(radii).item() # Use nanmax just in case
+        max_radius = cp.nanmax(radii).item()  # Use nanmax just in case
         kernel_size = int(2 * np.ceil(max_radius) + 1)
         if kernel_size % 2 == 0: kernel_size += 1
-    except ValueError: # Handles case where radii might be all NaN if area calc failed badly
-         logger.error("Could not determine valid kernel size from radii. Aborting.")
-         nvtx.end_range(nvtx_range)
-         # Return None for flux/back_flux to signal failure clearly
-         return None, None, areas
+    except ValueError:  # Handles case where radii might be all NaN if area calc failed badly
+        logger.error("Could not determine valid kernel size from radii. Aborting.")
+        nvtx.end_range(nvtx_range)
+        # Return None for flux/back_flux to signal failure clearly
+        return None, None, areas
 
     padding = (kernel_size - 1) // 2
     try:
-         fft_shape = fill_image((img_h + 2 * padding, img_w + 2 * padding))
+        fft_shape = fill_image((img_h + 2 * padding, img_w + 2 * padding))
     except Exception as e:
         logger.error(f"Error calculating FFT shape: {e}", exc_info=True)
         nvtx.end_range(nvtx_range)
-        return None, None, areas # Abort if FFT shape calculation fails
+        return None, None, areas  # Abort if FFT shape calculation fails
 
     logger.info(
         f"Using FFT shape: {fft_shape} for image shape {img_h, img_w} and max radius {max_radius} (kernel size {kernel_size})")
@@ -2017,7 +2051,7 @@ def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
                     # Cleanup intermediate vars for this radius
                     del kernel, kernel_c, prod_img, convolved_img, convolved_img_rolled, convolved_img_cropped
                     del prod_back, convolved_back, convolved_back_rolled, convolved_back_cropped
-                    mempool.free_all_blocks();
+                    mempool.free_all_blocks()
                     gc.collect()
                     raise e_radius  # Propagate error to outer handler
                 finally:
@@ -2049,12 +2083,12 @@ def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
     fft_loop_range = nvtx.start_range('fft_convolution_loop', category='phot.photo_gpu')
     final_flux = None
     final_back_flux = None
-    success = True # Flag to track overall success
+    success = True  # Flag to track overall success
 
     if is_3d:
         for c in range(n_images):
             logger.info(f"Starting processing for image plane {c + 1}/{n_images}")
-            img_plane = img[c]
+            img_plane = img_ori[c] - back[c] if back is not None else img_ori[c]
             back_plane = back[c] if back is not None else None
             plane_flux_res, plane_back_flux_res = process_plane(c, img_plane, back_plane)
 
@@ -2073,7 +2107,6 @@ def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
                 all_plane_back_flux.append(plane_back_flux_res)
             del plane_flux_res, plane_back_flux_res
 
-
         # Stack results *after* the loop if successful
         if success and all_plane_flux:
             stack_range = nvtx.start_range('stack_results', category='phot.postproc')
@@ -2081,37 +2114,38 @@ def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
             try:
                 final_flux = cp.stack(all_plane_flux, axis=0)
                 if all_plane_back_flux:
-                     final_back_flux = cp.stack(all_plane_back_flux, axis=0)
+                    final_back_flux = cp.stack(all_plane_back_flux, axis=0)
                 logger.info("Stacking successful.")
             except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e_stack:
-                 logger.error(f"OOM Error during final stacking: {e_stack}", exc_info=True)
-                 success = False # Mark as failed if stack fails
-                 final_flux, final_back_flux = None, None # Set results to None
+                logger.error(f"OOM Error during final stacking: {e_stack}", exc_info=True)
+                success = False  # Mark as failed if stack fails
+                final_flux, final_back_flux = None, None  # Set results to None
             except Exception as e_stack_gen:
-                 logger.error(f"Unexpected error during stacking: {e_stack_gen}", exc_info=True)
-                 success = False
-                 final_flux, final_back_flux = None, None
+                logger.error(f"Unexpected error during stacking: {e_stack_gen}", exc_info=True)
+                success = False
+                final_flux, final_back_flux = None, None
             finally:
-                 # Clean up the list memory regardless of stack success
-                 del all_plane_flux, all_plane_back_flux
-                 mempool.free_all_blocks(); gc.collect()
-                 nvtx.end_range(stack_range)
-        elif not success: # If loop failed
-             logger.warning("Processing loop failed, returning None for flux arrays.")
-             final_flux, final_back_flux = None, None
-        else: # If successful but no planes processed (n_images=0?) or list empty
-             logger.warning("No planes processed or list empty after loop, returning None.")
-             final_flux, final_back_flux = None, None
+                # Clean up the list memory regardless of stack success
+                del all_plane_flux, all_plane_back_flux
+                mempool.free_all_blocks();
+                gc.collect()
+                nvtx.end_range(stack_range)
+        elif not success:  # If loop failed
+            logger.warning("Processing loop failed, returning None for flux arrays.")
+            final_flux, final_back_flux = None, None
+        else:  # If successful but no planes processed (n_images=0?) or list empty
+            logger.warning("No planes processed or list empty after loop, returning None.")
+            final_flux, final_back_flux = None, None
 
 
-    else: # Case 2D
-        final_flux, final_back_flux = process_plane(0, img, back)
+    else:  # Case 2D
+        final_flux, final_back_flux = process_plane(0, img_ori - back if back is not None else img_ori, back)
         if final_flux is None:
-             logger.critical(f"Processing failed for the 2D image.")
-             success = False
-             # final_flux and final_back_flux are already None
+            logger.critical(f"Processing failed for the 2D image.")
+            success = False
+            # final_flux and final_back_flux are already None
         else:
-             success = True
+            success = True
 
     nvtx.end_range(fft_loop_range)
     # --- End FFT Loop ---
@@ -2131,6 +2165,7 @@ def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
 
     # Return final results (could be None if failed)
     return final_flux, final_back_flux, areas
+
 
 # @contextmanager
 # @nvtx.annotate('gpu_array_manager',category='phot.photo_gpu')
@@ -2207,6 +2242,8 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
 
     # with gpu_array_manager(imdata, mempool) as img_cp:
     img_cp = cp.asarray(imdata)
+    imadata_shape = imdata.shape
+    del imdata
 
     # Protect bad prereduction
     img_cp[cp.isinf(img_cp) | cp.isnan(img_cp)] = 0
@@ -2217,10 +2254,10 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     del _
 
     rms = cp.sqrt(back * gain + rdnoise ** 2) / gain / cp.sqrt(n_images)
-    xmin = int(imdata.shape[1] * 0.5 * (1 - 0.3))
-    xmax = int(imdata.shape[1] * 0.5 * (1 + 0.3))
-    ymin = int(imdata.shape[0] * 0.5 * (1 - 0.3))
-    ymax = int(imdata.shape[0] * 0.5 * (1 + 0.3))
+    xmin = int(imadata_shape[1] * 0.5 * (1 - 0.3))
+    xmax = int(imadata_shape[1] * 0.5 * (1 + 0.3))
+    ymin = int(imadata_shape[0] * 0.5 * (1 - 0.3))
+    ymax = int(imadata_shape[0] * 0.5 * (1 + 0.3))
     m = cp.median(back[ymin:ymax, xmin:xmax])
     s = cp.std(back[ymin:ymax, xmin:xmax])
     mask = cp.abs(back[ymin:ymax, xmin:xmax] - m) < 3 * s
@@ -2255,10 +2292,10 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     star_dataset, coord, scaling = create_star_dataset(img, sources, scale)
     del sources
     center_factor = np.min((center_factor, 1))
-    xmin = int(imdata.shape[1] * 0.5 * (1 - center_factor))
-    xmax = int(imdata.shape[1] * 0.5 * (1 + center_factor))
-    ymin = int(imdata.shape[0] * 0.5 * (1 - center_factor))
-    ymax = int(imdata.shape[0] * 0.5 * (1 + center_factor))
+    xmin = int(imadata_shape[1] * 0.5 * (1 - center_factor))
+    xmax = int(imadata_shape[1] * 0.5 * (1 + center_factor))
+    ymin = int(imadata_shape[0] * 0.5 * (1 - center_factor))
+    ymax = int(imadata_shape[0] * 0.5 * (1 + center_factor))
 
     # Find reference psf
     unit_star_dataset = star_dataset.astype(cp.double) / scaling[:, 3][:, None, None]
@@ -2304,15 +2341,15 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
         eigen_psfs = get_eigen_psfs(unit_star_dataset_dev_norm, n_components=5)
         eigen_psfs = cp.asarray(eigen_psfs)
         coefficients = project_all_stars_onto_eigenpsfs(unit_star_dataset_dev, eigen_psfs)
-        coeff_map = create_coeff_map(imdata.shape, coord, coefficients.T, scale, tile_section=tile_section)
+        coeff_map = create_coeff_map(imadata_shape, coord, coefficients.T, scale, tile_section=tile_section)
         # del coord
         mempool.free_all_blocks()
         gc.collect()
 
-        x1 = int(imdata.shape[1] * 0.25)
-        x2 = int(imdata.shape[1] * 0.75)
-        y1 = int(imdata.shape[0] * 0.25)
-        y2 = int(imdata.shape[0] * 0.75)
+        x1 = int(imadata_shape[1] * 0.25)
+        x2 = int(imadata_shape[1] * 0.75)
+        y1 = int(imadata_shape[0] * 0.25)
+        y2 = int(imadata_shape[0] * 0.75)
         x = np.array([x1, x2, x1, x2])
         y = np.array([y1, y2, y2, y1])
         fwhm_lab = ['FWHMLL', 'FWHMLR', 'FWHMUL', 'FWHMUR']
@@ -2345,13 +2382,12 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
 
     # TODO: Revisar por Miguel: dejamos center_factor y min_conv_snr con valor dor defecto de la función, o por defecto de DEFAULT_PROCESSING_PARAMS
 
-    imadata_shape = imdata.shape
     if 'img_cp' not in locals():
         img_cp = cp.asarray(imdata)
     # img_cp = cp.asarray(imdata)
     # with gpu_array_manager(imdata, mempool) as img_cp:
     optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry_optimized_gpu_crossmatch(
-        img=img_cp - back,
+        img_ori=img_cp,
         back=back,
         conv_ima_sigma=conv_ima_sigma,
         source_coord=sources,
@@ -2385,7 +2421,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     dfm_ast = dfm_ast.sort_values('snr', ascending=False).dropna().reset_index(drop=True)
 
     # Astrometrize
-    h_wcs = astrometrice2(dfm_ast, scale, target_ra, target_dec, imdata.shape, sip_order=1)
+    h_wcs = astrometrice2(dfm_ast, scale, target_ra, target_dec, imadata_shape, sip_order=1)
     del dfm_ast
     if h_wcs == {}:
         logger.error('Astrometry failed')
