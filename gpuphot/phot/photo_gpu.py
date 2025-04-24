@@ -2169,7 +2169,7 @@ def batch_aperture_photometry(
 
     if is_3d:
         for c in range(n_images):
-            logger.info(f"Starting processing for image plane {c + 1}/{n_images}")
+            logger.debug(f"Starting processing for image plane {c + 1}/{n_images}")
             img_plane_gpu = img_gpu[c]
             back_plane_gpu = back_gpu[c] if back_gpu is not None else None
             # Perform subtraction for this plane
