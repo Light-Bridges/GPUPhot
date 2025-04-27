@@ -296,6 +296,7 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
 
     return selected_star_dataset, selected_coords, selected_scaling_dataset
 
+
 @nvtx.annotate('_group_star_dataset_cpu_impl', category='phot.psf_cpu')
 def _group_star_dataset_cpu_impl(coords: np.ndarray, avg_group_size: int = 10, min_group_size: int = 5) -> np.ndarray:
     """CPU implementation using sklearn/scipy."""
@@ -762,51 +763,93 @@ def recreate_normed_stars_batch(coeff_map: cp.ndarray, eigen_psfs: cp.ndarray, c
 
 ### # @hierarchical_debug(logger)
 @nvtx.annotate('fit_moffat', category='phot.psf')
-def fit_moffat(star_data: np.ndarray) -> tuple:
+def fit_moffat(star_data: np.ndarray | cp.ndarray) -> tuple:
     """
-    Fit a Moffat profile to a star.
+    Fit a Moffat profile to a star, accepting either NumPy or CuPy arrays.
 
-    :param star_data: Image array containing the star data.
-    :type star_data: numpy.ndarray
-    :return: A tuple containing the radial coordinates, the intensity profile, the fit result, the FWHM, and the FWHM uncertainty.
+    Performs calculations on CPU or GPU based on the input array type,
+    but returns results as NumPy arrays and floats.
+
+    :param star_data: Image array containing the star data (NumPy or CuPy).
+    :type star_data: numpy.ndarray | cupy.ndarray
+    :return: A tuple containing the radial coordinates (numpy.ndarray),
+             the intensity profile (numpy.ndarray), the fit result (lmfit.model.ModelResult),
+             the FWHM (float), and the FWHM uncertainty (float).
     :rtype: tuple(numpy.ndarray, numpy.ndarray, lmfit.model.ModelResult, float, float)
     """
+    # Determine the array module (numpy or cupy) based on input
+    xp = cp.get_array_module(star_data)
 
-    # Reshape the 2D image to 1D arrays
-    ax, ay = np.meshgrid(np.arange(star_data.shape[1]), np.arange(star_data.shape[0]))
+    # Reshape the 2D image to 1D arrays using the appropriate module
+    ax, ay = xp.meshgrid(xp.arange(star_data.shape[1]), xp.arange(star_data.shape[0]))
     X, Y, Z = ax.ravel(), ay.ravel(), star_data.ravel()
 
-    # Transform to radial coordiantes
-    center = (np.array([X[np.argmax(Z)], Y[np.argmax(Z)]])).astype(int)
-    r = np.sqrt((X - center[0]) ** 2 + (Y - center[1]) ** 2)
+    del star_data
 
-    del X, Y
+    # Find center based on the peak pixel using the appropriate module
+    peak_idx = xp.argmax(Z)
+    center = xp.array([X[peak_idx], Y[peak_idx]]).astype(int)
 
-    # Remove the sky from the outer part of the star
-    sky = np.median(Z[r > np.percentile(r, 0.7)])
-    Z = Z.astype(np.float32) - sky
+    # Transform to radial coordinates using the appropriate module
+    r = xp.sqrt((X - center[0]) ** 2 + (Y - center[1]) ** 2)
 
-    peak = np.max(Z)
-    fwhm = r[np.argmin(np.abs(Z - (np.max(Z) - np.min(Z)) / 2))]
+    del X, Y  # Conserve memory
 
-    mask = r < 5 * fwhm
+    # Remove the sky from the outer part of the star using the appropriate module
+    # Use percentile 70 (0-100 range) instead of 0.7
+    sky_mask = r > xp.percentile(r, 70)
+    # Ensure Z[sky_mask] is not empty before calculating median
+    sky = xp.median(Z[sky_mask])
+
+    Z = Z.astype(xp.float32) - sky
+
+    # Estimate peak and FWHM using the appropriate module
+    peak = xp.max(Z)
+    min_Z = xp.min(Z)  # Needed for accurate half-max calculation
+    half_max_value = (peak - min_Z) / 2.0 + min_Z  # Calculate the half-maximum intensity value
+    # Find the radius closest to where intensity drops to half max
+    fwhm_est_idx = xp.argmin(xp.abs(Z - half_max_value))
+    fwhm_est = r[fwhm_est_idx]  # This is an estimate of the radius at half-max
+
+    # Check if fwhm_est is zero or very small, provide a default if so
+    if fwhm_est <= 1e-6:
+        fwhm_est = xp.asarray(5.0)  # Default radius estimate if calculation failed
+
+    # Mask data based on estimated FWHM using the appropriate module
+    # The mask radius 5 * fwhm_est is 2.5 * FWHM_est (since fwhm_est is radius)
+    mask = r < 5 * fwhm_est
     r = r[mask]
     Z = Z[mask]
     del mask
 
-    # Fit the Moffat profile
+    # --- CPU BOUNDARY for lmfit ---
+    # lmfit requires NumPy arrays. Transfer data from GPU if necessary.
+    if xp == cp:
+        r = cp.asnumpy(r)
+        Z = cp.asnumpy(Z)
+        peak = cp.asnumpy(peak)  # Convert peak (potentially 0-d array) to scalar float
+        if isinstance(peak, np.ndarray):
+            peak = peak.item()
+    # else:
+    #     r_cpu = r
+    #     Z_cpu = Z
+    #     peak_cpu = peak  # Already numpy scalar or float
+
+    # del r_masked, Z_masked  # Conserve memory
+
+    # Fit the Moffat profile using lmfit (operates on CPU data)
+    # Note: The 'moffat' function itself can handle np/cp, but lmfit will pass np arrays to it.
     model = Model(moffat, independent_vars=['r'])
-    params = model.make_params(r0=0, A=peak)
+    params = model.make_params(r0=0, A=peak)  # Provide initial guesses
+
+    # Perform the fit
     result = model.fit(Z, r=r, params=params)
 
-    # Obtain the FWHM and uncertainty
-    if result.params['R'].stderr is None or result.params['R'].stderr is None:
-        fwhm, fwhm_err = moffat_fwhm(result.params['R'].value, result.params['B'].value,
-                                     1e30, 1e30)
-    else:
-        fwhm, fwhm_err = moffat_fwhm(result.params['R'].value, result.params['B'].value,
-                                     result.params['R'].stderr, result.params['B'].stderr)
+    # Obtain the FWHM and uncertainty from CPU results
+    fwhm, fwhm_err = moffat_fwhm(result.params['R'].value, result.params['B'].value, result.params['R'].stderr,
+                                 result.params['B'].stderr)
 
+    # Return results as NumPy arrays and floats as requested
     return r, Z, result, fwhm, fwhm_err
 
 
@@ -845,13 +888,15 @@ def get_centroids_distance_kdtree(centroids: np.array):
 
 
 @nvtx.annotate('moffat', category='phot.psf')
-def moffat(r: np.array, A: float = 1., r0: float = 0., B: float = 1., R: float = 1.) -> np.array:
+def moffat(r, A: float = 1., r0: float = 0., B: float = 1., R: float = 1.) -> np.array | cp.array:
     """
     Moffat profile function.
     https://nbviewer.org/github/ysbach/AO_2017/blob/master/04_Ground_Based_Concept.ipynb#1.2.-Moffat
 
+    Handles both NumPy and CuPy arrays for 'r'.
+
     :param r: Radial coordinates.
-    :type r: numpy.ndarray
+    :type r: numpy.ndarray or cupy.ndarray
     :param A: Peak intensity.
     :type A: float
     :param r0: Central position.
@@ -861,15 +906,16 @@ def moffat(r: np.array, A: float = 1., r0: float = 0., B: float = 1., R: float =
     :param R: Scale factor.
     :type R: float
     :return: The Moffat profile.
-    :rtype: numpy.ndarray
+    :rtype: numpy.ndarray or cupy.ndarray
     """
+    # Basic math operations work transparently on both np and cp arrays with scalars
     return A * (1 + ((r - r0) / R) ** 2) ** (-B)
 
 
 @nvtx.annotate('moffat_fwhm', category='phot.psf')
 def moffat_fwhm(R: float, B: float, R_err: float, B_err: float) -> tuple:
     """
-    Calculate the FWHM of a Moffat profile.
+    Calculate the FWHM of a Moffat profile using scalar inputs.
 
     :param R: Scale factor.
     :type R: float
@@ -882,7 +928,17 @@ def moffat_fwhm(R: float, B: float, R_err: float, B_err: float) -> tuple:
     :return: A tuple containing the FWHM and the FWHM uncertainty.
     :rtype: tuple(float, float)
     """
-    FWHM = 2 * R * np.sqrt(2 ** (1 / B) - 1)
-    FWHM_err = 2 * R_err * np.sqrt(2 ** (1 / B) - 1) + 2 * R * B_err * \
-               (np.log(2) * 2 ** ((1 / B) - 1)) / (B ** 2 * np.sqrt(2 ** (1 / B) - 1))
+    # This function operates on scalar floats from lmfit results, so numpy is fine.
+    xp = cp.get_array_module()
+
+    FWHM = 2 * R * xp.sqrt(2 ** (1 / B) - 1)
+
+    # Error propagation formula (using numpy for math functions on floats)
+    term1_err = 2 * R_err * xp.sqrt(2 ** (1 / B) - 1) if R_err is not None else 0
+    sqrt_term = xp.sqrt(2 ** (1 / B) - 1)
+    term2_err = 2 * R * B_err * (xp.log(2) * 2 ** ((1 / B) - 1)) / (B ** 2 * sqrt_term)
+
+    # Combine errors
+    FWHM_err = term1_err + term2_err
+
     return FWHM, FWHM_err

@@ -15,7 +15,7 @@ WARNING_LEVEL = 1
 CRITICAL_LEVEL = 2
 
 # Define default thresholds in a single place
-DEFAULT_THRESHOLDS = {'warning': 0.75, 'critical': 0.85}
+DEFAULT_THRESHOLDS = {'warning': 0.5, 'critical': 0.75}
 
 
 @nvtx.annotate('human_readable_size', category='utils.gpu')
@@ -421,3 +421,14 @@ def get_gpu_var_reactive(var_name: str, data_dict: dict, data_location: dict, me
         raise RuntimeError(f"Variable '{var_name}' needed but its state is '{loc}' (deleted or never existed).")
     else:  # Estados de error
         raise RuntimeError(f"Variable '{var_name}' needed but is in unexpected/error state: {loc}")
+
+@nvtx.annotate('cleanup_cupy', category='utils.gpu')
+def cleanup_cupy(*args):
+    """Deletes CuPy arrays passed as arguments and runs GC and free_all_blocks."""
+    mempool = cp.get_default_memory_pool()
+    for arr in args:
+        del arr
+    # gc.collect() # Colectar referencias Python
+    # mempool.free_all_blocks() # Liberar bloques CuPy (hacer con cuidado)
+    # cp.cuda.Stream.null.synchronize() # Esperar a que la GPU termine
+    maybe_free_arrays([], mempool) # Usar tu función existente si prefieres
