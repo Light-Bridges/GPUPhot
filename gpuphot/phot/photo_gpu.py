@@ -724,7 +724,7 @@ def process_image(imdata, imheader, header_descriptions=None, **kwargs):
         params = {**default_params, **kwargs}
 
         # Call calibrate_image with updated parameters
-        dfm, h_wcs, dic_calib = calibrate_image_v2(
+        dfm, h_wcs, dic_calib = calibrate_image(
             imdata, filter,
             scale, gain, rdnoise, exptime, satlevel,
             target_ra, target_dec, n_images=n_images,
