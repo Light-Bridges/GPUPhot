@@ -302,3 +302,122 @@ def adaptive_memory_management(
             # raise e # Optional: re-raise the exception
 
     return level
+
+
+@nvtx.annotate('offload_to_cpu', category='mem_mgmt')
+def offload_to_cpu(var_name: str, data_dict: dict, data_location: dict, mempool: cp.cuda.MemoryPool):
+    """Mueve un array CuPy a CPU (si existe en GPU) y actualiza el estado."""
+    if data_location.get(var_name) == 'GPU' and var_name in data_dict:
+        if data_dict[var_name] is None:  # Check if None before proceeding
+            logger.warning(f"Attempted to offload '{var_name}', but it was None.")
+            data_location[var_name] = 'None'  # Mark as None explicitly
+            return False
+        try:
+            logger.info(f"Offloading '{var_name}' from GPU to CPU due to memory pressure.")
+            nvtx_range = nvtx.start_range(f'offload_{var_name}', category='mem_mgmt')
+            size_gb = data_dict[var_name].nbytes / (1024 ** 3)
+            logger.debug(f"Offloading '{var_name}' (Size: {size_gb:.3f} GB)")
+            start_time = time.monotonic()
+            data_dict[var_name + '_cpu'] = data_dict[var_name].get()
+            del data_dict[var_name]
+            mempool.free_all_blocks()
+            cp.cuda.Stream.null.synchronize()
+            duration = time.monotonic() - start_time
+            data_location[var_name] = 'CPU'
+            logger.info(f"Successfully offloaded '{var_name}' in {duration:.3f}s.")
+            nvtx.end_range(nvtx_range)
+            return True
+        except Exception as e:
+            logger.error(f"Error offloading '{var_name}': {e}", exc_info=True)
+            data_location[var_name] = 'GPU_OFFLOAD_FAILED'
+            if var_name in data_dict: del data_dict[var_name]
+            if var_name + '_cpu' in data_dict: del data_dict[var_name + '_cpu']
+            mempool.free_all_blocks()
+            cp.cuda.Stream.null.synchronize()
+            return False
+    elif var_name not in data_dict or data_location.get(var_name) != 'GPU':
+        logger.debug(f"Variable '{var_name}' not on GPU or not found, skipping offload.")
+        return False
+
+
+@nvtx.annotate('load_to_gpu', category='mem_mgmt')
+def load_to_gpu(var_name: str, data_dict: dict, data_location: dict, mempool: cp.cuda.MemoryPool,
+                force_if_critical: bool = False):
+    """Carga un array de CPU a GPU (si existe en CPU y es necesario) y actualiza estado."""
+    cpu_var_name = var_name + '_cpu'
+    if data_location.get(var_name) == 'CPU' and cpu_var_name in data_dict:
+        if data_dict[cpu_var_name] is None:  # Check if None
+            logger.warning(f"Attempted to load '{var_name}' from CPU, but its value was None.")
+            data_location[var_name] = 'None'  # Mark as None
+            return False
+        logger.info(f"Attempting to load '{var_name}' from CPU back to GPU.")
+        level_before_load = adaptive_memory_management(mempool,
+                                                       force_free=False)  # Pasar thresholds si son personalizados
+
+        if level_before_load < CRITICAL_LEVEL or force_if_critical:
+            if level_before_load >= WARNING_LEVEL:
+                logger.warning(f"Loading '{var_name}' to GPU while memory is at WARNING level.")
+            try:
+                nvtx_range = nvtx.start_range(f'load_{var_name}', category='mem_mgmt')
+                size_gb = data_dict[cpu_var_name].nbytes / (1024 ** 3)
+                logger.debug(f"Loading '{var_name}' (Size: {size_gb:.3f} GB)")
+                start_time = time.monotonic()
+                data_dict[var_name] = cp.asarray(data_dict[cpu_var_name])
+                del data_dict[cpu_var_name]  # Borrar copia CPU
+                duration = time.monotonic() - start_time
+                data_location[var_name] = 'GPU'
+                logger.info(f"Successfully loaded '{var_name}' to GPU in {duration:.3f}s.")
+                nvtx.end_range(nvtx_range)
+                return True
+            except (MemoryError, cp.cuda.runtime.CUDARuntimeError) as e:
+                logger.error(f"OOM Error loading '{var_name}' back to GPU: {e}", exc_info=True)
+                data_location[var_name] = 'CPU_LOAD_FAILED'
+                reset_cupy_allocators()
+                return False
+            except Exception as e:
+                logger.error(f"Unexpected error loading '{var_name}': {e}", exc_info=True)
+                data_location[var_name] = 'CPU_LOAD_FAILED'
+                return False
+        else:
+            logger.error(f"CRITICAL memory pressure ({level_before_load}). Cannot load '{var_name}' back to GPU now.")
+            return False
+    elif cpu_var_name not in data_dict and data_location.get(var_name) == 'CPU':
+        logger.error(f"Inconsistency: State for '{var_name}' is CPU, but '{cpu_var_name}' not found in data_dict.")
+        data_location[var_name] = 'Unknown'
+        return False
+    elif data_location.get(var_name) != 'CPU':
+        logger.debug(
+            f"Variable '{var_name}' not on CPU (State: {data_location.get(var_name)}), skipping load function.")
+        return False
+
+
+@nvtx.annotate('get_gpu_var_reactive', category='mem_mgmt')
+def get_gpu_var_reactive(var_name: str, data_dict: dict, data_location: dict, mempool: cp.cuda.MemoryPool,
+                         force_load_if_critical: bool = False) -> cp.ndarray:
+    """
+    Obtiene una variable asegurándose de que esté en la GPU.
+    Intenta cargarla desde CPU si fue descargada previamente.
+    Lanza MemoryError o RuntimeError si no se puede obtener en GPU.
+    """
+    loc = data_location.get(var_name)
+
+    if loc == 'GPU':
+        if var_name in data_dict and data_dict[var_name] is not None:
+            logger.debug(f"Accessing '{var_name}' directly from GPU.")
+            return data_dict[var_name]
+        else:
+            raise RuntimeError(f"State inconsistency: Variable '{var_name}' marked as GPU but not found or is None.")
+    elif loc == 'CPU':
+        logger.info(f"Variable '{var_name}' is on CPU, attempting reactive load to GPU.")
+        if load_to_gpu(var_name, data_dict, data_location, mempool, force_if_critical=force_load_if_critical):
+            if var_name in data_dict and data_dict[var_name] is not None:
+                logger.info(f"Reactive load successful for '{var_name}'.")
+                return data_dict[var_name]
+            else:
+                raise RuntimeError(f"State inconsistency after successful load_to_gpu for '{var_name}'.")
+        else:
+            raise MemoryError(f"Failed to reactively load '{var_name}' from CPU back to GPU.")
+    elif loc == 'None' or loc is None:
+        raise RuntimeError(f"Variable '{var_name}' needed but its state is '{loc}' (deleted or never existed).")
+    else:  # Estados de error
+        raise RuntimeError(f"Variable '{var_name}' needed but is in unexpected/error state: {loc}")

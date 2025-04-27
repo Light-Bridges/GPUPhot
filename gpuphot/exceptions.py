@@ -168,7 +168,7 @@ def capture_cuda_exception(func):
                         raise  # Lanzar excepción si se han agotado los reintentos
 
             except Exception as e:
-                logger.error(f"An unexpected error occurred in {func.__name__}: {e}")
+                logger.error(f"An unexpected error occurred in {func.__name__}: {e}", exc_info=True)
                 raise  # Permitir que se propague cualquier otro tipo de excepción
 
         logger.debug(f"Max retries reached for {func.__name__}.")

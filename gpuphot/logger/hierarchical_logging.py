@@ -185,6 +185,7 @@ class SystemInfo:
 def hierarchical_debug(logger_name):
     logger = SingletonLogger.get_logger(logger_name)
     system_info_instance = SystemInfo.get_instance()
+    pid = os.getpid()
 
     def decorator(func):
         @functools.wraps(func)
@@ -213,7 +214,7 @@ def hierarchical_debug(logger_name):
             try:
                 # Log the start of the function
                 system_info_instance.refresh_gpu_info()
-                critical_logger.debug(f'Starting function {func.__name__}', extra={
+                critical_logger.debug(f'Starting function {func.__name__} (PID: {pid})', extra={
                     'function_name': func.__name__,
                     'arguments': arg_str,
                     'event': 'function_start',
@@ -226,7 +227,7 @@ def hierarchical_debug(logger_name):
 
                 # Log successful completion
                 execution_time = time.time() - start_time
-                critical_logger.debug(f'Finishing function {func.__name__}', extra={
+                critical_logger.debug(f'Finishing function {func.__name__} (PID: {pid})', extra={
                     'function_name': func.__name__,
                     'arguments': arg_str,
                     'execution_time': execution_time,
@@ -241,7 +242,7 @@ def hierarchical_debug(logger_name):
                 # Log the exception
                 tb = traceback.format_exc()
                 system_info_instance.refresh_gpu_info()
-                critical_logger.error(f"Exception in {func.__name__}", extra={
+                critical_logger.error(f"Exception in {func.__name__} (PID: {pid})", extra={
                     'function_name': func.__name__,
                     'arguments': arg_str,
                     'exception': str(e),
