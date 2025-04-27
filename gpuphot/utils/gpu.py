@@ -15,7 +15,7 @@ WARNING_LEVEL = 1
 CRITICAL_LEVEL = 2
 
 # Define default thresholds in a single place
-DEFAULT_THRESHOLDS = {'warning': 0.5, 'critical': 0.75}
+DEFAULT_THRESHOLDS = {'warning': 0.75, 'critical': 0.85}
 
 
 @nvtx.annotate('human_readable_size', category='utils.gpu')
@@ -251,16 +251,15 @@ def adaptive_memory_management(
     elif ratio >= effective_thresholds['warning']:
         level = WARNING_LEVEL
 
-    log_prefix = "AMM"  # Adaptive Memory Management prefix for logs
     logger.debug(
-        f"{log_prefix} Check: Ratio={ratio:.3f}, Level={level} "
+        f"Check: Ratio={ratio:.3f}, Level={level} "
         f"(Thresholds: W={effective_thresholds['warning']:.2f}, C={effective_thresholds['critical']:.2f})"
     )
 
     # Log specific warnings if threshold is breached but not critical yet
     if level == WARNING_LEVEL:
-        logger.warning(
-            f"{log_prefix} WARNING memory pressure detected (Ratio={ratio:.3f}). "
+        logger.debug(
+            f"WARNING memory pressure detected (Ratio={ratio:.3f}). "
             f"Usage exceeds threshold {effective_thresholds['warning']:.2f}."
         )
 
@@ -270,11 +269,11 @@ def adaptive_memory_management(
     if perform_cleanup:
         if level >= CRITICAL_LEVEL:
             logger.warning(
-                f"{log_prefix} CRITICAL memory pressure (Ratio={ratio:.3f} >= "
+                f"CRITICAL memory pressure (Ratio={ratio:.3f} >= "
                 f"{effective_thresholds['critical']:.2f}). Forcing free_all_blocks."
             )
         else:  # force_free must be True
-            logger.info(f"{log_prefix} Forcing free_all_blocks (force_free=True). Current Ratio={ratio:.3f}.")
+            logger.debug(f"Forcing free_all_blocks (force_free=True). Current Ratio={ratio:.3f}.")
 
         try:
             start_time = time.monotonic()
@@ -290,12 +289,12 @@ def adaptive_memory_management(
             # Measure and log memory state *after* cleanup
             ratio_after = get_memory_usage_ratio(mempool)
             duration = end_time - start_time
-            logger.info(
-                f"{log_prefix} free_all_blocks completed in {duration:.3f}s. "
+            logger.debug(
+                f"free_all_blocks completed in {duration:.3f}s. "
                 f"Memory ratio after cleanup: {ratio_after:.3f}"
             )
         except Exception as e:
-            logger.error(f"{log_prefix} Error during memory cleanup: {e}", exc_info=True)
+            logger.error(f"Error during memory cleanup: {e}", exc_info=True)
             # Even if cleanup failed, the level remains critical or was forced
             # Return the determined level, but the state might be uncertain.
             # Consider re-raising if cleanup failure is fatal for the application.
