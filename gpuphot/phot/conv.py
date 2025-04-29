@@ -220,15 +220,14 @@ def gen_apm_filter(lk: int, li: int = 0, norm: bool = True, **kwargs) -> cp.ndar
     # return k_app
     k_dim = (2 * lk + 1, 2 * lk + 1)
     indi = cp.indices(k_dim, dtype=cp.float64)  # Use float64 for consistency
-    center = float(lk)
-    dist_sq = (indi[0, :, :] - center) ** 2 + (indi[1, :, :] - center) ** 2
+    dist_sq = (lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2
 
     # Create the outer circle mask directly
-    mask_outer = dist_sq <= float(lk) ** 2
+    mask_outer = dist_sq <= lk ** 2
 
     # Create the inner circle mask (if li != 0) and combine
     if li != 0:
-        mask_inner = dist_sq < float(li) ** 2
+        mask_inner = dist_sq < (li ** 2)
         mask = mask_outer & ~mask_inner  # Combine using boolean logic
     else:
         mask = mask_outer

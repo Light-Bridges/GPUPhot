@@ -26,8 +26,7 @@ from ..stats.reduction import stack_sigmaclip
 from ..utils.astro import astrometrice2, get_astrometry_params, get_maglim, get_target_snr, get_zeropoint, \
     plate_scale_px
 from ..utils.catalog import catalog_results, crossmatch_sources
-from ..utils.gpu import free_gpu_mem, reset_cupy_allocators, maybe_free_arrays, adaptive_memory_management, \
-    DEFAULT_THRESHOLDS, CRITICAL_LEVEL, offload_to_cpu, get_gpu_var_reactive, cleanup_cupy
+from ..utils.gpu import free_gpu_mem, reset_cupy_allocators, maybe_free_arrays, adaptive_memory_management
 from ..utils.headers import update_header_with_astrometry, update_header_with_photometry
 
 logger = setup_logger(__name__)
@@ -379,7 +378,7 @@ def find_aperture_corrections_gpu(sources: cp.ndarray, corrections: cp.ndarray, 
     # Call the main crossmatch function. It will handle GPU/CPU automatically.
     # Since inputs (sources, cluster_centers) are CuPy, it will attempt GPU first.
     cm_range = nvtx.start_range('call_crossmatch_wrapper', category='utils.catalog')
-    _, tile_idx = crossmatch_sources(sources, cluster_centers, thres_px=float(cp.iinfo(cp.int32).max))
+    _, tile_idx = crossmatch_sources(sources, cluster_centers, thres_px=int(cp.max(sources)))
     nvtx.end_range(cm_range)
     # tile_idx will be CuPy array if successful GPU or if fallback occurred from GPU input
 
@@ -754,13 +753,13 @@ def process_image(imdata, imheader, header_descriptions=None, **kwargs):
         reset_cupy_allocators()
 
 
-@nvtx.annotate('perform_opt_photometry_optimized_gpu_crossmatch', category='phot.photo_gpu')
-def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp.ndarray,
-                                                    source_coord: cp.ndarray, isolated_coord: cp.ndarray,
-                                                    tile_section_psf: int, star_dataset: cp.ndarray, fwhm: float,
-                                                    gain: float, rdnoise: float, n_images: int = 1,
-                                                    center_factor: float = 1.0,
-                                                    min_conv_snr: float = 300.0, **kwargs) -> tuple[
+@nvtx.annotate('perform_opt_photometry', category='phot.photo_gpu')
+def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp.ndarray,
+                           source_coord: cp.ndarray, isolated_coord: cp.ndarray,
+                           tile_section_psf: int, star_dataset: cp.ndarray, fwhm: float,
+                           gain: float, rdnoise: float, n_images: int = 1,
+                           center_factor: float = 1.0,
+                           min_conv_snr: float = 300.0, **kwargs) -> tuple[
     np.ndarray, np.ndarray, np.ndarray, dict]:
     """
     Optimize the aperture photometry process to find the best radii for signal-to-noise ratio (SNR) for each star.
@@ -805,7 +804,7 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: c
 
     adaptive_memory_management(mempool)
 
-    # BLOQUE 1: Selección de estrellas centrales (GPU mask, CPU limits)
+    # BLOQUE 1: Select central stars
     block1_range = nvtx.start_range('center_stars_selection', category='phot.photo_gpu', color='yellow')
     # ... (Sin cambios respecto a la versión anterior) ...
     center_factor = min(center_factor, 1.0)
@@ -818,16 +817,16 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: c
                   (isolated_coord[:, 1] > xmin) & (isolated_coord[:, 1] < xmax)
     nvtx.end_range(block1_range)
 
-    # BLOQUE 2: Procesamiento SNR y validación de fuentes (GPU crossmatch)
+    # BLOQUE 2: Obtain convolutional SNR
     block2_range = nvtx.start_range('snr_source_validation_gpu', category='phot.photo_gpu', color='orange')
     # ... (Cálculo de conv_snr y filtrado inicial igual que antes) ...
-    source_row_idx = cp.clip(cp.rint(source_coord[:, 0]), 0, h - 1).astype(cp.int32)
-    source_col_idx = cp.clip(cp.rint(source_coord[:, 1]), 0, w - 1).astype(cp.int32)
-    conv_snr = conv_ima_sigma[source_row_idx, source_col_idx]
+    conv_snr = conv_ima_sigma[
+        cp.round(source_coord[:, 0]).astype(cp.int32), cp.round(source_coord[:, 1]).astype(cp.int32)]
     pos_conv_snr_mask = conv_snr > 0
-    source_coord_filt = source_coord[pos_conv_snr_mask]
-    conv_snr_filt = conv_snr[pos_conv_snr_mask]
-    isolated_coord_center = isolated_coord[center_mask]
+    source_coord = source_coord[pos_conv_snr_mask]
+    conv_snr = conv_snr[pos_conv_snr_mask]
+
+    del pos_conv_snr_mask
 
     # --- NO TRANSFER NEEDED ---
     # Call GPU crossmatch directly with CuPy arrays
@@ -835,8 +834,9 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: c
     try:
         # Match isolated_coord_center TO source_coord_filt
         _, source_coords_matched_idx = crossmatch_sources(
-            isolated_coord_center, source_coord_filt, thres_px=3
+            isolated_coord[center_mask], source_coord, thres_px=3
         )
+        del _
         # source_coords_matched_idx is now a CuPy array of indices into source_coord_filt
     except ImportError as e:
         logger.error(f"ImportError using GPU crossmatch: {e}. Cannot proceed.")
@@ -849,29 +849,30 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: c
     # --- End GPU Crossmatch ---
 
     # ... (Resto del Bloque 2: validación de isolated stars, etc. sin cambios) ...
-    isolated_row_idx = cp.clip(cp.rint(isolated_coord[:, 0]), 0, h - 1).astype(cp.int32)
-    isolated_col_idx = cp.clip(cp.rint(isolated_coord[:, 1]), 0, w - 1).astype(cp.int32)
-    conv_snr_isol = conv_ima_sigma[isolated_row_idx, isolated_col_idx]
-    conv_snr_mask_isol = conv_snr_isol > min_conv_snr
-    final_isolated_mask = center_mask & conv_snr_mask_isol
+    conv_snr_isol = conv_ima_sigma[
+        cp.round(isolated_coord[:, 0]).astype(cp.int32), cp.round(isolated_coord[:, 1]).astype(cp.int32)]
+    conv_snr_mask = conv_snr_isol > min_conv_snr
 
-    num_good_isolated = cp.sum(final_isolated_mask)
+    del conv_ima_sigma
+
+    num_good_isolated = cp.sum(conv_snr_mask)
     if num_good_isolated < 10:
-        final_isolated_mask = conv_snr_isol > min_conv_snr * 0.5
+        conv_snr_mask = conv_snr_isol > min_conv_snr * 0.5
 
-    num_good_isolated = cp.sum(final_isolated_mask)
+    del conv_snr_isol
+
+    num_good_isolated = cp.sum(conv_snr_mask)
     if num_good_isolated < 3:
         nvtx.end_range(block2_range)
         nvtx.end_range(overall_range)
         raise InsufficientStarsError(num_stars=num_good_isolated.item())
-    isolated_coord_for_map = isolated_coord[final_isolated_mask]
-    star_dataset_for_map = star_dataset[final_isolated_mask]
+
     nvtx.end_range(block2_range)
 
     # BLOQUE 3: Configuración radios (Sin cambios)
     block3_range = nvtx.start_range('aperture_radii_setup', category='phot.photo_gpu', color='yellow')
     # ... (igual que antes) ...
-    max_radii = float(np.ceil(7 * fwhm))
+    max_radii = float(np.ceil(7 * fwhm) + 1)
     min_radii = float(np.ceil(0.75 * fwhm))
     radii = cp.arange(int(min_radii), int(max_radii) + 1, 1, dtype=cp.float64)
     if radii.size == 0:
@@ -880,61 +881,68 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: c
         raise DataValidationError("Input data is invalid or insufficient")
     nvtx.end_range(block3_range)
 
-    # BLOQUE 4: Mapa de correcciones (Llama a helpers que usan GPU crossmatch internamente)
+    # BLOQUE 4: Find aperture corrections
     block4_range = nvtx.start_range('aperture_corrections_mapping_gpu', category='phot.photo_gpu', color='purple')
+    adaptive_memory_management(mempool)
     # create_aperture_corrections_map_gpu still has internal CPU steps for grouping
     corrections, correction_errors, cluster_centers = create_aperture_corrections_map_gpu(
-        (h, w), tile_section_psf, star_dataset_for_map,
-        isolated_coord_for_map, radii
+        (h, w), tile_section_psf, star_dataset[conv_snr_mask],
+        isolated_coord[conv_snr_mask], radii
     )
+
+    del conv_snr_mask, star_dataset, isolated_coord
+
     # find_aperture_corrections_gpu now uses GPU crossmatch, no external transfers needed
     aperture_corrections, aperture_correction_errors = find_aperture_corrections_gpu(
-        source_coord_filt, corrections, correction_errors, cluster_centers
+        source_coord, corrections, correction_errors, cluster_centers
     )
+
+    del corrections, correction_errors, cluster_centers
     nvtx.end_range(block4_range)
 
-    # BLOQUE 5: Fotometría por lotes (Sin cambios)
+    # BLOQUE 5: Get batch photometry
     block5_range = nvtx.start_range('batch_aperture_photometry', category='phot.photo_gpu', color='green')
-    # ... (igual que antes, llama a batch_aperture_photometry adaptada) ...
-    source_coord_int = cp.rint(source_coord_filt).astype(cp.int32)
-    source_coord_int[:, 0] = cp.clip(source_coord_int[:, 0], 0, h - 1)
-    source_coord_int[:, 1] = cp.clip(source_coord_int[:, 1], 0, w - 1)
-    source_flux, back_flux, area = batch_aperture_photometry(img_ori, back, source_coord_int, radii)
-
-    if img_ori.ndim == 3:  # Handle averaging if needed
-        source_flux = cp.mean(source_flux, axis=0)
-        if back_flux is not None: back_flux = cp.mean(back_flux, axis=0)
+    adaptive_memory_management(mempool)
+    source_flux, back_flux, area = batch_aperture_photometry(img_ori, back, cp.round(source_coord).astype(cp.int32),
+                                                             radii)
+    del img_ori, back
+    # if img_ori.ndim == 3:  # Handle averaging if needed
+    #     source_flux = cp.mean(source_flux, axis=0)
+    #     if back_flux is not None: back_flux = cp.mean(back_flux, axis=0)
     nvtx.end_range(block5_range)
 
-    # BLOQUE 7: Cálculo señal/ruido (Sin cambios, ya era full GPU)
+    # BLOQUE 7: Calculate photometric parameteres
     block7_range = nvtx.start_range('photometric_parameters_calc_gpu', category='phot.photo_gpu', color='lime')
-    # Uses source_coords_matched_idx (now CuPy from GPU crossmatch)
-    # ... (lógica igual que antes) ...
-    aperture_corrections_matched = aperture_corrections[source_coords_matched_idx]
-    aperture_errors_matched = aperture_correction_errors[source_coords_matched_idx]
-    source_flux_matched = source_flux[:, source_coords_matched_idx]
-    back_flux_matched = back_flux[:, source_coords_matched_idx] if back_flux is not None else None
-    aperture_corrections_matched_t = aperture_corrections_matched.T
-    aperture_errors_matched_t = aperture_errors_matched.T
-    epsilon = 1e-9
-    center_isolated_signal = cp.divide(source_flux_matched, aperture_corrections_matched_t + epsilon)
-    area_col = area.reshape(-1, 1)
-    center_isolated_back_noise_sq = cp.zeros_like(source_flux_matched)
-    if back_flux_matched is not None: center_isolated_back_noise_sq = cp.abs(back_flux_matched) * gain
-    center_isolated_read_noise_sq = area_col * rdnoise ** 2
-    corr_sq = aperture_corrections_matched_t ** 2
-    center_isolated_source_noise_sq = cp.divide(source_flux_matched * gain, corr_sq + epsilon)
-    center_isolated_corr_noise_sq = cp.power(
-        cp.divide(source_flux_matched * gain * aperture_errors_matched_t, corr_sq + epsilon), 2)
-    total_noise_sq_sum = (
-            center_isolated_source_noise_sq / n_images + center_isolated_back_noise_sq / n_images + center_isolated_read_noise_sq / n_images + center_isolated_corr_noise_sq)
-    total_noise_sq_sum = cp.maximum(total_noise_sq_sum, 0)
-    center_isolated_total_noise = cp.sqrt(total_noise_sq_sum) / gain
-    center_isolated_snr = cp.divide(center_isolated_signal, center_isolated_total_noise + epsilon)
-    center_conv_snr = conv_snr_filt[source_coords_matched_idx]  # Already CuPy
+
+    center_isolated_flux = source_flux[:, source_coords_matched_idx]
+    center_isolated_aper_corr = aperture_corrections[source_coords_matched_idx].T
+    center_isolated_aper_corr_err = aperture_correction_errors[source_coords_matched_idx].T
+
+    center_isolated_signal = center_isolated_flux / center_isolated_aper_corr
+
+    center_isolated_back_noise_sq = cp.abs(back_flux[:, source_coords_matched_idx]) * gain
+    center_isolated_read_noise_sq = area.reshape(-1, 1) * rdnoise ** 2
+    center_isolated_source_noise_sq = center_isolated_flux * gain / center_isolated_aper_corr ** 2
+    center_isolated_corr_noise_sq = (
+                                            center_isolated_flux * gain * center_isolated_aper_corr_err / center_isolated_aper_corr ** 2) ** 2
+
+    center_isolated_total_noise = cp.sqrt(
+        center_isolated_source_noise_sq +
+        center_isolated_back_noise_sq +
+        center_isolated_read_noise_sq +
+        center_isolated_corr_noise_sq
+    ) / gain / cp.sqrt(n_images)
+
+    del center_isolated_source_noise_sq, center_isolated_back_noise_sq, center_isolated_read_noise_sq, center_isolated_corr_noise_sq, center_isolated_flux, center_isolated_aper_corr_err, center_isolated_aper_corr
+
+    center_isolated_snr = center_isolated_signal / center_isolated_total_noise
+    center_conv_snr = conv_snr[source_coords_matched_idx]
+
+    del source_coords_matched_idx, center_isolated_signal, center_isolated_total_noise
+
     nvtx.end_range(block7_range)
 
-    # BLOQUE 8: Optimización radio (Ahora usando xp para los cálculos)
+    # BLOQUE 8: Find optimal aperture radius
     block8_range = nvtx.start_range('optimal_radii_calculation', category='phot.photo_gpu', color='orange')
 
     # Determinar el módulo (numpy o cupy) basado en una de las entradas principales
@@ -946,28 +954,9 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: c
     # Obtener los radios óptimos usando indexación (funciona en np y cp)
     # Renombrado de opt_radii_gpu -> opt_radii
     opt_radii = radii[opt_radii_idx]
-
-    # Crear máscara de puntos válidos para el ajuste usando xp
-    # Ya no se necesitan las versiones _np ni la transferencia previa
-    valid_fit_mask = (
-            (center_conv_snr > 0) &
-            (opt_radii > 0) &
-            xp.isfinite(center_conv_snr) &
-            xp.isfinite(opt_radii)
-    )
-
-    # Comprobar si hay suficientes puntos válidos usando xp.sum
-    num_valid_points = xp.sum(valid_fit_mask)
-    # Nota: xp.sum() puede devolver un array 0D en CuPy. Convertir a int si es necesario comparar.
-    if int(num_valid_points) < 2:
-        nvtx.end_range(block8_range)
-        # Asumiendo que overall_range existe fuera de este snippet
-        # nvtx.end_range(overall_range)
-        raise DataValidationError("Not enough valid points for polyfit")  # Asume DataValidationError está definida
-
-    # Filtrar los datos para el ajuste usando la máscara
-    center_conv_snr_fit = center_conv_snr[valid_fit_mask]
-    opt_radii_fit = opt_radii[valid_fit_mask]
+    del opt_radii_idx, center_isolated_snr
+    if len(center_conv_snr) == 0 or len(opt_radii) == 0:
+        raise DataValidationError("center_conv_snr or opt_radii is empty. Ensure valid data is provided.")
 
     # Calcular polyfit usando xp.log10 y xp.polyfit
     # La etiqueta NVTX ahora refleja si es CPU o GPU
@@ -976,14 +965,10 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: c
     polyfit_label = 'polyfit_gpu' if xp == cp else 'polyfit_cpu'
     polyfit_range = nvtx.start_range(polyfit_label, category=polyfit_category, color=polyfit_color)
     try:
-        # Calcular logaritmos usando xp
-        log10_conv_snr_fit = xp.log10(center_conv_snr_fit)
-        log10_opt_radii_fit = xp.log10(opt_radii_fit)
-
         # Calcular polyfit usando xp
         # pov será un array np o cp dependiendo de xp
-        pov = xp.polyfit(log10_conv_snr_fit, log10_opt_radii_fit, 1, cov=False)
-
+        pov = xp.polyfit(xp.log10(center_conv_snr), xp.log10(opt_radii), 1, cov=False)
+        del opt_radii, center_conv_snr
     except Exception as e:
         nvtx.end_range(polyfit_range)
         nvtx.end_range(block8_range)
@@ -995,100 +980,81 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: c
     nvtx.end_range(polyfit_range)
     nvtx.end_range(block8_range)
 
-    # BLOQUE 9: Cálculo flujo/ruido óptimos (Sin cambios, ya era full GPU)
+    # BLOQUE 9: Calculate optimal flux and noise
     block9_range = nvtx.start_range('optimal_flux_calculation', category='phot.metadata', color='lime')
-    # ... (lógica igual que antes, opera en GPU) ...
-    valid_conv_snr_mask = (conv_snr_filt > 0) & cp.isfinite(conv_snr_filt)
-    source_opt_rad = cp.full_like(conv_snr_filt, cp.nan)
-    source_opt_rad_idx = cp.full_like(source_opt_rad, -1, dtype=cp.int32)
-    if cp.any(valid_conv_snr_mask):
-        log10_conv_snr_valid = cp.log10(conv_snr_filt[valid_conv_snr_mask])
-        log10_opt_rad_valid = pov[0] * log10_conv_snr_valid + pov[1]
-        opt_rad_intermediate_valid = cp.power(10, log10_opt_rad_valid)
-        max_radii_val = radii[-1].item()
-        min_radii_val = radii[0].item()
-        source_opt_rad_valid = cp.rint(cp.clip(opt_rad_intermediate_valid, min_radii_val, max_radii_val)).astype(
-            radii.dtype)
-        source_opt_rad[valid_conv_snr_mask] = source_opt_rad_valid
-    valid_opt_rad_mask = ~cp.isnan(source_opt_rad)
-    if cp.any(valid_opt_rad_mask):
-        source_opt_rad_for_search = source_opt_rad[valid_opt_rad_mask]
-        indices_valid = cp.searchsorted(radii, source_opt_rad_for_search, side='left')
-        indices_valid = cp.clip(indices_valid, 0, len(radii) - 1)
-        source_opt_rad_idx[valid_opt_rad_mask] = indices_valid
-    final_valid_mask = (source_opt_rad_idx != -1)
-    opt_aperture_corrections = cp.full_like(source_opt_rad, cp.nan)
-    opt_aperture_correction_errors = cp.full_like(source_opt_rad, cp.nan)
-    opt_flux = cp.full_like(source_opt_rad, cp.nan)
-    if cp.any(final_valid_mask):
-        indices_for_final = source_opt_rad_idx[final_valid_mask]
-        source_indices_final = cp.where(final_valid_mask)[0]
-        opt_aperture_corrections[final_valid_mask] = aperture_corrections[source_indices_final, indices_for_final]
-        opt_aperture_correction_errors[final_valid_mask] = aperture_correction_errors[
-            source_indices_final, indices_for_final]
-        opt_flux[final_valid_mask] = source_flux[indices_for_final, source_indices_final]
-    positive_flux_mask = final_valid_mask & (opt_flux > 0)
-    if cp.sum(positive_flux_mask) == 0:
-        nvtx.end_range(block9_range)
-        nvtx.end_range(overall_range)
-        raise DataValidationError("Input data is invalid or insufficient")
-    opt_flux_final = opt_flux[positive_flux_mask]
-    opt_aper_corr_final = opt_aperture_corrections[positive_flux_mask]
-    opt_corr_err_final = opt_aperture_correction_errors[positive_flux_mask]
-    source_opt_rad_final = source_opt_rad[positive_flux_mask]
-    source_opt_rad_idx_final = source_opt_rad_idx[positive_flux_mask]
-    final_source_indices = cp.where(positive_flux_mask)[0]
-    opt_signal_final = cp.divide(opt_flux_final, opt_aper_corr_final + epsilon)
-    opt_back_flux_final = cp.zeros_like(opt_flux_final)
-    if back_flux is not None: opt_back_flux_final = back_flux[source_opt_rad_idx_final, final_source_indices]
-    opt_area_final = area[source_opt_rad_idx_final]
-    opt_back_noise_sq = cp.abs(opt_back_flux_final) * gain
-    opt_read_noise_sq = opt_area_final * rdnoise ** 2
-    opt_corr_sq = opt_aper_corr_final ** 2
-    opt_source_noise_sq = cp.divide(opt_flux_final * gain, opt_corr_sq + epsilon)
-    opt_corr_noise_sq = cp.power(cp.divide(opt_flux_final * gain * opt_corr_err_final, opt_corr_sq + epsilon), 2)
-    opt_total_noise_sq_sum = (
-            opt_source_noise_sq / n_images + opt_back_noise_sq / n_images + opt_read_noise_sq / n_images + opt_corr_noise_sq)
-    opt_total_noise_sq_sum = cp.maximum(opt_total_noise_sq_sum, 0)
-    opt_total_noise_final = cp.sqrt(opt_total_noise_sq_sum) / gain
-    opt_coords_final = source_coord_filt[final_source_indices]
+
+    source_opt_rad = cp.round(
+        cp.fmax(cp.fmin((10 ** (pov[0] * cp.log10(conv_snr) + pov[1])), max_radii), min_radii)
+    ).astype(int)
+    source_opt_rad_idx = cp.searchsorted(radii, source_opt_rad, side='right') - 1
+
+    del conv_snr
+
+    opt_aperture_corrections = aperture_corrections[cp.arange(source_coord.shape[0]), source_opt_rad_idx]
+    opt_aperture_correction_errors = aperture_correction_errors[cp.arange(source_coord.shape[0]), source_opt_rad_idx]
+    opt_flux = source_flux[source_opt_rad_idx, cp.arange(source_coord.shape[0])]
+
+    del source_flux, aperture_correction_errors, aperture_corrections
+
+    mask = opt_flux > 0
+    opt_flux = opt_flux[mask]
+    opt_aper_corr = opt_aperture_corrections[mask]
+    opt_corr_err = opt_aperture_correction_errors[mask]
+
+    del opt_aperture_correction_errors, opt_aperture_corrections
+
+    opt_signal = opt_flux / opt_aper_corr
+
+    opt_back_noise_sq = cp.abs(back_flux[source_opt_rad_idx, cp.arange(source_coord.shape[0])])[mask] * gain
+    opt_read_noise_sq = area[source_opt_rad_idx][mask] * rdnoise ** 2
+
+    del source_opt_rad_idx, back_flux
+
+    opt_source_noise_sq = opt_flux * gain / opt_aper_corr ** 2
+    opt_corr_noise_sq = (opt_flux * gain * opt_corr_err / opt_aper_corr ** 2) ** 2
+
+    opt_total_noise = cp.sqrt(
+        opt_source_noise_sq / n_images +
+        opt_back_noise_sq / n_images +
+        opt_read_noise_sq / n_images +
+        opt_corr_noise_sq
+    ) / gain
+    opt_coords = source_coord[mask]
+
+    del source_coord, opt_back_noise_sq, opt_read_noise_sq, opt_corr_noise_sq, opt_source_noise_sq, opt_flux, opt_corr_err
+
     nvtx.end_range(block9_range)
 
-    # BLOQUE 10: Info extra (Transferencia escalares)
+    # BLOQUE 10: Obtain aditional information for header purposes
     block10_range = nvtx.start_range('extra_info_generation', category='phot.metadata', color='yellow')
     # ... (igual que antes, usa cp.argmin, .item()) ...
     extra_info = {}
     ref_snr_values = [10, 100, 250, 1000]
-    opt_final_snr = cp.divide(opt_signal_final, opt_total_noise_final + epsilon)
-    if opt_final_snr.size > 0:
-        for snr_ref in ref_snr_values:
-            diff_snr = cp.abs(opt_final_snr - snr_ref)
-            ref_idx_cp = cp.argmin(diff_snr)
-            tx4_range = nvtx.start_range(f'transfer_extra_info_snr{snr_ref}', category='transfer_scalar', color='pink')
-            ref_idx_np = ref_idx_cp.item()
-            try:
-                rad_val = source_opt_rad_final[ref_idx_np].item()
-                corr_val = opt_aper_corr_final[ref_idx_np].item()
-                extra_info[f'RAD{snr_ref}'] = int(rad_val)
-                extra_info[f'CORR{snr_ref}'] = round(corr_val, 3)
-            except IndexError:
-                extra_info[f'RAD{snr_ref}'] = -1
-                extra_info[f'CORR{snr_ref}'] = -1.0
-            nvtx.end_range(tx4_range)
-    else:
-        for snr_ref in ref_snr_values:
-            extra_info[f'RAD{snr_ref}'] = -1
-            extra_info[f'CORR{snr_ref}'] = -1.0
+    opt_final_snr = cp.divide(opt_signal, opt_total_noise)
+    for snr_ref in ref_snr_values:
+        diff_snr = cp.abs(opt_final_snr - snr_ref)
+        ref_idx_cp = cp.argmin(diff_snr)
+        tx4_range = nvtx.start_range(f'transfer_extra_info_snr{snr_ref}', category='transfer_scalar', color='pink')
+        ref_idx_np = ref_idx_cp.item()
+        try:
+            rad_val = source_opt_rad[mask][ref_idx_np].item()
+            corr_val = opt_aper_corr[ref_idx_np].item()
+            extra_info[f'RAD{snr_ref}'] = int(rad_val)
+            extra_info[f'CORR{snr_ref}'] = round(corr_val, 3)
+        except IndexError:
+            continue
+
+        nvtx.end_range(tx4_range)
+
+    del source_opt_rad, mask, opt_aper_corr, opt_final_snr
     nvtx.end_range(block10_range)
 
     # Transferencia final GPU -> CPU para return
-    final_transfer_range = nvtx.start_range('final_gpu_to_cpu_transfer', category='transfer', color='red')
-    opt_signal_np = opt_signal_final.get()
-    opt_total_noise_np = opt_total_noise_final.get()
-    opt_coords_np = opt_coords_final.get()
-    nvtx.end_range(final_transfer_range)
-
-    del opt_signal_final, opt_total_noise_final, opt_coords_final
+    # final_transfer_range = nvtx.start_range('final_gpu_to_cpu_transfer', category='transfer', color='red')
+    # opt_signal_np = opt_signal.get()
+    # opt_total_noise_np = opt_total_noise.get()
+    # opt_coords_np = opt_coords.get()
+    # nvtx.end_range(final_transfer_range)
 
     # Cleanup opcional
     # ... del ...
@@ -1096,7 +1062,7 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: c
     # gc.collect()
 
     nvtx.end_range(overall_range)
-    return opt_signal_np, opt_total_noise_np, opt_coords_np, extra_info
+    return opt_signal.get(), opt_total_noise.get(), opt_coords.get(), extra_info
 
 
 #
@@ -1130,8 +1096,8 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: c
 #     # BLOQUE 2: Procesamiento SNR y validación de fuentes (Includes transfers for crossmatch)
 #     block2_range = nvtx.start_range('snr_source_validation', category='phot.photo_gpu', color='orange')
 #     # Use cp.rint and clip for robust indexing
-#     source_row_idx = cp.clip(cp.rint(source_coord[:, 0]), 0, h - 1).astype(cp.int32)
-#     source_col_idx = cp.clip(cp.rint(source_coord[:, 1]), 0, w - 1).astype(cp.int32)
+#     source_row_idx = cp.clip(cp.round(source_coord[:, 0]), 0, h - 1).astype(cp.int32)
+#     source_col_idx = cp.clip(cp.round(source_coord[:, 1]), 0, w - 1).astype(cp.int32)
 #     conv_snr = conv_ima_sigma[source_row_idx, source_col_idx]
 #
 #     pos_conv_snr_mask = conv_snr > 0
@@ -1163,8 +1129,8 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: c
 #     # --- End Transfers for Crossmatch ---
 #
 #     # Check SNR for isolated stars (used for correction map generation)
-#     isolated_row_idx = cp.clip(cp.rint(isolated_coord[:, 0]), 0, h - 1).astype(cp.int32)
-#     isolated_col_idx = cp.clip(cp.rint(isolated_coord[:, 1]), 0, w - 1).astype(cp.int32)
+#     isolated_row_idx = cp.clip(cp.round(isolated_coord[:, 0]), 0, h - 1).astype(cp.int32)
+#     isolated_col_idx = cp.clip(cp.round(isolated_coord[:, 1]), 0, w - 1).astype(cp.int32)
 #     conv_snr_isol = conv_ima_sigma[isolated_row_idx, isolated_col_idx]
 #
 #     # Mask for isolated stars used in correction map (center AND snr threshold)
@@ -1221,7 +1187,7 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: c
 #     # BLOQUE 5: Fotometría por lotes (GPU)
 #     block5_range = nvtx.start_range('batch_aperture_photometry', category='phot.photo_gpu', color='green')
 #     # Ensure coords passed are integers
-#     source_coord_int = cp.rint(source_coord_filt).astype(cp.int32)
+#     source_coord_int = cp.round(source_coord_filt).astype(cp.int32)
 #     # Clip again just to be absolutely safe before indexing image
 #     source_coord_int[:, 0] = cp.clip(source_coord_int[:, 0], 0, h - 1)
 #     source_coord_int[:, 1] = cp.clip(source_coord_int[:, 1], 0, w - 1)
@@ -1384,7 +1350,7 @@ def perform_opt_photometry_optimized_gpu_crossmatch(img_ori: cp.ndarray, back: c
 #         # Clip and round on GPU
 #         max_radii_val = radii[-1].item()  # Get max value from radii array (scalar)
 #         min_radii_val = radii[0].item()  # Get min value
-#         source_opt_rad_valid = cp.rint(
+#         source_opt_rad_valid = cp.round(
 #             cp.clip(opt_rad_intermediate_valid, min_radii_val, max_radii_val)
 #         ).astype(radii.dtype)  # Match radii dtype
 #
@@ -1913,7 +1879,7 @@ def batch_aperture_photometry(
     mempool = cp.get_default_memory_pool()
 
     # Preferred processing dtype (float32 saves memory)
-    processing_dtype = cp.float32
+    processing_dtype = cp.float64
 
     # --- Input Validation and GPU Transfer ---
     transfer_nvtx = nvtx.start_range('input_transfer_check', category='phot.setup', color='orange')
@@ -1978,7 +1944,7 @@ def batch_aperture_photometry(
     radii = radii.astype(processing_dtype, copy=False)  # Ensure correct dtype
 
     nvtx.end_range(transfer_nvtx)
-    logger.info(f"Inputs transferred/validated. GPU Memory: Used={mempool.used_bytes() / 1e9:.2f} GB")
+    logger.debug(f"Inputs transferred/validated. GPU Memory: Used={mempool.used_bytes() / 1e9:.2f} GB")
 
     # --- Validations and Area Calculation ---
     if radii.size == 0:
@@ -2037,7 +2003,7 @@ def batch_aperture_photometry(
         nvtx.end_range(nvtx_range)
         return None, None, areas
 
-    logger.info(f"Using FFT shape: {fft_shape} for image {img_h, img_w}, max radius {max_radius}")
+    logger.debug(f"Using FFT shape: {fft_shape} for image {img_h, img_w}, max radius {max_radius}")
 
     # --- DELAYED ALLOCATION ---
     all_plane_flux = [] if is_3d else None
@@ -2225,7 +2191,7 @@ def batch_aperture_photometry(
         # Stack results *after* the loop
         if success and all_plane_flux:
             stack_range = nvtx.start_range('stack_results', category='phot.postproc')
-            logger.info(f"Stacking results from {len(all_plane_flux)} planes...")
+            logger.debug(f"Stacking results from {len(all_plane_flux)} planes...")
             try:
                 final_flux = cp.stack(all_plane_flux, axis=0)
                 if all_plane_back_flux:
@@ -2242,7 +2208,7 @@ def batch_aperture_photometry(
         # ... (handle other failure/empty cases) ...
 
     else:  # Case 2D
-        logger.info(f"Processing 2D image.")
+        logger.debug(f"Processing 2D image.")
         img_subtracted = img_gpu - back_gpu if back_gpu is not None else img_gpu
         final_flux, final_back_flux = process_plane(0, img_subtracted, back_gpu)
         del img_subtracted  # Delete temporary subtraction
@@ -2263,7 +2229,7 @@ def batch_aperture_photometry(
     nvtx.end_range(nvtx_range)  # End overall function range
 
     if success:
-        logger.info(f"Batch aperture photometry completed successfully.")
+        logger.debug(f"Batch aperture photometry completed successfully.")
     else:
         logger.error(f"Batch aperture photometry failed due to errors.")
 
@@ -2478,19 +2444,14 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
 
     # Perform optimized photometry
 
-    # optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry(img_cp - back, back,
-    #                                                                                  conv_ima_sigma, sources,
-    #                                                                                  coord, tile_section_psf,
-    #                                                                                  star_dataset[mask_star_dataset],
-    #                                                                                  fwhm, gain, n_images, rdnoise)
+    # if 'img_cp' not in locals():
+    #     img_cp = cp.asarray(imdata)
+    # img_cp = cp.asarray(imdata)
+    # with gpu_array_manager(imdata, mempool) as img_cp:
 
     # TODO: Revisar por Miguel: dejamos center_factor y min_conv_snr con valor dor defecto de la función, o por defecto de DEFAULT_PROCESSING_PARAMS
 
-    if 'img_cp' not in locals():
-        img_cp = cp.asarray(imdata)
-    # img_cp = cp.asarray(imdata)
-    # with gpu_array_manager(imdata, mempool) as img_cp:
-    optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry_optimized_gpu_crossmatch(
+    optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry(
         img_ori=img_cp,
         back=back,
         conv_ima_sigma=conv_ima_sigma,
@@ -2586,1142 +2547,6 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
         dic_calib['OBJECSNR'] = np.round(target_snr, 2)
 
     return dfm, h_wcs, dic_calib
-
-
-### # @hierarchical_debug(logger)
-@nvtx.annotate('calibrate_image_v2', category='phot.photo_gpu')
-def calibrate_image_v2(imdata: np.ndarray, filter: str, scale: float, gain: float, rdnoise: float,
-                       exptime: float, satlevel: float, target_ra: float, target_dec: float = None, n_images: int = 1,
-                       SP_filt: bool = True, CR_filt: bool = False, border: int = 10, center_factor: float = 0.7,
-                       pca_method: bool = True, tile_section: int = 1000, max_stars_ref: int = 15, min_snr: int = 5,
-                       color_range: float = 0.6, tile_section_psf: int = 2500,
-                       memory_thresholds: dict = None,
-                       **kwargs):
-    """
-        Calibrate an image.
-
-        :param imdata: Image data.
-        :type imdata: numpy.ndarray
-        :param filter: Filter used for the image.
-        :type filter: str
-        :param scale: Image scale, in arcsec/pixel.
-        :type scale: float
-        :param gain: Gain value, in e-/ADU.
-        :type gain: float
-        :param rdnoise: Read noise value, in e-.
-        :type rdnoise: float
-        :param exptime: Exposure time, in seconds.
-        :type exptime: float
-        :param satlevel: Saturation level, in ADU.
-        :type satlevel: float
-        :param target_ra: Target right ascension, in degrees.
-        :type target_ra: float
-        :param target_dec: Target declination, in degrees.
-        :type target_dec: float or None
-        :param n_images: Number of stacked images.
-        :type n_images: int
-        :param SP_filt: Whether to apply a Salt-and-Pepper filter.
-        :type SP_filt: bool
-        :param CR_filt: Whether to apply a cosmic ray filter.
-        :type CR_filt: bool
-        :param border: Distance from the border where sources are ignored.
-        :type border: int
-        :param center_factor: Factor to select the center of the image for reference calculations.
-        :type center_factor: float
-        :param pca_method: Whether to use PCA for PSF fitting.
-        :type pca_method: bool
-        :param tile_section: Tile section size for background estimation.
-        :type tile_section: int
-        :param max_stars_ref: Maximum number of stars to use for reference PSF.
-        :type max_stars_ref: int
-        :param min_snr: Minimum SNR for source detection.
-        :type min_snr: int
-        :param color_range: Color range around B-V = 0.65 for zeropoing calculations.
-        :type color_range: float
-        :param tile_section_psf: Tile section size for aperture corrections variations.
-        :type tile_section_psf: int
-        :return: Calibration dictionary, astrometry dictionary, photometry dataframe.
-        :rtype: tuple(dict, dict, pandas.DataFrame)
-        :raises InsufficientStarsError: If less than 5 isolated stars are detected.
-        :raises MoffatFitError: If there's an error fitting Moffat to reference PSF.
-        """
-    mempool = cp.get_default_memory_pool()
-    thresholds = {**DEFAULT_THRESHOLDS, **(memory_thresholds or {})}
-    data_dict = {}
-    data_location = {}
-    imadata_shape = imdata.shape  # Guardar forma original
-
-    dfm = None
-    h_wcs = {}
-    dic_calib = {}
-
-    # Lista de variables que podrían gestionarse (para limpieza final)
-    managed_vars = ['img_cp', 'back', 'rms', 'img_sub', 'img_filt', 'sources_iso',
-                    'star_dataset', 'coord', 'scaling', 'unit_star_dataset',
-                    'star_dataset_ref', 'psf', 'eigen_psfs', 'coefficients', 'coeff_map',
-                    'sources', 'conv_ima_sigma', 'img_sub_detect', 'img_sub_phot',
-                    'mask_star_dataset']
-
-    try:
-        nvtx_overall = nvtx.start_range('calibrate_image_reactive_adaptive_overall', category='phot.calibrate')
-
-        # --- Carga Inicial ---
-        try:
-            data_dict['img_cp'] = cp.asarray(imdata);
-            data_location['img_cp'] = 'GPU'
-            data_dict['img_cp'][cp.isinf(data_dict['img_cp']) | cp.isnan(data_dict['img_cp'])] = 0
-            del imdata
-        except (MemoryError, cp.cuda.runtime.CUDARuntimeError) as e:
-            raise MemoryError("Insufficient GPU memory for initial image.") from e
-
-        # --- Checkpoint 1: Antes de Background ---
-        logger.info("Checkpoint 1: Before Background")
-        level1 = adaptive_memory_management(mempool, thresholds)
-        # No hay offload reactivo aquí
-
-        nvtx_back = nvtx.start_range('background', category='phot.calibrate')
-        try:
-            logger.info("Calculating background and RMS...")
-            img_cp_gpu = get_gpu_var_reactive('img_cp', data_dict, data_location, mempool)  # Acceso reactivo
-            data_dict['back'], _ = get_local_background_fft(img_cp_gpu, scale, get_std=False, **kwargs)
-            data_location['back'] = 'GPU';
-            del _
-            # Acceso directo a 'back' aquí, ya que se acaba de crear/asegurar en GPU
-            data_dict['rms'] = cp.sqrt(data_dict['back'] * gain + rdnoise ** 2) / gain / cp.sqrt(
-                n_images)
-
-            data_location['rms'] = 'GPU'
-            logger.info("Background and RMS calculated.")
-            # Cálculo fluxsky...
-            center_factor = np.min((center_factor, 1))
-            ymin_sky = int(imadata_shape[0] * 0.5 * (1 - center_factor));
-            ymax_sky = int(imadata_shape[0] * 0.5 * (1 + center_factor))
-            xmin_sky = int(imadata_shape[1] * 0.5 * (1 - center_factor));
-            xmax_sky = int(imadata_shape[1] * 0.5 * (1 + center_factor))
-            back_center = data_dict['back'][ymin_sky:ymax_sky, xmin_sky:xmax_sky];
-            m = cp.median(back_center);
-            s = cp.std(back_center)
-            mask_sky = cp.abs(back_center - m) < 3 * s;
-            m = cp.median(back_center[mask_sky])
-            fluxsky = np.round(m.get(), 6);
-            dic_calib['FLUXSKY'] = fluxsky
-
-            if fluxsky < 0: logger.warning('Median background flux negative: %.3f', fluxsky)
-            del back_center, m, s, mask_sky
-        except (MemoryError, cp.cuda.runtime.CUDARuntimeError) as e:
-            raise MemoryError("OOM during background/RMS.") from e
-        finally:
-            nvtx.end_range(nvtx_back)
-
-        # --- Checkpoint 2: Antes de Filt./Detect Iso ---
-        logger.info("Checkpoint 2: Before Filtering / Initial Star Detection")
-        level2 = adaptive_memory_management(mempool, thresholds)
-        if level2 == CRITICAL_LEVEL:  # Offload reactivo
-            logger.warning("Memory CRITICAL before filtering/detection. Attempting offload 'back'.")
-            offload_to_cpu('back', data_dict, data_location, mempool)
-
-        nvtx_filter_detect = nvtx.start_range('filter_detect_iso', category='phot.calibrate')
-        try:
-            logger.info("Performing initial subtraction and filtering...")
-            img_cp_gpu = get_gpu_var_reactive('img_cp', data_dict, data_location, mempool)
-            back_gpu = get_gpu_var_reactive('back', data_dict, data_location, mempool,
-                                            force_load_if_critical=True)  # Forzar carga si crítico
-            rms_gpu = get_gpu_var_reactive('rms', data_dict, data_location, mempool)
-
-            data_dict['img_sub'] = img_cp_gpu - back_gpu;
-            data_location['img_sub'] = 'GPU'
-            if CR_filt:
-                data_dict['img_filt'] = CR_filter(data_dict['img_sub'])
-            elif SP_filt:
-                data_dict['img_filt'] = SP_filter(data_dict['img_sub'])  # change SP_filter_cupy to SP_filter
-            else:
-                data_dict['img_filt'] = data_dict['img_sub']
-
-            data_location['img_filt'] = 'GPU'
-            del data_dict['img_sub'];
-            data_location['img_sub'] = 'None';
-            logger.info("Filtering complete.")
-
-            logger.info("Detecting isolated stars...")
-            data_dict['sources_iso'] = detect_isolated_stars(
-                data_dict['img_filt'][border:-border, border:-border],
-                rms_gpu[border:-border, border:-border],
-                scale, sat_lim=satlevel * 0.8, **kwargs
-            )
-            data_dict['sources_iso'] += border;
-            data_location['sources_iso'] = 'GPU'
-            if len(data_dict['sources_iso']) < 5: raise InsufficientStarsError(num_stars=len(data_dict['sources_iso']))
-            logger.info(f"Detected {len(data_dict['sources_iso'])} isolated stars.")
-
-            logger.info("Creating star dataset...")
-            # Usar img_filt y sources_iso que están garantizados en GPU por el código anterior
-            data_dict['star_dataset'], data_dict['coord'], data_dict['scaling'] = create_star_dataset(
-                data_dict['img_filt'], data_dict['sources_iso'], scale
-            )
-            data_location['star_dataset'] = 'GPU';
-            data_location['coord'] = 'GPU';
-            data_location['scaling'] = 'GPU'
-            logger.info(f"Star dataset created with {len(data_dict['coord'])} stars.")
-
-        except (MemoryError, cp.cuda.runtime.CUDARuntimeError) as e:
-            raise MemoryError("OOM during filtering/initial detection.") from e
-        finally:
-            # Limpiar lo que ya no se necesita para PSF/PCA: sources_iso, img_filt
-            if 'sources_iso' in data_dict: del data_dict['sources_iso']; data_location['sources_iso'] = 'None'
-            # if 'img_filt' in data_dict: del data_dict['img_filt']; data_location['img_filt'] = 'None'
-            # img_cp, back, rms, star_dataset, coord, scaling SÍ se necesitan
-            maybe_free_arrays([], mempool);
-            nvtx.end_range(nvtx_filter_detect)
-
-        # --- Checkpoint 3: Antes de PSF/PCA ---
-        logger.info("Checkpoint 3: Before PSF/PCA")
-        level3 = adaptive_memory_management(mempool, thresholds)
-        if level3 == CRITICAL_LEVEL:  # Offload reactivo
-            logger.warning("Memory CRITICAL before PSF/PCA. Attempting offload 'rms' and 'back'.")
-            offload_to_cpu('rms', data_dict, data_location, mempool)
-            offload_to_cpu('back', data_dict, data_location, mempool)
-            # No descargar star_dataset, coord, scaling
-
-        nvtx_psf_pca = nvtx.start_range('psf_pca', category='phot.calibrate')
-        try:
-            logger.info("Calculating reference PSF and performing PCA (if enabled)...")
-            # Acceso reactivo (forzar carga si es crítico porque son necesarios ahora)
-            star_dataset_gpu = get_gpu_var_reactive('star_dataset', data_dict, data_location, mempool,
-                                                    force_load_if_critical=True)
-            coord_gpu = get_gpu_var_reactive('coord', data_dict, data_location, mempool, force_load_if_critical=True)
-            scaling_gpu = get_gpu_var_reactive('scaling', data_dict, data_location, mempool,
-                                               force_load_if_critical=True)
-
-            # --- Inicio Lógica PSF/PCA ---
-            data_dict['unit_star_dataset'] = star_dataset_gpu.astype(cp.float64) / scaling_gpu[:, 3][:, None, None]
-            data_location['unit_star_dataset'] = 'GPU'
-            coord_psf = coord_gpu
-            center_factor = min(center_factor, 1.0)
-            xmin_psf = int(imadata_shape[1] * 0.5 * (1 - center_factor));
-            xmax_psf = int(imadata_shape[1] * 0.5 * (1 + center_factor))
-            ymin_psf = int(imadata_shape[0] * 0.5 * (1 - center_factor));
-            ymax_psf = int(imadata_shape[0] * 0.5 * (1 + center_factor))
-            center_mask = (coord_psf[:, 1] > xmin_psf) & (coord_psf[:, 1] < xmax_psf) & (coord_psf[:, 0] > ymin_psf) & (
-                    coord_psf[:, 0] < ymax_psf)
-            unit_star_dataset_stds = cp.std(data_dict['unit_star_dataset'], axis=(1, 2))
-            mask_star_dataset = unit_star_dataset_stds < cp.percentile(
-                cp.std(data_dict['unit_star_dataset'], axis=(1, 2)), 95.4)
-
-            #
-            # if unit_star_dataset_stds.size > 0:
-            #     perc_val = cp.percentile(unit_star_dataset_stds,
-            #                              95.4);
-            #     mask_star_dataset = unit_star_dataset_stds < perc_val
-            # else:
-            #     mask_star_dataset = cp.zeros(len(coord_psf), dtype=bool)
-
-            data_dict['mask_star_dataset'] = mask_star_dataset;
-            data_location['mask_star_dataset'] = 'GPU'
-
-            data_dict['unit_star_dataset'] = data_dict['unit_star_dataset'][mask_star_dataset]
-            data_dict['coord'] = coord_psf[mask_star_dataset]  # Actualizar 'coord'
-            data_dict['star_dataset'] = star_dataset_gpu[mask_star_dataset]  # Actualizar 'star_dataset'
-            logger.debug(f"Filtered datasets based on PSF quality. Kept {len(data_dict['coord'])} stars.")
-            del unit_star_dataset_stds, coord_psf, star_dataset_gpu, scaling_gpu
-
-            if 'scaling' in data_dict: del data_dict['scaling']; data_location['scaling'] = 'None'
-
-            center_mask_filt = center_mask[mask_star_dataset]
-            data_dict['star_dataset_ref'] = data_dict['unit_star_dataset'][center_mask_filt][:max_stars_ref, :, :]
-            if data_dict['star_dataset_ref'].shape[0] < 5: raise InsufficientStarsError(
-                data_dict['star_dataset_ref'].shape[0], "in center for PSF ref")
-            data_dict['psf'], _ = stack_sigmaclip(data_dict['star_dataset_ref'], n=2);
-            data_location['psf'] = 'GPU'
-            del _, data_dict['star_dataset_ref'], center_mask
-            data_dict['psf'] /= cp.sum(data_dict['psf']);
-            logger.debug("Reference PSF calculated.")
-
-            logger.debug("Fitting Moffat to reference PSF...")
-            try:
-                _, _, _, fwhm, _ = fit_moffat(data_dict['psf']);
-                del _
-            except Exception as e:
-                raise MoffatFitError() from e
-            if fwhm < 2: raise MoffatFitError(f'FWHM < 2 ({fwhm:.2f})')
-            dic_calib['FWHM'] = fwhm;
-
-            fwhm = max(fwhm, 2.0);
-            logger.info(f"PSF FWHM calculated: {fwhm:.2f} pixels")
-
-            if pca_method:
-                logger.debug("Performing PCA analysis for PSF...")
-                unit_star_dataset_dev = data_dict['unit_star_dataset'] - data_dict['psf']
-
-                unit_star_dataset_dev_norm = (unit_star_dataset_dev - cp.mean(unit_star_dataset_dev, axis=(1, 2))[:,
-                                                                      None,
-                                                                      None]) / cp.std(unit_star_dataset_dev,
-                                                                                      axis=(1, 2))[:,
-                                                                               None, None]
-
-                #
-                # mean_dev = cp.mean(unit_star_dataset_dev, axis=(1, 2), keepdims=True);
-                # std_dev = cp.std(unit_star_dataset_dev, axis=(1, 2), keepdims=True)
-                # unit_star_dataset_dev_norm = (unit_star_dataset_dev - mean_dev) / cp.maximum(std_dev, 1e-9)
-                eigen_psfs_np = get_eigen_psfs(unit_star_dataset_dev_norm, n_components=5)
-                data_dict['eigen_psfs'] = cp.asarray(eigen_psfs_np);
-                data_location['eigen_psfs'] = 'GPU';
-                del eigen_psfs_np
-                data_dict['coefficients'] = project_all_stars_onto_eigenpsfs(unit_star_dataset_dev,
-                                                                             data_dict['eigen_psfs']);
-                data_location['coefficients'] = 'GPU'
-                # Acceso reactivo a 'coord' (ya filtrado y en GPU)
-                coord_pca_gpu = get_gpu_var_reactive('coord', data_dict, data_location, mempool)
-                data_dict['coeff_map'] = create_coeff_map(imadata_shape, coord_pca_gpu, data_dict['coefficients'].T,
-                                                          scale, tile_section=tile_section);
-                data_location['coeff_map'] = 'GPU'
-                # FWHM esquinas...
-                x1 = int(imadata_shape[1] * 0.25);
-                x2 = int(imadata_shape[1] * 0.75);
-                y1 = int(imadata_shape[0] * 0.25);
-                y2 = int(imadata_shape[0] * 0.75)
-                x = np.array([x1, x2, x1, x2]);
-                y = np.array([y1, y2, y2, y1]);
-                fwhm_lab = ['FWHMLL', 'FWHMLR', 'FWHMUL', 'FWHMUR']
-                for point in range(len(fwhm_lab)):
-                    psf_l = data_dict['psf'] + recreate_normed_star(data_dict['coeff_map'], data_dict['eigen_psfs'],
-                                                                    (x[point], y[point]))
-                    try:
-                        _, _, _, fwhm_l, _ = fit_moffat(psf_l);
-                        fwhm_l = np.round(fwhm_l, 2)
-                    except:
-                        fwhm_l = 0.0
-                    dic_calib[fwhm_lab[point]] = fwhm_l;
-
-                    del psf_l, fwhm_l
-                if 'coefficients' in data_dict: del data_dict['coefficients']; data_location['coefficients'] = 'None'
-                del unit_star_dataset_dev, unit_star_dataset_dev_norm, coord_pca_gpu
-                logger.debug("PCA analysis complete.")
-            else:
-                data_location['eigen_psfs'] = 'None';
-                data_location['coeff_map'] = 'None'
-            # --- Fin Lógica PSF/PCA ---
-
-        except (MemoryError, cp.cuda.runtime.CUDARuntimeError) as e:
-            raise MemoryError("OOM during PSF/PCA.") from e
-        finally:
-            if 'unit_star_dataset' in data_dict: del data_dict['unit_star_dataset']; data_location[
-                'unit_star_dataset'] = 'None'
-            maybe_free_arrays([], mempool);
-            nvtx.end_range(nvtx_psf_pca)
-
-        # --- Checkpoint 4: Antes de Detección Final ---
-        logger.info("Checkpoint 4: Before Final Source Detection")
-        level4 = adaptive_memory_management(mempool, thresholds)
-        if level4 == CRITICAL_LEVEL:  # Offload reactivo
-            logger.warning("Memory CRITICAL before final detection. Attempting offload non-essentials.")
-            offload_to_cpu('coeff_map', data_dict, data_location, mempool)
-            offload_to_cpu('eigen_psfs', data_dict, data_location, mempool)
-            offload_to_cpu('star_dataset', data_dict, data_location, mempool)
-            offload_to_cpu('coord', data_dict, data_location, mempool)
-            offload_to_cpu('mask_star_dataset', data_dict, data_location, mempool)
-
-        nvtx_detect_final = nvtx.start_range('detect_sources_psf', category='phot.calibrate')
-        try:
-            logger.info("Detecting final sources using PSF model...")
-            # Acceso reactivo forzando carga
-            img_cp_gpu = get_gpu_var_reactive('img_cp', data_dict, data_location, mempool, force_load_if_critical=True)
-            back_gpu = get_gpu_var_reactive('back', data_dict, data_location, mempool, force_load_if_critical=True)
-            rms_gpu = get_gpu_var_reactive('rms', data_dict, data_location, mempool, force_load_if_critical=True)
-            psf_gpu = get_gpu_var_reactive('psf', data_dict, data_location, mempool, force_load_if_critical=True)
-            eigen_psfs_gpu = None;
-            coeff_map_gpu = None
-            if pca_method:
-                eigen_psfs_gpu = get_gpu_var_reactive('eigen_psfs', data_dict, data_location, mempool,
-                                                      force_load_if_critical=True)
-                coeff_map_gpu = get_gpu_var_reactive('coeff_map', data_dict, data_location, mempool,
-                                                     force_load_if_critical=True)
-
-            data_dict['img_sub_detect'] = data_dict['img_filt']
-            if 'img_filt' in data_dict: del data_dict['img_filt']; data_location['img_filt'] = 'None'
-            data_location['img_sub_detect'] = 'GPU'
-
-            data_dict['sources'], data_dict['conv_ima_sigma'] = detect_sources_psf(
-                data_dict['img_sub_detect'], rms_gpu, fwhm, psf_gpu, eigen_psfs_gpu, coeff_map_gpu, min_snr=min_snr,
-                **kwargs
-            );
-            data_location['sources'] = 'GPU';
-            data_location['conv_ima_sigma'] = 'GPU'
-            del data_dict['img_sub_detect'];
-            data_location['img_sub_detect'] = 'None'
-            logger.info(f"Detected {len(data_dict['sources'])} final sources.")
-
-            border_mask = (data_dict['sources'][:, 0] > border) & (
-                    data_dict['sources'][:, 0] < imadata_shape[0] - border) & (
-                                  data_dict['sources'][:, 1] > border) & (
-                                  data_dict['sources'][:, 1] < imadata_shape[1] - border)
-            data_dict['sources'] = data_dict['sources'][border_mask]
-            logger.debug(f"Filtered sources by border, kept {len(data_dict['sources'])}.")
-
-        except (MemoryError, cp.cuda.runtime.CUDARuntimeError) as e:
-            raise MemoryError("OOM during final detection.") from e
-        finally:
-            # Limpiar lo que ya no se necesita: psf, eigen, coeff, rms
-            vars_to_del_post_detect = ['psf', 'eigen_psfs', 'coeff_map', 'rms']
-            for var in vars_to_del_post_detect:
-                if var in data_dict: del data_dict[var]; data_location[var] = 'None'
-                if var + '_cpu' in data_dict: del data_dict[var + '_cpu']
-            maybe_free_arrays([], mempool);
-            nvtx.end_range(nvtx_detect_final)
-
-        # --- Checkpoint 5: Antes de Fotometría Optimizada ---
-        logger.info("Checkpoint 5: Before Optimized Photometry")
-        level5 = adaptive_memory_management(mempool, thresholds)
-        if level5 == CRITICAL_LEVEL:  # Solo log, no offload porque se necesita GPU
-            logger.critical(
-                "CRITICAL memory before optimized photometry. Inputs required on GPU. Proceeding, OOM likely.")
-            adaptive_memory_management(mempool, thresholds, force_free=True)
-
-        nvtx_phot = nvtx.start_range('photometry', category='phot.calibrate')
-        try:
-            logger.info("Preparing and starting optimized photometry...")
-            # Acceso reactivo forzando carga para TODO
-            img_cp_gpu = get_gpu_var_reactive('img_cp', data_dict, data_location, mempool, force_load_if_critical=True)
-            back_gpu = get_gpu_var_reactive('back', data_dict, data_location, mempool, force_load_if_critical=True)
-            conv_ima_sigma_gpu = get_gpu_var_reactive('conv_ima_sigma', data_dict, data_location, mempool,
-                                                      force_load_if_critical=True)
-            sources_gpu = get_gpu_var_reactive('sources', data_dict, data_location, mempool,
-                                               force_load_if_critical=True)
-            coord_gpu = get_gpu_var_reactive('coord', data_dict, data_location, mempool, force_load_if_critical=True)
-            star_dataset_gpu = get_gpu_var_reactive('star_dataset', data_dict, data_location, mempool,
-                                                    force_load_if_critical=True)
-            # mask_star_dataset no se usa directamente en la llamada a fotometría si los otros ya están filtrados
-            # from .photo_gpu_old import perform_opt_photometry_optimized_gpu_crossmatch
-
-            data_dict['optimal_flux_np'], data_dict['optimal_noise_np'], data_dict['optimal_coords_np'], extra_info = \
-                perform_opt_photometry_optimized_gpu_crossmatch(
-                    img_ori=img_cp_gpu, back=back_gpu, conv_ima_sigma=conv_ima_sigma_gpu,
-                    source_coord=sources_gpu, isolated_coord=coord_gpu, star_dataset=star_dataset_gpu,
-                    tile_section_psf=tile_section_psf, fwhm=fwhm, gain=gain, rdnoise=rdnoise, n_images=n_images,
-                    # **kwargs
-                )
-
-            dic_calib.update(extra_info);
-            logger.info("Optimized photometry complete.")
-
-        except (MemoryError, cp.cuda.runtime.CUDARuntimeError) as e:
-            raise MemoryError("OOM during optimized photometry.") from e
-        finally:
-            logger.debug("Cleaning up photometry inputs from GPU and CPU...")
-            vars_after_phot = ['img_cp', 'back', 'conv_ima_sigma', 'sources', 'coord', 'star_dataset',
-                               'mask_star_dataset']
-            for var in vars_after_phot:
-                if var in data_dict: del data_dict[var]; data_location[var] = 'None'
-                if var + '_cpu' in data_dict: del data_dict[var + '_cpu']
-            maybe_free_arrays([], mempool);
-            nvtx.end_range(nvtx_phot)
-
-        # --- Checkpoint 6: Astrometría/Final (CPU) ---
-        logger.info("Checkpoint 6: Astrometry and Final Calculations (CPU)")
-        nvtx_astro_final = nvtx.start_range('astrometry_catalog_final', category='phot.calibrate')
-        try:
-            logger.info("Creating results DataFrame...")
-            # Los resultados ya están en _np, no necesitan data_dict
-            optimal_flux_np = data_dict.pop('optimal_flux_np', None)
-            optimal_noise_np = data_dict.pop('optimal_noise_np', None)
-            optimal_coords_np = data_dict.pop('optimal_coords_np', None)
-            if optimal_flux_np is None or optimal_noise_np is None or optimal_coords_np is None:
-                raise RuntimeError("Photometry results missing after cleanup.")
-
-            dfm = pd.DataFrame({'xcentroid': optimal_coords_np[:, 1], 'ycentroid': optimal_coords_np[:, 0],
-                                'flux': optimal_flux_np, 'noise': optimal_noise_np,
-                                'snr': optimal_flux_np / optimal_noise_np})
-            # Calcular SNR de forma segura
-            # dfm['snr'] = np.divide(dfm['flux'], dfm['noise'], out=np.zeros_like(dfm['flux']), where=dfm['noise'] != 0)
-            # dfm['snr'] = dfm['snr'].fillna(0)  # Asegurar que no queden NaNs
-            del optimal_coords_np, optimal_flux_np, optimal_noise_np
-
-            logger.info("Performing astrometry...")
-            dfm_ast = dfm.loc[dfm['snr'] > 5].copy()
-            dfm_ast = dfm_ast.sort_values('snr', ascending=False).dropna().reset_index(drop=True)
-            h_wcs_dict = astrometrice2(dfm_ast, scale, target_ra, target_dec, imadata_shape, sip_order=1)
-            del dfm_ast
-
-            if not h_wcs_dict:
-                logger.error('Astrometry failed');
-                h_wcs = {}
-            else:
-                h_wcs = h_wcs_dict;
-                logger.info("Astrometry successful.")
-                logger.info("Performing catalog matching and zeropoint calculation...")
-                # ... (resto del bloque igual que antes) ...
-                coocenter, FOV, scale = get_astrometry_params(h_wcs, imadata_shape)
-                result_cat, catalog_name, ref_filter = catalog_results(coocenter, FOV / 2, filter, maglimit=23,
-                                                                       **kwargs)
-                dic_calib['CATALOG'] = catalog_name;
-                dic_calib['CATBAND'] = ref_filter
-
-                wcs_obj = WCS(h_wcs)
-                dfm.loc[:, 'RA'], dfm.loc[:, 'DEC'] = wcs_obj.all_pix2world(dfm['xcentroid'].values,
-                                                                            dfm['ycentroid'].values, 1)
-
-                photo_dict = get_zeropoint(result_cat, dfm, exptime,
-                                           center_lims=(xmin_sky, xmax_sky, ymin_sky, ymax_sky),
-                                           solar_filter=color_range, dist_thres_px=1.5 * fwhm * scale / 3600)
-                dic_calib.update(photo_dict)
-                dfm_idx, catalog_idx = crossmatch_sources(dfm[['RA', 'DEC']].values, result_cat[['RA', 'DEC']].values,
-                                                          thres_px=1.5 * fwhm * scale / 3600)
-                dfm.loc[:, 'RAERR'] = np.nan;
-                dfm.loc[:, 'DECERR'] = np.nan
-                if len(dfm_idx) > 0:
-                    dfm.loc[dfm_idx, 'RAERR'] = dfm.loc[dfm_idx, 'RA'].values - result_cat.loc[catalog_idx, 'RA'].values
-                    dfm.loc[dfm_idx, 'DECERR'] = dfm.loc[dfm_idx, 'DEC'].values - result_cat.loc[
-                        catalog_idx, 'DEC'].values
-                    dic_calib['RAPREC'] = np.round(np.nanmedian(dfm['RAERR'].dropna()) * 3600, 3)
-                    dic_calib['DECPREC'] = np.round(np.nanmedian(dfm['DECERR'].dropna()) * 3600, 3)
-                    dic_calib['RADISP'] = np.round(np.nanstd(dfm['RAERR'].dropna()) * 3600, 3)
-                    dic_calib['DECDISP'] = np.round(np.nanstd(dfm['DECERR'].dropna()) * 3600, 3)
-
-                else:
-                    logger.warning("No crossmatches found for astrometric precision.");
-                    dic_calib['RAPREC'] = np.nan
-                del dfm_idx, catalog_idx, result_cat
-
-                logger.info("Calculating limiting magnitude...")
-                try:
-                    zp_value = dic_calib.get('ZP', np.nan);
-                    maglim3 = np.nan
-                    if not np.isnan(zp_value) and 'flux' in dfm.columns and 'snr' in dfm.columns:
-                        valid_mask = (dfm['flux'] > 0) & dfm['flux'].notna() & dfm['snr'].notna()
-                        if valid_mask.any():
-                            valid_flux = dfm.loc[valid_mask, 'flux'].values;
-                            valid_snr = dfm.loc[valid_mask, 'snr'].values
-                            with np.errstate(divide='ignore', invalid='ignore'): mag = zp_value - 2.5 * np.log10(
-                                valid_flux / exptime)
-                            maglim3 = get_maglim(mag[np.isfinite(mag)], valid_snr[np.isfinite(mag)], 3);
-                            del mag, valid_flux, valid_snr
-                except Exception as e:
-                    logger.warning(f'Error calculating limiting magnitude: {e}', exc_info=True);
-                    maglim3 = np.nan
-                dic_calib['MAGLIM'] = maglim3 if not np.isnan(maglim3) else 0.0
-
-                logger.info("Calculating target SNR...")
-                try:
-                    target_snr_val = get_target_snr(dfm, target_ra, target_dec,
-                                                    dist_thres_px=1.5 * fwhm) if target_ra is not None and target_dec is not None else 0.0
-                except Exception as e:
-                    target_snr_val = 0.0;
-                    logger.warning(f'Error calculating target SNR: {e}', exc_info=True)
-                dic_calib['OBJECSNR'] = np.round(target_snr_val, 2)
-
-
-        except Exception as e:
-            logger.error(f"Error during Astrometry/Catalog/Final steps: {e}", exc_info=True)
-        finally:
-            nvtx.end_range(nvtx_astro_final)
-
-        nvtx.end_range(nvtx_overall)
-        logger.info("Calibration reactive adaptive process finished successfully.")
-        return dfm if dfm is not None else pd.DataFrame(), h_wcs, dic_calib
-
-    # --- Bloques Catch Externos ---
-    except InsufficientStarsError as e:
-        logger.error(f"Calibration failed: {e}");
-        return dfm if dfm is not None else pd.DataFrame(), {}, dic_calib
-    except MoffatFitError as e:
-        logger.error(f"Calibration failed: {e}");
-        return dfm if dfm is not None else pd.DataFrame(), {}, dic_calib
-    except DataValidationError as e:
-        logger.error(f"Calibration failed: {e}");
-        return dfm if dfm is not None else pd.DataFrame(), {}, dic_calib
-    except MemoryError as e:
-        logger.critical(f"Calibration CRASHED due to CUDA Out-of-Memory: {e}",
-                        exc_info=True);
-        reset_cupy_allocators();
-        raise
-    except cp.cuda.runtime.CUDARuntimeError as e:
-        logger.critical(f"Calibration CRASHED due to CUDA Runtime Error: {e}",
-                        exc_info=True);
-        reset_cupy_allocators();
-        raise
-    except RuntimeError as e:
-        logger.error(f"Calibration failed due to runtime error: {e}",
-                     exc_info=True);
-        return dfm if dfm is not None else pd.DataFrame(), {}, dic_calib
-    except Exception as e:
-        logger.error(f"An unexpected error occurred during calibration: {e}",
-                     exc_info=True);
-        return dfm if dfm is not None else pd.DataFrame(), {}, dic_calib
-    finally:
-        nvtx_cleanup = nvtx.start_range('final_cleanup', category='phot.calibrate')
-        logger.info("Performing final guaranteed cleanup.")
-        keys_to_del = list(data_dict.keys());
-        for key in keys_to_del:
-            if key in data_dict: del data_dict[key]
-            if key + '_cpu' in data_dict: del data_dict[key + '_cpu']
-        reset_cupy_allocators();
-        gc.collect()
-        logger.info("Final cleanup complete.")
-        nvtx.end_range(nvtx_cleanup)
-
-
-@nvtx.annotate('calibrate_image_v3', category='phot.photo_gpu')
-def calibrate_image_v3(imdata: np.ndarray, filter: str, scale: float, gain: float, rdnoise: float,
-                       exptime: float, satlevel: float, target_ra: float, target_dec: float = None, n_images: int = 1,
-                       SP_filt: bool = True, CR_filt: bool = False, border: int = 10, center_factor: float = 0.7,
-                       pca_method: bool = True, tile_section: int = 1000, max_stars_ref: int = 15, min_snr: int = 5,
-                       color_range: float = 0.6, tile_section_psf: int = 2500,
-                       memory_thresholds: dict = None,
-                       **kwargs):
-    """
-    Calibrate an image (V3: Optimized memory management - proactive deletion).
-    (Docstring igual que antes)
-    """
-    mempool = cp.get_default_memory_pool()
-    thresholds = {**DEFAULT_THRESHOLDS, **(memory_thresholds or {})}
-    imadata_shape = imdata.shape
-    dfm = pd.DataFrame()  # DataFrame vacío por defecto
-    h_wcs = {}
-    dic_calib = {}
-
-    # --- Variables a gestionar ---
-    img_cp = None
-    back = None
-    rms = None
-    img_sub = None  # O img_filt directamente
-    sources_iso = None
-    star_dataset = None
-    coord = None
-    scaling = None
-    unit_star_dataset = None
-    mask_star_dataset = None
-    star_dataset_ref = None
-    psf = None
-    eigen_psfs = None
-    coefficients = None
-    coeff_map = None
-    sources = None
-    conv_ima_sigma = None
-    # Resultados fotometría
-    optimal_flux_np = None
-    optimal_noise_np = None
-    optimal_coords_np = None
-
-    try:
-        nvtx_overall = nvtx.start_range('calibrate_image_v3_overall', category='phot.calibrate')
-
-        # --- 1. Carga Inicial y Background ---
-        nvtx_load_back = nvtx.start_range('load_background', category='phot.calibrate')
-        try:
-            logger.info("Loading image to GPU...")
-            img_cp = cp.asarray(imdata);
-            img_cp[cp.isinf(img_cp) | cp.isnan(img_cp)] = 0
-            del imdata  # Liberar memoria CPU
-            logger.info(f"Image loaded to GPU. Shape: {img_cp.shape}")
-
-            # Checkpoint *después* de cargar, antes de la primera gran operación
-            level = adaptive_memory_management(mempool, thresholds)
-            if level == CRITICAL_LEVEL:
-                logger.warning("CRITICAL memory after initial load. Background calculation might fail.")
-                # No offload, solo advertir o liberar bloques si algo se borró antes (poco probable aquí)
-                mempool.free_all_blocks()  # Intentar liberar por si acaso
-
-            logger.info("Calculating background and RMS...")
-            # Pasar kwargs a get_local_background_fft
-            fft_kwargs = {k: v for k, v in kwargs.items() if k in ['box_size', 'filter_size']}  # Ejemplo
-            back, _ = get_local_background_fft(img_cp, scale, get_std=False, **fft_kwargs)
-            del _
-            rms = cp.sqrt(back * gain + rdnoise ** 2) / gain / cp.sqrt(n_images)
-            logger.info("Background and RMS calculated.")
-
-            # Calcular fluxsky (usando back que está en GPU)
-            # (Mismo código que antes para calcular fluxsky, m, s, mask...)
-            center_factor_sky = np.min((center_factor, 1))  # Usar variable local si center_factor cambia
-            ymin_sky = int(imadata_shape[0] * 0.5 * (1 - center_factor_sky));
-            ymax_sky = int(imadata_shape[0] * 0.5 * (1 + center_factor_sky))
-            xmin_sky = int(imadata_shape[1] * 0.5 * (1 - center_factor_sky));
-            xmax_sky = int(imadata_shape[1] * 0.5 * (1 + center_factor_sky))
-            # Usar sección pequeña para evitar OOM si back es grande
-            try:
-                back_center = back[ymin_sky:ymax_sky, xmin_sky:xmax_sky]
-                m = cp.median(back_center);
-                s = cp.std(back_center)
-                mask_sky = cp.abs(back_center - m) < 3 * s
-                m = cp.median(back_center[mask_sky])
-                fluxsky = np.round(m.get(), 6);
-                dic_calib['FLUXSKY'] = fluxsky
-                if fluxsky < 0: logger.warning('Median background flux negative: %.3f', fluxsky)
-                del back_center, m, s, mask_sky  # Limpiar intermedios de fluxsky
-            except MemoryError as e_sky:
-                logger.error(f"OOM during fluxsky calculation: {e_sky}. Setting FLUXSKY to NaN.")
-                dic_calib['FLUXSKY'] = np.nan  # O 0.0 si se prefiere
-            except Exception as e_sky_other:
-                logger.error(f"Error during fluxsky calculation: {e_sky_other}. Setting FLUXSKY to NaN.")
-                dic_calib['FLUXSKY'] = np.nan
-
-
-        except (MemoryError, cp.cuda.runtime.CUDARuntimeError) as e:
-            logger.critical(f"OOM during initial load or background: {e}")
-            reset_cupy_allocators()
-            raise MemoryError("Insufficient GPU memory for initial load/background.") from e
-        finally:
-            nvtx.end_range(nvtx_load_back)
-            # NO borrar img_cp, back, rms todavía
-
-        # --- 2. Filtrado y Detección Inicial ---
-        nvtx_filter_detect = nvtx.start_range('filter_detect_iso', category='phot.calibrate')
-        try:
-            # Checkpoint antes de la resta y filtrado
-            level = adaptive_memory_management(mempool, thresholds)
-            if level == CRITICAL_LEVEL:
-                logger.warning("CRITICAL memory before filtering/detection. Forcing free_all_blocks.")
-                mempool.free_all_blocks()  # Liberar bloques ahora
-
-            logger.info("Performing initial subtraction and filtering...")
-            img_sub = img_cp - back  # Resta inicial
-            # IMPORTANTE: Borrar img_cp y back *si es posible* y ya no se necesitan directamente.
-            #             img_cp SÍ se necesita para la fotometría final.
-            #             back SÍ se necesita para la fotometría final.
-            #             ¡No borrarlos aquí!
-
-            if CR_filt:
-                img_filt = CR_filter(img_sub)
-                del img_sub  # Borrar intermedio
-            elif SP_filt:
-                img_filt = SP_filter(img_sub)
-                del img_sub  # Borrar intermedio
-            else:
-                img_filt = img_sub  # Reusar la variable (sin borrar img_sub)
-
-            logger.info("Filtering complete.")
-
-            logger.info("Detecting isolated stars...")
-            # Pasar kwargs a detect_isolated_stars
-            detect_kwargs = {k: v for k, v in kwargs.items() if k in ['min_pix', 'threshold', 'box_sep']}  # Ejemplo
-            sources_iso = detect_isolated_stars(
-                img_filt[border:-border, border:-border],
-                rms[border:-border, border:-border],  # rms todavía necesario
-                scale, sat_lim=satlevel * 0.8, **detect_kwargs
-            )
-            sources_iso += border
-            if len(sources_iso) < 5: raise InsufficientStarsError(num_stars=len(sources_iso))
-            logger.info(f"Detected {len(sources_iso)} isolated stars.")
-
-            logger.info("Creating star dataset...")
-            star_dataset, coord, scaling = create_star_dataset(
-                img_filt, sources_iso, scale
-            )
-            logger.info(f"Star dataset created with {len(coord)} stars.")
-
-            # LIMPIEZA INMEDIATA: Borrar lo que ya no se necesita para PSF/PCA
-            del sources_iso  # Ya no se necesita
-            # img_filt sí se necesita si no hubo filtro (es img_sub) o para la detección final? NO.
-            # img_filt se usa para crear star_dataset, después no parece usarse más. BORRAR.
-            del img_filt
-            # img_cp, back, rms, star_dataset, coord, scaling SÍ se necesitan más adelante.
-
-        except (MemoryError, cp.cuda.runtime.CUDARuntimeError) as e:
-            logger.critical(f"OOM during filtering/initial detection: {e}")
-            reset_cupy_allocators()
-            raise MemoryError("OOM during filtering/initial detection.") from e
-        finally:
-            cleanup_cupy()  # Llamar a GC + free_all_blocks si se borró algo grande
-            nvtx.end_range(nvtx_filter_detect)
-
-        # --- 3. PSF y PCA ---
-        nvtx_psf_pca = nvtx.start_range('psf_pca', category='phot.calibrate')
-        try:
-            # Checkpoint antes de operaciones potencialmente grandes de PSF/PCA
-            level = adaptive_memory_management(mempool, thresholds)
-            if level == CRITICAL_LEVEL:
-                logger.warning("CRITICAL memory before PSF/PCA. Forcing free_all_blocks.")
-                mempool.free_all_blocks()
-                # ¿Offload? NO. Necesitamos star_dataset, coord, scaling en GPU.
-
-            logger.info("Calculating reference PSF and performing PCA (if enabled)...")
-
-            # --- Inicio Lógica PSF/PCA ---
-            # Asegurarse de que los tipos son correctos (double para unit_star)
-            unit_star_dataset = star_dataset.astype(cp.float64) / scaling[:, 3][:, None, None]
-
-            # Filtros para seleccionar estrellas (centro, std bajo)
-            # (Mismo código que antes para center_mask, unit_star_dataset_stds, mask_star_dataset)
-            coord_psf = coord  # Usar una copia o referencia temporal si coord se modifica
-            center_factor_psf = min(center_factor, 1.0)  # Usar variable local
-            xmin_psf = int(imadata_shape[1] * 0.5 * (1 - center_factor_psf));
-            xmax_psf = int(imadata_shape[1] * 0.5 * (1 + center_factor_psf))
-            ymin_psf = int(imadata_shape[0] * 0.5 * (1 - center_factor_psf));
-            ymax_psf = int(imadata_shape[0] * 0.5 * (1 + center_factor_psf))
-            center_mask = (coord_psf[:, 1] > xmin_psf) & (coord_psf[:, 1] < xmax_psf) & (coord_psf[:, 0] > ymin_psf) & (
-                    coord_psf[:, 0] < ymax_psf)
-
-            unit_star_dataset_stds = cp.std(unit_star_dataset, axis=(1, 2))
-            # Evitar error si unit_star_dataset está vacío (aunque ya se chequeó len(sources_iso))
-            if unit_star_dataset_stds.size > 0:
-                perc_val = cp.percentile(unit_star_dataset_stds, 95.4)
-                mask_star_dataset = unit_star_dataset_stds < perc_val
-            else:
-                mask_star_dataset = cp.zeros(len(coord_psf), dtype=bool)  # Máscara vacía
-
-            # Aplicar máscara a unit_star_dataset, coord y star_dataset
-            unit_star_dataset = unit_star_dataset[mask_star_dataset]
-            coord = coord[mask_star_dataset]  # Actualizar coord principal
-            star_dataset = star_dataset[mask_star_dataset]  # Actualizar star_dataset principal
-            logger.debug(f"Filtered datasets based on PSF quality. Kept {len(coord)} stars.")
-
-            # LIMPIEZA: Borrar intermedios
-            del unit_star_dataset_stds, coord_psf  # Borrar la referencia temporal
-            # scaling ya no se necesita después de calcular unit_star_dataset
-            del scaling
-
-            # Seleccionar estrellas de referencia y calcular PSF
-            center_mask_filt = center_mask[mask_star_dataset]  # Aplicar máscara a center_mask también
-            star_dataset_ref = unit_star_dataset[center_mask_filt][:max_stars_ref, :, :]
-            if star_dataset_ref.shape[0] < 5: raise InsufficientStarsError(star_dataset_ref.shape[0],
-                                                                           "in center for PSF ref")
-
-            psf, _ = stack_sigmaclip(star_dataset_ref, n=2)
-            del _, star_dataset_ref, center_mask, center_mask_filt  # Limpiar intermedios
-            psf /= cp.sum(psf)
-            logger.debug("Reference PSF calculated.")
-
-            # Ajuste Moffat (en CPU)
-            logger.debug("Fitting Moffat to reference PSF...")
-            try:
-                _, _, _, fwhm, _ = fit_moffat(psf);
-                del _
-            except Exception as e:
-                raise MoffatFitError() from e
-            if fwhm < 2: raise MoffatFitError(f'FWHM < 2 ({fwhm:.2f})')
-            dic_calib['FWHM'] = fwhm;
-            fwhm = max(fwhm, 2.0)
-            logger.info(f"PSF FWHM calculated: {fwhm:.2f} pixels")
-
-            # PCA (si está activado)
-            if pca_method:
-                logger.debug("Performing PCA analysis for PSF...")
-                # Calcular desviaciones y normalizar
-                unit_star_dataset_dev = unit_star_dataset - psf  # Reutiliza unit_star_dataset filtrado
-                mean_dev = cp.mean(unit_star_dataset_dev, axis=(1, 2), keepdims=True)
-                std_dev = cp.std(unit_star_dataset_dev, axis=(1, 2), keepdims=True)
-                # Evitar división por cero si alguna estrella es plana
-                unit_star_dataset_dev_norm = cp.divide(unit_star_dataset_dev - mean_dev, std_dev,
-                                                       out=cp.zeros_like(unit_star_dataset_dev), where=std_dev > 1e-9)
-                del mean_dev, std_dev  # Limpiar intermedios
-
-                # Obtener eigen PSFs (cálculo puede ser pesado, va a CPU y vuelve)
-                eigen_psfs_np = get_eigen_psfs(unit_star_dataset_dev_norm, n_components=5)
-                eigen_psfs = cp.asarray(eigen_psfs_np);
-                del eigen_psfs_np
-                logger.debug("Eigen PSFs calculated.")
-
-                # Proyectar estrellas en eigen PSFs
-                coefficients = project_all_stars_onto_eigenpsfs(unit_star_dataset_dev, eigen_psfs)
-                logger.debug("Coefficients calculated.")
-
-                # Crear mapa de coeficientes
-                # coord ya está filtrado y en GPU
-                coeff_map = create_coeff_map(imadata_shape, coord, coefficients.T, scale, tile_section=tile_section)
-                logger.debug("Coefficient map created.")
-
-                # LIMPIEZA PCA: Borrar intermedios grandes tan pronto como sea posible
-                del unit_star_dataset_dev, unit_star_dataset_dev_norm, coefficients
-                # unit_star_dataset tampoco se necesita más después de PCA
-                del unit_star_dataset
-
-                # Calcular FWHM en esquinas (usa coeff_map y eigen_psfs)
-                # (Mismo código que antes para FWHMLL, etc.)
-                x1 = int(imadata_shape[1] * 0.25);
-                x2 = int(imadata_shape[1] * 0.75)
-                y1 = int(imadata_shape[0] * 0.25);
-                y2 = int(imadata_shape[0] * 0.75)
-                x = np.array([x1, x2, x1, x2]);
-                y = np.array([y1, y2, y2, y1]);
-                fwhm_lab = ['FWHMLL', 'FWHMLR', 'FWHMUL', 'FWHMUR']
-                for point in range(len(fwhm_lab)):
-                    psf_l = psf + recreate_normed_star(coeff_map, eigen_psfs, (x[point], y[point]))
-                    try:
-                        _, _, _, fwhm_l, _ = fit_moffat(psf_l);
-                        fwhm_l = np.round(fwhm_l, 2)
-                    except:
-                        fwhm_l = 0.0
-                    dic_calib[fwhm_lab[point]] = fwhm_l;
-                    del psf_l, fwhm_l  # Limpiar dentro del bucle
-                logger.debug("Corner FWHMs calculated.")
-
-            else:  # Si no hay PCA
-                eigen_psfs = None;
-                coeff_map = None
-                # unit_star_dataset no se necesita más después de calcular el PSF ref
-                del unit_star_dataset
-            # --- Fin Lógica PSF/PCA ---
-
-        except (MemoryError, cp.cuda.runtime.CUDARuntimeError) as e:
-            logger.critical(f"OOM during PSF/PCA: {e}")
-            reset_cupy_allocators()
-            raise MemoryError("OOM during PSF/PCA.") from e
-        finally:
-            # Limpiar variables que definitivamente ya no se usan: unit_star_dataset (si no se borró antes)
-            # scaling, sources_iso, img_filt ya deberían estar borrados.
-            # star_dataset y coord SÍ se necesitan para fotometría.
-            cleanup_cupy()
-            nvtx.end_range(nvtx_psf_pca)
-
-        # --- 4. Detección Final de Fuentes ---
-        nvtx_detect_final = nvtx.start_range('detect_sources_psf', category='phot.calibrate')
-        try:
-            # Checkpoint antes de la detección final (puede crear conv_ima_sigma grande)
-            level = adaptive_memory_management(mempool, thresholds)
-            if level == CRITICAL_LEVEL:
-                logger.warning("CRITICAL memory before final detection. Forcing free_all_blocks.")
-                mempool.free_all_blocks()
-                # NO offload. Necesitamos img_cp, back, rms, psf, etc. en GPU.
-
-            logger.info("Detecting final sources using PSF model...")
-            # Necesitamos la imagen original menos el fondo para la detección
-            # Recrearla si img_sub se borró (¡pero no debería haberse borrado!)
-            # Si img_sub (o img_filt) existiera, usarla. Si no, calcularla.
-            # ¡ERROR LÓGICO en V2! img_sub_detect se crea a partir de img_filt, que ya se borró.
-            # Necesitamos img_cp - back aquí.
-            img_sub_detect = img_cp - back  # Recalcular si es necesario (o mejor, no borrarla antes)
-
-            # Pasar kwargs a detect_sources_psf
-            detect_final_kwargs = {k: v for k, v in kwargs.items() if
-                                   k in ['detect_threshold', 'analysis_threshold']}  # Ejemplo
-            sources, conv_ima_sigma = detect_sources_psf(
-                img_sub_detect, rms, fwhm, psf, eigen_psfs, coeff_map, min_snr=min_snr, **detect_final_kwargs
-            )
-            logger.info(f"Detected {len(sources)} final sources.")
-
-            # LIMPIEZA INMEDIATA: Borrar lo que se usó solo para detección
-            del img_sub_detect  # Ya no se necesita la imagen restada para detección
-            # rms, psf, eigen_psfs, coeff_map ya no se necesitan después de esta detección.
-            del rms
-            del psf
-            if eigen_psfs is not None: del eigen_psfs
-            if coeff_map is not None: del coeff_map
-            # sources y conv_ima_sigma SÍ se necesitan para fotometría.
-
-            # Filtrar fuentes por borde
-            border_mask = (sources[:, 0] > border) & (sources[:, 0] < imadata_shape[0] - border) & \
-                          (sources[:, 1] > border) & (sources[:, 1] < imadata_shape[1] - border)
-            sources = sources[border_mask]
-            logger.debug(f"Filtered sources by border, kept {len(sources)}.")
-
-        except (MemoryError, cp.cuda.runtime.CUDARuntimeError) as e:
-            logger.critical(f"OOM during final source detection: {e}")
-            reset_cupy_allocators()
-            raise MemoryError("OOM during final source detection.") from e
-        finally:
-            cleanup_cupy()
-            nvtx.end_range(nvtx_detect_final)
-
-        # --- 5. Fotometría Optimizada ---
-        # Esta es a menudo la parte que más memoria consume por las sub-imágenes
-        nvtx_phot = nvtx.start_range('photometry', category='phot.calibrate')
-        try:
-            # Checkpoint ANTES de la fotometría. Es el último punto crítico de memoria GPU.
-            level = adaptive_memory_management(mempool, thresholds, force_free=True)  # Forzar limpieza aquí
-            if level == CRITICAL_LEVEL:
-                logger.critical("CRITICAL memory before optimized photometry even after forced cleanup. OOM likely.")
-            else:
-                logger.info("Memory cleaned before optimized photometry.")
-
-            logger.info("Performing optimized photometry...")
-            # Asegurarse de que todos los inputs están disponibles (deberían estarlo si no se borraron erróneamente)
-            # Inputs: img_cp, back, conv_ima_sigma, sources, coord, star_dataset
-            #         fwhm, gain, rdnoise, n_images, tile_section_psf
-            if img_cp is None or back is None or conv_ima_sigma is None or sources is None or coord is None or star_dataset is None:
-                raise RuntimeError("Missing required data for perform_opt_photometry. Check deletion logic.")
-
-            # Pasar solo kwargs relevantes si es necesario
-            # phot_kwargs = {k: v for k, v in kwargs.items() if k in ['phot_apertures', 'sky_annulus']}
-            optimal_flux_np, optimal_noise_np, optimal_coords_np, extra_info = \
-                perform_opt_photometry_optimized_gpu_crossmatch(
-                    img_ori=img_cp, back=back, conv_ima_sigma=conv_ima_sigma,
-                    source_coord=sources, isolated_coord=coord, star_dataset=star_dataset,
-                    tile_section_psf=tile_section_psf, fwhm=fwhm, gain=gain, rdnoise=rdnoise, n_images=n_images,
-                    # **phot_kwargs
-                )
-            dic_calib.update(extra_info)
-            logger.info("Optimized photometry complete.")
-
-
-        except (MemoryError, cp.cuda.runtime.CUDARuntimeError) as e:
-            logger.critical(f"OOM during optimized photometry: {e}")
-            reset_cupy_allocators()
-            # ¿Intentar devolver resultados parciales? Podría ser complejo. Mejor fallar.
-            raise MemoryError("OOM during optimized photometry.") from e
-        finally:
-            # LIMPIEZA FINAL GPU: Borrar todo lo que quede en GPU que ya no sea necesario
-            # img_cp, back, conv_ima_sigma, sources, coord, star_dataset ya no se necesitan.
-            logger.info("Cleaning up GPU memory after photometry...")
-            cleanup_cupy(img_cp, back, conv_ima_sigma, sources, coord, star_dataset)
-            img_cp, back, conv_ima_sigma, sources, coord, star_dataset = None, None, None, None, None, None  # Resetear variables Python
-            mempool.free_all_blocks()  # Forzar liberación final GPU
-            logger.info("GPU memory cleanup finished.")
-            nvtx.end_range(nvtx_phot)
-
-        # --- 6. Pasos Finales (CPU) ---
-        nvtx_astro_final = nvtx.start_range('astrometry_catalog_final', category='phot.calibrate')
-        try:
-            logger.info("Creating results DataFrame...")
-            if optimal_flux_np is None or optimal_noise_np is None or optimal_coords_np is None:
-                raise RuntimeError("Photometry results are missing after GPU cleanup.")
-
-            # Crear DataFrame (manejar división por cero en SNR)
-            noise_safe = np.where(optimal_noise_np == 0, 1e-9, optimal_noise_np)  # Evitar div by zero
-            snr_calc = optimal_flux_np / noise_safe
-            dfm = pd.DataFrame({
-                'xcentroid': optimal_coords_np[:, 1], 'ycentroid': optimal_coords_np[:, 0],
-                'flux': optimal_flux_np, 'noise': optimal_noise_np,
-                'snr': snr_calc
-            })
-            del optimal_coords_np, optimal_flux_np, optimal_noise_np, noise_safe, snr_calc  # Limpiar arrays numpy
-
-            # Astrometría
-            logger.info("Performing astrometry...")
-            dfm_ast = dfm.loc[dfm['snr'] > 5].copy()  # Asegurar copia
-            dfm_ast = dfm_ast.sort_values('snr', ascending=False).dropna().reset_index(drop=True)
-            if len(dfm_ast) > 0:
-                # Pasar kwargs a astrometrice2 si es necesario
-                # astro_kwargs = {k: v for k, v in kwargs.items() if k in ['catalog_source', 'search_radius']}
-                h_wcs = astrometrice2(dfm_ast, scale, target_ra, target_dec, imadata_shape,
-                                      sip_order=1)  # , **astro_kwargs)
-                if not h_wcs:
-                    logger.error('Astrometry failed');
-                    h_wcs = {}
-                else:
-                    logger.info("Astrometry successful.")
-            else:
-                logger.warning("No sources with SNR > 5 for astrometry. Astrometry skipped.")
-                h_wcs = {}
-            del dfm_ast
-
-            # Si la astrometría funcionó, proceder con fotometría y catálogo
-            if h_wcs:
-                logger.info("Performing catalog matching and zeropoint calculation...")
-                # (Mismo código que antes para get_astrometry_params, catalog_results, get_zeropoint, crossmatch_sources, etc.)
-                # ... Asegúrate de que las variables como xmin_sky, fwhm, etc., todavía existan o se pasen correctamente ...
-                coocenter, FOV, scale_astro = get_astrometry_params(h_wcs,
-                                                                    imadata_shape)  # Obtener scale del WCS por si acaso
-                # Pasar kwargs a catalog_results
-                cat_kwargs = {k: v for k, v in kwargs.items() if k in ['catalog_source', 'mag_limit_cat']}
-                result_cat, catalog_name, ref_filter = catalog_results(coocenter, FOV / 2, filter, maglimit=23,
-                                                                       **cat_kwargs)
-                dic_calib['CATALOG'] = catalog_name;
-                dic_calib['CATBAND'] = ref_filter
-
-                wcs_obj = WCS(h_wcs)
-                dfm['RA'], dfm['DEC'] = wcs_obj.all_pix2world(dfm['xcentroid'].values, dfm['ycentroid'].values, 1)
-
-                # Pasar kwargs a get_zeropoint
-                zp_kwargs = {k: v for k, v in kwargs.items() if k in ['max_stars_zp', 'zp_error_limit']}
-                # Usar fwhm calculado antes. Usar límites de cielo calculados antes (xmin_sky etc.)
-                photo_dict = get_zeropoint(result_cat, dfm, exptime,
-                                           center_lims=(xmin_sky, xmax_sky, ymin_sky, ymax_sky),
-                                           solar_filter=color_range, dist_thres_px=1.5 * fwhm * scale / 3600,
-                                           **zp_kwargs)
-                dic_calib.update(photo_dict)
-
-                # Crossmatch y errores astrométricos
-                dfm_idx, catalog_idx = crossmatch_sources(dfm[['RA', 'DEC']].values, result_cat[['RA', 'DEC']].values,
-                                                          thres_px=1.5 * fwhm * scale / 3600)
-                dfm['RAERR'] = np.nan;
-                dfm['DECERR'] = np.nan
-                if len(dfm_idx) > 0:
-                    # Usar .loc para asignación segura
-                    ra_err = dfm.loc[dfm_idx, 'RA'].values - result_cat.loc[catalog_idx, 'RA'].values
-                    dec_err = dfm.loc[dfm_idx, 'DEC'].values - result_cat.loc[catalog_idx, 'DEC'].values
-                    dfm.loc[dfm_idx, 'RAERR'] = ra_err
-                    dfm.loc[dfm_idx, 'DECERR'] = dec_err
-                    # Calcular precisión/dispersión (usando nanmedian/nanstd)
-                    dic_calib['RAPREC'] = np.round(np.nanmedian(ra_err) * 3600, 3) if not np.all(
-                        np.isnan(ra_err)) else np.nan
-                    dic_calib['DECPREC'] = np.round(np.nanmedian(dec_err) * 3600, 3) if not np.all(
-                        np.isnan(dec_err)) else np.nan
-                    dic_calib['RADISP'] = np.round(np.nanstd(ra_err) * 3600, 3) if not np.all(
-                        np.isnan(ra_err)) else np.nan
-                    dic_calib['DECDISP'] = np.round(np.nanstd(dec_err) * 3600, 3) if not np.all(
-                        np.isnan(dec_err)) else np.nan
-                    del ra_err, dec_err
-                else:
-                    logger.warning("No crossmatches found for astrometric precision.")
-                    dic_calib['RAPREC'], dic_calib['DECPREC'], dic_calib['RADISP'], dic_calib[
-                        'DECDISP'] = np.nan, np.nan, np.nan, np.nan
-                del dfm_idx, catalog_idx, result_cat, wcs_obj  # Limpiar
-
-                # Magnitud Límite
-                logger.info("Calculating limiting magnitude...")
-                try:
-                    zp_value = dic_calib.get('ZP', np.nan);
-                    maglim3 = np.nan
-                    if not np.isnan(zp_value) and not dfm.empty:
-                        valid_mask = (dfm['flux'] > 0) & dfm['flux'].notna() & dfm['snr'].notna()
-                        if valid_mask.any():
-                            valid_flux = dfm.loc[valid_mask, 'flux'].values
-                            valid_snr = dfm.loc[valid_mask, 'snr'].values
-                            with np.errstate(divide='ignore', invalid='ignore'):
-                                mag = zp_value - 2.5 * np.log10(valid_flux / exptime)
-                            finite_mask = np.isfinite(mag) & np.isfinite(valid_snr)
-                            if finite_mask.any():
-                                maglim3 = get_maglim(mag[finite_mask], valid_snr[finite_mask], 3)
-                            del mag, valid_flux, valid_snr, finite_mask
-                except Exception as e:
-                    logger.warning(f'Error calculating limiting magnitude: {e}', exc_info=True);
-                    maglim3 = np.nan
-                dic_calib['MAGLIM'] = maglim3 if not np.isnan(maglim3) else 0.0  # Devolver 0.0 si es NaN? O Nan?
-
-                # Target SNR
-                logger.info("Calculating target SNR...")
-                target_snr_val = 0.0
-                if target_ra is not None and target_dec is not None and not dfm.empty:
-                    try:
-                        target_snr_val = get_target_snr(dfm, target_ra, target_dec, dist_thres_px=1.5 * fwhm)
-                    except Exception as e:
-                        logger.warning(f'Error calculating target SNR: {e}', exc_info=True)
-                dic_calib['OBJECSNR'] = np.round(target_snr_val, 2)
-
-            # --- Fin Astrometría/Catálogo ---
-
-        except Exception as e:
-            logger.error(f"Error during CPU-based Astrometry/Catalog/Final steps: {e}", exc_info=True)
-            # No fallar toda la calibración por esto, devolver lo que se tenga
-        finally:
-            nvtx.end_range(nvtx_astro_final)
-
-        nvtx.end_range(nvtx_overall)
-        logger.info("Calibration v3 process finished.")
-        return dfm, h_wcs, dic_calib
-
-    # --- Bloques Catch Externos (como antes) ---
-    except InsufficientStarsError as e:
-        logger.error(f"Calibration failed: {e}");
-        return dfm, h_wcs, dic_calib
-    except MoffatFitError as e:
-        logger.error(f"Calibration failed: {e}");
-        return dfm, h_wcs, dic_calib
-    # except DataValidationError as e: # Si tienes validaciones específicas
-    #     logger.error(f"Calibration failed: {e}"); return dfm, h_wcs, dic_calib
-    except MemoryError as e:
-        logger.critical(f"Calibration CRASHED due to CUDA Out-of-Memory: {e}", exc_info=True)
-        reset_cupy_allocators()  # Asegurar limpieza en fallo OOM
-        # Re-lanzar para que el llamador sepa que falló por memoria
-        raise
-    except cp.cuda.runtime.CUDARuntimeError as e:
-        logger.critical(f"Calibration CRASHED due to CUDA Runtime Error: {e}", exc_info=True)
-        reset_cupy_allocators()
-        raise  # Re-lanzar error CUDA
-    except Exception as e:
-        logger.error(f"An unexpected error occurred during calibration: {e}", exc_info=True)
-        return dfm, h_wcs, dic_calib  # Devolver valores por defecto en error inesperado
-    finally:
-        # --- Limpieza Final Garantizada ---
-        nvtx_cleanup = nvtx.start_range('final_cleanup', category='phot.calibrate')
-        logger.info("Performing final guaranteed cleanup (CPU and GPU check)...")
-        # Borrar variables locales de Python que puedan contener arrays grandes
-        cleanup_cupy(img_cp, back, rms, img_sub, sources_iso, star_dataset, coord, scaling,
-                     unit_star_dataset, mask_star_dataset, star_dataset_ref, psf, eigen_psfs,
-                     coefficients, coeff_map, sources, conv_ima_sigma)
-        del dfm, h_wcs, dic_calib  # Borrar resultados también si están en el scope
-        gc.collect()  # GC de Python
-        reset_cupy_allocators()  # Asegurar que el pool de CuPy esté limpio
-        logger.info("Final cleanup complete.")
-        nvtx.end_range(nvtx_cleanup)
 
 
 ### # @hierarchical_debug(logger)

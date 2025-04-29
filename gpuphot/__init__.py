@@ -63,6 +63,9 @@ def _super_safe_rmtree(cls, name, ignore_errors=False, onerror=None):
 if hasattr(tempfile.TemporaryDirectory, '_rmtree'):
     tempfile.TemporaryDirectory._rmtree = MethodType(_super_safe_rmtree, tempfile.TemporaryDirectory)
 
+# Use this if you want to use cupy float64 patch
+# from . import patch_cupy
+
 # Resto de imports y configuración
 from . import image_processor
 from . import instrument_config_parser

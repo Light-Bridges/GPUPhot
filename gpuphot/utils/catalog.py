@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 import cupy as cp
 import numpy as np
 import nvtx
@@ -335,6 +337,8 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
              - ref_filter: The reference filter used in calculations.
     :rtype: tuple(pandas.DataFrame, str, str)
     """
+    logger.info(f'Attempting to retrieve data from catalog.')
+    start_time = time.time()
     if coocenter.dec.deg < -30:
         def get_filter(_filter):
             filter_map = {
@@ -449,4 +453,5 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
                                'SOLAR': solar_index})
         ref_filter = final_ref_filter[:-3]
 
+    logger.info(f"Catalog query completed in {time.time() - start_time:.2f} seconds.")
     return result, catalog, ref_filter
