@@ -2439,7 +2439,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     sources = sources[(sources[:, 0] > border) & (sources[:, 0] < img.shape[0] - border) & (sources[:, 1] > border) & (
             sources[:, 1] < img.shape[1] - border)]
 
-    del coeff_map, img, rms
+    del coeff_map, img, rms,psf
     mempool.free_all_blocks()
 
     # Perform optimized photometry
@@ -2467,10 +2467,12 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
         # min_conv_snr=kwargs.get('min_conv_snr', 300.0)
     )
 
-    del img_cp
+    del img_cp, back, conv_ima_sigma, mask_star_dataset, star_dataset, coord, sources
 
-    del conv_ima_sigma, sources, back, mask_star_dataset, star_dataset, coord
-    mempool.free_all_blocks()
+    # del conv_ima_sigma, sources, back, mask_star_dataset, star_dataset, coord
+    # mempool.free_all_blocks()
+    # At this point, the memory has been freed
+    reset_cupy_allocators()
 
     dic_calib.update(extra_info)
 
