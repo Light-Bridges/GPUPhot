@@ -902,7 +902,7 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 
     # BLOQUE 5: Get batch photometry
     block5_range = nvtx.start_range('batch_aperture_photometry', category='phot.photo_gpu', color='green')
-    adaptive_memory_management(mempool)
+    adaptive_memory_management(mempool,force_free=True)
     source_flux, back_flux, area = batch_aperture_photometry(img_ori, back, cp.round(source_coord).astype(cp.int32),
                                                              radii)
     del img_ori, back
@@ -1843,7 +1843,7 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 #     return flux, back_flux, areas  # Return calculated areas
 #
 
-@nvtx.annotate('batch_aperture_photometry', category='phot.photo_gpu')
+@nvtx.annotate('batch_aperture_photometry', category='phot.photo_gpu', color='blue')
 def batch_aperture_photometry(
         # Accept both types for image and background
         img_ori_input: cp.ndarray | np.ndarray,
@@ -1855,6 +1855,7 @@ def batch_aperture_photometry(
 ) -> tuple[cp.ndarray | None, cp.ndarray | None, cp.ndarray]:
     """
     Perform aperture photometry with adaptive input handling and internal background subtraction (v4).
+    Uses CUDA streams for potentially concurrent plane processing.
 
     Accepts image and background as NumPy or CuPy arrays, transfers to GPU if needed,
     performs background subtraction internally, and uses delayed output allocation.
@@ -1878,7 +1879,8 @@ def batch_aperture_photometry(
     nvtx_range = nvtx.start_range('batch_aperture_photometry', category='phot.photo_gpu', color='blue')
     mempool = cp.get_default_memory_pool()
 
-    # Preferred processing dtype (float32 saves memory)
+    # Preferred processing dtype (float32 saves memory, float64 more precise)
+    # Let's stick to float64 as in the original for now, can be changed later if needed
     processing_dtype = cp.float64
 
     # --- Input Validation and GPU Transfer ---
@@ -1891,8 +1893,9 @@ def batch_aperture_photometry(
         logger.info(f"batch_photometry received NumPy image, transferring to GPU.")
         transfer_start = time.time()
         try:
+            # Transfer directly with the target processing dtype
             img_gpu = cp.asarray(img_ori_input, dtype=processing_dtype)
-            del img_ori_input  # Free CPU memory
+            # No need to free here, let Python GC handle img_ori_input when it goes out of scope
         except Exception as e:
             logger.error(f"Failed to transfer input image to GPU: {e}", exc_info=True)
             nvtx.end_range(transfer_nvtx)
@@ -1902,23 +1905,27 @@ def batch_aperture_photometry(
         logger.info(
             f"Image transfer took {transfer_end - transfer_start:.2f}s. Mem: {mempool.used_bytes() / 1e9:.2f} GB")
     elif isinstance(img_ori_input, cp.ndarray):
-        img_gpu = img_ori_input.astype(processing_dtype, copy=False)  # Ensure correct dtype
+        # Ensure correct dtype, avoid copy if already correct
+        if img_ori_input.dtype != processing_dtype:
+            logger.info(f"Converting input GPU image to {processing_dtype}")
+            img_gpu = img_ori_input.astype(processing_dtype, copy=True) # Explicit copy if dtype changes
+        else:
+            img_gpu = img_ori_input # No copy needed
     else:
         raise TypeError(f"img_ori_input must be NumPy or CuPy array, got {type(img_ori_input)}")
 
     # Validate and transfer Background (if provided)
     if back_input is not None:
         if isinstance(back_input, np.ndarray):
-            if back_input.shape != img_gpu.shape:  # Check shape against GPU image
-                raise ValueError("Background shape mismatch with image shape.")
+            if back_input.shape != img_gpu.shape[-back_input.ndim:]: # Check shape against GPU image dims
+                 raise ValueError(f"Background shape {back_input.shape} mismatch with image shape {img_gpu.shape}.")
             logger.info(f"batch_photometry received NumPy background, transferring to GPU.")
             transfer_start = time.time()
             try:
                 back_gpu = cp.asarray(back_input, dtype=processing_dtype)
-                del back_input  # Free CPU memory
             except Exception as e:
                 logger.error(f"Failed to transfer input background to GPU: {e}", exc_info=True)
-                del img_gpu  # Clean up already transferred image
+                del img_gpu # Clean up already transferred image
                 mempool.free_all_blocks()
                 gc.collect()
                 nvtx.end_range(transfer_nvtx)
@@ -1928,9 +1935,14 @@ def batch_aperture_photometry(
             logger.info(
                 f"Background transfer took {transfer_end - transfer_start:.2f}s. Mem: {mempool.used_bytes() / 1e9:.2f} GB")
         elif isinstance(back_input, cp.ndarray):
-            if back_input.shape != img_gpu.shape:
-                raise ValueError("Background shape mismatch with image shape.")
-            back_gpu = back_input.astype(processing_dtype, copy=False)  # Ensure correct dtype
+            if back_input.shape != img_gpu.shape[-back_input.ndim:]:
+                 raise ValueError(f"Background shape {back_input.shape} mismatch with image shape {img_gpu.shape}.")
+            # Ensure correct dtype, avoid copy if already correct
+            if back_input.dtype != processing_dtype:
+                 logger.info(f"Converting input GPU background to {processing_dtype}")
+                 back_gpu = back_input.astype(processing_dtype, copy=True) # Explicit copy
+            else:
+                 back_gpu = back_input # No copy needed
         else:
             raise TypeError(f"back_input must be NumPy/CuPy array or None, got {type(back_input)}")
     else:
@@ -1938,10 +1950,12 @@ def batch_aperture_photometry(
 
     # Validate Radii and Positions (expected on GPU)
     if not isinstance(positions, cp.ndarray):
+        # Maybe transfer if numpy? For now, enforce CuPy input.
         raise TypeError("positions must be a CuPy array.")
     if not isinstance(radii, cp.ndarray):
         raise TypeError("radii must be a CuPy array.")
-    radii = radii.astype(processing_dtype, copy=False)  # Ensure correct dtype
+    # Ensure radii has the correct dtype for processing if needed, but keep original precision for area
+    radii_proc = radii.astype(processing_dtype, copy=False)
 
     nvtx.end_range(transfer_nvtx)
     logger.debug(f"Inputs transferred/validated. GPU Memory: Used={mempool.used_bytes() / 1e9:.2f} GB")
@@ -1949,19 +1963,20 @@ def batch_aperture_photometry(
     # --- Validations and Area Calculation ---
     if radii.size == 0:
         raise ValueError("Radii array cannot be empty.")
-    # ... (Area calculation logic - same as before, uses 'radii' which is CuPy) ...
     area_calc_range = nvtx.start_range('area_kernel_params', category='phot.setup')
     areas = cp.zeros(len(radii), dtype=cp.float64)  # Keep area precision high
     try:
-        max_radius = cp.max(radii).item()
-        kernel_size = int(2 * np.ceil(max_radius) + 1)
-        if kernel_size % 2 == 0: kernel_size += 1
-        for i, r in enumerate(radii):
-            temp_kernel, areas[i] = get_aper_kernel(r.item(), size=kernel_size)
+        # Use original radii for area calculation precision
+        max_radius_area = cp.max(radii).item()
+        kernel_size_area = int(2 * np.ceil(max_radius_area) + 1)
+        if kernel_size_area % 2 == 0: kernel_size_area += 1
+        for i, r_orig in enumerate(radii): # Iterate over original radii
+            # get_aper_kernel likely returns float64 kernel, area calculation is sensitive
+            temp_kernel, areas[i] = get_aper_kernel(r_orig.item(), size=kernel_size_area)
             del temp_kernel
     except Exception as e:
         logger.error(f"Error calculating areas: {e}", exc_info=True)
-        areas.fill(cp.nan)
+        areas.fill(cp.nan) # Mark areas as invalid
     nvtx.end_range(area_calc_range)
 
     # Handle empty positions *after* area calculation
@@ -1969,7 +1984,16 @@ def batch_aperture_photometry(
         logger.warning("Positions array is empty. Returning empty flux results.")
         n_radii_out = len(radii)
         n_images_out = img_gpu.shape[0] if img_gpu.ndim == 3 else 1
-        out_shape = (n_images_out, n_radii_out, 0) if img_gpu.ndim == 3 else (n_radii_out, 0)
+        # Ensure output shape matches image dimensions
+        if img_gpu.ndim == 3:
+             out_shape = (n_images_out, n_radii_out, 0)
+        elif img_gpu.ndim == 2:
+             out_shape = (n_radii_out, 0)
+        else: # Handle 1D or other unexpected dims if necessary
+             logger.error(f"Unexpected image dimension: {img_gpu.ndim}")
+             nvtx.end_range(nvtx_range)
+             return None, None, areas # Or raise error
+
         nvtx.end_range(nvtx_range)
         # Return results matching processing_dtype
         return cp.zeros(out_shape, dtype=processing_dtype), \
@@ -1985,34 +2009,62 @@ def batch_aperture_photometry(
     n_radii = len(radii)
     n_positions = len(positions)
 
-    # ... (Kernel size calculation - same as before) ...
+    # Determine kernel size based on max radius using the processing dtype version
     try:
-        max_radius = cp.nanmax(radii).item()
+        max_radius = cp.nanmax(radii_proc).item() # Use radii_proc here
         kernel_size = int(2 * np.ceil(max_radius) + 1)
         if kernel_size % 2 == 0: kernel_size += 1
-    except ValueError:
-        logger.error("Could not determine valid kernel size from radii. Aborting.")
+    except ValueError: # Handles case where radii_proc contains only NaNs
+        logger.error("Could not determine valid kernel size from radii (all NaNs?). Aborting.")
         nvtx.end_range(nvtx_range)
-        return None, None, areas
+        # Clean up GPU memory before returning
+        del img_gpu, back_gpu, radii_proc, positions
+        mempool.free_all_blocks(); gc.collect()
+        return None, None, areas # Return None for fluxes, but calculated areas
 
     padding = (kernel_size - 1) // 2
     try:
+        # Calculate FFT shape based on image dimensions + padding
         fft_shape = fill_image((img_h + 2 * padding, img_w + 2 * padding))
     except Exception as e:
         logger.error(f"Error calculating FFT shape: {e}", exc_info=True)
         nvtx.end_range(nvtx_range)
+        del img_gpu, back_gpu, radii_proc, positions
+        mempool.free_all_blocks(); gc.collect()
         return None, None, areas
 
-    logger.debug(f"Using FFT shape: {fft_shape} for image {img_h, img_w}, max radius {max_radius}")
-
-    # --- DELAYED ALLOCATION ---
-    all_plane_flux = [] if is_3d else None
-    all_plane_back_flux = [] if is_3d and back_gpu is not None else None
+    logger.debug(f"Using FFT shape: {fft_shape} for image ({img_h}, {img_w}), max radius {max_radius}, kernel size {kernel_size}")
 
     # --- Function to process a single 2D image plane ---
-    # Receives background-subtracted image and the original background
+    # (process_plane remains largely the same as provided in the prompt,
+    #  it correctly uses the passed 'stream' argument)
     def process_plane(plane_idx, img_plane_subtracted_gpu, back_plane_gpu, stream):
-        # ... (Initialize local variables: plane_nvtx, fft_img_range, etc. to None) ...
+        # ... (Existing process_plane implementation from the prompt) ...
+        # Important: Ensure it returns (plane_flux, plane_back_flux)
+        # Ensure internal variables are cleaned up (del) before returning
+        # Ensure it handles potential OOM within the plane processing gracefully
+        # and returns (None, None) in case of failure.
+
+        # <<< PASTE THE ORIGINAL process_plane FUNCTION CODE HERE >>>
+        # Make sure it accepts 'stream' as the last argument and uses it internally.
+        # It should look something like this:
+
+        # with stream:
+        #    plane_nvtx = None
+        #    # ... rest of the function ...
+        #    try:
+        #       # ... calculations ...
+        #       return plane_flux, plane_back_flux # On success
+        #    except Exception as e:
+        #       logger.error(...)
+        #       # ... cleanup internal variables ...
+        #       return None, None # On failure
+        #    finally:
+        #       if plane_nvtx: nvtx.end_range(plane_nvtx)
+
+        # --- Placeholder for the actual process_plane function ---
+        # Replace this placeholder with your actual function implementation
+        # Ensure it correctly uses the 'stream' argument passed to it.
         with stream:
             plane_nvtx = None
             fft_img_range = None
@@ -2023,32 +2075,35 @@ def batch_aperture_photometry(
             plane_flux = None
             img_c, back_c = None, None
             kernel_c = None
+            positions_local = positions # Use positions directly from outer scope
+            radii_local = radii_proc # Use processing radii from outer scope
 
             try:
                 plane_nvtx = nvtx.start_range(f'process_plane_{plane_idx}', category='phot.plane')
-                logger.debug(f"Processing plane {plane_idx}. Mem: {mempool.used_bytes() / 1e9:.2f} GB")
+                logger.debug(f"Processing plane {plane_idx} on stream {stream.ptr}. Mem: {mempool.used_bytes() / 1e9:.2f} GB")
 
-                # if mem_level >= 2:
-                #     raise MemoryError(f"Insufficient memory before FFTing plane {plane_idx}")
-
-                # Perform FFTs (on subtracted image and original background)
+                # Perform FFTs (on subtracted image and original background if available)
                 fft_img_range = nvtx.start_range(f'fft_plane_{plane_idx}', category='phot.fft')
                 try:
-                    # Ensure inputs are float32 for rfft2 if processing_dtype is float32
-                    img_c = cp.fft.rfft2(img_plane_subtracted_gpu.astype(processing_dtype, copy=False), s=fft_shape)
+                    # FFT requires float input for rfft2 (real->complex).
+                    # Input arrays are already processing_dtype.
+                    img_c = cp.fft.rfft2(img_plane_subtracted_gpu, s=fft_shape)
                     if back_plane_gpu is not None:
-                        back_c = cp.fft.rfft2(back_plane_gpu.astype(processing_dtype, copy=False), s=fft_shape)
+                        back_c = cp.fft.rfft2(back_plane_gpu, s=fft_shape)
+                    else:
+                        back_c = None
+                except Exception as e:
+                    logger.error(f"FFT failed for plane {plane_idx}: {e}", exc_info=True)
+                    raise # Propagate error to be caught by outer try-except
                 finally:
                     if fft_img_range: nvtx.end_range(fft_img_range)
 
                 # Allocate output for *this plane* (matching processing dtype)
                 plane_flux = cp.zeros((n_radii, n_positions), dtype=processing_dtype)
-                plane_back_flux = cp.zeros((n_radii, n_positions),
-                                           dtype=processing_dtype) if back_plane_gpu is not None else None
+                plane_back_flux = cp.zeros((n_radii, n_positions), dtype=processing_dtype) if back_plane_gpu is not None else None
 
                 # --- Loop over radii ---
-                for i, r in enumerate(radii):
-                    # ... (Initialize radius loop variables to None) ...
+                for i, r in enumerate(radii_local): # Use processing radii
                     kernel = None
                     prod_img = None
                     convolved_img = None
@@ -2062,77 +2117,90 @@ def batch_aperture_photometry(
                     kernel_range = None
                     conv_range = None
                     conv_back_range = None
-                    kernel_c = None
+                    kernel_c = None # Needs to be defined before try
 
                     try:
-                        radius_nvtx = nvtx.start_range(f'radius_{r.item():.2f}', category='phot.radius_iter')
+                        r_item = r.item() # Get scalar value for NVTX/logging
+                        radius_nvtx = nvtx.start_range(f'radius_{r_item:.2f}', category='phot.radius_iter')
 
                         # --- Kernel FFT ---
-                        kernel_range = nvtx.start_range(f'kernel_fft_r={r.item():.2f}', category='phot.conv')
+                        kernel_range = nvtx.start_range(f'kernel_fft_r={r_item:.2f}', category='phot.conv')
                         try:
-                            kernel, _ = get_aper_kernel(r.item(), size=kernel_size)
-                            kernel = kernel.astype(processing_dtype)  # Match processing dtype
+                            # Use original radius for get_aper_kernel if precision matters there,
+                            # but the kernel used for convolution should match processing_dtype.
+                            # Assuming get_aper_kernel uses the scalar radius value.
+                            # We use the corresponding original radius `radii[i]` if needed,
+                            # otherwise `r_item` from `radii_proc` is fine.
+                            # Let's assume `r_item` is sufficient here for kernel shape.
+                            kernel_orig_precision, _ = get_aper_kernel(r_item, size=kernel_size) # Recalculate kernel
+                            kernel = kernel_orig_precision.astype(processing_dtype, copy=False) # Cast to processing dtype
+                            # We need the conjugate for convolution theorem multiplication
                             kernel_c = cp.conj(cp.fft.rfft2(kernel, s=fft_shape))
-                            del kernel
+                            del kernel, kernel_orig_precision # Free kernel memory
                             kernel = None
+                        except Exception as e:
+                             logger.error(f"Kernel FFT failed for radius {r_item} in plane {plane_idx}: {e}", exc_info=True)
+                             raise # Propagate
                         finally:
                             if kernel_range: nvtx.end_range(kernel_range)
 
+
                         # --- Convolution (Subtracted Image for Flux) ---
-                        conv_range = nvtx.start_range(f'ifft_roll_index_img_r={r.item():.2f}', category='phot.conv')
+                        conv_range = nvtx.start_range(f'ifft_roll_index_img_r={r_item:.2f}', category='phot.conv')
                         try:
                             prod_img = img_c * kernel_c
-                            # Output of irfft2 matches input FFT precision (float32 if img_c was complex64)
+                            # Output of irfft2 matches input FFT precision (float if img_c was complex)
                             convolved_img = cp.fft.irfft2(prod_img, s=fft_shape)
-                            del prod_img
-                            prod_img = None
+                            del prod_img; prod_img = None # Free memory
+                            # Rolling introduces temporary copy/view
                             convolved_img_rolled = cp.roll(convolved_img, shift=[padding, padding], axis=[0, 1])
-                            del convolved_img
-                            convolved_img = None
+                            del convolved_img; convolved_img = None # Free memory
+                            # Cropping introduces view or copy depending on contiguity
                             convolved_img_cropped = convolved_img_rolled[:img_h, :img_w]
-                            del convolved_img_rolled
-                            convolved_img_rolled = None
-                            # Perform indexing
-                            plane_flux[i, :] = convolved_img_cropped[positions[:, 0], positions[:, 1]]
-                            del convolved_img_cropped
-                            convolved_img_cropped = None
+                            del convolved_img_rolled; convolved_img_rolled = None # Free memory
+                            # Perform indexing (advanced indexing creates a copy)
+                            plane_flux[i, :] = convolved_img_cropped[positions_local[:, 0], positions_local[:, 1]]
+                            del convolved_img_cropped; convolved_img_cropped = None # Free memory
+                        except Exception as e:
+                             logger.error(f"Image convolution/indexing failed for radius {r_item} in plane {plane_idx}: {e}", exc_info=True)
+                             raise # Propagate
                         finally:
                             if conv_range: nvtx.end_range(conv_range)
 
+
                         # --- Convolution (Original Background for Back Flux) ---
-                        if back_c is not None and plane_back_flux is not None:  # Check both
-                            conv_back_range = nvtx.start_range(f'ifft_roll_index_back_r={r.item():.2f}',
-                                                               category='phot.conv')
+                        if back_c is not None and plane_back_flux is not None:
+                            conv_back_range = nvtx.start_range(f'ifft_roll_index_back_r={r_item:.2f}', category='phot.conv')
                             try:
                                 prod_back = back_c * kernel_c
                                 convolved_back = cp.fft.irfft2(prod_back, s=fft_shape)
-                                del prod_back
-                                prod_back = None
+                                del prod_back; prod_back = None
                                 convolved_back_rolled = cp.roll(convolved_back, shift=[padding, padding], axis=[0, 1])
-                                del convolved_back
-                                convolved_back = None
+                                del convolved_back; convolved_back = None
                                 convolved_back_cropped = convolved_back_rolled[:img_h, :img_w]
-                                del convolved_back_rolled
-                                convolved_back_rolled = None
-                                plane_back_flux[i, :] = convolved_back_cropped[positions[:, 0], positions[:, 1]]
-                                del convolved_back_cropped
-                                convolved_back_cropped = None
+                                del convolved_back_rolled; convolved_back_rolled = None
+                                plane_back_flux[i, :] = convolved_back_cropped[positions_local[:, 0], positions_local[:, 1]]
+                                del convolved_back_cropped; convolved_back_cropped = None
+                            except Exception as e:
+                                 logger.error(f"Background convolution/indexing failed for radius {r_item} in plane {plane_idx}: {e}", exc_info=True)
+                                 raise # Propagate
                             finally:
                                 if conv_back_range: nvtx.end_range(conv_back_range)
 
                         # --- Radius Cleanup ---
-                        del kernel_c
-                        kernel_c = None
-                        # Optional: check memory within loop if many radii and high pressure
-                        # adaptive_memory_management(mempool, mem_thresholds, f"Plane {plane_idx} Radius {i} Post:")
+                        del kernel_c; kernel_c = None # Clean up kernel FFT explicitly
 
                     except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e_radius:
-                        logger.error(f"OOM Error during radius r={r.item()} in plane {plane_idx}: {e_radius}",
-                                     exc_info=True)
-                        # ... (cleanup local radius variables: kernel_c, prod_img, etc.) ...
-                        mempool.free_all_blocks()
+                        logger.error(f"OOM or CUDA Error during radius r={r_item} in plane {plane_idx}: {e_radius}", exc_info=False) # Less verbose exc_info
+                        # Clean up potential intermediate arrays from this radius iteration
+                        del kernel_c, prod_img, convolved_img, convolved_img_rolled, convolved_img_cropped
+                        del prod_back, convolved_back, convolved_back_rolled, convolved_back_cropped
+                        mempool.free_all_blocks() # Try to free memory
                         gc.collect()
-                        raise e_radius  # Propagate error
+                        raise e_radius  # Propagate error to outer handler for the plane
+                    except Exception as e_gen_radius:
+                        logger.error(f"Unexpected error during radius r={r_item} in plane {plane_idx}: {e_gen_radius}", exc_info=True)
+                        raise e_gen_radius
                     finally:
                         if radius_nvtx: nvtx.end_range(radius_nvtx)
                 # --- End Radii Loop ---
@@ -2140,116 +2208,242 @@ def batch_aperture_photometry(
                 # --- Successful Plane Cleanup ---
                 logger.debug(f"Finished radii for plane {plane_idx}. Cleaning up FFT data.")
                 del img_c, back_c  # Delete FFT transforms for the plane
-                mempool.free_all_blocks()
-                gc.collect()  # Free memory after each plane
+                img_c, back_c = None, None # Ensure they are None
+                # No need to call free_all_blocks here, let the outer loop manage batch cleanup
+                # gc.collect() # Avoid frequent GC inside the hot loop if possible
                 return plane_flux, plane_back_flux
 
             except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e_plane:
-                logger.error(f"OOM Error processing plane {plane_idx}: {e_plane}", exc_info=True)
-                del img_c, back_c, plane_flux, kernel_c  # Ensure cleanup
-                return None, None  # Signal failure
+                logger.error(f"OOM or CUDA Error processing plane {plane_idx}: {e_plane}", exc_info=False) # Less verbose
+                # Ensure cleanup of major allocations if error occurred mid-plane
+                del img_c, back_c, plane_flux, kernel_c # Use vars defined outside radius loop
+                # Try to free memory before returning None
+                mempool.free_all_blocks()
+                gc.collect()
+                return None, None  # Signal failure for this plane
             except Exception as e_gen_plane:
                 logger.error(f"Unexpected error processing plane {plane_idx}: {e_gen_plane}", exc_info=True)
                 del img_c, back_c, plane_flux, kernel_c
+                mempool.free_all_blocks()
+                gc.collect()
                 return None, None  # Signal failure
             finally:
+                # Make sure NVTX range is ended even if exceptions occur
                 if plane_nvtx: nvtx.end_range(plane_nvtx)
-
     # --- End process_plane function ---
+
 
     # --- Main Processing Loop ---
     fft_loop_range = nvtx.start_range('fft_convolution_loop', category='phot.photo_gpu')
     final_flux = None
     final_back_flux = None
-    success = True
+    success = True # Overall success flag
 
-    # Crear un número limitado de streams para concurrencia controlada
-    max_concurrent = min(4, n_images)  # Limitar por seguridad
+    # Create a fixed number of streams for controlled concurrency
+    # Limit concurrency to avoid excessive intermediate memory usage
+    max_concurrent = min(20, n_images) if n_images > 1 else 1 # Ensure at least 1 stream
+    logger.info(f"Using {max_concurrent} concurrent streams for processing {n_images} planes.")
     streams = [cp.cuda.Stream() for _ in range(max_concurrent)]
 
+    # --- 3D Image Cube Processing ---
     if is_3d:
+        all_plane_flux_list = [None] * n_images # Preallocate list for results
+        all_plane_back_flux_list = [None] * n_images if back_gpu is not None else None
+
+        # Store futures: (plane_idx, stream_obj, future_result_tuple)
+        # We don't need the stream_obj later if we sync all, but good for debug
+        futures_in_flight = []
+
         for batch_start in range(0, n_images, max_concurrent):
+            batch_nvtx = nvtx.start_range(f'batch_{batch_start}-{min(batch_start+max_concurrent, n_images)-1}', category='phot.batch')
             batch_end = min(batch_start + max_concurrent, n_images)
             batch_size = batch_end - batch_start
+            streams_this_batch = streams[:batch_size] # Get streams for this batch
 
-            # Iniciar procesamiento de cada plano en su propio stream
-            results = []
+            # --- 1. Launch work for the current batch asynchronously ---
+            launch_nvtx = nvtx.start_range(f'launch_batch', category='phot.launch')
+            logger.debug(f"Launching batch: planes {batch_start} to {batch_end - 1}")
+            current_batch_futures = []
             for i in range(batch_size):
                 plane_idx = batch_start + i
-                stream = streams[i]
+                stream = streams_this_batch[i]
 
-                # Ejecutar en contexto del stream específico
+                # Prepare data for the plane (do this outside 'with stream' if it involves complex setup,
+                # but simple slicing and subtraction are fine inside)
+                # The actual process_plane call must be inside 'with stream'
+                img_plane = img_gpu[plane_idx]
+                back_plane = back_gpu[plane_idx] if back_gpu is not None else None
+
+                # Perform subtraction - this intermediate needs memory
+                # Do it inside the stream context so it's scheduled correctly.
                 with stream:
-                    img_plane = img_gpu[plane_idx]
-                    back_plane = back_gpu[plane_idx] if back_gpu is not None else None
-                    img_subtracted = img_plane - back_plane if back_plane is not None else img_plane
+                   img_subtracted = img_plane - back_plane if back_plane is not None else img_plane.copy() # Use copy if no subtraction to avoid modifying input
 
-                    # La función process_plane modificada (ver abajo)
-                    results.append((plane_idx, process_plane(plane_idx, img_subtracted, back_plane, stream)))
+                   # Call process_plane - this queues operations on the stream
+                   # It returns GPU arrays immediately, computation happens later.
+                   future_result_tuple = process_plane(plane_idx, img_subtracted, back_plane, stream)
 
-            # Sincronizar todos los streams antes de continuar
-            for stream in streams[:batch_size]:
-                stream.synchronize()
+                   # Store the future result along with its index and stream
+                   current_batch_futures.append( (plane_idx, stream, future_result_tuple) )
 
-            # Agregar resultados a las listas finales
-            for plane_idx, (plane_flux, plane_back_flux) in results:
+                   # Explicitly delete the temporary subtracted image *within the stream's context*
+                   # This might not free memory immediately but signals intent earlier.
+                   del img_subtracted
+
+            nvtx.end_range(launch_nvtx) # End launch phase NVTX
+
+            # --- 2. Synchronize streams for this batch ---
+            sync_nvtx = nvtx.start_range(f'sync_batch', category='phot.sync')
+            logger.debug(f"Synchronizing {len(streams_this_batch)} streams for batch starting at {batch_start}...")
+            sync_start_time = time.time()
+            for i in range(batch_size):
+                # Sync each stream used in this batch
+                streams_this_batch[i].synchronize()
+            sync_end_time = time.time()
+            logger.debug(f"Batch synchronization took {sync_end_time - sync_start_time:.3f} s")
+            nvtx.end_range(sync_nvtx) # End sync phase NVTX
+
+            # --- 3. Collect results for this batch ---
+            collect_nvtx = nvtx.start_range(f'collect_batch', category='phot.collect')
+            logger.debug(f"Collecting results for batch starting at {batch_start}...")
+            for plane_idx, stream, future_result in current_batch_futures:
+                # Now that the stream is synchronized, the data is ready on GPU
+                plane_flux, plane_back_flux = future_result
+
                 if plane_flux is not None:
-                    all_plane_flux.append(plane_flux)
-                    if all_plane_back_flux is not None and plane_back_flux is not None:
-                        all_plane_back_flux.append(plane_back_flux)
+                    all_plane_flux_list[plane_idx] = plane_flux
+                    if all_plane_back_flux_list is not None and plane_back_flux is not None:
+                        all_plane_back_flux_list[plane_idx] = plane_back_flux
+                    elif all_plane_back_flux_list is not None and plane_back_flux is None and back_gpu is not None:
+                         # Handle case where background existed but failed for this plane
+                         logger.warning(f"Background processing failed for plane {plane_idx}, but flux calculation succeeded.")
+                         # Keep None in the list for this plane's background flux
+                else:
+                    # process_plane returned None, indicating failure for this plane
+                    logger.error(f"Processing failed for plane {plane_idx}. Flux result will be missing.")
+                    success = False # Mark overall process as potentially incomplete/failed
+                    # Keep None in the list for this plane's flux (and back_flux if applicable)
 
-            # Liberar memoria después de cada lote
+            nvtx.end_range(collect_nvtx) # End collect phase NVTX
+
+            # --- Cleanup after batch ---
+            # Clear the futures list for the completed batch
+            del current_batch_futures
+            # Force garbage collection and free unused GPU memory blocks *after* each batch
+            # This is crucial when processing many planes to avoid OOM
+            cleanup_nvtx = nvtx.start_range('batch_cleanup', category='phot.cleanup')
+            logger.debug(f"Cleaning memory after batch. Used: {mempool.used_bytes() / 1e9:.2f} GB")
             mempool.free_all_blocks()
             gc.collect()
+            logger.debug(f"Memory after cleanup. Used: {mempool.used_bytes() / 1e9:.2f} GB")
+            nvtx.end_range(cleanup_nvtx)
 
-        # Stack results *after* the loop
-        if success and all_plane_flux:
+            nvtx.end_range(batch_nvtx) # End overall batch NVTX
+
+        # --- Stack results *after* processing all batches ---
+        if success and any(f is not None for f in all_plane_flux_list): # Check if any plane succeeded
             stack_range = nvtx.start_range('stack_results', category='phot.postproc')
-            logger.debug(f"Stacking results from {len(all_plane_flux)} planes...")
+            logger.info(f"Stacking final results from {sum(1 for f in all_plane_flux_list if f is not None)} successful planes...")
             try:
-                final_flux = cp.stack(all_plane_flux, axis=0)
-                if all_plane_back_flux:
-                    final_back_flux = cp.stack(all_plane_back_flux, axis=0)
-            except Exception as e_stack:  # Catch MemoryError too
+                # Filter out None values before stacking if any planes failed
+                valid_fluxes = [f for f in all_plane_flux_list if f is not None]
+                if valid_fluxes:
+                   final_flux = cp.stack(valid_fluxes, axis=0)
+                else: # All planes failed
+                   logger.error("All planes failed processing. Returning None for flux.")
+                   final_flux = None
+                   success = False
+
+                if all_plane_back_flux_list is not None:
+                    valid_back_fluxes = [bf for bf in all_plane_back_flux_list if bf is not None]
+                    if valid_back_fluxes:
+                         final_back_flux = cp.stack(valid_back_fluxes, axis=0)
+                    # If valid_back_fluxes is empty but final_flux exists, it means background failed everywhere or wasn't calculated
+                    # Keep final_back_flux as None in this case or if final_flux is None
+
+            except Exception as e_stack:
                 logger.error(f"Error during final stacking: {e_stack}", exc_info=True)
                 success = False
-                final_flux, final_back_flux = None, None
+                final_flux, final_back_flux = None, None # Ensure reset on stacking failure
             finally:
-                del all_plane_flux, all_plane_back_flux  # Clear list memory
+                del all_plane_flux_list, all_plane_back_flux_list # Clear intermediate list memory
                 mempool.free_all_blocks()
                 gc.collect()
-                nvtx.end_range(stack_range)
-        # ... (handle other failure/empty cases) ...
+                if stack_range: nvtx.end_range(stack_range)
+        elif not success:
+             logger.error("Overall processing failed or was incomplete. Returning None for fluxes.")
+             final_flux, final_back_flux = None, None
+        else: # Case: success=True but all_plane_flux_list was empty or all None (shouldn't happen if positions weren't empty)
+             logger.warning("Processing finished, but no valid plane results were collected.")
+             final_flux, final_back_flux = None, None
 
-    else:  # Case 2D
+
+    # --- 2D Image Processing ---
+    else: # Case 2D (n_images = 1)
         logger.debug(f"Processing 2D image.")
-        img_subtracted = img_gpu - back_gpu if back_gpu is not None else img_gpu
-        stream = cp.cuda.Stream()
-        with stream:
-            final_flux, final_back_flux = process_plane(0, img_subtracted, back_gpu,stream)
-        del img_subtracted  # Delete temporary subtraction
-        if final_flux is None:
-            logger.critical(f"Processing failed for the 2D image.")
-            success = False
+        stream = streams[0] # Use the first stream
+        img_subtracted = None # Define before try block
+        try:
+           with stream:
+               # Perform subtraction within the stream context
+               img_subtracted = img_gpu - back_gpu if back_gpu is not None else img_gpu.copy() # Use copy if no subtraction
+
+               # Call process_plane for the single plane (index 0)
+               final_flux, final_back_flux = process_plane(0, img_subtracted, back_gpu, stream)
+
+               del img_subtracted # Delete intermediate
+
+           # Synchronize the single stream used
+           stream.synchronize()
+
+           if final_flux is None:
+               logger.critical(f"Processing failed for the 2D image.")
+               success = False # Mark failure
+
+        except Exception as e_2d:
+             logger.error(f"Error processing 2D image: {e_2d}", exc_info=True)
+             success = False
+             final_flux, final_back_flux = None, None
+             # Cleanup potential intermediate
+             del img_subtracted
+             mempool.free_all_blocks()
+             gc.collect()
+
 
     nvtx.end_range(fft_loop_range)
     # --- End FFT Loop ---
 
-    # Final cleanup of main inputs
-    del img_gpu, back_gpu  # Delete the guaranteed GPU arrays
+    # Final cleanup of main inputs (img_gpu, back_gpu might have been deleted earlier on error)
     final_cleanup_range = nvtx.start_range('final_cleanup', category='phot.cleanup')
+    logger.debug("Performing final cleanup of input arrays.")
+    try:
+        del img_gpu
+    except NameError: pass
+    try:
+        del back_gpu
+    except NameError: pass
+    try:
+        del radii_proc
+    except NameError: pass
+    # positions is input, maybe don't delete here unless sure it's a copy
+    # del positions
     mempool.free_all_blocks()
     gc.collect()
+    logger.debug(f"Final memory usage: {mempool.used_bytes() / 1e9:.2f} GB")
     nvtx.end_range(final_cleanup_range)
 
     nvtx.end_range(nvtx_range)  # End overall function range
 
     if success:
-        logger.debug(f"Batch aperture photometry completed successfully.")
+        logger.info(f"Batch aperture photometry completed.")
     else:
-        logger.error(f"Batch aperture photometry failed due to errors.")
+        logger.error(f"Batch aperture photometry finished with errors or failures.")
 
-    return final_flux, final_back_flux, areas
+    # Ensure return types match expectation even on failure (None or CuPy array)
+    if not success:
+       return None, None, areas
+    else:
+       return final_flux, final_back_flux, areas
 #
 # @nvtx.annotate('batch_aperture_photometry', category='phot.photo_gpu')
 # def batch_aperture_photometry(
