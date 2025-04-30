@@ -8,6 +8,8 @@ from lmfit import Model
 from scipy.spatial import KDTree
 from scipy.spatial.distance import cdist
 
+from ..utils.gpu import adaptive_memory_management
+
 try:
     from cuml import AgglomerativeClustering
 except ImportError:
@@ -137,6 +139,8 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
     kernel = gaussian_kernel(int(np.max((5 * 2 + 1, 10 / pxscale))), 2)
     kernel = (kernel - cp.mean(kernel)) / cp.std(kernel)
 
+    adaptive_memory_management(mempool)
+
     # Usar un contexto para conv_ima y conv_sigma
     with cp.cuda.Stream():  # Asegura la ejecución asíncrona y la liberación de recursos
         conv_ima = convolve_fft(img, kernel, **kwargs)
@@ -177,6 +181,7 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
         # Liberación de memoria
         del snr, peak, m, dist, dist_mask, sort_metric, idx
 
+    del img, rms
     mempool.free_all_blocks()
     return coor_f
 
@@ -611,9 +616,11 @@ def create_coeff_map(img_shape: tuple, positions: cp.array, coefficients: cp.arr
             if cp.sum(cp.isnan(tiles)) == s: lk += 1
             s = cp.sum(cp.isnan(tiles))
 
+        del s
         coeff_map[c, :, :] = recompose_from_percentiles(tiles.reshape(-1), img_shape, block_size)
 
-    del tiles
+        del tiles
+
     return coeff_map
 
 
