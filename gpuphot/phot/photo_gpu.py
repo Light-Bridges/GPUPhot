@@ -2241,7 +2241,7 @@ def batch_aperture_photometry(
 
     # Create a fixed number of streams for controlled concurrency
     # Limit concurrency to avoid excessive intermediate memory usage
-    max_concurrent = min(20, n_images) if n_images > 1 else 1 # Ensure at least 1 stream
+    max_concurrent = n_images if n_images > 1 else 1 # Ensure at least 1 stream
     logger.info(f"Using {max_concurrent} concurrent streams for processing {n_images} planes.")
     streams = [cp.cuda.Stream() for _ in range(max_concurrent)]
 
