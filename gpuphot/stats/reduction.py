@@ -135,7 +135,7 @@ def register_shift_frames(frames_list, upsample_factor=100, center_size=
     :type frames_list: list
     :param upsample_factor: Upsample factor for subpixel precision, by default 100.
     :type upsample_factor: int, optional
-    :param center_size: Size for centering the images, by default 1000.
+    :param center_size: Size for centering the images, by default 6000.
     :type center_size: int, optional
     :param shift_limit_pix: Maximum allowed shift in pixels, by default 300.
     :type shift_limit_pix: int, optional
