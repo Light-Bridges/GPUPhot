@@ -11,7 +11,7 @@ import nvtx
 import pandas as pd
 from astropy.wcs import WCS
 # import tensorflow as tf
-from cupyx.scipy.ndimage import convolve, maximum_filter, \
+from cupyx.scipy.ndimage import convolve, label, sum as nd_sum, mean as nd_mean, maximum_filter, \
     median_filter, laplace, binary_dilation
 
 from .conv import fill_image, fill_nan_fft, get_aper_kernel, convolve_fft, gen_apm_filter
@@ -26,7 +26,7 @@ from ..stats.reduction import stack_sigmaclip
 from ..utils.astro import astrometrice2, get_astrometry_params, get_maglim, get_target_snr, get_zeropoint, \
     plate_scale_px
 from ..utils.catalog import catalog_results, crossmatch_sources
-from ..utils.gpu import free_gpu_mem, reset_cupy_allocators, maybe_free_arrays, adaptive_memory_management
+from ..utils.gpu import free_gpu_mem, reset_cupy_allocators, adaptive_memory_management
 from ..utils.headers import update_header_with_astrometry, update_header_with_photometry
 
 logger = setup_logger(__name__)
@@ -3554,75 +3554,75 @@ def gen_gauss_filter(fw, **kwargs):
 
 
 # ### # @hierarchical_debug(logger)
-# @nvtx.annotate('detect_gpu', category='phot.photo_gpu')
-# def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
-# =4, mincut=10, mem=cp.get_default_pinned_memory_pool(), **kwargs):
-#     """
-#     Detect sources in an image using GPU.
-#
-#     :param img: Input image.
-#     :type img: cupy.ndarray
-#     :param sky: Sky background.
-#     :type sky: cupy.ndarray
-#     :param rms: RMS noise.
-#     :type rms: cupy.ndarray
-#     :param sdet: Detection threshold in sigma units.
-#     :type sdet: float
-#     :param mode: Detection mode ('g' for Gaussian).
-#     :type mode: str
-#     :param fw: Full width at half maximum.
-#     :type fw: float
-#     :param alpha: Moffat alpha parameter (not used for Gaussian mode).
-#     :type alpha: float
-#     :param beta: Moffat beta parameter (not used for Gaussian mode).
-#     :type beta: float
-#     :param minpix: Minimum number of pixels for a valid detection.
-#     :type minpix: int
-#     :param mincut: Minimum flux cut for a valid detection.
-#     :type mincut: float
-#     :param mem: GPU memory pool.
-#     :type mem: cupy.cuda.MemoryPool
-#     :return: DataFrame of detected sources, mask of small detections, and memory usage.
-#     :rtype: tuple(pandas.DataFrame, cupy.ndarray, int)
-#     """
-#     gf, lk = gen_gauss_filter(fw)
-#     g = convolve(img - sky, gf, origin=(0, 0))
-#     g1 = (g / rms > sdet).astype(cp.int32)
-#     del rms
-#     mem.free_all_blocks()
-#     label_im, nb_labels = label(g1)
-#     ids0 = cp.asarray([range(nb_labels + 1)])
-#     npix = nd_sum(g1, label_im, ids0)
-#     ids = ids0[(npix > mincut) & (npix > 0)]
-#     idm = ids0[(npix <= minpix) & (npix > 0)]
-#     npix = npix[(npix > mincut) & (npix > 0)]
-#     if minpix == 0:
-#         mask = False
-#     else:
-#         mask = cp.isin(label_im, cp.asarray(idm))
-#     del g1
-#     mem.free_all_blocks()
-#     idx = cp.indices(img.shape, dtype=cp.int16)
-#     im1 = g * idx
-#     x = nd_mean(im1[0, :, :], label_im, ids) / nd_mean(g, label_im, ids)
-#     y = nd_mean(im1[1, :, :], label_im, ids) / nd_mean(g, label_im, ids)
-#     el = nd_mean(im1[0, :, :] * im1[1, :, :], label_im, ids) / nd_mean(g,
-#                                                                        label_im, ids)
-#     el = el - x * y
-#     coor = x.astype(cp.int16), y.astype(cp.int16)
-#     mm = cp.get_default_memory_pool().used_bytes()
-#     flux = g[coor]
-#     del g
-#     mem.free_all_blocks()
-#     res = np.asarray([y.get(), x.get(), flux.get(), npix.get(), el.get()]
-#                      ).transpose().reshape((-1, 5))
-#
-#     del x, y, flux, npix, el
-#
-#     df = pd.DataFrame(res, columns=['xcentroid', 'ycentroid', 'flux',
-#                                     'npix', 'elip'])
-#
-#     return df, mask, mm
+@nvtx.annotate('detect_gpu', category='phot.photo_gpu')
+def detect_gpu(img, sky, rms, sdet, mode='g', fw=1, alpha=0, beta=0, minpix
+=4, mincut=10, mem=cp.get_default_pinned_memory_pool(), **kwargs):
+    """
+    Detect sources in an image using GPU.
+
+    :param img: Input image.
+    :type img: cupy.ndarray
+    :param sky: Sky background.
+    :type sky: cupy.ndarray
+    :param rms: RMS noise.
+    :type rms: cupy.ndarray
+    :param sdet: Detection threshold in sigma units.
+    :type sdet: float
+    :param mode: Detection mode ('g' for Gaussian).
+    :type mode: str
+    :param fw: Full width at half maximum.
+    :type fw: float
+    :param alpha: Moffat alpha parameter (not used for Gaussian mode).
+    :type alpha: float
+    :param beta: Moffat beta parameter (not used for Gaussian mode).
+    :type beta: float
+    :param minpix: Minimum number of pixels for a valid detection.
+    :type minpix: int
+    :param mincut: Minimum flux cut for a valid detection.
+    :type mincut: float
+    :param mem: GPU memory pool.
+    :type mem: cupy.cuda.MemoryPool
+    :return: DataFrame of detected sources, mask of small detections, and memory usage.
+    :rtype: tuple(pandas.DataFrame, cupy.ndarray, int)
+    """
+    gf, lk = gen_gauss_filter(fw)
+    g = convolve(img - sky, gf, origin=(0, 0))
+    g1 = (g / rms > sdet).astype(cp.int32)
+    del rms
+    mem.free_all_blocks()
+    label_im, nb_labels = label(g1)
+    ids0 = cp.asarray([range(nb_labels + 1)])
+    npix = nd_sum(g1, label_im, ids0)
+    ids = ids0[(npix > mincut) & (npix > 0)]
+    idm = ids0[(npix <= minpix) & (npix > 0)]
+    npix = npix[(npix > mincut) & (npix > 0)]
+    if minpix == 0:
+        mask = False
+    else:
+        mask = cp.isin(label_im, cp.asarray(idm))
+    del g1
+    mem.free_all_blocks()
+    idx = cp.indices(img.shape, dtype=cp.int16)
+    im1 = g * idx
+    x = nd_mean(im1[0, :, :], label_im, ids) / nd_mean(g, label_im, ids)
+    y = nd_mean(im1[1, :, :], label_im, ids) / nd_mean(g, label_im, ids)
+    el = nd_mean(im1[0, :, :] * im1[1, :, :], label_im, ids) / nd_mean(g,
+                                                                       label_im, ids)
+    el = el - x * y
+    coor = x.astype(cp.int16), y.astype(cp.int16)
+    mm = cp.get_default_memory_pool().used_bytes()
+    flux = g[coor]
+    del g
+    mem.free_all_blocks()
+    res = np.asarray([y.get(), x.get(), flux.get(), npix.get(), el.get()]
+                     ).transpose().reshape((-1, 5))
+
+    del x, y, flux, npix, el
+
+    df = pd.DataFrame(res, columns=['xcentroid', 'ycentroid', 'flux',
+                                    'npix', 'elip'])
+
+    return df, mask, mm
 
 
 ### # @hierarchical_debug(logger)
