@@ -518,14 +518,22 @@ def _attempt_online_solve(df_proc, image_width, image_height):
         if online_wcs_header:
             logger.debug(f"{attempt_name} successful: Solution found online.")
 
-            logger.debug(f"{attempt_name}: Cleaning COMMENT and HISTORY cards from obtained header.")
-            keys_to_remove = ['COMMENT', 'HISTORY']
+            # hdu = fits.PrimaryHDU(header=online_wcs_header)
+            # hdu.verify('silentfix+warn')
+            # wcs = WCS(hdu.header)
+            # clean_header = wcs.to_header(relax=True)
 
-            clean_header = fits.Header()
-            for result_key in online_wcs_header.keys():
-                if result_key not in keys_to_remove:
-                    clean_header[result_key] = online_wcs_header[result_key]
+            # logger.debug(f"{attempt_name}: Cleaning COMMENT and HISTORY cards from obtained header.")
+            # keys_to_remove = ['COMMENT', 'HISTORY']
+            #
+            # logger.debug(f"{attempt_name}: Cleaning COMMENT and HISTORY cards from obtained header.")
+            #
+            # clean_header = fits.Header()
+            # for result_key in online_wcs_header.keys():
+            #     if result_key not in keys_to_remove:
+            #         clean_header[result_key] = online_wcs_header[result_key]
 
+            clean_header = copy_header_selectively(online_wcs_header)
             try:
                 wcs_header = dict(clean_header)
             except Exception:
@@ -1124,6 +1132,51 @@ def plate_scale_mm(focal):
     """
     # focal length in mm
     return 206265 / focal  # arcsec/mm
+
+
+def copy_header_selectively(source_header, target_header=None, exclude_keywords=None):
+    """
+    Copies cards from a source FITS header to a target FITS header,
+    excluding specified keywords like 'COMMENT' and 'HISTORY'.
+    If target_header is None, a new Header object is created.
+
+    :param source_header: The astropy.io.fits.Header object to copy from.
+    :type source_header: astropy.io.fits.Header
+    :param target_header: The astropy.io.fits.Header object to copy to.
+                          If None, a new one is created.
+    :type target_header: astropy.io.fits.Header or None
+    :param exclude_keywords: A list or set of uppercase keyword strings to exclude.
+                             Defaults to ['COMMENT', 'HISTORY', ''].
+                             The empty string '' handles blank keyword cards.
+    :type exclude_keywords: list or set or None
+    :return: The target_header with cards copied from source_header.
+    :rtype: astropy.io.fits.Header
+    """
+    if target_header is None:
+        target_header = fits.Header()
+
+    if exclude_keywords is None:
+        # Default keywords to exclude. Note that FITS keywords are case-insensitive
+        # but astropy stores them internally as uppercase.
+        exclude_keywords = {'COMMENT', 'HISTORY', ''}  # Using a set for faster lookups
+    elif isinstance(exclude_keywords, list):
+        exclude_keywords = set(kw.upper() for kw in exclude_keywords)  # Ensure uppercase for set
+    else:  # Assume it's already a set or compatible
+        exclude_keywords = set(kw.upper() for kw in exclude_keywords)
+
+    for card in source_header.cards:
+        # card.keyword will be an uppercase string
+        if card.keyword not in exclude_keywords:
+            try:
+                target_header[card.keyword] = (card.value, card.comment)
+            except Exception as e:
+                logger.debug(f"Warning: Could not copy card '{card.keyword}': {e}. Trying append.")
+                try:
+                    target_header.append(card.copy(), end=True)
+                except Exception as e_append:
+                    logger.debug(f"Error: Could not append card '{card.keyword}' after failed set: {e_append}")
+
+    return target_header
 
 
 if __name__ == '__main__':
