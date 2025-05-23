@@ -129,7 +129,7 @@ def get_sky(im_g, fw, qt=90, mem=cp.get_default_memory_pool(), **kwargs):
 
 ### # @hierarchical_debug(logger)
 @nvtx.annotate('SP_filter', category='phot.photo_gpu')
-def SP_filter(img, filter_size=3, high_threshold_factor=10,
+def SP_filter(img, filter_size=3, high_threshold_factor=5,
               low_threshold_factor=5, scaling_factor=1.4826, **kwargs):
     """
     Apply a median filter to remove salt-and-pepper noise.
@@ -173,8 +173,7 @@ def CR_filter(img, thres=3, **kwargs):
     :rtype: cupy.ndarray
     """
 
-    img = cp.asarray(img, dtype=cp.float32)
-    mask = laplace(img)  # > 100
+    mask = laplace(img)
     mask = cp.abs(mask - cp.mean(mask)) > thres * cp.std(mask)
     mask = binary_dilation(mask, cp.ones((3, 3)))
     img_filled = img.copy()

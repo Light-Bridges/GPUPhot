@@ -154,7 +154,7 @@ def phase_cross_correlation(reference_image, moving_image, *,
             src_amp = cp.sum(np.real(src_freq * src_freq.conj()))
             target_amp = cp.sum(np.real(target_freq * target_freq.conj()))
 
-    del src_freq, target_freq,image_product
+    del target_freq, image_product
     for dim in range(src_freq.ndim):
         if shape[dim] == 1:
             shifts[dim] = 0
