@@ -1,3 +1,5 @@
+from typing import Union
+
 import cupy as cp
 import nvtx
 import numpy as np
@@ -11,7 +13,7 @@ logger = setup_logger(__name__)
 
 
 @nvtx.annotate('center',category='stats.reduction')
-def center(im, size):
+def center(im: Union[cp.ndarray, np.ndarray], size: int) -> Union[cp.ndarray, np.ndarray]:
     """
     Center the image to the given size.
 
@@ -22,15 +24,23 @@ def center(im, size):
     :return: Centered image.
     :rtype: numpy.ndarray
     """
-    if im.shape[0] > size:
-        c0 = int((im.shape[0] - size) / 2)
+    h, w = im.shape[0], im.shape[1]  # Funciona para np y cp
+
+    if h > size:
+        c0_start = (h - size) // 2
+        c0_end = c0_start + size
     else:
-        c0 = 0
-    if im.shape[1] > size:
-        c1 = int((im.shape[1] - size) / 2)
+        c0_start = 0
+        c0_end = h
+
+    if w > size:
+        c1_start = (w - size) // 2
+        c1_end = c1_start + size
     else:
-        c1 = 0
-    return im[c0:-c0, c1:-c1]
+        c1_start = 0
+        c1_end = w
+
+    return im[c0_start:c0_end, c1_start:c1_end]
 
 
 ### # @hierarchical_debug(logger)
@@ -159,7 +169,7 @@ def register_shift_frames(frames_list, upsample_factor=100, center_size=
         if (np.abs(shifted[0]) > shift_limit_pix) | np.abs(shifted[1] >
                                                            shift_limit_pix):
             shifted = 0, 0
-        logger.warning(f'Detected subpixel offset (y, x): {shifted}')
+        logger.debug(f'Detected subpixel offset (y, x): {shifted}')
         fc[i, :] = shift(fc1, shift=(shifted[0], shifted[1]), order=1, mode
         ='constant')
 
