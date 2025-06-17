@@ -371,7 +371,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     :rtype:
         tuple(pandas.DataFrame, str, str)
     """
-    logger.info(f'Attempting to retrieve data from catalog for filter: {filter}, radius: {radius}, maglimit: {maglimit}')
+    logger.info(f'Attempting to retrieve data from catalog for filter {filter}, radius: {radius:.2f} deg, maglimit: {maglimit:.2f}')
     start_time = time.time()
     if coocenter.dec.deg < -30:
         def get_filter(_filter):
