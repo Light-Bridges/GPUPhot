@@ -2895,7 +2895,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
                     exptime: float, satlevel: float, target_ra: float, target_dec: float = None, n_images: int = 1,
                     SP_filt: bool = True, CR_filt: bool = False, border: int = 10, center_factor: float = 0.7,
                     pca_method: bool = True, tile_section: int = 1000, max_stars_ref: int = 15, min_snr: int = 5,
-                    color_range: float = 0.6, tile_section_psf: int = 2500, **kwargs):
+                    color_range: float = 0.6, tile_section_psf: int = 2500, zp_maxmag: float = 21, **kwargs):
     """
     Calibrate an image.
 
@@ -3136,7 +3136,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
         # Photometrize
         coocenter, FOV, scale = get_astrometry_params(h_wcs, imadata_shape)
         result, catalog, ref_filter = catalog_results(coocenter, FOV / 2,
-                                                      filter, maglimit=23, **kwargs)
+                                                        filter, maglimit=zp_maxmag, **kwargs)
         dic_calib['CATALOG'] = catalog
         dic_calib['CATBAND'] = ref_filter
 
@@ -3145,13 +3145,33 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
         # dfm.loc[:, 'RA'] = ra
         # dfm.loc[:, 'DEC'] = dec
         photo_dict = get_zeropoint(result, dfm, exptime, center_lims=(xmin, xmax, ymin, ymax),
-                                   solar_filter=color_range, dist_thres_px=1.5 * fwhm * scale / 3600)
+                                    solar_filter=color_range, dist_thres_px=1.5 * fwhm * scale / 3600)
         dic_calib.update(photo_dict)
+
+        # Calculate limiting magnitude
+        try:
+            mag = dic_calib['ZP'] - 2.5 * np.log10(dfm.flux.values / exptime)
+            snr = dfm.snr.values
+            maglim3 = get_maglim(mag, snr, 3)
+            zp_maxmag = np.min([maglim3, 23])
+            del mag, snr
+        except Exception as e:
+            maglim3 = 0
+            zp_maxmag = 23
+            logger.warning('Error calculating limiting magnitude: {}'.format(e))
+        dic_calib['MAGLIM'] = maglim3
+
+        # Get all the sources
+        logger.info('Getting all sources from catalog until magnitude limit {}'.format(zp_maxmag))
+        result, catalog, ref_filter = catalog_results(coocenter, FOV / 2,
+                                                        filter, maglimit=zp_maxmag, **kwargs)
+        w = WCS(h_wcs)
+        dfm.loc[:, 'RA'], dfm.loc[:, 'DEC'] = w.all_pix2world(dfm.xcentroid.values, dfm.ycentroid.values, 1)
 
         # Check catalog coincidence
         dfm_idx, catalog_idx = crossmatch_sources(dfm[['RA', 'DEC']].values,
-                                                  result[['RA', 'DEC']].values,
-                                                  thres_px=1.5 * fwhm * scale / 3600)
+                                                    result[['RA', 'DEC']].values,
+                                                    thres_px=1.5 * fwhm * scale / 3600)
 
         # Add astrometric errors to dfm
         dfm.loc[dfm_idx, 'RAERR'] = dfm.loc[dfm_idx, 'RA'].values - result.loc[catalog_idx, 'RA'].values
@@ -3163,17 +3183,6 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
         dic_calib['DECPREC'] = np.round(np.nanmedian(dfm.DECERR) * 3600, 3)
         dic_calib['RADISP'] = np.round(np.nanstd(dfm.RAERR) * 3600, 3)
         dic_calib['DECDISP'] = np.round(np.nanstd(dfm.DECERR) * 3600, 3)
-
-        # Calculate limiting magnitude
-        try:
-            mag = dic_calib['ZP'] - 2.5 * np.log10(dfm.flux.values / exptime)
-            snr = dfm.snr.values
-            maglim3 = get_maglim(mag, snr, 3)
-            del mag, snr
-        except Exception as e:
-            maglim3 = 0
-            logger.warning('Error calculating limiting magnitude: {}'.format(e))
-        dic_calib['MAGLIM'] = maglim3
 
         # Calculate target SNR
         try:
