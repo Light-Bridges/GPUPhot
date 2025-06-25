@@ -201,6 +201,7 @@ def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
         nvtx.end_range(nvtx_range)
         return result_np_src, result_np_ref
 
+
 def _is_valid_result(result: pd.DataFrame, expected_columns: list):
     """
     Validate the result of a catalog query.
@@ -222,10 +223,11 @@ def _is_valid_result(result: pd.DataFrame, expected_columns: list):
         return all(checks)
     return False
 
+
 ### # @hierarchical_debug(logger)
 @nvtx.annotate('__getVizier', category='utils.catalog')
 def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
-                vizier_timeout=60, vizier_row_limit=-1,
+                vizier_timeout=450, vizier_row_limit=-1,
                 vizier_cache=True, custom_vizier_search_func=None,
                 expected_columns=None, **kwargs):
     """
@@ -256,6 +258,7 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                                        - ref_filter: The reference filter used for magnitude filtering.
                                        - row_limit: Maximum number of rows to return from the query.
                                        - expected_columns: List of expected column names in the results.
+                                       - timeout: Timeout duration for the query.
                                        This function should return a DataFrame or None.
     :type custom_vizier_search_func: callable or None
     :param expected_columns: List of expected column names in the results.
@@ -269,7 +272,7 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                 f'Using custom Vizier search function: {custom_vizier_search_func.__name__} for catalog: {catalog}')
             if expected_columns is None:
                 expected_columns = []
-            executor = TimeoutExecutor(timeout=vizier_timeout)
+            executor = TimeoutExecutor(timeout=int(vizier_timeout) + 2)
             result = executor.execute(
                 custom_vizier_search_func,
                 coocenter=coocenter,
@@ -278,7 +281,8 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                 mag_limit=float(maglimit),
                 ref_filter=ref_filter,
                 row_limit=int(vizier_row_limit),
-                expected_columns=list(set(expected_columns))
+                expected_columns=list(set(expected_columns)),
+                timeout=vizier_timeout
             )
             if _is_valid_result(result, expected_columns):
                 return result
@@ -367,7 +371,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     :rtype:
         tuple(pandas.DataFrame, str, str)
     """
-    logger.info(f'Attempting to retrieve data from catalog.')
+    logger.info(f'Attempting to retrieve data from catalog for filter {filter}, radius: {radius:.2f} deg, maglimit: {maglimit:.2f}')
     start_time = time.time()
     if coocenter.dec.deg < -30:
         def get_filter(_filter):

@@ -114,6 +114,7 @@ class DefaultConfig:
         'SP_filt': True,
         'tile_section': 1000,
         'tile_section_psf': 3000,
+        'zp_maxmag': 21,
     }
 
     DEFAULT_IMAGE_REDUCTION = {
