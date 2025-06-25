@@ -80,8 +80,8 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-5672}:5672"
+      - "${RABBITMQ_AMQP_PORT:-15672}:15672"
     environment:
       RABBITMQ_DEFAULT_USER: gpuphot
       RABBITMQ_DEFAULT_PASS: gpuphot
@@ -90,7 +90,7 @@ services:
   redis:
     image: redis:6-alpine
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     restart: unless-stopped
 
   beat:
@@ -120,7 +120,7 @@ services:
     #      - path: ./.env
     #        required: false
     ports:
-      - "8888:8888"
+      - "${JUPYTER_PORT:-8888}:8888"
     environment:
       <<: *celery-env
       JUPYTER_ENABLE_LAB: "yes"
@@ -155,7 +155,7 @@ services:
       NVIDIA_DRIVER_CAPABILITIES: ""
       FLOWER_PORT: 5555
     ports:
-      - "5555:5555"
+      - "${FLOWER_PORT:-5555}:5555"
     depends_on:
       - rabbitmq
       - redis
@@ -168,7 +168,7 @@ services:
       dockerfile: Dockerfile
       target: q3c_postgres
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_DB: GPUPhotDB
       POSTGRES_USER: admin
