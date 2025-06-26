@@ -130,6 +130,79 @@ nb_tasks['cells'].append(nbf.v4.new_code_cell(
     "print(f'Task result: {task_result.result}')"
 ))
 
+# Sección 5: Scheduling Periodic Tasks
+nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
+    "## Scheduling Periodic Tasks with RedBeat\n\n"
+    "This section demonstrates how to schedule a recurring Celery task using [RedBeat](https://github.com/sibson/redbeat), "
+    "which stores periodic task definitions in Redis.  \n"
+    "You can use this approach to automatically process images at a specific time every day, and the schedule will persist even if the system or container is restarted.\n\n"
+    "**Example:**  \n"
+    "The following cell schedules the `process_directory_task` to run every day at 10:00 AM, processing all FITS files in the `prered` directory with the `iKon936` instrument configuration."
+))
+
+nb_tasks['cells'].append(nbf.v4.new_code_cell(
+    "from redbeat import RedBeatSchedulerEntry\n"
+    "from celery.schedules import crontab\n"
+    "from gpuphot_worker.worker_app import app\n\n"
+    "entry = RedBeatSchedulerEntry(\n"
+    "    name='process_ikon_images_at_10_every_day',\n"
+    "    task='gpuphot_worker.tasks.process_image_task',\n"
+    "    schedule=crontab(hour=10, minute=0),\n"
+    "    args=('prered', 'dummy', '*.fits', 'iKon936', False),\n"
+    "    app=app\n"
+    ")\n"
+    "entry.save()"
+))
+
+nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
+    "**Parameters:**\n"
+    "- `name`: Unique identifier for the scheduled task.\n"
+    "- `task`: The full name of the Celery task to execute.\n"
+    "- `schedule`: The schedule for the task (in this example, every day at 10:00 AM).\n"
+    "- `args`: Arguments passed to the task, matching the signature of `process_image_task`.\n"
+    "- `app`: The Celery application instance.\n\n"
+    "After running this cell, the task will be scheduled and stored in Redis.  \n"
+    "You can verify the scheduled tasks or modify them using similar code cells."
+))
+
+nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
+    "## Removing a Scheduled Periodic Task\n\n"
+    "If you want to remove a scheduled periodic task (for example, if you no longer want to process iKon936 images every day at 10:00 AM), "
+    "you can delete it from Redis using RedBeat as shown below."
+))
+
+nb_tasks['cells'].append(nbf.v4.new_code_cell(
+    "from redbeat import RedBeatSchedulerEntry\n"
+    "from gpuphot_worker.worker_app import app\n\n"
+    "# Remove the scheduled task by name\n"
+    "key = 'redbeat:process_ikon_images_at_10_every_day'\n"
+    "entry = RedBeatSchedulerEntry.from_key(key, app=app)\n"
+    "entry.delete()\n"
+    "print(\"Task 'process_ikon_images_at_10_every_day' has been removed.\")"
+))
+
+nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
+    "## Listing All Scheduled Periodic Tasks\n\n"
+    "To see which periodic tasks are currently scheduled in RedBeat, you can list them as follows:"
+))
+
+nb_tasks['cells'].append(nbf.v4.new_code_cell(
+    "from redbeat.schedulers import get_redis\n"
+    "from redbeat import RedBeatSchedulerEntry\n"
+    "from gpuphot_worker.worker_app import app\n\n"
+    "redis = get_redis(app)\n"
+    "schedule_key = 'redbeat::schedule'\n"
+    "task_keys = redis.zrange(schedule_key, 0, -1)\n\n"
+    "for key in task_keys:\n"
+    "    entry = RedBeatSchedulerEntry.from_key(key, app=app)\n"
+    "    print(f\"Name: {entry.name}\")\n"
+    "    print(f\"Task: {entry.task}\")\n"
+    "    print(f\"Args: {entry.args}\")\n"
+    "    print(f\"Schedule: {entry.schedule}\")\n"
+    "    print(f\"Enabled: {entry.enabled}\")\n"
+    "    print('---')"
+))
+
 # Sección final: Link to the previous and next notebook
 nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
     "## Next Steps\n"

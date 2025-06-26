@@ -95,7 +95,7 @@ services:
 
   beat:
     <<: *common-worker-backend
-    command: [ "celery", "-A", "gpuphot_worker.worker_app", "beat" ]
+    command: [ "celery", "-A", "gpuphot_worker.worker_app", "beat" , "-S", "redbeat.RedBeatScheduler" ]
 
   gpuphot_worker:
     <<: *common-worker-backend

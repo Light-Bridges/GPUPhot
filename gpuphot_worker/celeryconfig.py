@@ -10,6 +10,8 @@ result_serializer = 'json'
 accept_content = ['json']
 result_expires = 24 * 3600
 worker_max_tasks_per_child = 1
+beat_scheduler = 'redbeat.RedBeatScheduler'
+redbeat_redis_url = 'redis://redis:6379/1'
 # worker_max_memory_per_child = 500000
 
 # Override settings with environment variables
