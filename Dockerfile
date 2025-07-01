@@ -217,7 +217,7 @@ RUN chmod +x /usr/local/bin/entrypoint-lab.sh
 
 WORKDIR /home/jovyan
 
-ENTRYPOINT ["/usr/local/bin/entrypoint-lab.sh"]
+#ENTRYPOINT ["/usr/local/bin/entrypoint-lab.sh"]
 
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--NotebookApp.token=''", "--notebook-dir=/home/jovyan/work"]
 #CMD []
