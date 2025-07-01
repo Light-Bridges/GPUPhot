@@ -212,9 +212,15 @@ RUN . venv/bin/activate && pip install --no-cache-dir jupyter jupyterlab
 WORKDIR /app
 COPY . .
 
+COPY entrypoint-lab.sh /usr/local/bin/entrypoint-lab.sh
+RUN chmod +x /usr/local/bin/entrypoint-lab.sh
+
 WORKDIR /home/jovyan
 
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--NotebookApp.token=''", "--notebook-dir=/home/jovyan/work"]
+ENTRYPOINT ["/usr/local/bin/entrypoint-lab.sh"]
+
+#CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--NotebookApp.token=''", "--notebook-dir=/home/jovyan/work"]
+CMD []
 
 # Flower target
 FROM base AS flower

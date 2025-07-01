@@ -1,3 +1,4 @@
+import argparse
 import os
 from pathlib import Path
 
@@ -213,7 +214,21 @@ nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
 ))
 
 # Guardar el notebook de tareas
-output_dir = os.path.join(Path(__file__).parent.absolute(), '..', '..', 'notebooks')
+
+parser = argparse.ArgumentParser(description="Generate a Jupyter Notebook.")
+
+# Añadir un argumento opcional '--output-dir'
+# Si no se proporciona, se usará el valor 'default'.
+parser.add_argument(
+    '--output-dir',
+    type=str,
+    default=os.path.join(Path(__file__).resolve().parent, '..', '..', 'notebooks'),
+    help='The directory where the notebook will be saved.'
+)
+
+args = parser.parse_args()
+output_dir = args.output_dir
+
 output_path_config = os.path.join(output_dir, "3_Task_Execution_Notebook.ipynb")
 os.makedirs(output_dir, exist_ok=True)
 

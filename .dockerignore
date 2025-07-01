@@ -11,3 +11,5 @@
 # Incluir la carpeta profiling_scripts incluso si otras reglas la excluirían
 !profiling_scripts/
 !profiling_scripts/*
+
+!entrypoint-lab.sh

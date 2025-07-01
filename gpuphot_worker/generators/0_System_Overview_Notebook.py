@@ -1,5 +1,7 @@
+import argparse
 import os
 from pathlib import Path
+
 import nbformat as nbf
 
 # Crear un nuevo notebook
@@ -36,7 +38,22 @@ nb_system['cells'].append(nbf.v4.new_markdown_cell(
     "- [3. Task Execution](./3_Task_Execution_Notebook.ipynb): Learn how to process images using Celery tasks.\n"
 ))
 # Guardar el notebook de overview
-output_dir = os.path.join(Path(__file__).parent.absolute(), '..', '..', 'notebooks')
+
+
+parser = argparse.ArgumentParser(description="Generate a Jupyter Notebook.")
+
+# Añadir un argumento opcional '--output-dir'
+# Si no se proporciona, se usará el valor 'default'.
+parser.add_argument(
+    '--output-dir',
+    type=str,
+    default=os.path.join(Path(__file__).resolve().parent, '..', '..', 'notebooks'),
+    help='The directory where the notebook will be saved.'
+)
+
+args = parser.parse_args()
+output_dir = args.output_dir
+
 output_path_system = os.path.join(output_dir, "0_System_Overview_Notebook.ipynb")
 os.makedirs(output_dir, exist_ok=True)
 
