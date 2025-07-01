@@ -1,24 +1,30 @@
 # Running GPUPhot with Docker Compose
 
-GPUPhot can be deployed using Docker Compose for distributed processing, easy management of services, and a reproducible
-environment. This guide explains how to set up and run GPUPhot with Docker Compose.
+GPUPhot can be deployed using Docker Compose for distributed processing, easy management of services, and a reproducible environment. This guide explains how to set up and run GPUPhot with Docker Compose.
+
+## Service Architecture
+
+The Docker setup uses a multi-stage `Dockerfile` to create optimized images for each service:
+
+*   **`base`**: A base image containing all common dependencies and the Python virtual environment.
+*   **`worker`**: Contains the code for the Celery workers that perform the GPU-based processing.
+*   **`lab`**: A JupyterLab environment for interactive development, with GPU access.
+*   **`flower`**: The Celery monitoring dashboard.
+*   **`q3c_postgres`**: A custom PostgreSQL image that includes the **Q3C** extension for efficient spatial indexing of astronomical coordinates.
+*   **`profiler`**: A specialized image for debugging and performance profiling with **NVIDIA Nsight Systems**, which includes an SSH server.
 
 ## Prerequisites
 
-* **Docker and Docker Compose:** Ensure that you have both Docker and Docker Compose installed on your system. Refer to
-  the official Docker documentation for installation instructions for your specific operating system. This setup has
-  been tested with:
-    * Docker version 20.10 or later.
-    * Docker Compose version 1.29 or later (using the Compose file format version 2 or higher).
-* **NVIDIA GPU and Drivers (If using GPU acceleration):**
-    * An NVIDIA GPU with compute capability 6.0 or higher.
-    * NVIDIA drivers installed and configured correctly. Version 525.x or later is recommended. You should be able to
-      run `nvidia-smi` and see your GPU listed.
-* **Git:** To clone the repository.
+*   **Docker and Docker Compose:** Ensure you have both Docker and Docker Compose installed.
+    *   Docker version 20.10 or later.
+    *   Docker Compose v2 or later (which uses the `docker compose` command).
+*   **NVIDIA GPU and Drivers (Required):**
+    *   One or more NVIDIA GPUs with compute capability 6.0 or higher.
+    *   **NVIDIA Container Toolkit** installed and configured to allow Docker to access GPUs.
+    *   NVIDIA drivers version 525.x or later. Verify that `nvidia-smi` runs correctly.
+*   **Git:** To clone the repository.
 
 ## 1. Clone the Repository
-
-First, clone the GPUPhot repository from GitHub:
 
 ```bash
 git clone https://github.com/Light-Bridges/GPUPhot.git
@@ -27,250 +33,222 @@ cd GPUPhot
 
 ## 2. Environment Variables (`.env`)
 
-Create a `.env` file in the *root* of the GPUPhot project (the same directory as `docker-compose.yml`). This file will
-contain environment variables that configure GPUPhot and its services.
+Create a `.env` file in the project's root directory. This file centralizes all configuration. You can copy the example below and **modify the paths and passwords** to match your setup.
 
-**Important:** The `.env` file is *optional* if you want to use all the default values. However, you *must* set
-`ASTROMETRY_CACHE_PATH` to a valid path on your host machine.
-
-Here's a complete example `.env` file with *all* available options and their default values. You only need to include
-the variables you want to *change* from their defaults.
+**Complete `.env` Example:**
 
 ```dotenv
-#--------------------------------------------------
-#  Library Settings
-#--------------------------------------------------
+# ===================================================================
+#  General & Docker Build Configuration
+# ===================================================================
 
-# Enable debug mode (True/False).  More verbose logging.
+# Base NVIDIA/CUDA image for building the containers.
+# Ensure it is compatible with your drivers and architecture.
+# Example x86_64: nvidia/cuda:12.6.3-devel-ubuntu24.04
+# Example Jetson: nvcr.io/nvidia/l4t-base:r35.4.1
+BASE_IMAGE=nvidia/cuda:12.6.3-devel-ubuntu24.04
+
+# Python requirements file to be used during the build.
+# This should match the Python version installed in the base image.
+REQUIREMENTS_FILE=requirements_3_12.txt
+
+# ===================================================================
+#  GPUPhot Application Settings
+# ===================================================================
+
+# Enable more verbose logging (True/False).
 GPUPHOT_DEBUG=True
 
-# Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+# Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
 GPUPHOT_LOG_LEVEL=DEBUG
 
-# Environment (development, production)
+# Execution environment (development, production).
 GPUPHOT_ENVIRONMENT=development
 
-#--------------------------------------------------
-#  Astrometry Settings
-#--------------------------------------------------
+# ===================================================================
+#  Host Path Configuration
+#  IMPORTANT: You must change these paths! They should be absolute paths.
+# ===================================================================
 
-# Path on the *host* machine where astrometry index files will be stored.
-# This directory MUST exist and be writable.
-ASTROMETRY_CACHE_PATH=/path/to/your/astrometry_cache  # ***CHANGE THIS***
+# Path on the *host* machine where Astrometry.net index files will be cached (requires a lot of space).
+ASTROMETRY_CACHE_PATH=/path/on/your/host/to/astrometry_cache
 
-#--------------------------------------------------
-#  Worker Settings
-#--------------------------------------------------
+# Path on the *host* machine where instrument configuration files (.json) are located.
+INSTRUMENT_CONFIG_PATH=/path/on/your/host/to/instrument_configs
 
-# Name of the instrument configuration to use (corresponds to a .json file in INSTRUMENT_CONFIG_PATH).
+# Path on the *host* machine where astronomical images to be processed are located.
+IMAGE_PATH=/path/on/your/host/to/images
+
+# ===================================================================
+#  Celery Worker Settings
+# ===================================================================
+
+# Name of the instrument to use (must correspond to a .json file in INSTRUMENT_CONFIG_PATH).
 INSTRUMENT_NAME=default
 
-# Base path on the *host* machine where instrument configuration files are located.
-INSTRUMENT_CONFIG_PATH=/path/to/your/instrument_configs  #  ***CHANGE THIS if not using the default***
-
-# Base path on the *host* machine where astronomical images are located.
-IMAGE_PATH=/path/to/your/images #  ***CHANGE THIS if not using the default***
-
-# Number of Celery worker processes to run per GPU.  Usually 1 is sufficient.
+# Number of worker processes per GPU. '1' is almost always the optimal value.
 CELERY_CONCURRENCY=1
 
-#--------------------------------------------------
-#  Database Settings
-#--------------------------------------------------
+# ===================================================================
+#  Services & Port Configuration
+# ===================================================================
 
-# Password for the PostgreSQL database.  Change this for production!
+# --- PostgreSQL (Database) ---
+# Password for the database 'admin' user. CHANGE IN PRODUCTION!
 POSTGRES_PASSWORD=gpuphot
+# Port exposed on the host for PostgreSQL.
+POSTGRES_PORT=5432
 
-#--------------------------------------------------
-#  Logging Settings (Optional - for Logstash integration)
-#--------------------------------------------------
+# --- RabbitMQ (Message Broker) ---
+# Port exposed on the host for the RabbitMQ management panel.
+RABBITMQ_MANAGEMENT_PORT=15672
+# Port exposed on the host for AMQP communication.
+RABBITMQ_AMQP_PORT=5672
+
+# --- Redis (Result Backend) ---
+# Port exposed on the host for Redis.
+REDIS_PORT=6379
+
+# --- JupyterLab ---
+# Port exposed on the host for JupyterLab.
+JUPYTER_PORT=8888
+
+# --- Flower (Celery Monitor) ---
+# Port exposed on the host for Flower.
+FLOWER_PORT=5555
+
+# ===================================================================
+#  Profiling & Debugging Configuration (Optional)
+# ===================================================================
+
+# SSH port for connecting to the profiling container.
+PROFILER_SSSH_PORT=2222
+
+# Root password for the SSH session in the profiling container.
+ROOT_PASSWORD=gpuphot_profiler
+
+# Path on the *host* where profiler results (Nsight reports) will be saved.
+PROFILER_RESULTS_PATH=/path/on/your/host/to/profiling_results
+
+# ===================================================================
+#  External Logging Configuration (Optional)
+# ===================================================================
 
 # Enable sending logs to Logstash (True/False).
-LOGSTASH_LOGGING=False  # Change to True to enable
-
-# Hostname or IP address of your Logstash server.
+LOGSTASH_LOGGING=False
 LOGSTASH_HOST=localhost
-
-# Port of your Logstash server.
 LOGSTASH_PORT=5000
+
+# ===================================================================
+#  API Keys (Optional)
+# ===================================================================
+
+# API key for the Astrometry.net online service (if used).
+ASTROMETRY_API_KEY=your_api_key_here
 ```
 
-**Explanation of Environment Variables:**
+**Security Note:** Do not commit your `.env` file to version control systems like Git. Add it to your `.gitignore` file.
 
-* **`GPUPHOT_DEBUG`:** Enables verbose logging for debugging. Set to `False` for normal operation.
-* **`GPUPHOT_LOG_LEVEL`:** Sets the logging level. Use `DEBUG` for detailed logs, `INFO` for general information,
-  `WARNING` for warnings, `ERROR` for errors, and `CRITICAL` for critical errors.
-* **`GPUPHOT_ENVIRONMENT`:** Sets the environment, for example 'development' for local use, and 'production' in the
-  deployment.
-* **`ASTROMETRY_CACHE_PATH`:**  *Crucially*, this is the directory on your *host* machine where the large astrometry
-  index files will be downloaded and stored. You *must* set this to a valid, writable directory. This directory should
-  have *plenty of free space* (tens of GB).
-* **`INSTRUMENT_NAME`:** The name of the instrument configuration to use. This corresponds to a JSON file (e.g.,
-  `default.json`, `my_instrument.json`) in the `INSTRUMENT_CONFIG_PATH`.
-* **`INSTRUMENT_CONFIG_PATH`:**  The directory on your *host* machine where your instrument configuration files are
-  located. The default is usually fine.
-* **`IMAGE_PATH`:** The base directory on your *host* machine where your astronomical images are located.
-* **`CELERY_CONCURRENCY`:**  The number of Celery worker processes to run *per GPU*. Usually, `1` is the optimal value,
-  as most of the work is done on the GPU. Increasing this beyond 1 will likely *not* improve performance and may lead to
-  memory issues.
-* **`POSTGRES_PASSWORD`:** The password for the PostgreSQL database.  **Change this for a production environment!**
-* **`LOGSTASH_LOGGING`:** Enables sending logs to a Logstash server. This is optional.
-* **`LOGSTASH_HOST`:** The hostname or IP address of your Logstash server.
-* **`LOGSTASH_PORT`:** The port of your Logstash server.
+## 3. Launching the Services
 
-**Security Note:**  Do *not* commit your `.env` file to version control (e.g., Git), especially if it contains passwords
-or other sensitive information. Add `.env` to your `.gitignore` file.
+### 3.A. Standard Launch
 
-## 3. Starting Services
+To start all main services (database, workers, JupyterLab, etc.) in detached mode, run:
 
-There are two ways to start the services: automatically using all available GPUs, or manually.
+```bash
+docker compose up -d
+```
 
-### 3.A. Automatic Multi-GPU Setup (Recommended)
+This command will use the default configuration for a single `gpuphot_worker` on the GPU with `ID=0`.
 
-This method uses the `launch_gpuphot.sh` script to automatically detect the available GPUs and configure the Celery
-workers accordingly.
+### 3.B. Multi-GPU Launch (Recommended for Multiple GPUs)
 
-1. **Make sure `launch_gpuphot.sh` is executable:**
+The `launch_gpuphot.sh` script is designed to detect and launch one `gpuphot_worker` container for each available GPU, assigning each to a specific GPU.
 
-   ```bash
-   chmod +x launch_gpuphot.sh
-   ```
+1.  **Make the script executable:**
+    ```bash
+    chmod +x launch_gpuphot.sh
+    ```
 
-2. **Run the script:**
+2.  **Run the script:**
+    ```bash
+    ./launch_gpuphot.sh [max_gpus]
+    ```
+    *   `[max_gpus]` (optional): Limits the number of GPUs to use. If omitted, all detected GPUs will be used.
+        *   Example: `./launch_gpuphot.sh 2` will use a maximum of 2 GPUs.
 
-   ```bash
-   ./launch_gpuphot.sh [max_gpus]
-   ```
+    This script will launch all base services and scale the `gpuphot_worker` service to match the desired number of GPUs.
 
-    * `[max_gpus]` (optional):  The maximum number of GPUs to use. If omitted, all available GPUs will be used. Example:
-      `./launch_gpuphot.sh 2` will use at most 2 GPUs.
+### 3.C. Launching for Profiling and Debugging
 
-   This script will:
+The `docker-compose.yml` includes special `profiler` services for detailed performance analysis with NVIDIA Nsight Systems. These services are not started by default. To launch them, use the `debug` profile:
 
-    * Detect the number of available NVIDIA GPUs using `nvidia-smi`.
-    * Start Docker Compose with the appropriate number of `gpuphot_worker` services (one per GPU, up to `max_gpus`).
-    * Set the `GPU_ID` environment variable for each worker to assign it to a specific GPU.
+1.  **Launch profiling services (x86):**
+    ```bash
+    docker compose --profile debug up -d profiler
+    ```
+2.  **Launch profiling services (Jetson):**
+    ```bash
+    # For standard Jetson
+    docker compose --profile debug up -d profiler_jetson
 
-### 3.B. Manual Setup
+    # For Jetson Orin
+    docker compose --profile debug up -d profiler_jetson_orin
+    ```
 
-If you don't want to use the automatic script, or if you want to control the setup more precisely, you can start the
-services manually:
-
-1. **Ensure you have a `.env` file (if you need to override default values).**
-
-2. **Run Docker Compose:**
-   ```bash
-    docker compose up -d
-   ```
-
-   This will start all services defined in `docker-compose.yml` in detached mode (in the background).
+Once running, you can connect to the container via SSH to run profiling tools:
+```bash
+ssh root@localhost -p ${PROFILER_SSSH_PORT:-2222}
+# The password is the one defined by ROOT_PASSWORD in your .env file
+```
 
 ## 4. Accessing Services
 
-Once the services are running, you can access them through the following URLs:
+*   **JupyterLab:** `http://localhost:${JUPYTER_PORT:-8888}`
+*   **Flower (Celery Monitor):** `http://localhost:${FLOWER_PORT:-5555}`
+*   **RabbitMQ Management:** `http://localhost:${RABBITMQ_MANAGEMENT_PORT:-15672}` (user: `gpuphot`, pass: `gpuphot`)
+*   **Profiler SSH:** Connect via SSH to port `${PROFILER_SSSH_PORT:-2222}` (see previous section).
 
-* **JupyterLab:**  `http://localhost:8888` (No login required by default)
-* **Flower (Celery Monitor):** `http://localhost:5555` (No authentication by default)
-* **RabbitMQ Management:** `http://localhost:15672` (Default credentials: `gpuphot` / `gpuphot`)
+## 5. Stopping the Services
 
-## 5. Stopping Services
+*   **To stop standard services:**
+    ```bash
+    docker compose down
+    ```
 
-To stop all services, run:
+*   **To stop profiling services:**
+    ```bash
+    docker compose --profile debug down
+    ```
 
-```bash
-docker compose down
-```
-
-This will stop and remove the containers, networks, and volumes defined in `docker-compose.yml`.
-
-## Troubleshooting
-
-* **GPU Issues:**
-    * Ensure your NVIDIA drivers are installed and working correctly: `nvidia-smi`
-    * Check that Docker and Docker Compose are configured for GPU support. See the official Docker documentation for GPU
-      support.
-    * Make sure your `docker-compose.yml` file is correctly configured to use GPUs (see the `deploy` section for the
-      `gpuphot_worker` service).
-* **Permission errors:** Make sure you have the right permissions on the folders defined in `.env`
-* **Port Conflicts:** If you have other services running on your machine that use the same ports as GPUPhot (e.g.,
-  another JupyterLab instance), you'll need to change the ports in `docker-compose.yml` or stop the conflicting
-  services.
-* **Out of Memory:** Reduce `CELERY_CONCURRENCY`.
-
-### NVIDIA Container Toolkit Configuration Issue
-
-If you encounter issues with GPU access in containers, particularly the need to manually specify GPU devices, it may be
-due to a configuration problem with the NVIDIA Container Toolkit.
-
-**Symptom:**
-You need to manually specify GPU devices when running containers, like this:
-
-```
-
-docker run --gpus all --runtime=nvidia \
---device /dev/nvidia0 \
---device /dev/nvidiactl \
-nvidia/cuda:12.6.3-devel-ubuntu24.04 nvidia-smi
-
-```
-
-**Solution:**
-
-1. Check the NVIDIA Container Toolkit configuration file:
-
-```
-
-cat /etc/nvidia-container-runtime/config.toml
-
-```
-
-2. Look for the line `no-cgroups = true`. If present, change it to `false` or comment it out:
-
-```
-
-
-# no-cgroups = false
-
-```
-
-3. Save the file and restart the Docker service:
-
-```
-
-sudo systemctl restart docker
-
-```
-
-After making this change, you should be able to run containers with GPU access without manually specifying device
-mappings.
-
-For more detailed troubleshooting steps and other common issues, please refer to the [Troubleshooting](#troubleshooting)
-section earlier in this document.
+This will stop and remove the containers, networks, and volumes.
 
 ## Services Overview
 
-| Service          | Description                                                                     | Port(s)     | Default Credentials            |
-|:-----------------|:--------------------------------------------------------------------------------|:------------|:-------------------------------|
-| `rabbitmq`       | Message broker for Celery.  Handles task distribution to workers.               | 5672, 15672 | gpuphot / gpuphot              |
-| `redis`          | Result backend for Celery.  Stores task results temporarily.                    | 6379        | (no authentication)            |
-| `celery_beat`    | Celery Beat scheduler.  Schedules periodic tasks.                               | -           | -                              |
-| `gpuphot_worker` | Celery worker that processes astronomical images using the GPU.                 | -           | -                              |
-| `lab`            | JupyterLab interactive development environment.                                 | 8888        | (no token required)            |
-| `flower`         | Celery monitoring tool.  Provides a web interface to monitor tasks and workers. | 5555        | (no authentication)            |
-| `postgres`       | PostgreSQL database.  Stores image metadata and photometry results.             | 5432        | admin / gpuphot (CHANGE THIS!) |
+| Service                | Description                                                          | Default Port(s) | Default Credentials              | Profile     |
+|:-----------------------|:---------------------------------------------------------------------|:----------------|:---------------------------------|:------------|
+| `rabbitmq`             | Message broker for Celery.                                           | `15672`, `5672` | `gpuphot` / `gpuphot`            | `default`   |
+| `redis`                | Result backend for Celery.                                           | `6379`          | (no auth)                        | `default`   |
+| `postgres`             | PostgreSQL database with **Q3C** extension.                          | `5432`          | `admin` / `${POSTGRES_PASSWORD}` | `default`   |
+| `beat`                 | Celery's periodic task scheduler.                                    | -               | -                                | `default`   |
+| `gpuphot_worker`       | Celery worker that processes images on the GPU.                      | -               | -                                | `default`   |
+| `lab`                  | Interactive JupyterLab environment with GPU access.                  | `8888`          | (no token)                       | `default`   |
+| `flower`               | Web interface for monitoring Celery workers and tasks.               | `5555`          | (no auth)                        | `default`   |
+| `profiler`             | Container with Nsight Systems and SSH for profiling on x86.          | `2222`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+| `profiler_jetson`      | Profiling container for Jetson platforms.                            | `2222`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+| `profiler_jetson_orin` | Profiling container for Jetson Orin platforms.                       | `2222`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
 
-**Note:** All credentials mentioned are default values.  **You should change these, especially the `POSTGRES_PASSWORD`,
-in a production environment.**
+## Customization
 
-## Customizing the Setup
+*   **`docker-compose.yml`**: You can modify this file to adjust resource limits, add services, or change complex configurations.
+*   **`.env`**: The easiest way to customize your setup is by modifying the variables in this file, especially ports and volume paths.
+*   **Build Arguments**: You can change the base image (`BASE_IMAGE`) or the requirements file (`REQUIREMENTS_FILE`) during the `build` phase by editing the `.env` file.
 
-* **`docker-compose.yml`:**  You can modify the `docker-compose.yml` file to:
-    * Change port mappings.
-    * Add or remove services.
-    * Adjust resource limits (CPU, memory).
-    * Mount additional volumes.
-* **`launch_gpuphot.sh`:**  You can modify this script to:
-    * Change the logic for determining the number of workers.
-    * Add additional options.
+## Troubleshooting
 
-By making these changes, the documentation becomes much more complete and helpful.
+*   **GPU Errors (`CUDA_ERROR_NO_DEVICE`)**:
+    *   Ensure the **NVIDIA Container Toolkit** is correctly installed.
+    *   Verify that `nvidia-smi` works on the host machine.
+    *   Check that the `BASE_IMAGE` variable in your `.env` is compatible with your system's architecture (x86_64 vs. aarch64/jetson).
+*   **Volume Permission Errors**: Make sure the paths defined in your `.env` file (`ASTROMETRY_CACHE_PATH`, `IMAGE_PATH`, etc.) exist on your host machine and that the user running Docker has read/write permissions for them.
+*   **Port Conflicts**: If a port is already in use, you can easily change it by modifying the corresponding variable in your `.env` file (e.g., `JUPYTER_PORT=8889`).
