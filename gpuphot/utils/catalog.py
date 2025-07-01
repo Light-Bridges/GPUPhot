@@ -204,7 +204,7 @@ def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
 
 def _is_valid_result(result: pd.DataFrame, expected_columns: list):
     """
-    Validate the result of a catalog query.
+    Validate the result of a catalog query, providing specific feedback on failure.
 
     :param result: The query result to validate.
     :type result: pandas.DataFrame or None
@@ -213,15 +213,32 @@ def _is_valid_result(result: pd.DataFrame, expected_columns: list):
     :return: True if the result is valid, False otherwise.
     :rtype: bool
     """
+    # 1. Verificar si el resultado es None
     if result is None:
+        logger.warning('Custom catalog query returned None. The function might have failed or found no data.')
         return False
-    if isinstance(result, pd.DataFrame):
-        checks = [
-            not result.empty,
-            expected_columns is None or all(col in result.columns for col in expected_columns)
-        ]
-        return all(checks)
-    return False
+
+    # 2. Verificar si el resultado es un DataFrame de pandas
+    if not isinstance(result, pd.DataFrame):
+        logger.warning(f"Custom catalog query did not return a pandas DataFrame. Got type: {type(result)}.")
+        return False
+
+    # 3. Verificar si el DataFrame está vacío
+    if result.empty:
+        logger.warning('Custom catalog query returned an empty DataFrame. No sources found matching the criteria.')
+        return False
+
+    # 4. Verificar si todas las columnas esperadas están presentes
+    if expected_columns:
+        # Usamos sets para encontrar eficientemente las columnas que faltan
+        missing_cols = set(expected_columns) - set(result.columns)
+        if missing_cols:
+            # Informamos exactamente qué columnas faltan
+            logger.warning(f"Custom catalog query result is missing required columns: {sorted(list(missing_cols))}.")
+            return False
+
+    # Si todas las validaciones pasan, el resultado es válido
+    return True
 
 
 ### # @hierarchical_debug(logger)
@@ -371,7 +388,8 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     :rtype:
         tuple(pandas.DataFrame, str, str)
     """
-    logger.info(f'Attempting to retrieve data from catalog for filter {filter}, radius: {radius:.2f} deg, maglimit: {maglimit:.2f}, coordinates: {coocenter}')
+    logger.info(
+        f'Attempting to retrieve data from catalog for filter {filter}, radius: {radius:.2f} deg, maglimit: {maglimit:.2f}, coordinates: {coocenter}')
     start_time = time.time()
     if coocenter.dec.deg < -30:
         def get_filter(_filter):
