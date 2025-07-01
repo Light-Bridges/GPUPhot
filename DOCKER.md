@@ -79,6 +79,12 @@ INSTRUMENT_CONFIG_PATH=/path/on/your/host/to/instrument_configs
 # Path on the *host* machine where astronomical images to be processed are located.
 IMAGE_PATH=/path/on/your/host/to/images
 
+# Path on the *host* where JupyterLab notebooks and work files will be saved.
+NOTEBOOKS_PATH=/path/on/your/host/to/jupyter_projects
+
+# Path on the *host* where PostgreSQL database files will be stored.
+POSTGRES_DATA_PATH=/path/on/your/host/to/postgres_data
+
 # ===================================================================
 #  Celery Worker Settings
 # ===================================================================
@@ -205,6 +211,7 @@ ssh root@localhost -p ${PROFILER_SSSH_PORT:-2222}
 ## 4. Accessing Services
 
 *   **JupyterLab:** `http://localhost:${JUPYTER_PORT:-8888}`
+    *   *Your work files will be saved in the host directory specified by `NOTEBOOKS_PATH`.*
 *   **Flower (Celery Monitor):** `http://localhost:${FLOWER_PORT:-5555}`
 *   **RabbitMQ Management:** `http://localhost:${RABBITMQ_MANAGEMENT_PORT:-15672}` (user: `gpuphot`, pass: `gpuphot`)
 *   **Profiler SSH:** Connect via SSH to port `${PROFILER_SSSH_PORT:-2222}` (see previous section).

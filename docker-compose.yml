@@ -128,7 +128,7 @@ services:
       INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
       IMAGE_BASE_PATH: /data/images
     volumes:
-      - ./notebooks:/home/jovyan/work:z
+      - ${NOTEBOOKS_PATH:-./notebooks}:/home/jovyan/work:z
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
       - ${ASTROMETRY_CACHE_PATH:-astrometry_cache}:/data/astrometry_cache:z
@@ -174,7 +174,7 @@ services:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
     volumes:
-      - ./gpuphot_database:/var/lib/postgresql/data
+      - ${POSTGRES_DATA_PATH:-./gpuphot_database}:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     restart: unless-stopped
 
