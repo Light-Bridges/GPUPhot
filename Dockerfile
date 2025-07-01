@@ -219,8 +219,8 @@ WORKDIR /home/jovyan
 
 ENTRYPOINT ["/usr/local/bin/entrypoint-lab.sh"]
 
-#CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--NotebookApp.token=''", "--notebook-dir=/home/jovyan/work"]
-CMD []
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--NotebookApp.token=''", "--notebook-dir=/home/jovyan/work"]
+#CMD []
 
 # Flower target
 FROM base AS flower

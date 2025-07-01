@@ -38,8 +38,8 @@ else
     echo "Notebooks already generated. Skipping generation."
 fi
 
-# Finalmente, ejecutar el comando original de JupyterLab
-# Usamos "exec" para que JupyterLab se convierta en el proceso principal (PID 1) del contenedor,
-# lo que es importante para que las señales de Docker (como 'docker stop') se manejen correctamente.
-echo "Starting JupyterLab..."
-exec jupyter lab --ip=0.0.0.0 --port=8888 --allow-root --NotebookApp.token='' --notebook-dir="$NOTEBOOK_DIR"
+## Finalmente, ejecutar el comando original de JupyterLab
+## Usamos "exec" para que JupyterLab se convierta en el proceso principal (PID 1) del contenedor,
+## lo que es importante para que las señales de Docker (como 'docker stop') se manejen correctamente.
+#echo "Starting JupyterLab..."
+#exec jupyter lab --ip=0.0.0.0 --port=8888 --allow-root --NotebookApp.token='' --notebook-dir="$NOTEBOOK_DIR"
