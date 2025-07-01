@@ -212,12 +212,12 @@ RUN . venv/bin/activate && pip install --no-cache-dir jupyter jupyterlab
 WORKDIR /app
 COPY . .
 
-COPY entrypoint-lab.sh /usr/local/bin/entrypoint-lab.sh
-RUN chmod +x /usr/local/bin/entrypoint-lab.sh
+COPY initialize_notebooks.sh /usr/local/bin/entrypoint-lab.sh
+RUN chmod +x /usr/local/bin/initialize_notebooks.sh
 
 WORKDIR /home/jovyan
 
-#ENTRYPOINT ["/usr/local/bin/entrypoint-lab.sh"]
+#ENTRYPOINT ["/usr/local/bin/initialize_notebooks.sh"]
 
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--NotebookApp.token=''", "--notebook-dir=/home/jovyan/work"]
 #CMD []

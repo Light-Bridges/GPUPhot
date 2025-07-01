@@ -216,7 +216,24 @@ ssh root@localhost -p ${PROFILER_SSSH_PORT:-2222}
 *   **RabbitMQ Management:** `http://localhost:${RABBITMQ_MANAGEMENT_PORT:-15672}` (user: `gpuphot`, pass: `gpuphot`)
 *   **Profiler SSH:** Connect via SSH to port `${PROFILER_SSSH_PORT:-2222}` (see previous section).
 
-## 5. Stopping the Services
+## 5. Initializing the Environment (First-Time Setup)
+
+After launching the services for the first time, you should initialize your JupyterLab environment by generating the example notebooks. These notebooks will guide you through the usage of GPUPhot.
+
+**Run the following command in your terminal:**
+
+```bash
+docker compose exec lab /usr/local/bin/initialize_notebooks.sh
+```
+
+This script will:
+*   Check if the notebooks have already been generated.
+*   If not, it will create a set of example `.ipynb` files inside the directory you specified in `NOTEBOOKS_PATH`.
+*   If you run it again, it will do nothing, preserving any changes you have made.
+
+After running the command, refresh your JupyterLab browser window. The example notebooks should appear in the file browser.
+
+## 6. Stopping the Services
 
 *   **To stop standard services:**
     ```bash

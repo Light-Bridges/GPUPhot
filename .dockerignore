@@ -12,4 +12,4 @@
 !profiling_scripts/
 !profiling_scripts/*
 
-!entrypoint-lab.sh
+!initialize_notebooks.sh
