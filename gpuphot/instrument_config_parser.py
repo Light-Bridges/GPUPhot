@@ -259,12 +259,34 @@ class InstrumentConfigParser:
         """
         file_path = os.path.join(self.config_dir, file_name)
         try:
-            with open(file_path, 'r') as file:
-                return jsonc.load(file)
+            with open(file_path, 'r', encoding='utf-8') as file:
+                content = file.read()
+                return jsonc.loads(content)
         except FileNotFoundError:
             return {}
         except json.JSONDecodeError as e:
-            logger.error(f"Error decoding JSON in {file_name}: {e}")
+            logger.error(f"Format error in JSON configuration file: '{file_name}'")
+
+            # Split content into lines to display the problematic line
+            lines = content.splitlines()
+            if 0 < e.lineno <= len(lines):
+                error_line = lines[e.lineno - 1]
+                # Create a pointer to highlight the exact error column
+                pointer = ' ' * (e.colno - 1) + '^'
+
+                logger.error(f"  > Line {e.lineno}, Column {e.colno}: {e.msg}")
+                logger.error(f"  > {error_line}")
+                logger.error(f"  > {pointer}")
+                logger.error("  > Hint: Ensure all strings (both keys and values) use double quotes (\"). "
+                             "Also, check for misplaced or trailing commas.")
+            else:
+                # Fallback in case line/column numbers are out of range
+                logger.error(f"  > Error details: {e}")
+
+            return {}
+        except Exception as e:
+            # Catch-all for any other unexpected errors during file reading
+            logger.error(f"Could not read configuration file '{file_name}': {e}")
             return {}
 
     def get_config(self, instrument_name):
