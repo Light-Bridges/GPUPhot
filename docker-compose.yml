@@ -99,7 +99,7 @@ services:
 
   gpuphot_worker:
     <<: *common-worker-backend
-    command: [ "celery", "-A", "gpuphot_worker.worker_app", "worker", "-c", "${CELERY_CONCURRENCY:-1}", "-n", "gpuphot-worker-${GPU_ID:-0}", "--soft-time-limit", "240", "--time-limit", "300" ]
+    command: [ "celery", "-A", "gpuphot_worker.worker_app", "worker", "--pool=gevent", "-c", "${CELERY_CONCURRENCY:-1}", "-n", "gpuphot-worker-${GPU_ID:-0}", "--soft-time-limit", "240", "--time-limit", "300" ]
     deploy:
       resources:
         reservations:
