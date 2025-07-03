@@ -129,14 +129,17 @@ class DefaultConfig:
 
 
 class HeaderTranslator:
-    def __init__(self, header_keywords):
+    def __init__(self, header_keywords, camera_specs):
         """
         Initialize the header translator.
 
-        :param header_keywords: Dictionary mapping custom header keys to internal keys.
+        :param header_keywords: Dictionary mapping internal keys to user-specific header keys.
         :type header_keywords: dict
+        :param camera_specs: Dictionary with default values for missing keys.
+        :type camera_specs: dict
         """
         self.translations = header_keywords
+        self.camera_specs = camera_specs
         self.default_translations = DefaultConfig.DEFAULT_HEADER_KEYWORDS
         self.reverse_translations = {v: k for k, v in self.translations.items()}
         self.warned_keys = set()
@@ -154,7 +157,8 @@ class HeaderTranslator:
 
     def translate_header(self, header):
         """
-        Translate a FITS header using defined translations.
+        Translate a FITS header using defined translations and fill in missing
+        values from camera specifications.
 
         :param header: FITS header to translate.
         :type header: astropy.io.fits.header.Header
@@ -167,18 +171,33 @@ class HeaderTranslator:
 
         translated = header.copy()
 
-        for internal_key, default_key in self.default_translations.items():
-            user_key = self.translations.get(internal_key, default_key)
+        # Iteramos sobre nuestro set de claves internas estándar
+        for internal_key, standard_fits_key in self.default_translations.items():
+            # 1. Determinar qué clave buscar en el header de entrada (la del usuario)
+            user_key = self.translations.get(internal_key, standard_fits_key)
+
+            # 2. Comprobar si la clave del usuario O la clave estándar ya están en el header
             if user_key in header:
                 value = header[user_key]
-                translated[default_key] = value
+                # Si la clave del usuario es diferente a la estándar, la traducimos
+                if user_key != standard_fits_key:
+                    translated[standard_fits_key] = value
+            elif standard_fits_key in header:
+                # La clave estándar ya estaba, no hacemos nada
+                pass
             else:
-                default_value = DefaultConfig.DEFAULT_CAMERA_SPECS.get(internal_key)
+                # 3. Si no está, buscar un valor por defecto en las especificaciones de la cámara
+                #    que le pasamos al inicializar.
+                default_value = self.camera_specs.get(internal_key)
+
                 if default_value is not None:
-                    translated.setdefault(default_key, default_value)
-                    logger.debug(f"Added missing keyword '{default_key}' with default value '{default_value}'.")
+                    translated[standard_fits_key] = default_value
+                    logger.debug(f"Keyword '{user_key}' not found. Added standard keyword '{standard_fits_key}' "
+                                 f"with default value '{default_value}' from camera specs.")
                 elif internal_key not in self.warned_keys:
-                    warnings.warn(f"No default value found in camera specs for '{internal_key}'.", UserWarning)
+                    # 4. Si no hay valor por defecto, advertir al usuario.
+                    warnings.warn(f"Keyword '{user_key}' not found in header and no default value "
+                                  f"is defined in camera specs for '{internal_key}'.", UserWarning)
                     self.warned_keys.add(internal_key)
 
         return translated
@@ -278,7 +297,10 @@ class InstrumentConfigParser:
                 logger.warning(f"Configuration for {instrument_name} not found. Using default values.")
 
         # Crear y añadir el traductor de headers
-        config['header_translator'] = HeaderTranslator(config['header_keywords'])
+        config['header_translator'] = HeaderTranslator(
+            header_keywords=config['header_keywords'],
+            camera_specs=config['camera_specs']
+        )
         return config
 
     def generate_config_file(self, instrument_name):
