@@ -25,7 +25,7 @@ x-common-worker-backend: &common-worker-backend
     INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
     IMAGE_BASE_PATH: /data/images
   volumes:
-    - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/gpuphot/instrument_configs:z
+    - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
     - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
     - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
     - /run/docker.sock:/run/docker.sock
