@@ -153,6 +153,11 @@ def SP_filter(img, filter_size=3, high_threshold_factor=5,
     ms = scaling_factor * cp.nanmedian(cp.abs(dif - med))
     mask = (dif > med + high_threshold_factor * ms) | (dif < med -
                                                        low_threshold_factor * ms)
+    kernel = cp.array([[1, 1, 1],
+                       [1, 0, 1],
+                       [1, 1, 1]], dtype=cp.uint8)
+    neighbor_count = convolve(mask.astype(cp.uint8), kernel, mode='constant', cval=0.0)
+    mask = (mask & (neighbor_count < 2))
     img[mask] = med_filter[mask]
     del med_filter, dif, med, ms, mask
 

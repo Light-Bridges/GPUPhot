@@ -195,29 +195,16 @@ def gen_apm_filter(lk: int, li: int = 0, norm: bool = True, **kwargs) -> cp.ndar
     """
     Generate an aperture filter for the detection of sources in an image.
 
-    :param lk: Length of the kernel.
+    :param lk: Radius of the kernel.
     :type lk: int
-    :param li: Length of the inner kernel.  Default is 0 (no inner kernel).
+    :param li: Radius of the inner kernel.  Default is 0 (no inner kernel).
     :type li: int
     :param norm: Whether to normalize the kernel.
     :type norm: bool
     :return: An aperture filter.
     :rtype: cupy.ndarray
     """
-    # k_dim = (2 * lk + 1, 2 * lk + 1)
-    # indi = cp.indices(k_dim)
-    # fw2 = lk ** 2
-    # k_app = cp.zeros(k_dim)
-    # dist_sq = (lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2
-    # struc = cp.where(dist_sq <= fw2)
-    # k_app[struc] = 1
-    #
-    # # if li is not 0, it creates a circle with radius li and sets the values inside to 0
-    # if li != 0:
-    #     struc_inner = cp.where(dist_sq < (li ** 2))
-    #     k_app[struc_inner] = 0
-    # if norm and k_app.sum() != 0: k_app = k_app / k_app.sum()
-    # return k_app
+
     k_dim = (2 * lk + 1, 2 * lk + 1)
     indi = cp.indices(k_dim, dtype=cp.float64)  # Use float64 for consistency
     dist_sq = (lk - indi[0, :, :]) ** 2 + (lk - indi[1, :, :]) ** 2
