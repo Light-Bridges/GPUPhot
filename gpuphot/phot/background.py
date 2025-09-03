@@ -14,7 +14,7 @@ logger = setup_logger(__name__)
 
 ### # @hierarchical_debug(logger)
 @nvtx.annotate('get_local_background_fft', category='phot.background')
-def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper: int = 100,
+def get_local_background_fft(image, pxscale: float, qt: float = 75, fill_aper: int = 100,
                              avg_aper: int = 20, tile_section: int = 500, ks: int = 2,
                              get_std: bool = False, **kwargs) -> tuple:
     """
@@ -60,7 +60,6 @@ def get_local_background_fft(image, pxscale: float, qt: float = 69.2, fill_aper:
     free_gpu_mem()
 
     mask = binary_erosion(mask, cp.ones((max(int(ks / pxscale + 1), 2), max(int(ks / pxscale + 1), 2))))
-    mask = binary_dilation(mask, cp.ones((max(int(ks / pxscale + 1), 2), max(int(ks / pxscale + 1), 2))))
     mask = binary_dilation(mask, cp.ones((max(int(ks / pxscale + 1), 2), max(int(ks / pxscale + 1), 2))))
     mask = gaussian_filter(cp.array(mask, dtype=cp.float32), sigma=max(int(ks / pxscale + 1), 3)) > 0.05
     img_filled = image.copy()
