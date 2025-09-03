@@ -184,6 +184,51 @@ def get_memory_usage_ratio(mempool: cp.cuda.MemoryPool) -> float:
         return 1.0
 
 
+@nvtx.annotate('get_memory_stats', category='utils.gpu')
+def get_memory_stats(mempool: cp.cuda.MemoryPool) -> Dict[str, float]:
+    """
+    Retrieves comprehensive memory statistics from both the CuPy pool and the GPU device.
+
+    Returns:
+        A dictionary containing:
+        - pool_used_bytes: Memory used by active arrays in CuPy's pool.
+        - pool_total_bytes: Total size of CuPy's allocated memory pool.
+        - pool_ratio: Ratio of used to total pool memory.
+        - device_free_bytes: Free physical memory on the GPU device.
+        - device_total_bytes: Total physical memory on the GPU device.
+        - device_used_bytes: Used physical memory on the GPU device.
+        - device_ratio: Ratio of used to total device memory.
+    """
+    try:
+        # CuPy Memory Pool stats
+        pool_used = mempool.used_bytes()
+        pool_total = mempool.total_bytes()
+        pool_ratio = pool_used / pool_total if pool_total > 0 else 0.0
+
+        # CUDA Device stats (from the driver)
+        device_free, device_total = cp.cuda.Device().mem_info
+        device_used = device_total - device_free
+        device_ratio = device_used / device_total if device_total > 0 else 0.0
+
+        return {
+            "pool_used_bytes": pool_used,
+            "pool_total_bytes": pool_total,
+            "pool_ratio": pool_ratio,
+            "device_free_bytes": device_free,
+            "device_total_bytes": device_total,
+            "device_used_bytes": device_used,
+            "device_ratio": device_ratio,
+        }
+    except Exception as e:
+        logger.error(f"Error getting memory stats: {e}", exc_info=True)
+        # Return a dictionary indicating a critical failure state
+        return {
+            "pool_ratio": 1.0,
+            "device_ratio": 1.0,
+            # Other fields can be 0 or -1 to indicate error
+        }
+
+
 @nvtx.annotate('adaptive_memory_management', category='utils.gpu')
 def adaptive_memory_management(
         mempool: cp.cuda.MemoryPool,
@@ -191,117 +236,120 @@ def adaptive_memory_management(
         force_free: bool = False
 ) -> int:
     """
-    Checks GPU memory usage against thresholds and potentially frees memory.
-
-    Determines the memory pressure level based on the ratio of used bytes to
-    total bytes in the provided CuPy memory pool. If the 'critical' threshold
-    is exceeded or `force_free` is True, it attempts to free all blocks
-    in the memory pool, runs garbage collection, and synchronizes the default stream.
+    Verifica el uso de la memoria de la GPU contra umbrales y libera memoria si es necesario.
+    Utiliza un enfoque híbrido, monitorizando tanto el pool de memoria de CuPy como la memoria total del dispositivo.
 
     Args:
-        mempool: The CuPy memory pool to monitor (e.g., cp.get_default_memory_pool()).
-        thresholds: A dictionary with optional keys 'warning' and 'critical', mapping
-                    to memory usage ratios (0.0 to 1.0). If None or keys are missing,
-                    defaults defined in DEFAULT_THRESHOLDS are used.
-                    Values must be between 0.0 and 1.0, and warning < critical.
-        force_free: If True, always trigger the memory freeing process,
-                    regardless of the current usage ratio.
+        mempool: El pool de memoria de CuPy a monitorizar (e.g., cp.get_default_memory_pool()).
+        thresholds: Un diccionario con umbrales personalizados para 'warning' y 'critical'.
+        force_free: Si es True, siempre activa el proceso de liberación de memoria.
 
     Returns:
-        An integer representing the determined memory pressure level:
-        - SAFE_LEVEL (0): Usage is below the 'warning' threshold.
-        - WARNING_LEVEL (1): Usage is at or above 'warning' but below 'critical'.
-        - CRITICAL_LEVEL (2): Usage is at or above the 'critical' threshold.
-
-    Raises:
-        ValueError: If the provided threshold values are invalid (e.g., outside [0,1]
-                    or warning >= critical).
+        Un entero que representa el nivel de presión de memoria determinado:
+        - SAFE_LEVEL (0), WARNING_LEVEL (1), CRITICAL_LEVEL (2).
     """
-    # Establish effective thresholds, validating inputs
+    # Establece los umbrales efectivos, validando las entradas
     effective_thresholds = DEFAULT_THRESHOLDS.copy()
     if thresholds is not None:
         for key, value in thresholds.items():
             if key in effective_thresholds:
                 if not 0.0 <= value <= 1.0:
-                    raise ValueError(
-                        f"Invalid threshold value for '{key}': {value}. Must be between 0.0 and 1.0."
-                    )
+                    raise ValueError(f"Valor de umbral inválido para '{key}': {value}. Debe estar entre 0.0 y 1.0.")
                 effective_thresholds[key] = value
-            else:
-                logger.warning(f"Ignoring unknown threshold key: '{key}'")
-        # Validate relationship between thresholds after merging
         if effective_thresholds['warning'] >= effective_thresholds['critical']:
             raise ValueError(
-                f"Invalid thresholds: 'warning' ({effective_thresholds['warning']:.2f}) "
-                f"must be less than 'critical' ({effective_thresholds['critical']:.2f})."
+                f"Umbrales inválidos: 'warning' ({effective_thresholds['warning']:.2f}) "
+                f"debe ser menor que 'critical' ({effective_thresholds['critical']:.2f})."
             )
 
-    # Get current memory usage ratio
-    try:
-        ratio = get_memory_usage_ratio(mempool)
-    except Exception:
-        # Error already logged in get_memory_usage_ratio
-        # Assume critical state if ratio cannot be determined
-        ratio = 1.0  # Force critical level
+    # Obtiene estadísticas de memoria completas
+    stats = get_memory_stats(mempool)
+    pool_ratio = stats.get("pool_ratio", 1.0)
+    device_ratio = stats.get("device_ratio", 1.0)
 
-    # Determine memory pressure level
+    # La relación efectiva es el PEOR de los dos escenarios
+    effective_ratio = max(pool_ratio, device_ratio)
+
+    # Determina el nivel de presión de memoria basado en la relación efectiva
     level = SAFE_LEVEL
-    if ratio >= effective_thresholds['critical']:
+    if effective_ratio >= effective_thresholds['critical']:
         level = CRITICAL_LEVEL
-    elif ratio >= effective_thresholds['warning']:
+    elif effective_ratio >= effective_thresholds['warning']:
         level = WARNING_LEVEL
 
+    # --- Logging Mejorado ---
+    # Esto ahora te dará una imagen completa del estado de la memoria
     logger.debug(
-        f"Check: Ratio={ratio:.3f}, Level={level} "
-        f"(Thresholds: W={effective_thresholds['warning']:.2f}, C={effective_thresholds['critical']:.2f})"
+        f"Mem Check: Effective Ratio={effective_ratio:.3f}, Level={level} "
+        f"(Device: {human_readable_size(stats.get('device_used_bytes', 0))}/{human_readable_size(stats.get('device_total_bytes', 0))} [{device_ratio:.3f}], "
+        f"Pool: {human_readable_size(stats.get('pool_used_bytes', 0))}/{human_readable_size(stats.get('pool_total_bytes', 0))} [{pool_ratio:.3f}])"
     )
 
-    # Log specific warnings if threshold is breached but not critical yet
-    if level == WARNING_LEVEL:
-        logger.debug(
-            f"WARNING memory pressure detected (Ratio={ratio:.3f}). "
-            f"Usage exceeds threshold {effective_thresholds['warning']:.2f}."
-        )
-
-    # Decide whether to perform cleanup
+    # Decide si realizar la limpieza
     perform_cleanup = force_free or level >= CRITICAL_LEVEL
 
     if perform_cleanup:
         if level >= CRITICAL_LEVEL:
             logger.warning(
-                f"CRITICAL memory pressure (Ratio={ratio:.3f} >= "
-                f"{effective_thresholds['critical']:.2f}). Forcing free_all_blocks."
+                f"PRESIÓN DE MEMORIA CRÍTICA (Ratio={effective_ratio:.3f} >= "
+                f"{effective_thresholds['critical']:.2f}). Forzando free_all_blocks."
             )
-        else:  # force_free must be True
-            logger.debug(f"Forcing free_all_blocks (force_free=True). Current Ratio={ratio:.3f}.")
+        else:  # force_free debe ser True
+            logger.debug(f"Forzando free_all_blocks (force_free=True). Ratio actual={effective_ratio:.3f}.")
 
         try:
             start_time = time.monotonic()
-            # Free CuPy memory blocks
             mempool.free_all_blocks()
-            # Run Python garbage collector to release references
             gc.collect()
-            # Ensure GPU operations related to freeing are complete before proceeding
-            # or measuring memory again. This helps get a more accurate "after" state.
             cp.cuda.Stream.null.synchronize()
             end_time = time.monotonic()
 
-            # Measure and log memory state *after* cleanup
-            ratio_after = get_memory_usage_ratio(mempool)
+            stats_after = get_memory_stats(mempool)
             duration = end_time - start_time
             logger.debug(
-                f"free_all_blocks completed in {duration:.3f}s. "
-                f"Memory ratio after cleanup: {ratio_after:.3f}"
+                f"free_all_blocks completado en {duration:.3f}s. "
+                f"Ratio de dispositivo después de la limpieza: {stats_after.get('device_ratio', -1.0):.3f}"
             )
         except Exception as e:
-            logger.error(f"Error during memory cleanup: {e}", exc_info=True)
-            # Even if cleanup failed, the level remains critical or was forced
-            # Return the determined level, but the state might be uncertain.
-            # Consider re-raising if cleanup failure is fatal for the application.
-            # raise e # Optional: re-raise the exception
+            logger.error(f"Error durante la limpieza de memoria: {e}", exc_info=True)
 
     return level
 
+
+@nvtx.annotate('check_memory_availability', category='utils.gpu')
+def check_memory_availability(required_bytes: int, safety_margin: float = 0.10) -> bool:
+    """
+    Verifica si hay suficiente memoria libre en el dispositivo para una asignación solicitada.
+
+    Args:
+        required_bytes: El número de bytes necesarios para la nueva asignación.
+        safety_margin: Un margen fraccional para asegurar que no asignemos hasta el último byte
+                       (e.g., 0.10 significa que requerimos un 10% extra de memoria libre).
+
+    Returns:
+        True si la memoria está disponible, False en caso contrario.
+    """
+    try:
+        free_mem, total_mem = cp.cuda.Device().mem_info
+
+        # Calcula la memoria disponible, dejando un búfer de seguridad
+        available_for_alloc = free_mem - (total_mem * safety_margin)
+
+        if required_bytes < available_for_alloc:
+            logger.debug(
+                f"Memoria disponible para asignación de {human_readable_size(required_bytes)}. "
+                f"(Libre: {human_readable_size(free_mem)}, Requerido: {human_readable_size(required_bytes)})"
+            )
+            return True
+        else:
+            logger.warning(
+                f"MEMORIA INSUFICIENTE para asignación de {human_readable_size(required_bytes)}. "
+                f"(Disponible con margen: {human_readable_size(available_for_alloc)}, Requerido: {human_readable_size(required_bytes)})"
+            )
+            return False
+    except Exception as e:
+        logger.error(f"Fallo al verificar la disponibilidad de memoria: {e}", exc_info=True)
+        return False
 
 @nvtx.annotate('offload_to_cpu', category='mem_mgmt')
 def offload_to_cpu(var_name: str, data_dict: dict, data_location: dict, mempool: cp.cuda.MemoryPool):
@@ -421,6 +469,7 @@ def get_gpu_var_reactive(var_name: str, data_dict: dict, data_location: dict, me
     else:  # Estados de error
         raise RuntimeError(f"Variable '{var_name}' needed but is in unexpected/error state: {loc}")
 
+
 @nvtx.annotate('cleanup_cupy', category='utils.gpu')
 def cleanup_cupy(*args):
     """Deletes CuPy arrays passed as arguments and runs GC and free_all_blocks."""
@@ -430,4 +479,4 @@ def cleanup_cupy(*args):
     # gc.collect() # Colectar referencias Python
     # mempool.free_all_blocks() # Liberar bloques CuPy (hacer con cuidado)
     # cp.cuda.Stream.null.synchronize() # Esperar a que la GPU termine
-    maybe_free_arrays([], mempool) # Usar tu función existente si prefieres
+    maybe_free_arrays([], mempool)  # Usar tu función existente si prefieres
