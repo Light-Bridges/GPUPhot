@@ -32,6 +32,7 @@ def SP_filter(img, filter_size=3, high_threshold_factor=5,
     :return: Filtered image.
     :rtype: cupy.ndarray
     """
+    logger.info("Applying SP_filter...")
     med_filter = median_filter(img, size=filter_size)
     dif = img - med_filter
     med = cp.nanmedian(dif)
@@ -44,6 +45,7 @@ def SP_filter(img, filter_size=3, high_threshold_factor=5,
     neighbor_count = convolve(mask.astype(cp.uint8), kernel, mode='constant', cval=0.0)
     mask = (mask & (neighbor_count < 2))
     img[mask] = med_filter[mask]
+    logger.info(f"SP_filter applied: {cp.sum(mask)} pixels corrected.")
     del med_filter, dif, med, ms, mask
 
     return img
