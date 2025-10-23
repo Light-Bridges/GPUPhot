@@ -1,6 +1,7 @@
 from typing import Union
 
 import cupy as cp
+from gpuphot.gpuphot.phot.photo_gpu import SP_filter
 import nvtx
 import numpy as np
 from astropy.io import fits
@@ -136,8 +137,8 @@ def stack_sigmaclip(data, it=5, n=3):
 
 ### # @hierarchical_debug(logger)
 @nvtx.annotate('register_shift_frames',category='stats.reduction')
-def register_shift_frames(frames_list, upsample_factor=100, center_size=
-6000, shift_limit_pix=300):
+def register_shift_frames(frames_list, upsample_factor=100, center_size=6000,
+                          shift_limit_pix=300, SP_filt=False):
     """
     Register and shift frames from a list of file paths.
 
@@ -149,11 +150,14 @@ def register_shift_frames(frames_list, upsample_factor=100, center_size=
     :type center_size: int, optional
     :param shift_limit_pix: Maximum allowed shift in pixels, by default 300.
     :type shift_limit_pix: int, optional
+    :param SP_filter: Whether to apply a spatial filter, by default False.
+    :type SP_filter: bool, optional
     :return: Registered and shifted image stack.
     :rtype: cupy.ndarray
     """
 
     fc0 = cp.asarray(fits.getdata(frames_list[0]), dtype=cp.float32)
+    if SP_filt: fc0 = SP_filter(fc0)
     im0 = center(fc0, center_size)
     im0 = binary_erosion(im0 > im0.mean() + im0.std())
     fc = cp.zeros((len(frames_list), fc0.shape[0], fc0.shape[1]), dtype=cp.
@@ -162,6 +166,7 @@ def register_shift_frames(frames_list, upsample_factor=100, center_size=
     del fc0
     for i in np.arange(1, len(frames_list)):
         fc1 = cp.asarray(fits.getdata(frames_list[i]), dtype=cp.float32)
+        if SP_filt: fc1 = SP_filter(fc1)
         im1 = center(fc1, center_size)
         im1 = binary_erosion(im1 > im1.mean() + im1.std())
         shifted, _, _ = phase_cross_correlation_gpu(im0, im1,

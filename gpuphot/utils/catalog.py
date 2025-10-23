@@ -483,7 +483,9 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
                 'SDSSg': 'gmag',
                 'SDSSr': 'rmag',
                 'SDSSi': 'imag',
-                'SDSSzs': 'zmag'
+                'SDSSzs': 'zmag',
+                'SDSSy': 'ymag',
+                'iz': 'imag',
             }
             return filter_map.get(_filter, 'gmag')
 
