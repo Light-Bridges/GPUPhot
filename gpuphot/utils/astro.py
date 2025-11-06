@@ -660,47 +660,56 @@ def astrometrice2(df: pd.DataFrame, scale: float,
 
     try:
         # --- Attempt 1: Local solving with a position hint ---
-        if star_data_local:  # Only attempt if star data preparation was successful
-            logger.info(f"Attempt 1: Local astrometry with position hint")
-            wcs_header = _attempt_local_solve(
-                solver,
-                star_data_local,
-                size_hint=astrometry.SizeHint(
-                    lower_arcsec_per_pixel=scale * 0.8,
-                    upper_arcsec_per_pixel=scale * 1.
-                ),
-                position_hint=astrometry.PositionHint(
-                    ra_deg=central_ra,
-                    dec_deg=central_dec,
-                    radius_deg=1,
-                ),
-                common_params_local=common_params_local
-            )
+        try:
+            if star_data_local:  # Only attempt if star data preparation was successful
+                logger.info(f"Attempt 1: Local astrometry with position hint")
+                wcs_header = _attempt_local_solve(
+                    solver,
+                    star_data_local,
+                    size_hint=astrometry.SizeHint(
+                        lower_arcsec_per_pixel=scale * 0.8,
+                        upper_arcsec_per_pixel=scale * 1.
+                    ),
+                    position_hint=astrometry.PositionHint(
+                        ra_deg=central_ra,
+                        dec_deg=central_dec,
+                        radius_deg=1,
+                    ),
+                    common_params_local=common_params_local
+                )
+        except Exception as e:
+            logger.warning(f"Error during Attempt 1 (local with hint): {e}", exc_info=True)
 
         # --- Attempt 2: Local solving without a position hint ---
-        if not wcs_header and star_data_local:  # Only attempt if previously failed AND local attempts are possible
-            logger.info(f"Attempt 2: Local astrometry without position hint")
-            wcs_header = _attempt_local_solve(
-                solver,
-                star_data_local,
-                size_hint=None,
-                position_hint=None,
-                common_params_local=common_params_local
-            )
+        try:
+            if not wcs_header and star_data_local:  # Only attempt if previously failed AND local attempts are possible
+                logger.info(f"Attempt 2: Local astrometry without position hint")
+                wcs_header = _attempt_local_solve(
+                    solver,
+                    star_data_local,
+                    size_hint=None,
+                    position_hint=None,
+                    common_params_local=common_params_local
+                )
+        except Exception as e:
+            logger.warning(f"Error during Attempt 2 (local without hint): {e}", exc_info=True)
 
         # --- Attempt 3: Online solving with Astrometry.net ---
-        if not wcs_header:  # Only attempt if local attempts failed
-            logger.info(f"Attempt 3: Online astrometry with Astrometry.net")
+        try:
+            if not wcs_header:  # Only attempt if local attempts failed
+                logger.info(f"Attempt 3: Online astrometry with Astrometry.net")
 
-            # Ensure correct image dimensions order (astroquery expects width, height)
-            image_height, image_width = image_shape
-            logger.debug(f"Using image dimensions for Astrometry.net: width={image_width}, height={image_height}")
+                # Ensure correct image dimensions order (astroquery expects width, height)
+                image_height, image_width = image_shape
+                logger.debug(f"Using image dimensions for Astrometry.net: width={image_width}, height={image_height}")
 
-            wcs_header = _attempt_online_solve(
-                df_proc=df_proc,
-                image_width=image_width,
-                image_height=image_height,
-            )
+                wcs_header = _attempt_online_solve(
+                    df_proc=df_proc,
+                    image_width=image_width,
+                    image_height=image_height,
+                )
+        except Exception as e:
+            logger.warning(f"Error during Attempt 3 (online Astrometry.net): {e}", exc_info=True)
 
 
     finally:
