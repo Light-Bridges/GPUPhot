@@ -42,24 +42,67 @@ nb_setup['cells'].append(nbf.v4.new_code_cell(
 nb_setup['cells'].append(nbf.v4.new_markdown_cell(
     "## Step 2: Download Astrometry Index Files\n"
     "Before processing astronomical images, you need to download the astrometry index files. "
-    "These files are required for solving the astrometric calibration of the images.\n\n"
-    "**Important:** Ensure that the `ASTROMETRY_CACHE_PATH` variable is correctly set in your `.env` file. "
-    "This path must exist on your host machine and will be used to store the downloaded index files.\n\n"
+    "These files are required for the astrometric calibration of the images.\n\n"
+    "**Important:** This process uses the `ASTROMETRY_CACHE_PATH` variable from your `.env` file to mount a directory from your host machine. "
+    "The code below will confirm the exact host path being used and then begin the download.\n\n"
     "Run the following code to download the index files:"
 ))
 
+download_cell_code = """import os
+from gpuphot.utils.astro import get_solver
+
+def download_astrometry_files():
+    \"\"\"
+    Checks for the astrometry cache path configuration and triggers the download
+    of the index files, providing clear information to the user about the host and
+    container paths.
+    \"\"\"
+    # This is the path INSIDE the Docker container, where the application runs.
+    internal_cache_path = '/data/astrometry_cache'
+
+    # This environment variable is passed from the docker-compose.yml
+    # to make the HOST path visible inside the container for informational purposes.
+    host_cache_path = os.getenv('ASTROMETRY_CACHE_PATH_HOST')
+
+    if host_cache_path:
+        print("--- Astrometry Index File Setup ---")
+        print(f"The solver will download files to the directory mounted inside this container.")
+        print(f"  - Container Path: {internal_cache_path}")
+        print(f"  - Host Machine Path: {host_cache_path}\\n")
+
+        print("IMPORTANT:")
+        print("The download process requires approximately 34GB of disk space and can take")
+        print("over an hour, depending on your internet connection. This only needs to be done once.\\n")
+
+        try:
+            # The get_solver() function is already configured to find the
+            # cache at the internal path, which is '/data/astrometry_cache'.
+            get_solver()
+            print("--- Success ---")
+            print(f"Astrometry index files are now available and stored on your host machine at: {host_cache_path}")
+        except Exception as e:
+            print(f"--- Error ---")
+            print(f"An error occurred during the solver initialization: {e}")
+            print("Please check your internet connection, disk space, and file permissions on the host path.")
+
+    else:
+        print("--- Configuration Error ---")
+        print("Error: The 'ASTROMETRY_CACHE_PATH_HOST' environment variable is not set inside the container.")
+        print("Please ensure it is correctly defined in your docker-compose.yml for the 'lab' service.")
+        print("Example for docker-compose.yml:")
+        print("  services:")
+        print("    lab:")
+        print("      environment:")
+        print("        - ASTROMETRY_CACHE_PATH_HOST=${ASTROMETRY_CACHE_PATH:-./astrometry_cache}")
+
+
+# To run the process, simply call the function in your notebook cell.
+download_astrometry_files()
+"""
+
 # Celda para descargar los índices de astrometría
-nb_setup['cells'].append(nbf.v4.new_code_cell(
-    "from gpuphot.utils.astro import get_solver\n\n"
-    "# Verify ASTROMETRY_CACHE_PATH is set\n"
-    "astrometry_cache_path = os.getenv('ASTROMETRY_CACHE_PATH')\n"
-    "if astrometry_cache_path is None:\n"
-    "    print('Error: ASTROMETRY_CACHE_PATH is not defined in the .env file. Please configure it before proceeding.')\n"
-    "else:\n"
-    "    print(f'Downloading astrometry index files to: {astrometry_cache_path}')\n"
-    "    get_solver()\n"
-    "    print('Astrometry index files downloaded successfully!')"
-))
+# Se usa la variable `download_cell_code` definida al inicio
+nb_setup['cells'].append(nbf.v4.new_code_cell(download_cell_code))
 
 # Sección 3: Configuración de variables de entorno
 nb_setup['cells'].append(nbf.v4.new_markdown_cell(

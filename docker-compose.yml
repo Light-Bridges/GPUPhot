@@ -127,11 +127,12 @@ services:
       INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
       INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
       IMAGE_BASE_PATH: /data/images
+      ASTROMETRY_CACHE_PATH_HOST: ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}
     volumes:
       - ${NOTEBOOKS_PATH:-./notebooks}:/home/jovyan/work:z
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
-      - ${ASTROMETRY_CACHE_PATH:-astrometry_cache}:/data/astrometry_cache:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
     deploy:
       resources:
         reservations:
