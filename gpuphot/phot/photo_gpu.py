@@ -6,7 +6,7 @@ import time
 import traceback
 
 import cupy as cp
-from gpuphot.gpuphot.phot.cosmetics import CR_filter, SP_filter
+from ..phot.cosmetics import CR_filter, SP_filter
 import numpy as np
 import nvtx
 import pandas as pd

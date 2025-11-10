@@ -1,7 +1,7 @@
 from typing import Union
 
 import cupy as cp
-from gpuphot.gpuphot.phot.cosmetics import SP_filter
+from ..phot.cosmetics import SP_filter
 import nvtx
 import numpy as np
 from astropy.io import fits
