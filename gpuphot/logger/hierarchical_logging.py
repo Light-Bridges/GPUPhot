@@ -12,7 +12,11 @@ from datetime import datetime
 
 import GPUtil
 import cupy as cp
-import numpy as np
+try:
+    import cupynumeric as np
+except ImportError:
+    import numpy as np
+
 from astropy.io.fits import Header
 from dotenv import load_dotenv
 

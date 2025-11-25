@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import cupy as cp
-import numpy as np
+try:
+    import cupynumeric as np
+except ImportError:
+    import numpy as np
+
 import nvtx
 from cupyx.scipy.ndimage import maximum_filter
 from lmfit import Model

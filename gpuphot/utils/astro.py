@@ -12,7 +12,11 @@ from functools import lru_cache
 import astrometry
 import ephem
 import matplotlib.pyplot as plt
-import numpy as np
+try:
+    import cupynumeric as np
+except ImportError:
+    import numpy as np
+
 import nvtx
 import pandas as pd
 from astropy import units as u

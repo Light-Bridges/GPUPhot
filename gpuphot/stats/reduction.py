@@ -3,7 +3,11 @@ from typing import Union
 import cupy as cp
 from ..phot.cosmetics import SP_filter
 import nvtx
-import numpy as np
+try:
+    import cupynumeric as np
+except ImportError:
+    import numpy as np
+
 from astropy.io import fits
 from cupyx.scipy.ndimage import binary_erosion, shift
 

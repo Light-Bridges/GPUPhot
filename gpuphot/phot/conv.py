@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import cupy as cp
-import numpy as np
+try:
+    import cupynumeric as np
+except ImportError:
+    import numpy as np
+
 import nvtx
 
 from ..logger.hierarchical_logging import setup_logger
