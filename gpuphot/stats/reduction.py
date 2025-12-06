@@ -1,19 +1,49 @@
 from typing import Union
 
-import cupy as cp
-from ..phot.cosmetics import SP_filter
-import nvtx
 import numpy as np
 from astropy.io import fits
-from cupyx.scipy.ndimage import binary_erosion, shift
 
-from ..logger.hierarchical_logging import setup_logger, hierarchical_debug
-from ..stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
+try:
+    import nvtx
+except ImportError:
+
+    class nvtx:
+        @staticmethod
+        def annotate(*args, **kwargs):
+            def decorator(func):
+                return func
+
+            return decorator
+
+try:
+    import cupy as cp
+    from cupyx.scipy.ndimage import binary_erosion, shift
+
+    ArrayType = Union[cp.ndarray, np.ndarray]
+except ImportError:
+    cp = None
+    ArrayType = np.ndarray
+
+
+    def binary_erosion(*args, **kwargs):
+        raise ImportError("CuPy no instalado")
+
+
+    def shift(*args, **kwargs):
+        raise ImportError("CuPy no instalado")
+
+try:
+    from ..phot.cosmetics import SP_filter
+    from ..stats.subpixel import phase_cross_correlation as phase_cross_correlation_gpu
+except ImportError:
+    pass
+
+from ..logger.hierarchical_logging import setup_logger  # , hierarchical_debug
 
 logger = setup_logger(__name__)
 
 
-@nvtx.annotate('center',category='stats.reduction')
+@nvtx.annotate('center', category='stats.reduction')
 def center(im: Union[cp.ndarray, np.ndarray], size: int) -> Union[cp.ndarray, np.ndarray]:
     """
     Center the image to the given size.
@@ -45,7 +75,7 @@ def center(im: Union[cp.ndarray, np.ndarray], size: int) -> Union[cp.ndarray, np
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('register_shift',category='stats.reduction')
+@nvtx.annotate('register_shift', category='stats.reduction')
 def register_shift(fc, uf=100, n=1000):
     """
     Register and shift image stack based on phase cross-correlation.
@@ -67,7 +97,7 @@ def register_shift(fc, uf=100, n=1000):
         im1 = binary_erosion(im1 > im1.mean() + im1.std())
         shifted, _, _ = phase_cross_correlation_gpu(im0.get(), im1.get(),
                                                     upsample_factor=uf)
-        if (np.abs(shifted[0]) > 300) | np.abs(shifted[1] > 300):
+        if (np.abs(shifted[0]) > 300) | (np.abs(shifted[1]) > 300):
             shifted = 0, 0
         fc1[i] = shift(cp.asarray(fc[i]), shift=(shifted[0], shifted[1]),
                        order=1, mode='constant').get()
@@ -78,7 +108,7 @@ def register_shift(fc, uf=100, n=1000):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('stack_sigmaclip',category='stats.reduction')
+@nvtx.annotate('stack_sigmaclip', category='stats.reduction')
 def stack_sigmaclip(data, it=5, n=3):
     """
     Stack images with sigma clipping.
@@ -136,7 +166,7 @@ def stack_sigmaclip(data, it=5, n=3):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('register_shift_frames',category='stats.reduction')
+@nvtx.annotate('register_shift_frames', category='stats.reduction')
 def register_shift_frames(frames_list, upsample_factor=100, center_size=6000,
                           shift_limit_pix=300, SP_filt=False):
     """
@@ -171,8 +201,7 @@ def register_shift_frames(frames_list, upsample_factor=100, center_size=6000,
         im1 = binary_erosion(im1 > im1.mean() + im1.std())
         shifted, _, _ = phase_cross_correlation_gpu(im0, im1,
                                                     upsample_factor=upsample_factor)
-        if (np.abs(shifted[0]) > shift_limit_pix) | np.abs(shifted[1] >
-                                                           shift_limit_pix):
+        if (np.abs(shifted[0]) > shift_limit_pix) | (np.abs(shifted[1]) > shift_limit_pix):
             shifted = 0, 0
         logger.debug(f'Detected subpixel offset (y, x): {shifted}')
         fc[i, :] = shift(fc1, shift=(shifted[0], shifted[1]), order=1, mode
@@ -182,7 +211,7 @@ def register_shift_frames(frames_list, upsample_factor=100, center_size=6000,
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('weighted_mean_std',category='stats.reduction')
+@nvtx.annotate('weighted_mean_std', category='stats.reduction')
 def weighted_mean_std(data, errors):
     """
     Calculate weighted mean and standard deviation.
