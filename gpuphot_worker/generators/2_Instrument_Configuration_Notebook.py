@@ -77,6 +77,32 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
     "print(content)"
 ))
 
+nb_config['cells'].append(nbf.v4.new_markdown_cell(
+    "## Advanced: Forcing Header Values (Overrides)\n"
+    "Sometimes, instrument headers contain incorrect or missing values that cannot be fixed by simple mapping. "
+    "For example, a camera might report `GAIN = 1.0` in the header, but you know the physical gain is actually `0.33`.\n\n"
+    "To handle this professionally, you can use the `forced_values` section. "
+    "Values defined here have **Priority 1**: they will override both the FITS header and the default camera specs.\n\n"
+    "The following code modifies `my_instrument.json` to force the gain to 0.33, ignoring whatever the header says."
+))
+
+nb_config['cells'].append(nbf.v4.new_code_cell(
+    "import json\n\n"
+    "# 1. Load the existing configuration\n"
+    "with open(file_path, 'r') as file:\n"
+    "    config_data = json.load(file)\n\n"
+    "# 2. Apply a forced value override\n"
+    "# We force 'gain' to 0.33. The system will now ignore 'GAIN' keyword in the FITS header.\n"
+    "config_data['forced_values'] = {\n"
+    "    'gain': 0.33\n"
+    "}\n\n"
+    "# 3. Save the updated configuration\n"
+    "with open(file_path, 'w') as file:\n"
+    "    json.dump(config_data, file, indent=2)\n\n"
+    "print(f'Updated {instrument_name}.json with forced values.')\n"
+    "print(json.dumps(config_data, indent=2))"
+))
+
 # Sección 4: Exploring Configuration Files
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Exploring Configuration Files\n"
