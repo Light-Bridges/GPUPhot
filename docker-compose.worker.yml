@@ -1,0 +1,40 @@
+version: '3.8'
+
+# Definimos las variables de entorno comunes para conectar al Master
+x-remote-env: &remote-env
+  CELERY_BROKER_URL: amqp://gpuphot:gpuphot@${MASTER_IP}:5672/
+  CELERY_RESULT_BACKEND: redis://${MASTER_IP}:6379/0
+  POSTGRES_HOST: ${MASTER_IP}
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: GPUPhotDB
+  POSTGRES_USER: admin
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
+
+services:
+  gpuphot_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+      args:
+        - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
+        - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements_3_12.txt}
+    environment:
+      <<: *remote-env
+      INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
+      GPU_ID: ${GPU_ID:-0}
+      INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
+      IMAGE_BASE_PATH: /data/images
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+      - /run/docker.sock:/run/docker.sock
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ "${GPU_ID:-0}" ]
+              capabilities: [ gpu ]
+    restart: unless-stopped
