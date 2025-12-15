@@ -10,13 +10,19 @@ nb_config = nbf.v4.new_notebook()
 # Título y descripción del notebook
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "# Instrument Configuration\n"
-    "This notebook demonstrates how to explore, create, and customize instrument configuration files."
+    "This notebook demonstrates how to explore, create, and customize instrument configuration files.\n\n"
+    "## Understanding Paths\n"
+    "Before creating configurations, it is important to understand where files are stored:\n"
+    "- **Host Path:** The folder on your physical machine defined by `INSTRUMENT_CONFIG_PATH` in your `.env` file.\n"
+    "- **Container Path:** Inside this Jupyter environment, that folder is mounted at `/data/instrument_configs`.\n\n"
+    "Any JSON file you create or edit here will be immediately available in your host folder."
 ))
 
 # Sección 1: Displaying the Default Configuration
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Displaying the Default Configuration\n"
-    "The following code displays the default configuration included in the library by directly reading the `default.json` file, including comments."
+    "The following code displays the default configuration included in the library by directly reading the `default.json` file, including comments.\n\n"
+    "Note that the default configuration includes sections for `header_keywords`, `camera_specs`, and optionally `forced_values`."
 ))
 
 nb_config['cells'].append(nbf.v4.new_code_cell(
@@ -39,9 +45,8 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Creating a Default Configuration File\n"
     "The following code demonstrates how to generate a default configuration file.\n\n"
-    "**Note:** The default configuration is always available, even if no `default.json` file exists. "
-    "It is generated internally using `DefaultConfig`. However, you can generate a `default.json` file "
-    "to customize the default settings."
+    "**Note:** The default configuration is always available internally. However, generating a `default.json` file "
+    "allows you to customize the baseline settings for all instruments."
 ))
 
 nb_config['cells'].append(nbf.v4.new_code_cell(
@@ -77,13 +82,15 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
     "print(content)"
 ))
 
+# --- NUEVA SECCIÓN: FORCED VALUES ---
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Advanced: Forcing Header Values (Overrides)\n"
-    "Sometimes, instrument headers contain incorrect or missing values that cannot be fixed by simple mapping. "
-    "For example, a camera might report `GAIN = 1.0` in the header, but you know the physical gain is actually `0.33`.\n\n"
-    "To handle this professionally, you can use the `forced_values` section. "
-    "Values defined here have **Priority 1**: they will override both the FITS header and the default camera specs.\n\n"
-    "The following code modifies `my_instrument.json` to force the gain to 0.33, ignoring whatever the header says."
+    "Sometimes, instrument headers contain incorrect, missing, or unreliable values. "
+    "You can use the `forced_values` section to strictly override these values.\n\n"
+    "### Mapping vs. Forcing\n"
+    "*   **`header_keywords` (Mapping):** Use this when the value exists in the header but has a different name (e.g., mapping `EXPTIME` to `EXPOSURE`).\n"
+    "*   **`forced_values` (Overriding):** Use this when you want to ignore the header completely and enforce a specific value (e.g., forcing `GAIN` to `0.33` because the header incorrectly says `1.0`).\n\n"
+    "Values defined in `forced_values` have **Priority 1**."
 ))
 
 nb_config['cells'].append(nbf.v4.new_code_cell(
@@ -92,7 +99,7 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
     "with open(file_path, 'r') as file:\n"
     "    config_data = json.load(file)\n\n"
     "# 2. Apply a forced value override\n"
-    "# We force 'gain' to 0.33. The system will now ignore 'GAIN' keyword in the FITS header.\n"
+    "# We force 'gain' to 0.33. The system will now use 0.33 even if the FITS header says otherwise.\n"
     "config_data['forced_values'] = {\n"
     "    'gain': 0.33\n"
     "}\n\n"
@@ -102,11 +109,12 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
     "print(f'Updated {instrument_name}.json with forced values.')\n"
     "print(json.dumps(config_data, indent=2))"
 ))
+# ------------------------------------
 
 # Sección 4: Exploring Configuration Files
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Exploring Configuration Files\n"
-    "The following code explores the configuration files in `INSTRUMENT_CONFIG_BASE_PATH`."
+    "The following code explores all the configuration files currently available in your configuration directory."
 ))
 
 nb_config['cells'].append(nbf.v4.new_code_cell(
@@ -134,7 +142,7 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
 # Sección final: Link to the next notebook
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Next Steps\n"
-    "Now that you have explored and customized instrument configurations, proceed to the next notebook to learn how to process images:\n"
+    "Now that you have configured your instrument, proceed to the next notebook to learn how to process images:\n"
     "- [3. Task Execution](./3_Task_Execution_Notebook.ipynb)"
 ))
 
@@ -143,7 +151,6 @@ nb_config['cells'].append(nbf.v4.new_markdown_cell(
 parser = argparse.ArgumentParser(description="Generate a Jupyter Notebook.")
 
 # Añadir un argumento opcional '--output-dir'
-# Si no se proporciona, se usará el valor 'default'.
 parser.add_argument(
     '--output-dir',
     type=str,
