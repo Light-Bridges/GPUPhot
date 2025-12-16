@@ -74,7 +74,8 @@
     "cd2_2": "CD2_2"
   },
   "camera_specs": {
-    // Default values for camera specifications when keywords are missing
+    // Default values for camera specifications when keywords are missing in the header.
+    // These have Priority 3 (lowest).
 
     // Default pixel size (in microns)
     "pxsize": null,
@@ -181,5 +182,67 @@
 
     // Coefficient for r-band magnitude in luminosity calculation
     "lum_rmag_coeff": 0.5
+  },
+  "image_reduction": {
+    // Options: "always", "never", "on_failure"
+    "apply_reduction": "never",
+
+    // Binning configuration for reduction
+    "binning": {
+      "factor": 2,
+      "method": "sum" // Options: "sum", "median"
+    },
+
+    // Center coordinates for reduction crop [x, y] (null to disable)
+    "center": null,
+
+    // Size of the crop for reduction [width, height] (null to disable)
+    "crop_size": null
+  },
+  "forced_values": {
+    // STRICT OVERRIDES (Priority 1).
+    // Any key defined here will override BOTH the FITS header and the camera_specs defaults.
+    // Use this to fix incorrect headers (e.g., gain reported as 1.0 when it is 0.33).
+    // Example: "gain": 0.33
+  },
+  "filter_map": {
+    // Filter Translation Map (Header Value -> Internal Code).
+    // The code expects standard internal names to choose the correct photometric catalog.
+    // Valid Internal Codes: "Lum", "Open", "SDSSu", "SDSSg", "SDSSr", "SDSSi", "SDSSzs", "SDSSy".
+
+    // Internal Identity Mappings (Standard -> Standard)
+    "Lum": "Lum",
+    "Open": "Open",
+    "SDSSu": "SDSSu",
+    "SDSSg": "SDSSg",
+    "SDSSr": "SDSSr",
+    "SDSSi": "SDSSi",
+    "SDSSzs": "SDSSzs",
+    "SDSSy": "SDSSy",
+
+    // Common Aliases (User Value -> Internal Code)
+    "Clear": "Open",
+    "C": "Open",
+    "L": "Lum",
+    "LUM": "Lum",
+    "w": "Lum",
+
+    // Johnson/Cousins Approximations
+    "B": "SDSSg",
+    "V": "SDSSg",
+    "R": "SDSSr",
+    "I": "SDSSi",
+
+    // Sloan Aliases
+    "u": "SDSSu", "u'": "SDSSu",
+    "g": "SDSSg", "g'": "SDSSg",
+    "r": "SDSSr", "r'": "SDSSr",
+    "i": "SDSSi", "i'": "SDSSi",
+    "z": "SDSSzs", "z'": "SDSSzs",
+    "y": "SDSSy",
+
+    // H-Alpha is usually calibrated against r-band
+    "Ha": "SDSSr",
+    "Halpha": "SDSSr"
   }
 }

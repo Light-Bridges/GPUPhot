@@ -131,9 +131,28 @@ class DefaultConfig:
     # Configuration for forced values to override header and default specs
     DEFAULT_FORCED_VALUES = {}
 
+    # Default filter mapping (Header Value -> Internal Code)
+    # This covers minimal standard naming. Specific instruments should override this
+    # in their JSON file if their filter wheel names are different (e.g., "Red" instead of "SDSSr").
+    DEFAULT_FILTER_MAP = {
+        # Internal codes as identity (if header matches code, keep it)
+        "Lum": "Lum",
+        "Open": "Open",
+        "SDSSu": "SDSSu",
+        "SDSSg": "SDSSg",
+        "SDSSr": "SDSSr",
+        "SDSSi": "SDSSi",
+        "SDSSzs": "SDSSzs",
+        "SDSSy": "SDSSy",
+        # Common aliases
+        "Clear": "Open",
+        "L": "Lum",
+        "w": "Lum"
+    }
+
 
 class HeaderTranslator:
-    def __init__(self, header_keywords, camera_specs, forced_values=None):
+    def __init__(self, header_keywords, camera_specs, forced_values=None, filter_map=None):
         """
         Initialize the header translator.
 
@@ -143,13 +162,20 @@ class HeaderTranslator:
         :type camera_specs: dict
         :param forced_values: Dictionary with values that strictly override any header data.
         :type forced_values: dict or None
+        :param filter_map: Dictionary mapping user filter values (from header) to internal standard codes.
+        :type filter_map: dict or None
         """
         self.translations = header_keywords
         self.camera_specs = camera_specs
         self.forced_values = forced_values if forced_values is not None else {}
+        self.filter_map = filter_map if filter_map is not None else DefaultConfig.DEFAULT_FILTER_MAP.copy()
+
         self.default_translations = DefaultConfig.DEFAULT_HEADER_KEYWORDS
         self.reverse_translations = {v: k for k, v in self.translations.items()}
         self.warned_keys = set()
+
+        # Identify the internal key used for filters to apply the map later
+        self.internal_filter_key = "filter"
 
     def get_keyword(self, key):
         """
@@ -165,16 +191,16 @@ class HeaderTranslator:
     def translate_header(self, header):
         """
         Translate a FITS header using defined translations, enforcing forced values,
-        and filling in missing values from camera specifications.
+        translating filter names, and filling in missing values from camera specifications.
 
         Priority order:
         1. Forced Values (overrides everything)
-        2. Header Values (using mapped keys)
+        2. Header Values (using mapped keys + filter name translation)
         3. Camera Specs (defaults)
 
         :param header: FITS header to translate.
         :type header: astropy.io.fits.header.Header
-        :return: Translated header with internal keys.
+        :return: Translated header with internal keys and standard filter names.
         :rtype: astropy.io.fits.header.Header
         :raises TypeError: If the header is not of the correct type.
         """
@@ -198,14 +224,30 @@ class HeaderTranslator:
             # Determine which key to look for in the input header (user's key)
             user_key = self.translations.get(internal_key, standard_fits_key)
 
+            # Retrieve value from header if it exists
+            value_from_header = None
             if user_key in header:
-                # If the key exists in the header, use it.
-                # If user_key differs from standard_fits_key, we map the value to the standard key.
-                translated[standard_fits_key] = header[user_key]
-
+                value_from_header = header[user_key]
             elif user_key == standard_fits_key and standard_fits_key in header:
-                # The standard key exists and matches the user key, do nothing (keep it).
-                pass
+                value_from_header = header[standard_fits_key]
+
+            if value_from_header is not None:
+                # SPECIAL HANDLING FOR FILTERS:
+                # If this is the filter keyword, we must check the filter_map to standardize the name.
+                # E.g., Header says "R_Filter" -> Map says "SDSSr".
+                if internal_key == self.internal_filter_key:
+                    # Normalize string (remove spaces) for lookup
+                    raw_val = str(value_from_header).strip()
+                    # Look up in map. If not found, keep the raw value.
+                    std_val = self.filter_map.get(raw_val, raw_val)
+
+                    if raw_val != std_val:
+                        logger.debug(f"Translating filter '{raw_val}' to standard code '{std_val}'.")
+
+                    translated[standard_fits_key] = std_val
+                else:
+                    # Normal copy for non-filter keys
+                    translated[standard_fits_key] = value_from_header
 
             # --- PRIORITY 3: CAMERA SPECS (DEFAULTS) ---
             else:
@@ -265,12 +307,14 @@ class InstrumentConfigParser:
                                        'instrument_configs') if not config_dir else config_dir
 
         # Initialize base configuration with all sections
-        self.base_config = {
+        from typing import Dict, Any  # Import for Type Hinting
+        self.base_config: Dict[str, Any] = {
             "header_keywords": DefaultConfig.DEFAULT_HEADER_KEYWORDS.copy(),
             "camera_specs": DefaultConfig.DEFAULT_CAMERA_SPECS.copy(),
             "processing_params": DefaultConfig.DEFAULT_PROCESSING_PARAMS.copy(),
             "image_reduction": DefaultConfig.DEFAULT_IMAGE_REDUCTION.copy(),
-            "forced_values": DefaultConfig.DEFAULT_FORCED_VALUES.copy()
+            "forced_values": DefaultConfig.DEFAULT_FORCED_VALUES.copy(),
+            "filter_map": DefaultConfig.DEFAULT_FILTER_MAP.copy()
         }
 
     def _load_json_config(self, file_name):
@@ -324,7 +368,7 @@ class InstrumentConfigParser:
         :return: Dictionary with instrument configuration and header translator.
         :rtype: dict
         """
-        # Step 1: Start with base configuration from DefaultConfig
+        # Step 1: Start with base configuration
         config: Dict[str, Any] = self.base_config.copy()
 
         # Step 2: Update with default.json if it exists
@@ -343,11 +387,12 @@ class InstrumentConfigParser:
             else:
                 logger.warning(f"Configuration for {instrument_name} not found. Using default values.")
 
-        # Create and add the header translator, passing the forced_values section
+        # Create and add the header translator, passing the forced_values and filter_map
         config['header_translator'] = HeaderTranslator(
             header_keywords=config['header_keywords'],
             camera_specs=config['camera_specs'],
-            forced_values=config.get('forced_values', {})
+            forced_values=config.get('forced_values', {}),
+            filter_map=config.get('filter_map', {})
         )
         return config
 

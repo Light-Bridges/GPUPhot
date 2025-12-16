@@ -22,7 +22,7 @@ nb_config['cells'].append(nbf.v4.new_markdown_cell(
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Displaying the Default Configuration\n"
     "The following code displays the default configuration included in the library by directly reading the `default.json` file, including comments.\n\n"
-    "Note that the default configuration includes sections for `header_keywords`, `camera_specs`, and optionally `forced_values`."
+    "Note that the default configuration includes sections for `header_keywords`, `camera_specs`, `forced_values`, and `filter_map`."
 ))
 
 nb_config['cells'].append(nbf.v4.new_code_cell(
@@ -82,7 +82,7 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
     "print(content)"
 ))
 
-# --- NUEVA SECCIÓN: FORCED VALUES ---
+# --- SECCIÓN: FORCED VALUES ---
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Advanced: Forcing Header Values (Overrides)\n"
     "Sometimes, instrument headers contain incorrect, missing, or unreliable values. "
@@ -109,7 +109,40 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
     "print(f'Updated {instrument_name}.json with forced values.')\n"
     "print(json.dumps(config_data, indent=2))"
 ))
-# ------------------------------------
+
+# --- NUEVA SECCIÓN: FILTER MAPPING ---
+nb_config['cells'].append(nbf.v4.new_markdown_cell(
+    "## Advanced: Filter Mapping (Standardization)\n"
+    "Different cameras and acquisition software use different names for filters (e.g., `Red`, `R`, `r_prime`, `650nm`). "
+    "However, the GPUPhot pipeline requires **Standard Internal Codes** to correctly select the photometric catalog (e.g., Pan-STARRS, SkyMapper, Gaia).\n\n"
+    "You can use the `filter_map` section to translate your specific header values to these internal codes.\n\n"
+    "### Valid Internal Standard Codes:\n"
+    "Use one of these as the **Target** value in your map:\n"
+    "*   **Broadband / Clear:** `Lum` (Luminance), `Open` (Clear).\n"
+    "*   **Sloan / PanSTARRS:** `SDSSu`, `SDSSg`, `SDSSr`, `SDSSi`, `SDSSzs`, `SDSSy`.\n\n"
+    "**Example:** If your FITS header contains `FILTER = 'Deep_Red_Bin2'`, you should map it to `SDSSr` or `SDSSi`."
+))
+
+nb_config['cells'].append(nbf.v4.new_code_cell(
+    "import json\n\n"
+    "# 1. Load the existing configuration\n"
+    "with open(file_path, 'r') as file:\n"
+    "    config_data = json.load(file)\n\n"
+    "# 2. Define the filter map\n"
+    "# Format: \"Your_Header_Value\": \"Standard_Internal_Code\"\n"
+    "config_data['filter_map'] = {\n"
+    "    \"Red_Special\": \"SDSSr\",\n"
+    "    \"Green_Bin2\": \"SDSSg\",\n"
+    "    \"Luminance_UVIR\": \"Lum\",\n"
+    "    \"Ha_7nm\": \"SDSSr\"   # H-alpha is often calibrated against r-band\n"
+    "}\n\n"
+    "# 3. Save the updated configuration\n"
+    "with open(file_path, 'w') as file:\n"
+    "    json.dump(config_data, file, indent=2)\n\n"
+    "print(f'Updated {instrument_name}.json with filter map.')\n"
+    "print(json.dumps(config_data, indent=2))"
+))
+# -------------------------------------
 
 # Sección 4: Exploring Configuration Files
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
