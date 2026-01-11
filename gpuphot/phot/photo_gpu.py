@@ -3053,7 +3053,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
 
     del optimal_coords, optimal_flux, optimal_noise
 
-    dfm_ast = dfm.loc[dfm.snr > 5]
+    dfm_ast = dfm.loc[dfm.snr > min_snr]
     dfm_ast = dfm_ast.sort_values('snr', ascending=False).dropna().reset_index(drop=True)
 
     # Astrometrize
