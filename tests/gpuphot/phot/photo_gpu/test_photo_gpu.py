@@ -37,22 +37,22 @@ class Test(TestCase):
 
         return 206265 / focal
 
-    def get_fwhm_model(model_path=Path(__file__).parent.parent):
-        import tensorflow as tf
-        from tensorflow.python.keras.models import load_model
-        # Obtener la ruta del directorio actual del script
-        current_dir = os.path.dirname(os.path.abspath(__file__))
+    # def get_fwhm_model(model_path=Path(__file__).parent.parent):
+    #     import tensorflow as tf
+    #     from tensorflow.python.keras.models import load_model
+    #     # Obtener la ruta del directorio actual del script
+    #     current_dir = os.path.dirname(os.path.abspath(__file__))
 
-        # Construir la ruta al directorio deseado
-        name = os.path.join(current_dir, 'gpuphot', 'fwhm', 'fwhm_3_2_mofatt_ns_mix_100_model')
+    #     # Construir la ruta al directorio deseado
+    #     name = os.path.join(current_dir, 'gpuphot', 'fwhm', 'fwhm_3_2_mofatt_ns_mix_100_model')
 
-        if tf.__version__ == '2.4.1':
-            name = name + '_old'
+    #     if tf.__version__ == '2.4.1':
+    #         name = name + '_old'
 
-        logger.debug(f'Loading model {name}')
+    #     logger.debug(f'Loading model {name}')
 
-        model = load_model(name)
-        return model
+    #     model = load_model(name)
+    #     return model
 
     # def test_get_detections(self):
 
