@@ -20,18 +20,21 @@ class ImageProcessor:
         """
         self.instrument_name = instrument_name
         self.config_parser = InstrumentConfigParser(config_dir)
+
+        # This config now includes the initialized HeaderTranslator with forced_values logic
         self.config = self.config_parser.get_config(instrument_name)
+
         self.processing_params = self.config['processing_params']
         self.camera_params = self.config['camera_specs']
         self.header_translator = self.config['header_translator']
 
         try:
-
             extra = {
                 'instrument_name': instrument_name,
                 'processing_params': self.processing_params,
                 'camera_params': self.camera_params,
-                'header_keywords': self.config['header_keywords']
+                'header_keywords': self.config['header_keywords'],
+                'forced_values': self.config.get('forced_values', {})
             }
 
             logger.debug(f"Image processor initialized for: {extra}", extra=extra)
@@ -54,7 +57,8 @@ class ImageProcessor:
         :return: A tuple containing the data frame of processed results and the translated original header.
         :rtype: tuple(pandas.DataFrame, astropy.io.fits.header.Header)
         """
-        # Traduce el header a las keywords estándar
+        # Translate the header to standard keywords.
+        # The logic for forced values is handled internally by self.header_translator.
         translated_header = self.header_translator.translate_header(imheader)
 
         # Combina los parámetros de procesamiento con los kwargs

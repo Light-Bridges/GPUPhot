@@ -3,7 +3,11 @@ from __future__ import annotations
 import time
 
 import cupy as cp
-import numpy as np
+try:
+    import cupynumeric as np
+except ImportError:
+    import numpy as np
+
 import nvtx
 import pandas as pd
 from astropy import units as u

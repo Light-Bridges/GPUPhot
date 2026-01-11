@@ -7,7 +7,11 @@ import traceback
 
 import cupy as cp
 from ..phot.cosmetics import CR_filter, SP_filter
-import numpy as np
+try:
+    import cupynumeric as np
+except ImportError:
+    import numpy as np
+
 import nvtx
 import pandas as pd
 from astropy.wcs import WCS

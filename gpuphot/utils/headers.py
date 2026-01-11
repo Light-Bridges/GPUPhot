@@ -1,6 +1,10 @@
 from datetime import datetime
 
-import numpy as np
+try:
+    import cupynumeric as np
+except ImportError:
+    import numpy as np
+
 import nvtx
 from astropy import units as u
 from astropy.coordinates import SkyCoord

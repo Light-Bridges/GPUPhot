@@ -3,7 +3,11 @@ import re
 from datetime import datetime
 from glob import glob
 
-import numpy as np
+try:
+    import cupynumeric as np
+except ImportError:
+    import numpy as np
+
 import pytz
 from celery import shared_task
 

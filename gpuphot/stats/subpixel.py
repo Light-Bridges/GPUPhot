@@ -4,7 +4,11 @@ https://www.mathworks.com/matlabcentral/fileexchange/18401-efficient-subpixel-im
 Cupyfication from skimage/registration/_phase_cross_correlation.py
 """
 import cupy as cp
-import numpy as np
+try:
+    import cupynumeric as np
+except ImportError:
+    import numpy as np
+
 from cupy.fft import fftn, ifftn, fftfreq
 import nvtx
 from .subpixel_masked import _masked_phase_cross_correlation

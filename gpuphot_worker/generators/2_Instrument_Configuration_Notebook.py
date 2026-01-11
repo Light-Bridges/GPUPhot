@@ -10,13 +10,19 @@ nb_config = nbf.v4.new_notebook()
 # Título y descripción del notebook
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "# Instrument Configuration\n"
-    "This notebook demonstrates how to explore, create, and customize instrument configuration files."
+    "This notebook demonstrates how to explore, create, and customize instrument configuration files.\n\n"
+    "## Understanding Paths\n"
+    "Before creating configurations, it is important to understand where files are stored:\n"
+    "- **Host Path:** The folder on your physical machine defined by `INSTRUMENT_CONFIG_PATH` in your `.env` file.\n"
+    "- **Container Path:** Inside this Jupyter environment, that folder is mounted at `/data/instrument_configs`.\n\n"
+    "Any JSON file you create or edit here will be immediately available in your host folder."
 ))
 
 # Sección 1: Displaying the Default Configuration
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Displaying the Default Configuration\n"
-    "The following code displays the default configuration included in the library by directly reading the `default.json` file, including comments."
+    "The following code displays the default configuration included in the library by directly reading the `default.json` file, including comments.\n\n"
+    "Note that the default configuration includes sections for `header_keywords`, `camera_specs`, `forced_values`, and `filter_map`."
 ))
 
 nb_config['cells'].append(nbf.v4.new_code_cell(
@@ -39,9 +45,8 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Creating a Default Configuration File\n"
     "The following code demonstrates how to generate a default configuration file.\n\n"
-    "**Note:** The default configuration is always available, even if no `default.json` file exists. "
-    "It is generated internally using `DefaultConfig`. However, you can generate a `default.json` file "
-    "to customize the default settings."
+    "**Note:** The default configuration is always available internally. However, generating a `default.json` file "
+    "allows you to customize the baseline settings for all instruments."
 ))
 
 nb_config['cells'].append(nbf.v4.new_code_cell(
@@ -77,10 +82,72 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
     "print(content)"
 ))
 
+# --- SECCIÓN: FORCED VALUES ---
+nb_config['cells'].append(nbf.v4.new_markdown_cell(
+    "## Advanced: Forcing Header Values (Overrides)\n"
+    "Sometimes, instrument headers contain incorrect, missing, or unreliable values. "
+    "You can use the `forced_values` section to strictly override these values.\n\n"
+    "### Mapping vs. Forcing\n"
+    "*   **`header_keywords` (Mapping):** Use this when the value exists in the header but has a different name (e.g., mapping `EXPTIME` to `EXPOSURE`).\n"
+    "*   **`forced_values` (Overriding):** Use this when you want to ignore the header completely and enforce a specific value (e.g., forcing `GAIN` to `0.33` because the header incorrectly says `1.0`).\n\n"
+    "Values defined in `forced_values` have **Priority 1**."
+))
+
+nb_config['cells'].append(nbf.v4.new_code_cell(
+    "import json\n\n"
+    "# 1. Load the existing configuration\n"
+    "with open(file_path, 'r') as file:\n"
+    "    config_data = json.load(file)\n\n"
+    "# 2. Apply a forced value override\n"
+    "# We force 'gain' to 0.33. The system will now use 0.33 even if the FITS header says otherwise.\n"
+    "config_data['forced_values'] = {\n"
+    "    'gain': 0.33\n"
+    "}\n\n"
+    "# 3. Save the updated configuration\n"
+    "with open(file_path, 'w') as file:\n"
+    "    json.dump(config_data, file, indent=2)\n\n"
+    "print(f'Updated {instrument_name}.json with forced values.')\n"
+    "print(json.dumps(config_data, indent=2))"
+))
+
+# --- NUEVA SECCIÓN: FILTER MAPPING ---
+nb_config['cells'].append(nbf.v4.new_markdown_cell(
+    "## Advanced: Filter Mapping (Standardization)\n"
+    "Different cameras and acquisition software use different names for filters (e.g., `Red`, `R`, `r_prime`, `650nm`). "
+    "However, the GPUPhot pipeline requires **Standard Internal Codes** to correctly select the photometric catalog (e.g., Pan-STARRS, SkyMapper, Gaia).\n\n"
+    "You can use the `filter_map` section to translate your specific header values to these internal codes.\n\n"
+    "### Valid Internal Standard Codes:\n"
+    "Use one of these as the **Target** value in your map:\n"
+    "*   **Broadband / Clear:** `Lum` (Luminance), `Open` (Clear).\n"
+    "*   **Sloan / PanSTARRS:** `SDSSu`, `SDSSg`, `SDSSr`, `SDSSi`, `SDSSzs`, `SDSSy`.\n\n"
+    "**Example:** If your FITS header contains `FILTER = 'Deep_Red_Bin2'`, you should map it to `SDSSr` or `SDSSi`."
+))
+
+nb_config['cells'].append(nbf.v4.new_code_cell(
+    "import json\n\n"
+    "# 1. Load the existing configuration\n"
+    "with open(file_path, 'r') as file:\n"
+    "    config_data = json.load(file)\n\n"
+    "# 2. Define the filter map\n"
+    "# Format: \"Your_Header_Value\": \"Standard_Internal_Code\"\n"
+    "config_data['filter_map'] = {\n"
+    "    \"Red_Special\": \"SDSSr\",\n"
+    "    \"Green_Bin2\": \"SDSSg\",\n"
+    "    \"Luminance_UVIR\": \"Lum\",\n"
+    "    \"Ha_7nm\": \"SDSSr\"   # H-alpha is often calibrated against r-band\n"
+    "}\n\n"
+    "# 3. Save the updated configuration\n"
+    "with open(file_path, 'w') as file:\n"
+    "    json.dump(config_data, file, indent=2)\n\n"
+    "print(f'Updated {instrument_name}.json with filter map.')\n"
+    "print(json.dumps(config_data, indent=2))"
+))
+# -------------------------------------
+
 # Sección 4: Exploring Configuration Files
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Exploring Configuration Files\n"
-    "The following code explores the configuration files in `INSTRUMENT_CONFIG_BASE_PATH`."
+    "The following code explores all the configuration files currently available in your configuration directory."
 ))
 
 nb_config['cells'].append(nbf.v4.new_code_cell(
@@ -108,7 +175,7 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
 # Sección final: Link to the next notebook
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Next Steps\n"
-    "Now that you have explored and customized instrument configurations, proceed to the next notebook to learn how to process images:\n"
+    "Now that you have configured your instrument, proceed to the next notebook to learn how to process images:\n"
     "- [3. Task Execution](./3_Task_Execution_Notebook.ipynb)"
 ))
 
@@ -117,7 +184,6 @@ nb_config['cells'].append(nbf.v4.new_markdown_cell(
 parser = argparse.ArgumentParser(description="Generate a Jupyter Notebook.")
 
 # Añadir un argumento opcional '--output-dir'
-# Si no se proporciona, se usará el valor 'default'.
 parser.add_argument(
     '--output-dir',
     type=str,
