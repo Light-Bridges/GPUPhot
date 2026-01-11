@@ -143,16 +143,22 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
 
     # Usar un contexto para conv_ima y conv_sigma
     with cp.cuda.Stream():  # Asegura la ejecución asíncrona y la liberación de recursos
-        conv_ima = convolve_fft(img, kernel, **kwargs)
-        conv_sigma = conv_ima / rms / cp.sqrt(kernel.shape[0] * kernel.shape[1])
-        del kernel, conv_ima  # Liberar kernel y conv_ima tan pronto como sea posible
-        mempool.free_all_blocks()  # Asegurar liberación
+        # conv_ima = convolve_fft(img, kernel, **kwargs)
+        # conv_sigma = conv_ima / rms / cp.sqrt(kernel.shape[0] * kernel.shape[1])
+        # del kernel, conv_ima  # Liberar kernel y conv_ima tan pronto como sea posible
+        # mempool.free_all_blocks()  # Asegurar liberación
 
-        conv_sigma[:border, :] = 0
-        conv_sigma[-border:, :] = 0
-        conv_sigma[:, :border] = 0
-        conv_sigma[:, -border:] = 0
-        coor_f = find_local_max(conv_sigma, min_distance=int(3 / pxscale), threshold_abs=min_snr)
+        # conv_sigma[:border, :] = 0
+        # conv_sigma[-border:, :] = 0
+        # conv_sigma[:, :border] = 0
+        # conv_sigma[:, -border:] = 0
+        # coor_f = find_local_max(conv_sigma, min_distance=int(3 / pxscale), threshold_abs=min_snr)
+
+        coor_f, conv_sigma = detect_sources_psf(img, rms, 2, kernel, None, None, min_snr=3, **kwargs)
+        coor_f = cp.round(coor_f[(coor_f[:, 0] > border) & (coor_f[:, 0] < img.shape[0] - border) & (coor_f[:, 1] > border) & (
+            coor_f[:, 1] < img.shape[1] - border)]).astype(cp.int32)
+        del kernel
+
         dist = get_centroids_distance_kdtree(coor_f.get())
         dist_mask = dist > dist_px
         coor_f = coor_f[dist_mask]
@@ -167,7 +173,7 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
             raise InsufficientStarsError(num_stars=0)
 
         coor_f = cp.asarray(coor_f)[m]
-        coor_f = find_local_centroid(conv_sigma, coor_f, int(3 / pxscale))
+        # coor_f = find_local_centroid(conv_sigma, coor_f, int(3 / pxscale))
 
         del conv_sigma  # Liberar antes del sort
 
