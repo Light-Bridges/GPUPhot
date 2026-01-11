@@ -2826,7 +2826,8 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
                     exptime: float, satlevel: float, target_ra: float, target_dec: float = None, n_images: int = 1,
                     SP_filt: bool = True, CR_filt: bool = False, border: int = 10, center_factor: float = 0.7,
                     pca_method: bool = True, tile_section: int = 1000, max_stars_ref: int = 15, min_snr: int = 5,
-                    color_range: float = 0.6, tile_section_psf: int = 2500, zp_maxmag: float = 21, **kwargs):
+                    color_range: float = 0.6, tile_section_psf: int = 2500, zp_maxmag: float = 21,
+                    sip_order: int = 1, **kwargs):
     """
     Calibrate an image.
 
@@ -3057,7 +3058,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     dfm_ast = dfm_ast.sort_values('snr', ascending=False).dropna().reset_index(drop=True)
 
     # Astrometrize
-    h_wcs = astrometrice2(dfm_ast, scale, target_ra, target_dec, imadata_shape, sip_order=1)
+    h_wcs = astrometrice2(dfm_ast, scale, target_ra, target_dec, imadata_shape, sip_order=sip_order)
     del dfm_ast
     if h_wcs == {}:
         logger.error('Astrometry failed')
