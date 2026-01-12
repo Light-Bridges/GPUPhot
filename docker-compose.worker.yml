@@ -25,6 +25,33 @@ services:
       GPU_ID: ${GPU_ID:-0}
       INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
       IMAGE_BASE_PATH: /data/images
+      # -----------------------------------------------------------------------------------------
+      # LEGATE / CUPYNUMERIC MEMORY CONFIGURATION
+      # -----------------------------------------------------------------------------------------
+      # When running Legate-based applications (like cuPyNumeric) via standard Python interpreters
+      # (e.g., Celery workers), the runtime ignores standard environment variables like LEGATE_FBMEM.
+      # Instead, configuration MUST be passed via the 'LEGATE_CONFIG' environment variable.
+      #
+      # This variable constructs a command-line-like string of options for the Legate runtime.
+      #
+      # Configuration Flags:
+      #   --fbmem <MB> : Framebuffer Memory (GPU VRAM).
+      #                  The amount of GPU memory reserved for the application.
+      #                  Default: 1024 MB (1GB). Increase this for larger image processing tasks.
+      #
+      #   --sysmem <MB>: System Memory (CPU DRAM).
+      #                  The amount of host RAM reserved for the application runtime.
+      #                  Default: 2048 MB (2GB).
+      #
+      #   --zcmem <MB> : Zero-Copy Memory (Pinned/Mapped Memory).
+      #                  Host memory mapped into the GPU address space for fast data transfers.
+      #                  Default: 256 MB.
+      #
+      # Usage:
+      #   You can override these defaults by setting the corresponding environment variables
+      #   (LEGATE_FBMEM, LEGATE_SYSMEM, LEGATE_ZCMEM) in your .env file.
+      # -----------------------------------------------------------------------------------------
+      LEGATE_CONFIG: "--fbmem ${LEGATE_FBMEM:-1024} --sysmem ${LEGATE_SYSMEM:-2048} --zcmem ${LEGATE_ZCMEM:-256}"
     volumes:
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z

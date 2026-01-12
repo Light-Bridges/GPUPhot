@@ -4,6 +4,45 @@ x-celery-env: &celery-env
   CELERY_BROKER_URL: amqp://gpuphot:gpuphot@rabbitmq:5672/
   CELERY_RESULT_BACKEND: redis://redis:6379/0
 
+x-worker-env: &worker-env
+  <<: *celery-env
+  INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
+  POSTGRES_DB: GPUPhotDB
+  POSTGRES_USER: admin
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
+  INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
+  IMAGE_BASE_PATH: /data/images
+
+x-gpu-env: &gpu-env
+  GPU_ID: ${GPU_ID:-0}
+  # -----------------------------------------------------------------------------------------
+  # LEGATE / CUPYNUMERIC MEMORY CONFIGURATION
+  # -----------------------------------------------------------------------------------------
+  # When running Legate-based applications (like cuPyNumeric) via standard Python interpreters
+  # (e.g., Celery workers), the runtime ignores standard environment variables like LEGATE_FBMEM.
+  # Instead, configuration MUST be passed via the 'LEGATE_CONFIG' environment variable.
+  #
+  # This variable constructs a command-line-like string of options for the Legate runtime.
+  #
+  # Configuration Flags:
+  #   --fbmem <MB> : Framebuffer Memory (GPU VRAM).
+  #                  The amount of GPU memory reserved for the application.
+  #                  Default: 1024 MB (1GB). Increase this for larger image processing tasks.
+  #
+  #   --sysmem <MB>: System Memory (CPU DRAM).
+  #                  The amount of host RAM reserved for the application runtime.
+  #                  Default: 2048 MB (2GB).
+  #
+  #   --zcmem <MB> : Zero-Copy Memory (Pinned/Mapped Memory).
+  #                  Host memory mapped into the GPU address space for fast data transfers.
+  #                  Default: 256 MB.
+  #
+  # Usage:
+  #   You can override these defaults by setting the corresponding environment variables
+  #   (LEGATE_FBMEM, LEGATE_SYSMEM, LEGATE_ZCMEM) in your .env file.
+  # -----------------------------------------------------------------------------------------
+  LEGATE_CONFIG: "--fbmem ${LEGATE_FBMEM:-1024} --sysmem ${LEGATE_SYSMEM:-2048} --zcmem ${LEGATE_ZCMEM:-256}"
+
 x-common-worker-backend: &common-worker-backend
   build:
     context: .
@@ -15,15 +54,6 @@ x-common-worker-backend: &common-worker-backend
   #  env_file:
   #    - path: ./.env
   #      required: false
-  environment:
-    <<: *celery-env
-    INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
-    GPU_ID: ${GPU_ID:-0}
-    POSTGRES_DB: GPUPhotDB
-    POSTGRES_USER: admin
-    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
-    INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
-    IMAGE_BASE_PATH: /data/images
   volumes:
     - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
     - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
@@ -47,14 +77,7 @@ x-common-profiler: &common-profiler
   profiles: [ "debug" ]
   privileged: true
   environment:
-    <<: *celery-env
-    INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
-    GPU_ID: ${GPU_ID:-0}
-    POSTGRES_DB: GPUPhotDB
-    POSTGRES_USER: admin
-    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
-    INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
-    IMAGE_BASE_PATH: /data/images
+    <<: [*worker-env, *gpu-env]
     NVIDIA_PERSISTENCE_MODE: "on"
     CUDA_DEVICE_ORDER: PCI_BUS_ID
     NVIDIA_VISIBLE_DEVICES: all
@@ -95,10 +118,16 @@ services:
 
   beat:
     <<: *common-worker-backend
+    environment:
+      <<: *worker-env
+      NVIDIA_VISIBLE_DEVICES: "none"
+      NVIDIA_DRIVER_CAPABILITIES: ""
     command: [ "celery", "-A", "gpuphot_worker.worker_app", "beat" , "-S", "redbeat.RedBeatScheduler" ]
 
   gpuphot_worker:
     <<: *common-worker-backend
+    environment:
+      <<: [*worker-env, *gpu-env]
     command: [ "celery", "-A", "gpuphot_worker.worker_app", "worker", "--pool=gevent", "-c", "${CELERY_CONCURRENCY:-1}", "-n", "gpuphot-worker-${GPU_ID:-0}", "--soft-time-limit", "240", "--time-limit", "300" ]
     deploy:
       resources:
@@ -122,7 +151,7 @@ services:
     ports:
       - "${JUPYTER_PORT:-8888}:8888"
     environment:
-      <<: *celery-env
+      <<: [*celery-env, *gpu-env]
       JUPYTER_ENABLE_LAB: "yes"
       INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
       INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
@@ -249,5 +278,3 @@ services:
             - driver: nvidia
               device_ids: [ "${GPU_ID:-0}" ]
               capabilities: [ gpu ]
-
-
