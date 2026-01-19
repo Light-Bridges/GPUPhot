@@ -2945,7 +2945,9 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     unit_star_dataset = unit_star_dataset[mask_star_dataset]
     coord = coord[mask_star_dataset]
 
-    star_dataset_ref = unit_star_dataset[center_mask[mask_star_dataset]][:max_stars_ref, :, :]
+    star_dataset_ref = unit_star_dataset[center_mask[mask_star_dataset]]
+    star_dataset_ref = star_dataset_ref[cp.argsort(scaling[center_mask & mask_star_dataset, 3])[::-1]]
+    star_dataset_ref = star_dataset_ref[:max_stars_ref, :, :]
     del center_mask, unit_star_dataset_stds, scaling
     if star_dataset_ref.shape[0] < 5:
         logger.error('Less than 5 isolated stars detected. Image may be too crowded or too noisy')
