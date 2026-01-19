@@ -2940,7 +2940,8 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     # Find reference psf
     unit_star_dataset = star_dataset.astype(cp.double) / scaling[:, 3][:, None, None]
     center_mask = (coord[:, 1] > xmin) & (coord[:, 1] < xmax) & (coord[:, 0] > ymin) & (coord[:, 0] < ymax)
-    unit_star_dataset_stds = cp.std(unit_star_dataset, axis=(1, 2))
+    # unit_star_dataset_stds = cp.std(unit_star_dataset, axis=(1, 2))
+    unit_star_dataset_stds = scaling[:, 0] / scaling[:, 3]
     mask_star_dataset = unit_star_dataset_stds < cp.percentile(cp.std(unit_star_dataset, axis=(1, 2)), 95.4)
     unit_star_dataset = unit_star_dataset[mask_star_dataset]
     coord = coord[mask_star_dataset]
