@@ -1,3 +1,53 @@
+// SPDX-License-Identifier: MIT
+// default.json — Instrument configuration defaults for GPUPhot
+//
+// This file defines the default instrument configuration used by the
+// GPUPhot image processing pipeline. It is a human-editable JSON-style
+// configuration (comments are used for readability). The file contains
+// the following logical sections:
+//
+// 1) header_keywords: mapping of internal canonical names to FITS header
+//    keyword names expected in incoming image headers. These mappings are
+//    used to translate heterogeneous FITS headers into the pipeline's
+//    canonical field names.
+//
+// 2) camera_specs: fallback/default values for camera specifications that
+//    should be used when the corresponding keywords are missing or invalid
+//    in the FITS header. These are the lowest-priority defaults (Priority 3).
+//
+// 3) processing_params: tuning parameters for internal processing such as
+//    tile sizes, filtering options and padding. These are used by the
+//    image processor and can be tuned per-instrument.
+//
+// 4) image_reduction: configuration for automatic reduction (bin/crop) when
+//    requested or when memory/errors require it. The pipeline accepts
+//    values: "always", "never", "on_failure" for `apply_reduction`.
+//
+// 5) forced_values: strict overrides (Priority 1). Any value declared
+//    here will replace header values and camera_specs defaults. Use with
+//    caution — forcing values is intended to fix incorrect or missing
+//    metadata when the instrument cannot provide reliable headers.
+//
+// 6) filter_map: mapping from many possible filter names found in headers
+//    into the pipeline's standard internal codes (e.g., SDSSr, Lum). This
+//    mapping is used to select photometric catalogs and calibration.
+//
+// Conventions and priorities
+// --------------------------
+// - Priority 1: forced_values (strict overrides)
+// - Priority 2: values extracted from FITS headers using header_keywords
+// - Priority 3: camera_specs (fallback defaults)
+//
+// Editing
+// -------
+// - This file is intended to be edited by instrument maintainers. Keep
+//   comments to document changes and rationale. When deploying changes, the
+//   processors will read from the configured instrument config directory
+//   (see the environment variable `INSTRUMENT_CONFIG_BASE_PATH`).
+// - Do NOT remove the JSON keys; only change values or add new aliases in
+//   `filter_map`. If you prefer, create a per-instrument JSON that overrides
+//   defaults rather than editing this global file.
+
 {
   "header_keywords": {
     // Keyword for exposure time in the FITS header
