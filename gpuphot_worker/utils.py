@@ -1,3 +1,16 @@
+# SPDX-License-Identifier: MIT
+"""
+Helper utilities for gpuphot_worker: file I/O, image saving and image transformations.
+
+This module provides:
+- get_processor: factory wrapper to build image processors from project module.
+- open_image_file: robust opening for FITS and NPY images, returning data and header.
+- save_processed_image: save processed data to a standardized processed-images folder.
+- crop_and_bin_image: apply binning and cropping with careful WCS/header updates.
+
+Docstrings use NumPy-style conventions and all comments are in English.
+"""
+
 import os
 from typing import Optional, Tuple, Union
 
@@ -24,10 +37,15 @@ def get_processor(instrument_name=None):
     """
     Create a processor with optional custom instrument and configuration path.
 
-    :param instrument_name: Name of the instrument to use.
-    :type instrument_name: str or None
-    :return: Configured image processor
-    :rtype: ImageProcessor
+    Parameters
+    ----------
+    instrument_name : str or None
+        Name of the instrument to use.
+
+    Returns
+    -------
+    ImageProcessor
+        Configured image processor
     """
     instrument_name = instrument_name or os.environ.get('INSTRUMENT_NAME', 'default_instrument')
     config_base_path = os.environ.get('INSTRUMENT_CONFIG_BASE_PATH', '/gpuphot/instrument_configs')
@@ -38,16 +56,28 @@ def open_image_file(file_path: str) -> Tuple[np.ndarray, fits.Header]:
     """
     Opens an astronomical image file (FITS or NPY) and returns the data and header.
 
-    For NPY files, it first attempts to load metadata from a corresponding '.txt'
-    file (same basename). If the '.txt' file is not found or cannot be parsed,
-    a minimal FITS header is generated with basic dimension information,
-    and a warning is logged.
+    For NPY files, the function attempts to load metadata from an associated '.txt'
+    file (same basename). If the '.txt' file is missing or cannot be parsed, a
+    minimal FITS header is generated with reasonable defaults and a warning is logged.
 
-    :param file_path: Path to the image file (.fits or .npy).
-    :return: Tuple containing image data (as float32) and FITS header object.
-    :raises FileNotFoundError: If the specified file_path does not exist.
-    :raises ValueError: If the file format is not supported (.fits, .npy).
-    :raises IOError: If there's an error reading the FITS file or NPY data.
+    Parameters
+    ----------
+    file_path : str
+        Path to the image file (.fits or .npy).
+
+    Returns
+    -------
+    tuple
+        Tuple containing image data (as float32) and FITS header object.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified file_path does not exist.
+    ValueError
+        If the file format is not supported (.fits, .fit, .npy).
+    IOError
+        If there's an error reading the FITS file or NPY data.
     """
     logger.debug(f"Attempting to open image file: {file_path}")
 
@@ -154,17 +184,26 @@ def save_processed_image(file_path, base_path, imdata, hwcs):
     """
     Saves the processed image data and header as a FITS file in a 'gpuphot_processed' subdirectory.
 
-    :param file_path: Original file path.
-    :type file_path: str
-    :param base_path: Base path for relative paths.
-    :type base_path: str
-    :param imdata: Processed image data.
-    :type imdata: numpy.ndarray
-    :param hwcs: Updated header with WCS information.
-    :type hwcs: astropy.io.fits.Header
-    :return: Path of the saved FITS file.
-    :rtype: str
-    :raises ValueError: If there's an issue creating the output directory.
+    Parameters
+    ----------
+    file_path : str
+        Original file path.
+    base_path : str
+        Base path for relative paths.
+    imdata : numpy.ndarray
+        Processed image data.
+    hwcs : astropy.io.fits.Header
+        Updated header with WCS information.
+
+    Returns
+    -------
+    str
+        Path of the saved FITS file.
+
+    Raises
+    ------
+    ValueError
+        If there's an issue creating the output directory.
     """
     # Get the relative path
     process_file = os.path.relpath(file_path, base_path)
@@ -182,7 +221,6 @@ def save_processed_image(file_path, base_path, imdata, hwcs):
     photometrized_image.writeto(output_path, overwrite=True)
 
     return output_path
-
 
 # def crop_and_bin_image(fits_file, binning, binning_method='sum', crop_size=None, center=None):
 #     """
@@ -364,24 +402,33 @@ def crop_and_bin_image(fits_file: str,
     manually updating WCS for crops to ensure correctness.
     The output file is always in FITS format.
 
-    :param fits_file: Path to the FITS or NPY file to process.
-    :param binning: Binning factor (int >= 1). If 1, no binning is applied.
-    :param binning_method: 'sum' or 'median'. Method for combining pixels during binning.
-    :param crop_size: Desired output size in pixels after cropping.
-                      None = no cropping. Int = square crop. Tuple = (width, height).
-    :param center: Defines the center of the crop region.
-                   - If None (default): The crop is centered geometrically, ensuring the
-                     point corresponding to the geometric center of the *original* image
-                     becomes the geometric center of the cropped image.
-                   - If tuple (x, y): Interpreted as the desired center in *pixel coordinates*
-                     (0-based, X=axis1, Y=axis0) relative to the *original* image frame.
-                     These coordinates are then transformed to the current (potentially binned)
-                     frame before cropping.
-    :return: Path to the resulting FITS file.
-    :raises ValueError: If parameters are invalid, coordinates are out of bounds,
-                       or the crop region is invalid.
-    :raises IOError: If there are problems reading/writing files.
-    :raises FileNotFoundError: If the input file does not exist.
+    Parameters
+    ----------
+    fits_file : str
+        Path to the FITS or NPY file to process.
+    binning : int
+        Binning factor (int >= 1). If 1, no binning is applied.
+    binning_method : str, optional
+        'sum' or 'median'. Method for combining pixels during binning.
+    crop_size : int or tuple or None, optional
+        Desired output size in pixels after cropping. None = no cropping.
+    center : tuple or None, optional
+        Defines the center of the crop region; coordinates are given relative to
+        the original image frame and transformed if binning is applied.
+
+    Returns
+    -------
+    str
+        Path to the resulting FITS file.
+
+    Raises
+    ------
+    ValueError
+        If parameters are invalid, coordinates are out of bounds, or the crop region is invalid.
+    IOError
+        If there are problems reading/writing files.
+    FileNotFoundError
+        If the input file does not exist.
     """
     relative_path = os.path.relpath(fits_file, BASE_IMAGES_PATH) if 'BASE_IMAGES_PATH' in globals() else fits_file
     logger.debug(

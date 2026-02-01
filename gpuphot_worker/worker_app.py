@@ -1,3 +1,12 @@
+# SPDX-License-Identifier: MIT
+"""
+Celery application factory and scheduled tasks for the gpuphot_worker service.
+
+This module configures the Celery app, loads configuration from
+`gpuphot_worker.celeryconfig` and discovers tasks in the `gpuphot_worker.tasks`
+module. A sample periodic task schedule is included as an example.
+"""
+
 from celery import Celery
 from celery.schedules import crontab
 

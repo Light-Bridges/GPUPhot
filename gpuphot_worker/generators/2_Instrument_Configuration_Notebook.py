@@ -1,13 +1,23 @@
+# SPDX-License-Identifier: MIT
+"""
+Notebook generator: Instrument Configuration
+
+Generates a Jupyter notebook that explains how to inspect and create
+instrument configuration JSON files used by the GPUPhot image processor.
+This generator is intended to be invoked by the `initialize_notebooks.sh`
+initializer.
+"""
+
 import argparse
 import os
 from pathlib import Path
 
 import nbformat as nbf
 
-# Crear un nuevo notebook
+# Create a new notebook
 nb_config = nbf.v4.new_notebook()
 
-# Título y descripción del notebook
+# Title and description of the notebook
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "# Instrument Configuration\n"
     "This notebook demonstrates how to explore, create, and customize instrument configuration files.\n\n"
@@ -18,7 +28,7 @@ nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "Any JSON file you create or edit here will be immediately available in your host folder."
 ))
 
-# Sección 1: Displaying the Default Configuration
+# Section 1: Displaying the Default Configuration
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Displaying the Default Configuration\n"
     "The following code displays the default configuration included in the library by directly reading the `default.json` file, including comments.\n\n"
@@ -41,7 +51,7 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
     "    print(f'Error reading default.json: {e}')"
 ))
 
-# Sección 2: Creating a Default Configuration File
+# Section 2: Creating a Default Configuration File
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Creating a Default Configuration File\n"
     "The following code demonstrates how to generate a default configuration file.\n\n"
@@ -61,7 +71,7 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
     "print('Default configuration file generated.')"
 ))
 
-# Sección 3: Creating a Custom Configuration File
+# Section 3: Creating a Custom Configuration File
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Creating a Custom Configuration File\n"
     "The following code demonstrates how to generate a custom configuration file and open it for editing."
@@ -82,7 +92,7 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
     "print(content)"
 ))
 
-# --- SECCIÓN: FORCED VALUES ---
+# Advanced: Forced values explanation
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Advanced: Forcing Header Values (Overrides)\n"
     "Sometimes, instrument headers contain incorrect, missing, or unreliable values. "
@@ -110,7 +120,7 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
     "print(json.dumps(config_data, indent=2))"
 ))
 
-# --- NUEVA SECCIÓN: FILTER MAPPING ---
+# New section: Filter mapping explanation
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Advanced: Filter Mapping (Standardization)\n"
     "Different cameras and acquisition software use different names for filters (e.g., `Red`, `R`, `r_prime`, `650nm`). "
@@ -142,9 +152,8 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
     "print(f'Updated {instrument_name}.json with filter map.')\n"
     "print(json.dumps(config_data, indent=2))"
 ))
-# -------------------------------------
 
-# Sección 4: Exploring Configuration Files
+# Exploring configuration files
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Exploring Configuration Files\n"
     "The following code explores all the configuration files currently available in your configuration directory."
@@ -172,18 +181,15 @@ nb_config['cells'].append(nbf.v4.new_code_cell(
     "            print(f'Error reading {filename}: {e}')"
 ))
 
-# Sección final: Link to the next notebook
+# Final section: Link to the next notebook
 nb_config['cells'].append(nbf.v4.new_markdown_cell(
     "## Next Steps\n"
     "Now that you have configured your instrument, proceed to the next notebook to learn how to process images:\n"
     "- [3. Task Execution](./3_Task_Execution_Notebook.ipynb)"
 ))
 
-# Guardar el notebook de configuración
-
+# Save the notebook
 parser = argparse.ArgumentParser(description="Generate a Jupyter Notebook.")
-
-# Añadir un argumento opcional '--output-dir'
 parser.add_argument(
     '--output-dir',
     type=str,

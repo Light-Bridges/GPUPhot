@@ -1,3 +1,12 @@
+# SPDX-License-Identifier: MIT
+"""
+Human-readable descriptions for common FITS header keys used by GPUPhot.
+
+This dictionary maps FITS header keyword names to short descriptions and units
+so they can be used when writing or annotating processed FITS headers. Keys are
+intentionally uppercase as they correspond to FITS conventions.
+"""
+
 HEADER_DESCRIPTIONS = {
     'BITPIX': 'Bits that represent a data value (8,16,32,-32,-64)',
     'COMODE': 'Color mode',

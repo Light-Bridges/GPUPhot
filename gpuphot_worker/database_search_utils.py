@@ -1,3 +1,11 @@
+# SPDX-License-Identifier: MIT
+"""
+Read-only database helper functions for gpuphot_worker.
+
+Provides convenient search utilities that return pandas DataFrames for common
+queries used by the worker and monitoring tools.
+"""
+
 import os
 
 import pandas as pd
@@ -13,8 +21,10 @@ def connect_to_db():
     """
     Establish a connection to the PostgreSQL database.
 
-    :return: A database connection object or None if the connection fails.
-    :rtype: psycopg2.extensions.connection or None
+    Returns
+    -------
+    psycopg2.extensions.connection or None
+        A database connection object or None if the connection fails.
     """
     try:
         conn = psycopg2.connect(
@@ -32,10 +42,13 @@ def connect_to_db():
 
 def get_tables_and_columns():
     """
-    Retrieve all tables and their columns from the database, including column data types.
+    Retrieve all public tables and their columns with data types.
 
-    :return: A dictionary where keys are table names and values are lists of tuples (column_name, data_type).
-    :rtype: dict
+    Returns
+    -------
+    dict or None
+        A dictionary where keys are table names and values are lists of tuples
+        (column_name, data_type). Returns None if the connection cannot be made.
     """
     conn = connect_to_db()
     if conn is None:
@@ -76,12 +89,17 @@ def results_to_dataframe(results, column_names):
     """
     Convert query results into a pandas DataFrame.
 
-    :param results: List of tuples containing query results.
-    :type results: list
-    :param column_names: List of column names.
-    :type column_names: list
-    :return: A pandas DataFrame.
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    results : list
+        List of tuples containing query results.
+    column_names : list
+        List of column names.
+
+    Returns
+    -------
+    pd.DataFrame
+        A pandas DataFrame representing the query results.
     """
     if results is None or len(results) == 0:
         return pd.DataFrame()
@@ -94,16 +112,21 @@ def search_by_radec(ra, dec, radius, table='imastats'):
     """
     Search for records within a specified radius around given coordinates (RA, Dec).
 
-    :param ra: Right Ascension (in degrees).
-    :type ra: float
-    :param dec: Declination (in degrees).
-    :type dec: float
-    :param radius: Search radius (in degrees).
-    :type radius: float
-    :param table: Table to search in ('imastats' or 'imaphot').
-    :type table: str
-    :return: A DataFrame containing the search results.
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    ra : float
+        Right Ascension (in degrees).
+    dec : float
+        Declination (in degrees).
+    radius : float
+        Search radius (in degrees).
+    table : str, optional
+        Table to search in ('imastats' or 'imaphot').
+
+    Returns
+    -------
+    pd.DataFrame or None
+        A DataFrame containing the search results, or None on connection failure.
     """
     conn = connect_to_db()
     if conn is None:
@@ -144,12 +167,17 @@ def search_by_date_range(start_date, end_date):
     """
     Search for records within a specified date range.
 
-    :param start_date: Start date (inclusive).
-    :type start_date: str
-    :param end_date: End date (inclusive).
-    :type end_date: str
-    :return: A DataFrame containing the search results.
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    start_date : str
+        Start date (inclusive).
+    end_date : str
+        End date (inclusive).
+
+    Returns
+    -------
+    pd.DataFrame or None
+        A DataFrame containing the search results, or None on connection failure.
     """
     conn = connect_to_db()
     if conn is None:
@@ -187,10 +215,15 @@ def search_by_filename(filename_part):
     """
     Search for records by filename or partial filename.
 
-    :param filename_part: Part of the filename to search for.
-    :type filename_part: str
-    :return: A DataFrame containing the search results.
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    filename_part : str
+        Part of the filename to search for.
+
+    Returns
+    -------
+    pd.DataFrame or None
+        A DataFrame containing the search results, or None on connection failure.
     """
     conn = connect_to_db()
     if conn is None:
@@ -225,10 +258,15 @@ def search_transients(date_after):
     """
     Search for transient objects observed after a specified date.
 
-    :param date_after: Date to search for transients after (inclusive).
-    :type date_after: str
-    :return: A DataFrame containing the search results.
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    date_after : str
+        Date to search for transients after (inclusive).
+
+    Returns
+    -------
+    pd.DataFrame or None
+        A DataFrame containing the search results, or None on connection failure.
     """
     conn = connect_to_db()
     if conn is None:
@@ -266,10 +304,15 @@ def search_transient_images(date_after):
     """
     Search for transient images observed after a specified date.
 
-    :param date_after: Date to search for transient images after (inclusive).
-    :type date_after: str
-    :return: A DataFrame containing the search results.
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    date_after : str
+        Date to search for transient images after (inclusive).
+
+    Returns
+    -------
+    pd.DataFrame or None
+        A DataFrame containing the search results, or None on connection failure.
     """
     conn = connect_to_db()
     if conn is None:
@@ -308,10 +351,15 @@ def search_by_filenames(filenames):
     """
     Search for records by a list of filenames.
 
-    :param filenames: List of filenames to search for.
-    :type filenames: list
-    :return: A DataFrame containing the search results.
-    :rtype: pd.DataFrame
+    Parameters
+    ----------
+    filenames : list
+        List of filenames to search for.
+
+    Returns
+    -------
+    pd.DataFrame or None
+        A DataFrame containing the search results, or None on connection failure.
     """
     conn = connect_to_db()
     if conn is None:

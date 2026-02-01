@@ -1,13 +1,23 @@
+# SPDX-License-Identifier: MIT
+"""
+Notebook generator: Task Execution
+
+Generates a Jupyter notebook that demonstrates how to submit and monitor
+Celery tasks for processing images in the GPUPhot system. The notebook includes
+examples for processing single files, directories, scheduling with RedBeat, and
+checking task status.
+"""
+
 import argparse
 import os
 from pathlib import Path
 
 import nbformat as nbf
 
-# Crear un nuevo notebook
+# Create a new notebook
 nb_tasks = nbf.v4.new_notebook()
 
-# Título y descripción del notebook
+# Title and description of the notebook
 nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
     "# Task Execution\n"
     "This notebook demonstrates how to use Celery tasks to process astronomical images.\n\n"
@@ -15,7 +25,7 @@ nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
     "Other file formats are not supported."
 ))
 
-# Sección 1: Processing a Single Image
+# Section 1: Processing a Single Image
 nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
     "## Processing a Single Image\n"
     "The following example demonstrates how to process a single image using `process_image_task`.\n"
@@ -36,7 +46,7 @@ nb_tasks['cells'].append(nbf.v4.new_code_cell(
     "print(f'Task ID for processing {image_path} with {instrument_name}: {result.id}')"
 ))
 
-# Sección 2: Processing a Directory of Images
+# Section 2: Processing a Directory of Images
 nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
     "## Processing a Directory of Images\n"
     "The following examples demonstrate how to use `process_directory_task` to process a directory of images.\n"
@@ -83,7 +93,7 @@ nb_tasks['cells'].append(nbf.v4.new_code_cell(
     "print(f'Task ID for processing FITS files with iKon936 config (force reprocessing): {result.id}')"
 ))
 
-# Sección 3: Checking Task Status
+# Section 3: Checking Task Status
 nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
     "## Checking Task Status\n"
     "After submitting a task, you can check its status using the task ID."
@@ -98,7 +108,7 @@ nb_tasks['cells'].append(nbf.v4.new_code_cell(
     "print(f'Task result: {task_result.result}')"
 ))
 
-# Sección 4: Sending Tasks Directly with Celery App
+# Section 4: Sending Tasks Directly with Celery App
 nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
     "## Sending Tasks Directly with Celery App\n"
     "In addition to using the predefined task functions (`process_image_task` and `process_directory_task`), "
@@ -114,7 +124,7 @@ nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
     "This method requires the name of the task and the arguments to pass to it."
 ))
 
-# Celda para enviar una tarea directamente con Celery App
+# Code cell to send a task using the Celery app
 nb_tasks['cells'].append(nbf.v4.new_code_cell(
     "from gpuphot_worker.worker_app import app\n\n"
     "# Example: Send a task to process a single image\n"
@@ -131,7 +141,7 @@ nb_tasks['cells'].append(nbf.v4.new_code_cell(
     "print(f'Task result: {task_result.result}')"
 ))
 
-# Sección 5: Scheduling Periodic Tasks
+# Section 5: Scheduling Periodic Tasks
 nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
     "## Scheduling Periodic Tasks with RedBeat\n\n"
     "This section demonstrates how to schedule a recurring Celery task using [RedBeat](https://github.com/sibson/redbeat), "
@@ -204,7 +214,7 @@ nb_tasks['cells'].append(nbf.v4.new_code_cell(
     "    print('---')"
 ))
 
-# Sección final: Link to the previous and next notebook
+# Final section: Link to the previous and next notebook
 nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
     "## Next Steps\n"
     "If you need to revisit or modify instrument configurations, go back to the previous notebook:\n"
@@ -213,12 +223,8 @@ nb_tasks['cells'].append(nbf.v4.new_markdown_cell(
     "- [4. Database Query](./4_Database_Query_Notebook.ipynb)"
 ))
 
-# Guardar el notebook de tareas
-
+# Save the notebook
 parser = argparse.ArgumentParser(description="Generate a Jupyter Notebook.")
-
-# Añadir un argumento opcional '--output-dir'
-# Si no se proporciona, se usará el valor 'default'.
 parser.add_argument(
     '--output-dir',
     type=str,
