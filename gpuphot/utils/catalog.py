@@ -1,3 +1,15 @@
+# SPDX-License-Identifier: MIT
+"""
+Catalog and crossmatching utilities.
+
+Provides CPU and GPU implementations for crossmatching coordinates using
+SciPy KDTree (CPU) and RAPIDS cuML (GPU) when available. Also wraps Vizier
+queries and post-processes catalog results for photometric calibration.
+
+Documentation-only changes: translated inline comments to English, added
+module docstring. No functional changes performed.
+"""
+
 from __future__ import annotations
 
 import time
@@ -19,7 +31,7 @@ from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
-# Import cuml. Comprobar si está instalado.
+# Import cuml. Check if installed and available for GPU crossmatch.
 try:
     import cuml
     from cuml.neighbors import NearestNeighbors as cuNearestNeighbors
@@ -35,8 +47,10 @@ except ImportError:
 @nvtx.annotate('crossmatch_sources_gpu_impl', category='utils.catalog_gpu')
 def _crossmatch_sources_gpu_impl(source_coords: cp.ndarray, ref_coords: cp.ndarray,
                                  thres_px: float = 2.0) -> tuple[cp.ndarray, cp.ndarray]:
-    """GPU implementation using cuML (Internal use)."""
-    # (Código de crossmatch_sources_gpu anterior, sin la comprobación CUML_AVAILABLE)
+    """GPU implementation using cuML (internal use).
+
+    Expects CuPy arrays and returns matched indices as CuPy arrays.
+    """
     nvtx_range = nvtx.start_range('_crossmatch_sources_gpu_impl', category='utils.catalog_gpu', color='magenta')
 
     if not isinstance(source_coords, cp.ndarray) or not isinstance(ref_coords, cp.ndarray):
@@ -82,8 +96,10 @@ def _crossmatch_sources_gpu_impl(source_coords: cp.ndarray, ref_coords: cp.ndarr
 @nvtx.annotate('crossmatch_sources_cpu_impl', category='utils.catalog_cpu')
 def _crossmatch_sources_cpu_impl(source_coords: np.ndarray, ref_coords: np.ndarray,
                                  thres_px: float = 2.0) -> tuple[np.ndarray, np.ndarray]:
-    """CPU implementation using KDTree (Internal use)."""
-    # (Código de crossmatch_sources_cpu anterior)
+    """CPU implementation using KDTree (internal use).
+
+    Expects NumPy arrays and returns matched indices as NumPy arrays.
+    """
     nvtx_range = nvtx.start_range('_crossmatch_sources_cpu_impl', category='utils.catalog_cpu', color='blue')
 
     if not isinstance(source_coords, np.ndarray) or not isinstance(ref_coords, np.ndarray):
@@ -117,7 +133,7 @@ def _crossmatch_sources_cpu_impl(source_coords: np.ndarray, ref_coords: np.ndarr
     return source_coords_matched_idx, ref_coords_matched_idx
 
 
-# --- Wrapper Function (La que se debe llamar desde fuera) ---
+# --- Wrapper Function (the external entry point) ---
 @nvtx.annotate('crossmatch_sources', category='utils.catalog')
 def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
     """
@@ -161,22 +177,17 @@ def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
             return result  # Return GPU result directly
         except Exception as gpu_e:
             logger.warning(f"GPU crossmatch failed: {gpu_e}. Falling back to CPU.", exc_info=False)
-            # Fallback will happen below, no need to set use_gpu_attempt back to False
+            # Fallback will happen below
 
-    # --- CPU Path (if GPU not attempted, GPU failed, or input was CPU) ---
-    # This block executes if:
-    # 1. CUML_AVAILABLE is False
-    # 2. is_gpu_input is False
-    # 3. GPU was attempted but failed (Exception caught above)
+    # --- CPU Path (fallback or original CPU input) ---
     logger.debug("Using CPU crossmatch.")
     # Prepare NumPy arrays for CPU implementation
     if is_gpu_input:
-        # Need to transfer data from GPU to CPU for fallback
         transfer_range = nvtx.start_range('transfer_gpu_to_cpu_fallback', category='transfer', color='red')
         source_np = source_coords.get()
         ref_np = ref_coords.get()
         nvtx.end_range(transfer_range)
-    else:  # Input was already CPU
+    else:
         source_np = source_coords
         ref_np = ref_coords
 
@@ -187,11 +198,10 @@ def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
     except Exception as cpu_e:
         logger.error(f"CPU crossmatch failed: {cpu_e}")
         nvtx.end_range(nvtx_range)
-        raise  # Re-raise the exception from the CPU implementation
+        raise
 
-    # Determine final return type based on ORIGINAL input type
+    # Return results matching original input type
     if is_gpu_input:
-        # Original input was GPU, transfer results back
         transfer_back_range = nvtx.start_range('transfer_cpu_to_gpu_fallback_result', category='transfer', color='red')
         result_cp_src = cp.asarray(result_np_src)
         result_cp_ref = cp.asarray(result_np_ref)
@@ -200,7 +210,6 @@ def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
         nvtx.end_range(nvtx_range)
         return result_cp_src, result_cp_ref
     else:
-        # Original input was CPU, return NumPy results
         logger.debug("Returning CPU results (original input was CPU).")
         nvtx.end_range(nvtx_range)
         return result_np_src, result_np_ref
@@ -217,31 +226,28 @@ def _is_valid_result(result: pd.DataFrame, expected_columns: list):
     :return: True if the result is valid, False otherwise.
     :rtype: bool
     """
-    # 1. Verificar si el resultado es None
+    # 1. Check if result is None
     if result is None:
         logger.warning('Custom catalog query returned None. The function might have failed or found no data.')
         return False
 
-    # 2. Verificar si el resultado es un DataFrame de pandas
+    # 2. Verify the result is a pandas DataFrame
     if not isinstance(result, pd.DataFrame):
         logger.warning(f"Custom catalog query did not return a pandas DataFrame. Got type: {type(result)}.")
         return False
 
-    # 3. Verificar si el DataFrame está vacío
+    # 3. Check if the DataFrame is empty
     if result.empty:
         logger.warning('Custom catalog query returned an empty DataFrame. No sources found matching the criteria.')
         return False
 
-    # 4. Verificar si todas las columnas esperadas están presentes
+    # 4. Verify expected columns are present and report specifically which are missing
     if expected_columns:
-        # Usamos sets para encontrar eficientemente las columnas que faltan
         missing_cols = set(expected_columns) - set(result.columns)
         if missing_cols:
-            # Informamos exactamente qué columnas faltan
             logger.warning(f"Custom catalog query result is missing required columns: {sorted(list(missing_cols))}.")
             return False
 
-    # Si todas las validaciones pasan, el resultado es válido
     return True
 
 

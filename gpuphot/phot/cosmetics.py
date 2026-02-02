@@ -1,3 +1,12 @@
+# SPDX-License-Identifier: MIT
+"""
+Cosmetic image filters for gpuphot.phot.
+
+Contains small pre-processing filters such as salt-and-pepper removal (SP_filter)
+and cosmic ray filtering (CR_filter). Implementations prefer CuPy for GPU
+acceleration where available.
+"""
+
 ### # @hierarchical_debug(logger)
 from __future__ import annotations
 

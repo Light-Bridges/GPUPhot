@@ -1,3 +1,23 @@
+# SPDX-License-Identifier: MIT
+"""
+Hierarchical logging utilities for GPUPhot.
+
+This module provides:
+- IndentFormatter: a small logging.Formatter subclass that supports per-thread
+  indentation levels, so nested or recursive operations are visually indented.
+- NotifyingHandler: a handler that forwards selected log entries to a callback
+  as structured dictionaries (useful for web UIs or monitoring systems).
+- SystemInfo: singleton that collects system-level metadata (Python, OS,
+  GPU info, git commit) to include in structured logs.
+- hierarchical_debug: function decorator that logs function entry/exit,
+  arguments, execution time and exceptions using a persistent Logstash
+  handler when enabled.
+
+The module attempts to use GPU-aware libraries (CuPy) and will fall back to
+NumPy when Cupy is not available. It also tries to configure an asynchronous
+Logstash handler when environment variables enable it.
+"""
+
 import atexit
 import functools
 import inspect
@@ -26,7 +46,8 @@ try:
     from logstash_async.formatter import LogstashFormatter
     # from elasticsearch import Elasticsearch
 except ImportError:
-    pass
+    AsynchronousLogstashHandler = None
+    LogstashFormatter = None
 
 load_dotenv()
 
@@ -48,6 +69,13 @@ class IndentFormatter(logging.Formatter):
 
 
 class NotifyingHandler(logging.Handler):
+    """Handler that forwards structured log data to a supplied callback.
+
+    The callback receives a dictionary containing fields such as `message`,
+    `level`, `timestamp` and optional custom extras (event, function_name,
+    arguments, execution_time, exception, traceback).
+    """
+
     def __init__(self, callback):
         super().__init__()
         self.callback = callback
@@ -75,6 +103,10 @@ class NotifyingHandler(logging.Handler):
 
 
 def format_arg(arg):
+    """Return a concise representation of function arguments for logging.
+
+    Handles numpy/cupy arrays, astropy Header objects and common containers.
+    """
     try:
         if isinstance(arg, (np.ndarray, cp.ndarray)):
             return f"{type(arg).__name__}(shape={arg.shape}, dtype={arg.dtype})"
@@ -111,6 +143,12 @@ def format_arg(arg):
 
 
 class SystemInfo:
+    """Singleton collecting system metadata to include in structured logs.
+
+    The instance caches values such as the Cupy version, OS, Python version,
+    GPU information obtained via GPUtil and an attempt to read the local Git
+    commit id for traceability.
+    """
     _instance = None
 
     @classmethod
@@ -120,9 +158,9 @@ class SystemInfo:
         return cls._instance
 
     def __init__(self):
-        # Recopilar información del sistema
+        # Collect system information
         self.system_info = {
-            'cupy_version': cp.__version__,
+            'cupy_version': getattr(cp, '__version__', 'n/a'),
             'os': platform.system(),
             'os_version': platform.version(),
             'kernel_version': platform.release(),
@@ -158,12 +196,12 @@ class SystemInfo:
             }
 
         except Exception as e:
-            # print(f"Error al obtener la información de Git: {e}")
+            # Return None if Git information cannot be retrieved.
             return None
 
     def get_gpu_info(self):
         try:
-            # Obtener información de las GPUs usando GPUtil
+            # Obtain GPU information using GPUtil
             gpus = GPUtil.getGPUs()
             if gpus:
                 return [{
@@ -182,7 +220,7 @@ class SystemInfo:
             return [{'id': -1, 'name': "Error retrieving GPU info", 'error': str(e)}]
 
     def refresh_gpu_info(self):
-        # Método para actualizar solo la información de la GPU
+        # Update only the GPU information in the cached system info
         self.system_info['gpu'] = self.get_gpu_info()
 
 
@@ -259,9 +297,9 @@ def hierarchical_debug(logger_name):
             finally:
                 try:
                     if isinstance(critical_logger.handlers[0], AsynchronousLogstashHandler):
-                        critical_logger.handlers[0].flush()  # Asegúrate de que se envíen los logs.
+                        critical_logger.handlers[0].flush()  # Ensure logs are sent.
                 except Exception as e:
-                    logger.debug(f"Error al enviar logs: {str(e)}")
+                    logger.debug(f"Error sending logs: {str(e)}")
 
                 indent_levels[thread_id] = max(0, current_level)
 
@@ -306,7 +344,7 @@ def setup_logstash_handler(logger):
                 level=logging.DEBUG
             )
 
-            # Asignar el formateador al manejador
+            # Assign formatter to handler
             logstash_handler.setFormatter(formatter)
 
             logger.addHandler(logstash_handler)
@@ -353,9 +391,9 @@ class SingletonLogger:
         else:
             logger.setLevel(logging.ERROR)  # Default to ERROR level.
 
-        # Silenciar LogProcessingWorker
+        # Silence LogProcessingWorker
         log_processing_worker_logger = logging.getLogger("LogProcessingWorker")
-        log_processing_worker_logger.setLevel(logging.CRITICAL)  # Ignorar logs menores a CRITICAL
+        log_processing_worker_logger.setLevel(logging.CRITICAL)  # Ignore logs below CRITICAL
 
         # Configure StreamHandler.
         handler = logging.StreamHandler()

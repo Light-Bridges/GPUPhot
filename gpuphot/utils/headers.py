@@ -1,3 +1,11 @@
+# SPDX-License-Identifier: MIT
+"""
+Header utilities for FITS files used by the gpuphot pipeline.
+
+Contains helpers to update FITS headers with astrometry and photometry
+information and utilities to manipulate header sections.
+"""
+
 from datetime import datetime
 
 try:
@@ -20,11 +28,11 @@ logger = setup_logger(__name__)
 @nvtx.annotate('delete_header_from', category='utils.headers')
 def delete_header_from(header, val):
     """
-    Delete a section from the FITS header.
+    Delete a COMMENT block from the FITS header that contains a given value.
 
     :param header: FITS header.
     :type header: dict
-    :param val: Value to delete.
+    :param val: Value to search for and delete the surrounding block.
     :type val: str
     :return: Modified FITS header.
     :rtype: dict
@@ -136,7 +144,7 @@ def update_header_with_astrometry(imheader, h_wcs, site_latitude, site_longitude
     fovx = np.round(imheader[HeaderKey.NAXIS1.value] * scale / 60, 2)
     fovy = np.round(imheader[HeaderKey.NAXIS2.value] * scale / 60, 2)
 
-    # Usar .get() para evitar KeyError
+    # Use .get() to avoid KeyError
     imheader.insert('COMINIT', ('RA', ra, header_descriptions.get('RA', '')))
     imheader.insert('COMINIT', ('DEC', dec, header_descriptions.get('DEC', '')))
     imheader.insert('COMINIT', ('RAhms', ra_hms, header_descriptions.get('RAhms', '')))
@@ -198,7 +206,7 @@ def update_header_with_photometry(imheader, dic_calib, header_descriptions=None)
     try:
         del imheader['FWHM']
     except KeyError:
-        pass  # Es mejor capturar KeyError específicamente
+        pass  # Better to catch KeyError specifically
 
     imheader['COMINIT'] = 'e'
     imheader.insert('COMINIT', ('COMMENT', '***************************'))
@@ -206,14 +214,14 @@ def update_header_with_photometry(imheader, dic_calib, header_descriptions=None)
     imheader.insert('COMINIT', ('COMMENT', '***************************'))
 
     for v in dic_calib.keys():
-        # Usar .get() para evitar KeyError
+        # Use .get() to avoid KeyError
         description_value = header_descriptions.get(v, '')
         imheader.insert('COMINIT', (v, dic_calib[v], description_value))
 
-    # Usar .get() para la fecha de procesamiento
+    # Use .get() for processing date
     dateproc_value = header_descriptions.get("DATEPROC", '')
 
-    # Inserta la fecha de procesamiento
+    # Insert processing date
     imheader.insert(
         'COMINIT',
         ('DATEPROC',

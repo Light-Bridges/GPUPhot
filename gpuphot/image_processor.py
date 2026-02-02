@@ -1,3 +1,12 @@
+# SPDX-License-Identifier: MIT
+"""
+High-level image processing helper for gpuphot.
+
+Provides an ImageProcessor wrapper that loads instrument configuration,
+translates FITS headers to a canonical set of keywords, and delegates the
+actual image processing (photometry + astrometry) to `gpuphot.phot.photo_gpu`.
+"""
+
 import nvtx
 
 from .instrument_config_parser import InstrumentConfigParser
@@ -61,13 +70,13 @@ class ImageProcessor:
         # The logic for forced values is handled internally by self.header_translator.
         translated_header = self.header_translator.translate_header(imheader)
 
-        # Combina los parámetros de procesamiento con los kwargs
+        # Combine processing parameters with provided kwargs
         params = {**self.processing_params, **kwargs}
 
-        # Llama a la función process_image con el header traducido
+        # Call the core process_image function with the translated header
         phot_df, hwcs = process_image(imdata, translated_header, header_descriptions, **params)
 
-        ## Traduce el header procesado de vuelta a las keywords originales del usuario
+        # Optionally translate the processed header back to original instrument keywords
         # original_hwcs = self.header_translator.translate_back_header(hwcs)
 
         return phot_df, hwcs
@@ -85,7 +94,7 @@ class ImageProcessor:
         return self.header_translator.translate_header(header)
 
 
-# Function to create the processor
+# Factory function to create the processor
 @nvtx.annotate('create_processor', category='image_processor')
 def create_processor(instrument_name, config_dir=None):
     """

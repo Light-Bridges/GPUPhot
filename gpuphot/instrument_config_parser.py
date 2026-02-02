@@ -1,3 +1,13 @@
+# SPDX-License-Identifier: MIT
+"""
+Instrument configuration parser and header translator utilities.
+
+Provides a configurable mapping from instrument-specific FITS header keywords to
+internal canonical keys, default camera specs, processing parameters, and a
+HeaderTranslator helper that enforces forced values and maps filter names to
+standard internal codes.
+"""
+
 import json
 import os
 import warnings

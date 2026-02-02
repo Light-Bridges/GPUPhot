@@ -1,3 +1,18 @@
+# SPDX-License-Identifier: MIT
+"""
+High-level photometry pipeline for gpuphot.
+
+This module contains the primary high-level orchestration of the photometry
+pipeline: image calibration, background estimation, source detection, PSF
+handling, aperture photometry (batch), and final catalog/zero-point
+calculation. The implementation is optimized for GPUs using CuPy and includes
+fallbacks and carefully documented transfer points between CPU and GPU.
+
+Only documentation-level edits were applied in this pass. No functional code
+was modified. Any required runtime fixes are recorded in `FIXERS.md` in the
+same directory.
+"""
+
 from __future__ import annotations
 
 import gc
@@ -547,7 +562,6 @@ def create_aperture_corrections_map_gpu(image_shape: tuple, block_size: int, uni
     gc.collect()
 
     nvtx.end_range(nvtx_range)  # End overall function range
-    # Always return GPU arrays
     return aperture_corrections_final_gpu, aperture_correction_errors_final_gpu, cluster_centers_gpu
 
 
@@ -1358,10 +1372,8 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 #     # Get corresponding back_flux and area values
 #     opt_back_flux_final = cp.zeros_like(opt_flux_final)
 #     if back_flux is not None:
-#         # back_flux shape: (n_radii, n_sources_filt)
 #         opt_back_flux_final = back_flux[source_opt_rad_idx_final, final_source_indices]
 #
-#     # area shape: (n_radii,)
 #     opt_area_final = area[source_opt_rad_idx_final]  # Shape (n_final_sources,)
 #
 #     # Noise components for the final set
@@ -1483,7 +1495,7 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 #         :rtype: tuple(numpy.ndarray, numpy.ndarray, numpy.ndarray, dict)
 #         :raises InsufficientStarsError: If there are not enough isolated stars for processing.
 #         :raises DataValidationError: If input data is invalid or insufficient.
-#         """
+#     """
 #     # Memory pool
 #     mempool = cp.get_default_memory_pool()
 #

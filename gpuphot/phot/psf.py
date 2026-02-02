@@ -1,3 +1,12 @@
+# SPDX-License-Identifier: MIT
+"""
+PSF and star detection utilities for gpuphot.phot.
+
+Provides functions for PSF extraction, star detection, centroiding and
+grouping. The implementation favors GPU (CuPy/RAPIDS) where available and
+falls back to CPU-based libraries when necessary.
+"""
+
 from __future__ import annotations
 
 import cupy as cp
@@ -145,12 +154,12 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
 
     adaptive_memory_management(mempool)
 
-    # Usar un contexto para conv_ima y conv_sigma
-    with cp.cuda.Stream():  # Asegura la ejecución asíncrona y la liberación de recursos
+    # Use a context to ensure asynchronous execution and resource release
+    with cp.cuda.Stream():  # Ensures asynchronous execution and release of resources
         # conv_ima = convolve_fft(img, kernel, **kwargs)
         # conv_sigma = conv_ima / rms / cp.sqrt(kernel.shape[0] * kernel.shape[1])
-        # del kernel, conv_ima  # Liberar kernel y conv_ima tan pronto como sea posible
-        # mempool.free_all_blocks()  # Asegurar liberación
+        # del kernel, conv_ima  # Release kernel and conv_ima as soon as possible
+        # mempool.free_all_blocks()  # Ensure memory pool is freed
 
         # conv_sigma[:border, :] = 0
         # conv_sigma[-border:, :] = 0
@@ -166,7 +175,7 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
         dist = get_centroids_distance_kdtree(coor_f.get())
         dist_mask = dist > dist_px
         coor_f = coor_f[dist_mask]
-        dist = dist[dist_mask]  # Actualizar dist después del filtrado
+        dist = dist[dist_mask]  # Update distances after filtering
         snr = conv_sigma[coor_f[:, 0], coor_f[:, 1]]
         peak = img[coor_f[:, 0], coor_f[:, 1]]
         m = (snr > min_snr) & (peak < sat_lim)
@@ -179,16 +188,16 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
         coor_f = cp.asarray(coor_f)[m]
         # coor_f = find_local_centroid(conv_sigma, coor_f, int(3 / pxscale))
 
-        del conv_sigma  # Liberar antes del sort
+        del conv_sigma  # Release before sorting
 
         if sort:
-            # Calcular sort_metric en la GPU si es posible
-            sort_metric = snr[m].get() + dist[m.get()]  # Ahora dist ya ha sido filtrado.
+            # Compute sort_metric on GPU if possible
+            sort_metric = snr[m].get() + dist[m.get()]  # Now dist has been filtered.
             idx = cp.argsort(np.max(
-                sort_metric) - sort_metric)  # Se calcula con numpy ya que la cantidad de datos a ordenar es pequeña
+                sort_metric) - sort_metric)  # Computed with numpy as the amount of data to sort is small
             coor_f = coor_f[idx]
 
-        # Liberación de memoria
+        # Memory release
         del snr, peak, m, dist, dist_mask, sort_metric, idx
 
     del img, rms

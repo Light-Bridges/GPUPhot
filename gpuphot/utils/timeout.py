@@ -1,3 +1,11 @@
+# SPDX-License-Identifier: MIT
+"""
+Simple executor wrapper to run functions with a timeout using a separate process pool.
+
+Used by catalog query helpers to enforce external network/time-consuming calls to
+respect a maximum wall-time.
+"""
+
 import multiprocess as mp
 
 
@@ -18,4 +26,3 @@ class TimeoutExecutor:
                 raise self.TimeoutError(f"Function {func.__name__} exceeded {self.timeout}s")
             except Exception as e:
                 raise e
-
