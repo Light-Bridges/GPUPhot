@@ -1,11 +1,17 @@
+# SPDX-License-Identifier: MIT
 """
-Implementation of the masked normalized cross-correlation.
-Based on the following publication:
-D. Padfield. Masked object registration in the Fourier domain.
+Masked normalized cross-correlation implementation.
+
+Based on:
+D. Padfield. Masked Object Registration in the Fourier Domain.
 IEEE Transactions on Image Processing (2012)
-and the author's original MATLAB implementation, available on this website:
-http://www.dirkpadfield.com/
+
+This module implements the masked normalized cross-correlation algorithm and
+follows the original MATLAB reference implementation by Dirk Padfield
+(see http://www.dirkpadfield.com/). Bibliographic references are preserved
+in function docstrings to keep scientific attribution.
 """
+
 from functools import partial
 import nvtx
 import cupy as cp
@@ -18,44 +24,43 @@ logger = setup_logger(__name__)
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('_masked_phase_cross_correlation',category='stats.subpixel_masked')
+@nvtx.annotate('_masked_phase_cross_correlation', category='stats.subpixel_masked')
 def _masked_phase_cross_correlation(reference_image, moving_image,
                                     reference_mask, moving_mask=None, overlap_ratio=0.3):
     """
-    Perform masked image translation registration by masked normalized cross-correlation.
+    Perform masked image translation registration using masked normalized cross-correlation.
 
-    :param reference_image: Reference image.
-    :type reference_image: ndarray
-    :param moving_image: Image to register. Must be the same dimensionality as `reference_image`,
-                         but not necessarily the same size.
-    :type moving_image: ndarray
-    :param reference_mask: Boolean mask for `reference_image`. The mask should evaluate to `True`
-                           (or 1) on valid pixels. `reference_mask` should have the same shape as `reference_image`.
-    :type reference_mask: ndarray
-    :param moving_mask: Boolean mask for `moving_image`. The mask should evaluate to `True`
-                        (or 1) on valid pixels. `moving_mask` should have the same shape
-                        as `moving_image`. If `None`, `reference_mask` will be used.
-    :type moving_mask: ndarray or None, optional
-    :param overlap_ratio: Minimum allowed overlap ratio between images. The correlation for
-                          translations corresponding with an overlap ratio lower than this
-                          threshold will be ignored.
-    :type overlap_ratio: float, optional
-    :return: Shift vector (in pixels) required to register `moving_image`
-             with `reference_image`. Axis ordering is consistent with
-             numpy (e.g. Z, Y, X).
-    :rtype: ndarray
-    :raises ValueError: If input images have different shapes and moving_mask is not explicitly set,
-                        or if image sizes don't match their respective mask sizes.
+    Parameters
+    ----------
+    reference_image : ndarray
+        Reference image.
+    moving_image : ndarray
+        Image to register. May be different size from the reference but must be
+        compatible when masks are provided.
+    reference_mask : ndarray
+        Boolean mask for the reference image (True for valid pixels).
+    moving_mask : ndarray or None
+        Boolean mask for the moving image. If None, reference_mask is used.
+    overlap_ratio : float, optional
+        Minimum allowed overlap ratio between images; results with less overlap
+        will be ignored.
 
+    Returns
+    -------
+    ndarray
+        Shift vector (in pixels) required to align moving_image to reference_image.
+
+    Raises
+    ------
+    ValueError
+        If input shapes are incompatible with masks.
 
     References
     ----------
     .. [1] Dirk Padfield. Masked Object Registration in the Fourier Domain.
-           IEEE Transactions on Image Processing, vol. 21(5),
-           pp. 2706-2718 (2012). :DOI:`10.1109/TIP.2011.2181402`
-    .. [2] D. Padfield. "Masked FFT registration". In Proc. Computer Vision and
-           Pattern Recognition, pp. 2918-2925 (2010).
-           :DOI:`10.1109/CVPR.2010.5540032`
+           IEEE Transactions on Image Processing, vol. 21(5), pp. 2706-2718 (2012).
+           :DOI:`10.1109/TIP.2011.2181402`
+    .. [2] D. Padfield. "Masked FFT registration". In Proc. CVPR (2010).
     """
     if moving_mask is None:
         if reference_image.shape != moving_image.shape:
@@ -81,45 +86,34 @@ def _masked_phase_cross_correlation(reference_image, moving_image,
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('cross_correlate_masked',category='stats.subpixel_masked')
+@nvtx.annotate('cross_correlate_masked', category='stats.subpixel_masked')
 def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
                            overlap_ratio=0.3):
     """
     Compute masked normalized cross-correlation between arrays.
 
-    :param arr1: First array.
-    :type arr1: ndarray
-    :param arr2: Second array. The dimensions of `arr2` along axes that are not
-                 transformed should be equal to that of `arr1`.
-    :type arr2: ndarray
-    :param m1: Mask of `arr1`. The mask should evaluate to `True`
-               (or 1) on valid pixels. `m1` should have the same shape as `arr1`.
-    :type m1: ndarray
-    :param m2: Mask of `arr2`. The mask should evaluate to `True`
-               (or 1) on valid pixels. `m2` should have the same shape as `arr2`.
-    :type m2: ndarray
-    :param mode: {'full', 'same'}, optional
-                 'full': Returns the convolution at each point of overlap.
-                 'same': The output is the same size as `arr1`, centered with respect
-                         to the 'full' output.
-    :type mode: str, optional
-    :param axes: Axes along which to compute the cross-correlation.
-    :type axes: tuple of ints, optional
-    :param overlap_ratio: Minimum allowed overlap ratio between images.
-    :type overlap_ratio: float, optional
-    :return: Masked normalized cross-correlation.
-    :rtype: ndarray
-    :raises ValueError: If correlation `mode` is not valid, or array dimensions along
-                        non-transformation axes are not equal.
-
-    References
+    Parameters
     ----------
-    .. [1] Dirk Padfield. Masked Object Registration in the Fourier Domain.
-           IEEE Transactions on Image Processing, vol. 21(5),
-           pp. 2706-2718 (2012). :DOI:`10.1109/TIP.2011.2181402`
-    .. [2] D. Padfield. "Masked FFT registration". In Proc. Computer Vision and
-           Pattern Recognition, pp. 2918-2925 (2010).
-           :DOI:`10.1109/CVPR.2010.5540032`
+    arr1, arr2 : ndarray
+        Arrays to be correlated.
+    m1, m2 : ndarray
+        Boolean masks for the inputs (True = valid pixels).
+    mode : {'full', 'same'}, optional
+        Output mode for the correlation.
+    axes : tuple, optional
+        Axes along which to compute the correlation.
+    overlap_ratio : float, optional
+        Minimum allowed overlap ratio.
+
+    Returns
+    -------
+    ndarray
+        Masked normalized cross-correlation result.
+
+    Raises
+    ------
+    ValueError
+        If mode is invalid or non-transformation axes are not consistent.
     """
     if mode not in {'full', 'same'}:
         raise ValueError(f"Correlation mode '{mode}' is not valid.")
@@ -148,11 +142,7 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
     _ifft = partial(fftmodule.ifftn, s=fast_shape, axes=axes)
 
     def ifft(x):
-        """
-
-        :param x: 
-
-        """
+        """Helper: inverse FFT returning the real part."""
         return _ifft(x).real
 
     fixed_image[cp.logical_not(fixed_mask)] = 0.0
@@ -204,17 +194,22 @@ def cross_correlate_masked(arr1, arr2, m1, m2, mode='full', axes=(-2, -1),
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('_flip',category='stats.subpixel_masked')
+@nvtx.annotate('_flip', category='stats.subpixel_masked')
 def _flip(arr, axes=None):
     """
     Reverse array over many axes. Generalization of arr[::-1] for many dimensions.
 
-    :param arr: Input array to be flipped.
-    :type arr: ndarray
-    :param axes: Axes over which to flip the array. If None, flips over all axes.
-    :type axes: tuple of ints or None, optional
-    :return: Flipped array.
-    :rtype: ndarray
+    Parameters
+    ----------
+    arr : ndarray
+        Input array to be flipped.
+    axes : tuple of ints or None, optional
+        Axes over which to flip the array. If None, flips over all axes.
+
+    Returns
+    -------
+    ndarray
+        Flipped array.
     """
 
     if axes is None:
@@ -228,19 +223,24 @@ def _flip(arr, axes=None):
 
 
 ### # @hierarchical_debug(logger)
-@nvtx.annotate('_centered',category='stats.subpixel_masked')
+@nvtx.annotate('_centered', category='stats.subpixel_masked')
 def _centered(arr, newshape, axes):
     """
     Return the center `newshape` portion of `arr`, leaving axes not in `axes` untouched.
 
-    :param arr: Input array.
-    :type arr: ndarray
-    :param newshape: Shape of the centered output array.
-    :type newshape: tuple of ints
-    :param axes: Axes along which to center the array.
-    :type axes: tuple of ints
-    :return: Centered array.
-    :rtype: ndarray
+    Parameters
+    ----------
+    arr : ndarray
+        Input array.
+    newshape : tuple of ints
+        Shape of the centered output array.
+    axes : tuple of ints
+        Axes along which to center the array.
+
+    Returns
+    -------
+    ndarray
+        Centered array.
     """
     newshape = cp.asarray(newshape)
     currshape = cp.array(arr.shape)

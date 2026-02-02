@@ -1,3 +1,15 @@
+# SPDX-License-Identifier: MIT
+"""
+Reduction utilities and helpers for gpuphot.stats.
+
+This module contains routines for subpixel registration via phase
+cross-correlation, sigma-clipped stacking, frame registration helpers and
+small statistical utilities used across the photometry pipeline.
+
+Bibliographic references present in the original code are preserved in the
+function docstrings where relevant.
+"""
+
 from typing import Union
 
 import numpy as np
@@ -48,12 +60,17 @@ def center(im: Union[cp.ndarray, np.ndarray], size: int) -> Union[cp.ndarray, np
     """
     Center the image to the given size.
 
-    :param im: Input image.
-    :type im: numpy.ndarray
-    :param size: Desired size for centering.
-    :type size: int
-    :return: Centered image.
-    :rtype: numpy.ndarray
+    Parameters
+    ----------
+    im : array_like (NumPy or CuPy)
+        Input image.
+    size : int
+        Desired centered window size.
+
+    Returns
+    -------
+    array_like
+        Cropped image centered to `size` (or original image if smaller).
     """
     h, w = im.shape[0], im.shape[1]  # Funciona para np y cp
 
@@ -78,16 +95,25 @@ def center(im: Union[cp.ndarray, np.ndarray], size: int) -> Union[cp.ndarray, np
 @nvtx.annotate('register_shift', category='stats.reduction')
 def register_shift(fc, uf=100, n=1000):
     """
-    Register and shift image stack based on phase cross-correlation.
+    Register and shift an image stack using phase cross-correlation.
 
-    :param fc: Stack of images to be registered.
-    :type fc: numpy.ndarray
-    :param uf: Upsample factor for subpixel precision, by default 100.
-    :type uf: int, optional
-    :param n: Size for centering the images, by default 1000.
-    :type n: int, optional
-    :return: Registered and shifted image stack.
-    :rtype: numpy.ndarray
+    The routine recenters each frame to a window of size `n`, computes a
+    binary mask via erosion and uses the GPU-enabled phase_cross_correlation
+    implementation to estimate subpixel shifts.
+
+    Parameters
+    ----------
+    fc : array_like
+        Stack of images to register (frames on axis 0).
+    uf : int, optional
+        Upsampling factor for subpixel precision (default: 100).
+    n : int, optional
+        Size for centering the images prior to registration (default: 1000).
+
+    Returns
+    -------
+    array_like
+        Registered and shifted image stack.
     """
     fc1 = fc.copy()
     im0 = center(fc[0], n)
@@ -111,16 +137,22 @@ def register_shift(fc, uf=100, n=1000):
 @nvtx.annotate('stack_sigmaclip', category='stats.reduction')
 def stack_sigmaclip(data, it=5, n=3):
     """
-    Stack images with sigma clipping.
+    Stack images using iterative sigma-clipping.
 
-    :param data: Stack of images to be processed.
-    :type data: cupy.ndarray
-    :param it: Number of iterations for sigma clipping, by default 5.
-    :type it: int, optional
-    :param n: Sigma clipping threshold, by default 3.
-    :type n: int, optional
-    :return: Tuple containing the average and standard deviation of the stacked images.
-    :rtype: tuple(cupy.ndarray, cupy.ndarray or None)
+    Parameters
+    ----------
+    data : cupy.ndarray
+        Input image stack (N, H, W).
+    it : int, optional
+        Number of sigma-clipping iterations (default: 5).
+    n : int, optional
+        Sigma threshold for clipping (default: 3).
+
+    Returns
+    -------
+    tuple
+        (mean, std) of the stacked images. If fewer than 3 images are provided,
+        returns the simple mean and None.
     """
     nim = data.shape[0]
     if nim < 3:
@@ -172,20 +204,25 @@ def register_shift_frames(frames_list, upsample_factor=100, center_size=6000,
     """
     Register and shift frames from a list of file paths.
 
-    :param frames_list: List of file paths to the frames.
-    :type frames_list: list
-    :param upsample_factor: Upsample factor for subpixel precision, by default 100.
-    :type upsample_factor: int, optional
-    :param center_size: Size for centering the images, by default 6000.
-    :type center_size: int, optional
-    :param shift_limit_pix: Maximum allowed shift in pixels, by default 300.
-    :type shift_limit_pix: int, optional
-    :param SP_filter: Whether to apply a spatial filter, by default False.
-    :type SP_filter: bool, optional
-    :return: Registered and shifted image stack.
-    :rtype: cupy.ndarray
-    """
+    Parameters
+    ----------
+    frames_list : list
+        List of frame file paths (FITS or other formats readable by astropy).
+    upsample_factor : int, optional
+        Upsample factor for subpixel refinement (default: 100).
+    center_size : int, optional
+        Center window size used for registration (default: 6000).
+    shift_limit_pix : int, optional
+        Maximum allowed shift in pixels; shifts larger than this are treated
+        as invalid and replaced by (0, 0).
+    SP_filt : bool, optional
+        Apply spatial filter if True.
 
+    Returns
+    -------
+    cupy.ndarray
+        Registered image stack.
+    """
     fc0 = cp.asarray(fits.getdata(frames_list[0]), dtype=cp.float32)
     if SP_filt: fc0 = SP_filter(fc0)
     im0 = center(fc0, center_size)
@@ -214,14 +251,19 @@ def register_shift_frames(frames_list, upsample_factor=100, center_size=6000,
 @nvtx.annotate('weighted_mean_std', category='stats.reduction')
 def weighted_mean_std(data, errors):
     """
-    Calculate weighted mean and standard deviation.
+    Compute weighted mean and weighted standard deviation.
 
-    :param data: Input data.
-    :type data: numpy.ndarray
-    :param errors: Error values corresponding to the data.
-    :type errors: numpy.ndarray
-    :return: Tuple containing the weighted mean and weighted standard deviation.
-    :rtype: tuple(float, float)
+    Parameters
+    ----------
+    data : array_like
+        Input data values.
+    errors : array_like
+        Corresponding uncertainties (sigma) for the data.
+
+    Returns
+    -------
+    tuple
+        (weighted_mean, weighted_std).
     """
     weights = 1 / errors ** 2
     weighted_mean = np.sum(weights * data) / np.sum(weights)
