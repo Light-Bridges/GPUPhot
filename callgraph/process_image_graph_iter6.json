@@ -1,0 +1,8 @@
+{
+  "generated_from": "gpuphot/phot/photo_gpu.py (start at process_image)",
+  "dot_file": "process_image_graph_iter6.dot",
+  "description": "Grafo DOT que representa el flujo desde process_image incluyendo transfers y fallbacks (cuML/sklearn).",
+  "note": "Renderiza process_image_graph_iter6.dot con Graphviz (dot -Tpng -O process_image_graph_iter6.dot)",
+  "source_callgraph": "docs/callgraph_iter5.json",
+  "created_from_callgraph": true
+}

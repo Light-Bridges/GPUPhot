@@ -1,0 +1,125 @@
+digraph process_image {
+  rankdir=LR;
+  node [shape=box, style=rounded, fontsize=10];
+
+  // Nodos principales
+  process_image [label="process_image\n(gpuphot/phot/photo_gpu.py:625-697)\nTipo: Mixto\nNotas: entry point - orquesta calibración"];
+  calibrate [label="calibrate_image\n(gpuphot/phot/photo_gpu.py:2837-3145)\nTipo: Mixto\nTransfers: CPU->GPU: cp.asarray(imdata) @2849\nGPU->CPU: fluxsky.get() @2931"];
+
+  // Background y conv
+  get_local_bg [label="get_local_background_fft\n(gpuphot/phot/background.py:25-89)\nTipo: GPU\nTransfers: CPU->GPU: cp.array(image) @52"];
+  get_mean_std [label="get_mean_std\n(gpuphot/phot/conv.py:84-109)\nTipo: GPU\nLlama: gen_apm_filter -> convolve_fft"];
+  gen_apm_filter [label="gen_apm_filter\n(gpuphot/phot/conv.py)\nTipo: GPU"];
+  convolve_fft [label="convolve_fft\n(gpuphot/phot/conv.py:28-80)\nTipo: GPU\nLlama: cp.fft.rfft2 / cp.fft.irfft2"];
+  fill_nan_fft [label="fill_nan_fft\n(gpuphot/phot/conv.py)\nTipo: GPU"];
+  decompose_tiles [label="decompose_into_tiles\n(gpuphot/phot/utils.py)\nTipo: CPU/GPU util"];
+
+  // PSF / detección y dataset
+  detect_iso [label="detect_isolated_stars\n(gpuphot/phot/psf.py:123-205)\nTipo: Mixto\nTransfers: GPU->CPU coords.get() for KDTree @175"];
+  detect_src_psf [label="detect_sources_psf\n(gpuphot/phot/psf.py:678-716)\nTipo: GPU\nLlama: convolve_fft, find_local_max, find_local_centroid"];
+  create_ds [label="create_star_dataset\n(gpuphot/phot/psf.py:209-321)\nTipo: GPU\nNotas: genera cutouts y scaling"];
+
+  // Photometry principal
+  perform_opt [label="perform_opt_photometry\n(gpuphot/phot/photo_gpu.py:701-1009)\nTipo: Mixto\nTransfers: GPU->CPU (polyfit & returns)\nOpcional: cuML (crossmatch)"];
+  create_apm_map [label="create_aperture_corrections_map_gpu\n(gpuphot/phot/photo_gpu.py:388-565)\nTipo: Mixto\nTransfers: GPU->CPU (aperture_curves_cp.get() fallback)\nCPU->GPU: cp.asarray(aperture_corrections_np) @523"];
+  find_apm [label="find_aperture_corrections_gpu\n(gpuphot/phot/photo_gpu.py:301-353)\nTipo: GPU\nOpcional: crossmatch (cuML)"];
+  batch_phot [label="batch_aperture_photometry\n(gpuphot/phot/photo_gpu.py:1789-2423)\nTipo: GPU\nTransfers: CPU->GPU cp.asarray(img_ori_input) @1830\nNotas: v4 streams, OOM handling"];
+
+  // Crossmatch y agrupamiento (wrappers con fallback)
+  crossmatch [label="crossmatch_sources\n(gpuphot/utils/catalog.py:137-215)\nTipo: Mixto\nOpcional: cuML\nTransfers: GPU->CPU get() on fallback"];
+  crossmatch_gpu_impl [label="_crossmatch_sources_gpu_impl\n(cuML)", shape=ellipse];
+  crossmatch_cpu_impl [label="_crossmatch_sources_cpu_impl\n(sklearn/numpy)", shape=ellipse];
+
+  group_ds [label="group_star_dataset\n(gpuphot/phot/psf.py:471-541)\nTipo: Mixto\nOpcional: cuML clustering\nTransfers: GPU->CPU coords.get() on fallback"];
+  group_gpu_impl [label="_group_star_dataset_gpu_impl\n(cuML)", shape=ellipse];
+  group_cpu_impl [label="_group_star_dataset_cpu_impl\n(sklearn)", shape=ellipse];
+
+  // Decision nodes (conditions detected in code)
+  CUML_DECISION [label="CUML_AVAILABLE?\n(gpuphot/utils/catalog.py:35-43)", shape=diamond, style=filled, fillcolor=lightgoldenrod];
+  CUML_CLUSTER_DECISION [label="CUML_CLUSTERING_AVAILABLE?\n(gpuphot/phot/psf.py:28-42)", shape=diamond, style=filled, fillcolor=lightgoldenrod];
+  IS_GPU_DECISION [label="is_gpu_input?\n(isinstance(x, cp.ndarray))", shape=diamond, style=filled, fillcolor=lightblue];
+  OOM_DECISION [label="Runtime GPU error (OOM/Exception)?\n(general try/except)", shape=diamond, style=filled, fillcolor=lightpink];
+
+  // PSF helpers
+  coeff_map [label="create_coeff_map\n(gpuphot/phot/psf.py:599-644)\nTipo: GPU\nLlama: fill_nan_fft + tile nanmean sigclip"];
+  eigen_psf [label="get_eigen_psfs\n(gpuphot/phot/psf.py:544-573)\nTipo: Mixto\nTransfers: GPU->CPU normed_star_dataset.get() before PCA.fit\nOpcional: cuML PCA fallback"];
+  fit_moffat [label="fit_moffat\n(gpuphot/phot/psf.py:791-879)\nTipo: Mixto\nTransfers: cp.asnumpy(...) before lmfit"];
+
+  // Conexiones principales (calls). Etiquetas muestran línea de llamada cuando está disponible.
+  process_image -> calibrate [label="calls @669"];
+
+  calibrate -> get_local_bg [label="calls @2903"];
+  calibrate -> detect_iso [label="calls @2934"];
+  calibrate -> create_ds [label="calls @2944"];
+  calibrate -> perform_opt [label="calls @3039"];
+  calibrate -> catalog_results [label="calls @3108", style=dashed, color=gray];
+
+  get_local_bg -> get_mean_std [label="calls @55"];
+  get_local_bg -> fill_nan_fft [label="calls @82"];
+  get_local_bg -> decompose_tiles [label="calls @59"];
+
+  get_mean_std -> gen_apm_filter [label="calls @99"];
+  get_mean_std -> convolve_fft [label="calls @100"];
+  gen_apm_filter -> convolve_fft [label="calls (FFT)"];
+
+  detect_iso -> detect_src_psf [label="calls @170"];
+  detect_iso -> get_centroids_kdtree [label="calls @175", labeldistance=2.5];
+  detect_src_psf -> convolve_fft [label="calls @704"];
+  detect_src_psf -> find_local_max [label="calls @711"];
+  detect_src_psf -> find_local_centroid [label="calls @712"];
+
+  perform_opt -> create_apm_map [label="calls @832"];
+  perform_opt -> find_apm [label="calls @840"];
+  perform_opt -> batch_phot [label="calls @850"];
+  perform_opt -> crossmatch [label="calls @720"];
+
+  create_apm_map -> batch_phot [label="calls @418"];
+  create_apm_map -> group_ds [label="calls @431"];
+  create_apm_map -> calculate_aperture_corrections_gpu [label="calls @460"];
+
+  find_apm -> crossmatch [label="calls @326"];
+
+  batch_phot -> get_aper_kernel [label="calls get_aper_kernel"];
+  batch_phot -> fill_image [label="calls fill_image"];
+  batch_phot -> fft_ops [label="calls cp.fft.rfft2/irfft2"];
+
+  // Crossmatch decision wiring
+  crossmatch -> IS_GPU_DECISION [label="check is_gpu_input (type) @156-158"];
+  IS_GPU_DECISION -> CUML_DECISION [label="if True -> check cuml availability"];
+  IS_GPU_DECISION -> crossmatch_cpu_impl [label="if False -> CPU impl (KDTree)", style=dashed];
+
+  CUML_DECISION -> crossmatch_gpu_impl [label="if True -> try GPU _crossmatch_sources_gpu_impl (cuML)"];
+  CUML_DECISION -> crossmatch_cpu_impl [label="if False -> CPU impl (KDTree)", style=dashed];
+
+  crossmatch_gpu_impl -> OOM_DECISION [label="on Exception -> fallback to CPU path"];
+  OOM_DECISION -> crossmatch_cpu_impl [label="free mempool / transfer .get() -> CPU KDTree", style=dashed];
+
+  // Grouping decision wiring
+  group_ds -> IS_GPU_DECISION [label="check is_gpu_input (type) @482"];
+  IS_GPU_DECISION -> CUML_CLUSTER_DECISION [label="if True -> check cuML clustering flag"];
+  IS_GPU_DECISION -> group_cpu_impl [label="if False -> CPU grouping (sklearn)", style=dashed];
+
+  CUML_CLUSTER_DECISION -> group_gpu_impl [label="if True -> try GPU grouping (cuml)"];
+  CUML_CLUSTER_DECISION -> group_cpu_impl [label="if False -> CPU grouping (sklearn)", style=dashed];
+
+  group_gpu_impl -> OOM_DECISION [label="on Exception -> fallback to CPU grouping"];
+  OOM_DECISION -> group_cpu_impl [label="transfer coords.get() -> CPU clustering; cp.asarray back"];
+
+  coeff_map -> fill_nan_fft [label="calls @634"];
+  coeff_map -> calculate_tile_nanmean_sigclip [label="calls @628"];
+
+  eigen_psf -> eigen_psf_note [label="PCA.fit on CPU after .get()", shape=plaintext];
+
+  // Estilo para aristas de fallback (CPU)
+  edge [color=black];
+
+  // legend cluster
+  subgraph cluster_legend {
+    label="Leyenda";
+    labelloc="b";
+    fontsize=10;
+    legend1 [label="-- dashed edge = fallback CPU/implementación alternativa", shape=note];
+    legend2 [label="Node label includes: path_range / tipo / transfers / notas", shape=note];
+    style=invis;
+  }
+}
