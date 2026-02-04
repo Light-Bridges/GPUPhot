@@ -5,7 +5,7 @@ include INSTALL.md
 include DOCKER.md
 include requirements.txt
 include requirements-worker.txt
-include requirements_3_12.txt
+include requirements-312.txt
 include pyproject.toml
 include setup.py
 include launch_gpuphot.sh

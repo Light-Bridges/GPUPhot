@@ -182,7 +182,7 @@ COPY requirements-worker.txt ./
 RUN pip install --no-cache-dir -r requirements-worker.txt
 
 # Copy requirements
-ARG REQUIREMENTS_FILE=requirements_3_12.txt
+ARG REQUIREMENTS_FILE=requirements-312.txt
 COPY ${REQUIREMENTS_FILE} ./
 RUN pip install --no-cache-dir -r ${REQUIREMENTS_FILE} --extra-index-url=https://pypi.nvidia.com
 

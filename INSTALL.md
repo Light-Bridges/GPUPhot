@@ -58,7 +58,7 @@ source .venv/bin/activate  # On Linux/macOS
         ```bash
         pip install .[py312]
         # OR
-        # pip install -r requirements_3_12.txt
+        # pip install -r requirements-312.txt
         ```
 
     *  **For development (testing, documentation):**
