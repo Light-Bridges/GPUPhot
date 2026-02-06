@@ -21,6 +21,7 @@ This guide explains how to use GPUPhot for astronomical image processing, coveri
 *   [6. Advanced Usage](#6-advanced-usage)
      *  [6.1. Image Reduction](#61-image-reduction)
      *  [6.2 Custom processing parameters](#62-custom-processing-parameters)
+     *  [6.3 Using a Custom Catalog Source](#63-using-a-custom-catalog-source)
 
 ## 1. Instrument Configuration
 
@@ -107,7 +108,7 @@ processor = create_processor('my_instrument', '/path/to/your/instrument_configs'
 processor = create_processor()
 
 ```
-The `config_dir` argument in `create_processor` is optional. By default, uses the value defined by `INSTRUMENT_CONFIG_BASE_PATH`.
+The `config_dir` argument in `create_processor` is optional. By default, it uses the value defined by `INSTRUMENT_CONFIG_BASE_PATH`.
 
 ## 2. Astrometry Setup
 
@@ -125,7 +126,7 @@ get_solver()
 ```
 
 *   This will download the files to the directory specified by the `ASTROMETRY_CACHE_PATH` environment variable.  Make sure this directory exists and has enough free space.
-* This can take a *long time*, depending on your internet connection. It is normal.
+* This can take a *long time*, depending on your internet connection. This is normal.
 
 ## 3. Basic Usage
 
@@ -155,7 +156,7 @@ The `process_image` function performs the photometry. It takes two main argument
 ### 3.2. Understanding the Output
 The `process_image` function returns a tuple containing:
 * `phot_df`: A Pandas DataFrame with the photometry results.
-* `hwcs`: The image fits header, updated.
+* `hwcs`: The image FITS header, updated.
 
 **`phot_df` Columns:**
 
@@ -222,7 +223,7 @@ Flower provides a web-based interface for monitoring Celery tasks.
 ### 4.4. Retrieving Results
 * Using the `task.get()` method.
 ```python
-result = task.get() #This will wait the task is completed
+result = task.get() #This will wait until the task is completed
 print(result)
 ```
 
@@ -233,22 +234,22 @@ When using the provided Docker Compose setup, keep in mind:
 1.  **Image Location:** Place your FITS images in the directory you mapped to `/data/images` inside the container (this is controlled by the `IMAGE_BASE_PATH` environment variable in your `.env` file).
 2.  **JupyterLab:** Access JupyterLab at `http://localhost:8888` to interact with GPUPhot interactively, run notebooks, and analyze results.
 3.  **Flower:** Monitor Celery tasks at `http://localhost:5555`.
-4. **RabbitMQ**: You can acces using `http://localhost:15672` with the credentials `gpuphot:gpuphot`
+4. **RabbitMQ**: You can access it using `http://localhost:15672` with the credentials `gpuphot:gpuphot`.
 
 ## 6. Advanced Usage
 ### 6.1. Image Reduction
 
-GPUPhot supports basic image reduction as binning or/and cropping before photometric and astrometric analisys. This is specially usefull when the system doesn't have enough resources to process the image, and it is needed to reduce the image size. You can configure the image reduction using the `image_reduction` parameter inside your instrument configuration file. The posible setings are:
+GPUPhot supports basic image reduction, such as binning and/or cropping, before photometric and astrometric analysis. This is especially useful when the system lacks sufficient resources to process the full image and its size needs to be reduced. You can configure image reduction using the `image_reduction` parameter in your instrument configuration file. The possible settings are:
 
-* **apply_reduction**: It can be set as `always`, `never` or `on_failure`.
-* **binning**: Here you can define the binning factor, and the method.
+* **apply_reduction**: Can be set to `always`, `never`, or `on_failure`.
+* **binning**: Here you can define the binning factor and method.
     - **factor**: The binning factor.
-    - **method**: sum or median.
-* **center:** If the image has to be cropped, the center, in pixels, of the cropped image.
-* **crop_size:** If the image has to be cropped, the size of the cropped area.
+    - **method**: `sum` or `median`.
+* **center:** If the image is to be cropped, the center of the cropped image in pixels.
+* **crop_size:** If the image is to be cropped, the size of the cropped area.
 
 Example:
-```
+```json
 "image_reduction": {
         "apply_reduction": "on_failure",
         "binning": {
@@ -261,18 +262,17 @@ Example:
 ```
 
 ### 6.2 Custom processing parameters
-As well as image reduction configuration, some other parameters of the processing chain can be configured using the `processing_params` entry of the instrument configuration file. For example:
+In addition to image reduction, other parameters of the processing chain can be configured using the `processing_params` entry of the instrument configuration file. For example:
 
 *   **tile_section**: Size of the tiles.
-*   **center_factor**: Fraction of the center of the image that will be used to get the reference stars to model the PSF.
-*   **SP_filt**: Apply a filter to remove salt and pepper noise.
+*   **center_factor**: Fraction of the image center used to get reference stars for PSF modeling.
+*   **SP_filt**: Apply a filter to remove salt-and-pepper noise.
 *   **pca_method**: Use the PCA method.
 *    **CR_filt**: Apply a filter for cosmic rays.
 *    **border**: Set a border where no sources will be searched.
-*   **tile_section_psf**: Size of the tiles used to model the variations of the PSF across the image.
-*   **lum_gmag_coeff**: The coefficient to weight the g magnitude in the calculation of the luminosity, when the filter is `Lum`.
-*    **lum_rmag_coeff**: The coefficient to weight the r magnitude in the calculation of the luminosity, when the filter is `Lum`.
-```
+*   **tile_section_psf**: Size of the tiles used to model PSF variations across the image.
+*   **lum_gmag_coeff**: The coefficient to weight the g magnitude in the luminosity calculation when the filter is `Lum`.
+*    **lum_rmag_coeff**: The coefficient to weight the r magnitude in the luminosity calculation when the filter is `Lum`.
 
 ```json
 "processing_params": {
@@ -284,5 +284,61 @@ As well as image reduction configuration, some other parameters of the processin
     "lum_gmag_coeff": 0.5,
     "lum_rmag_coeff": 0.5
   }
+```
+
+### 6.3 Using a Custom Catalog Source
+
+GPUPhot allows you to replace the default Vizier client with a custom function to query local or private astronomical catalogs. This is a powerful feature for integrating `GPUPhot` with your own data infrastructure, such as a PostgreSQL database or a private API.
+
+To enable this, you pass your custom function and its related parameters to `process_image` by grouping them in a dictionary.
+
+#### Example: Using a Custom Search Function
+
+Here is how you would call `process_image` with your custom catalog function. This method makes it clear that these parameters are part of an advanced, self-contained configuration.
+
+```python
+from gpuphot import get_processor
+from gpuphot_worker.utils import open_image_file
+from my_project.catalog_search import my_custom_search_function # Your implementation
+
+# 1. Create a processor
+processor = get_processor('my_instrument')
+
+# 2. Load image data and header
+imdata, imheader = open_image_file('path/to/your/image.fits')
+
+# 3. Define the custom catalog parameters in a dictionary
+custom_catalog_kwargs = {
+    'custom_vizier_search_func': my_custom_search_function,
+    'custom_vizier_timeout': 120  # Optional: 2-minute timeout
+}
+
+# 4. Process the image, unpacking the dictionary as keyword arguments
+phot_df, hwcs = processor.process_image(
+    imdata,
+    imheader,
+    **custom_catalog_kwargs
+)
+
+# 5. Continue with your analysis
+if phot_df is not None:
+    print(f"Successfully processed image, found {len(phot_df)} sources.")
+else:
+    print("Image processing failed or returned no data.")
 
 ```
+
+#### Implementing the Custom Function
+
+Your custom function is the core of the integration. It must be carefully designed to meet `GPUPhot`'s expectations to ensure seamless operation.
+
+For a complete guide on how to:
+-   Correctly define the function signature.
+-   Handle parameters like `radius`, `mag_limit`, and `ref_filter`.
+-   Connect to a database (e.g., PostgreSQL) safely using connection pools.
+-   Map your database columns to `GPUPhot`'s canonical names.
+-   Manage errors and timeouts gracefully.
+
+Please refer to the detailed developer documentation:
+
+**[>> Guide for Custom Catalog Integration (CUSTOM_CATALOG.md)](CUSTOM_CATALOG.md)**

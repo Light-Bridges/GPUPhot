@@ -1,177 +1,121 @@
-# gpuphot_worker
+# GPUPhot Worker
 
-This directory contains the Celery worker implementation and supporting helpers
-used by the GPUPhot project to process astronomical images and persist
-photometry and image metadata. It provides the end-to-end worker system that
-runs in a Celery environment (workers + optional beat scheduler) and integrates
-with the project's image processing pipeline and PostgreSQL backend.
+**Version:** 1.0
+**Date:** 2024-08-02
 
-Purpose and scope
------------------
-The `gpuphot_worker` package groups everything required to run asynchronous
-processing tasks for GPUPhot. It focuses on three responsibilities:
+## 1. Overview
 
-1. Task orchestration and error handling (Celery tasks and custom exceptions).
-2. Image file input/output and pre-/post-processing helpers (open, bin/crop,
-   save processed images, WCS/header handling).
-3. Persistence helpers to store photometry results and image metadata in
-   PostgreSQL, and read-only search helpers for monitoring and analysis.
+The `gpuphot_worker` directory contains all the components necessary for running `GPUPhot` in a distributed and asynchronous manner using [Celery](https://docs.celeryq.dev/en/stable/). It is designed to handle large-scale image processing by distributing tasks to one or more worker nodes.
 
-Architecture overview
----------------------
-- Celery tasks are defined in `tasks.py`. The main public tasks are:
-  - `process_directory_task`: find images under the configured images base
-    path and queue processing for each image found.
-  - `process_image_task`: process a single file, save the processed FITS and
-    store photometry and statistics in the database.
+The core of this component is a Celery application that exposes high-level tasks for processing individual images or entire directories. These tasks orchestrate the core `gpuphot` library, handle data persistence to a database, and manage image reduction strategies in case of failures (e.g., out-of-memory errors).
 
-- A Celery application instance and example periodic schedule are provided in
-  `worker_app.py` (used by `celery` command and `celery beat`).
+## 2. Directory Structure
 
-- `utils.py` contains file I/O and image-processing helpers used by tasks,
-  including robust FITS/NPY opening and a `crop_and_bin_image` function that
-  preserves and adjusts WCS/header keywords.
+-   `worker_app.py`: Defines and configures the main Celery application instance.
+-   `celeryconfig.py`: Contains the configuration for the Celery app, such as broker URL, result backend, and task routing.
+-   `tasks.py`: **(Most important for users)** Defines the Celery tasks that can be called remotely to process data.
+-   `database_insert_utils.py`: Contains utility functions for inserting photometry results and image statistics into the PostgreSQL database.
+-   `utils.py`: Provides helper functions for the worker, such as opening image files and managing processed image paths.
+-   `celery_exceptions.py`: Defines custom, serializable exceptions for robust error handling across the distributed system.
+-   `header_descriptions.py`: Stores the descriptions for custom FITS header keywords added by the pipeline.
 
-- `database_insert_utils.py` and `database_search_utils.py` contain helper
-  functions to write and read the PostgreSQL tables used by the project
-  (`imaphot`, `imastats`, ...). Insert functions use SQLAlchemy; search
-  helpers use psycopg2 and return pandas DataFrames for convenience.
+## 3. Available Celery Tasks
 
-- `celery_exceptions.py` defines a serializable exception and a task base
-  class that stores structured failure metadata in the Celery task state, which
-  helps remote callers and monitoring tools inspect failures.
+These tasks are the main entry points for users wanting to process images asynchronously.
 
-- `header_descriptions.py` provides a lookup dictionary with human-friendly
-  descriptions for common FITS header keywords used by the pipeline.
+### 3.1. `process_directory_task`
 
-Key modules (short)
--------------------
-- `celery_exceptions.py` — custom SerializableTaskError and Task base class
-  that sets structured failure metadata.
-- `celeryconfig.py` — Celery defaults; supports overriding values using
-  environment variables prefixed with `CELERY_`.
-- `tasks.py` — task entrypoints and orchestration logic.
-- `utils.py` — image open/save, binning/cropping and WCS/header maintenance.
-- `database_insert_utils.py` — insert photometry and image stats into Postgres.
-- `database_search_utils.py` — read-only queries returning pandas DataFrames.
-- `header_descriptions.py` — description mapping for FITS header keywords.
-- `worker_app.py` — Celery app configuration + example beat schedule.
-- `generators/` — notebooks and helper scripts useful for onboarding and
-  demonstrations related to this worker package.
+This is a high-level orchestration task that scans a directory for images and queues an individual `process_image_task` for each one found.
 
-Configuration (environment variables)
--------------------------------------
-The worker relies on a set of well-known environment variables. Important
-examples used across the package:
+**Signature:**
+```python
+process_directory_task.delay(
+    path: str = None,
+    filename: str = None,
+    instrument_name: str = None,
+    exclude_pattern: str = None,
+    reprocess: bool = False
+)
+```
 
-- IMAGE_BASE_PATH — Base path where raw images are stored (default: `/data/images`).
-- PROCESSED_IMAGE_FOLDER — Relative folder name for processed FITS (default: `gpuphot_processed`).
-- INSTRUMENT_CONFIG_BASE_PATH — Base path for instrument configs used by the processor.
+**Parameters:**
 
-- Celery specific (prefix `CELERY_`) — any Celery setting can be overridden by
-  exporting `CELERY_<SETTING>` (for example `CELERY_BROKER_URL`,
-  `CELERY_RESULT_BACKEND`, `CELERY_TIMEZONE`). See `celeryconfig.py`.
+-   `path` (str, optional): The subdirectory within the main image data folder (`BASE_IMAGES_PATH`) to search. If `None`, it searches from the root of the data folder.
+-   `filename` (str, optional): A specific filename or a pattern with wildcards (e.g., `*object_A*.fits`) to match.
+-   `instrument_name` (str, optional): The name of the instrument configuration to use for processing. If `None`, the default configuration is used.
+-   `exclude_pattern` (str, optional): A regular expression to exclude certain filenames from processing.
+-   `reprocess` (bool, optional): If `True`, all matching images will be processed, even if they have been processed before. If `False` (default), it skips images that already have a corresponding output file.
 
-- PostgreSQL connection (read/write)
-  - POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST, POSTGRES_PORT
-  - Read-only variants used by search utilities: POSTGRES_USER_READ,
-    POSTGRES_PASSWORD_READ
+**Returns:**
+A dictionary mapping the relative path of each queued image to the Celery task ID of its `process_image_task`.
 
-Runtime flow (high level)
--------------------------
-1. A scheduler or manual invocation calls `process_directory_task` to discover
-   image files and queue `process_image_task` for each path.
-2. `process_image_task` opens the image, calls the processor (instrument
-   specific) to compute photometry and produce an updated header/WCS.
-3. The processed image is saved to a `PROCESSED_IMAGE_FOLDER` path as a FITS
-   file and a unique ID (GPUPHOTI) is generated and stored in the header.
-4. Photometry rows are converted into a DataFrame and inserted into the
-   `imaphot` table; image metadata is stored/updated in `imastats`.
-5. On failure, tasks raise `SerializableTaskError` (or the task base class
-   stores structured failure metadata) so the remote client can inspect
-   `task.info()` or Celery backend metadata for details.
+**Example Usage:**
+```python
+from gpuphot_worker.tasks import process_directory_task
 
-Operational notes
------------------
-- The package attempts to use GPU-accelerated arrays (cupy) when available
-  and falls back to NumPy otherwise. This is transparent to most of the code.
+# Process all .fits files in the 'night_2024-08-01' directory
+task = process_directory_task.delay(
+    path='night_2024-08-01',
+    filename='*.fits'
+)
 
-- Persistent data (processed FITS and database entries) are saved under the
-  configured `IMAGE_BASE_PATH` and PostgreSQL. Make sure worker processes have
-  the correct file system and DB access.
+print(f"Directory processing task started with ID: {task.id}")
 
-- For debugging, task states and `meta` information (including tracebacks)
-  can be inspected via Celery's result backend (e.g. Redis) or via the Celery
-  monitoring tools.
+# To get the result (a dict of queued tasks) later:
+# results_dict = task.get()
+```
 
-Developer notes
----------------
-- Docstrings are written in English and use NumPy-style conventions.
-- Source files in this package include SPDX headers identifying the license
-  (consistent with the project top-level license).
-- If you plan to evolve header definitions, consider generating a
-  human-readable `HEADERS_INDEX.md` from `header_descriptions.py`.
+### 3.2. `process_image_task`
 
-Where to look next
-------------------
-- `tasks.py` to understand the asynchronous processing flow and retry/failure handling.
-- `utils.py` for detailed image handling (important: WCS and header updates).
-- `database_insert_utils.py` and `database_search_utils.py` for persistence
-  semantics and sample queries.
+This task performs the complete processing pipeline for a single image file. It is typically called by `process_directory_task` but can be invoked directly.
 
-If you prefer this README in Spanish, or want a shorter developer-oriented
-version (API, examples), tell me which style you prefer and I will update it.
+**Signature:**
+```python
+process_image_task.delay(
+    image_path: str,
+    instrument_name: str = None
+)
+```
 
-## Notebook generators
+**Parameters:**
 
-This package includes a small collection of generator scripts under
-`gpuphot_worker/generators/` that programmatically create example Jupyter
-notebooks used for onboarding and demonstrations. The notebooks are intended
-for interactive use inside the project's JupyterLab environment.
+-   `image_path` (str): The path to the image file, relative to the `BASE_IMAGES_PATH` directory.
+-   `instrument_name` (str, optional): The instrument configuration to use.
 
-Generators available
---------------------
-- `0_System_Overview_Notebook.py` — creates `0_System_Overview_Notebook.ipynb`.
-  Provides a high-level overview of the services and architecture used by
-  GPUPhot (RabbitMQ, Redis, Celery, worker, PostgreSQL, JupyterLab, Flower).
+**Behavior:**
 
-- `1_Setup_Notebook.py` — creates `1_Setup_Notebook.ipynb`.
-  Guides the user through environment variables, `.env` example, and
-  instructions for downloading astrometry index files required by the solver.
+1.  Loads the image data and header.
+2.  Calls the core `gpuphot.process_image` function.
+3.  If processing is successful, it saves the photometry and statistics to the database and writes the processed FITS file to the output directory.
+4.  **Automatic Image Reduction**: If the initial processing fails with a `MemoryError`, and the instrument configuration allows it (`"apply_reduction": "on_failure"`), the task will automatically attempt to re-process the image after applying binning and/or cropping as defined in the configuration.
 
-- `2_Instrument_Configuration_Notebook.py` — creates `2_Instrument_Configuration_Notebook.ipynb`.
-  Demonstrates how to inspect, generate and customize instrument configuration
-  JSON files (forced values, filter mapping, default configuration).
+**Returns:**
+A dictionary containing metadata about the processing run, including input/output file paths and database insertion results.
 
-- `3_Task_Execution_Notebook.py` — creates `3_Task_Execution_Notebook.ipynb`.
-  Examples for submitting Celery tasks, monitoring AsyncResults, scheduling
-  periodic tasks with RedBeat and using `app.send_task`.
+**Example Usage:**
+```python
+from gpuphot_worker.tasks import process_image_task
 
-- `4_Database_Query_Notebook.py` — creates `4_Database_Query_Notebook.ipynb`.
-  Shows how to query the PostgreSQL database for photometric results,
-  generate light curves, and explore image statistics.
+# Process a single, specific image
+task = process_image_task.delay(
+    image_path='raw_data/image_001.fits',
+    instrument_name='my_telescope_config'
+)
 
-How the generators are used
---------------------------
-The repository contains an initializer script `initialize_notebooks.sh` which
-is executed when the Jupyter-based container starts. The initializer:
+print(f"Image processing task started with ID: {task.id}")
 
-1. Creates symbolic links from host data directories (instrument configs and
-   images) into the Jupyter work directory.
-2. Executes each generator script once to populate the user's Jupyter
-   `work` directory with example notebooks.
+# To get the result dictionary later:
+# result = task.get()
+```
 
-The initializer calls the generators using the Python interpreter installed in
-`/app/venv/bin/python` and passes `--output-dir` to control where the
-notebooks are written. The marker file `.notebooks_generated` in the work
-folder prevents re-generation on subsequent container starts.
+## 4. Configuration
 
-Notes and suggestions
----------------------
-- The generators are intentionally simple and write plain notebooks; you can
-  adapt or extend them to include additional examples or environment checks.
-- If you prefer a different layout for notebooks (for example, inside
-  `docs/notebooks/`), consider moving the generated files and updating the
-  initializer script accordingly. If you want, I can help reorganize the
-  directory structure before generating additional documentation.
+The worker's behavior is configured through environment variables, which are loaded by `celeryconfig.py`. Key variables include:
 
+-   `RABBITMQ_USER`, `RABBITMQ_PASS`, `RABBITMQ_HOST`, `RABBITMQ_PORT`: Credentials for the Celery message broker.
+-   `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_DB`, `POSTGRES_PORT`: Credentials for the results database.
+-   `BASE_IMAGES_PATH`: The absolute path to the root directory where raw image data is stored.
+-   `INSTRUMENT_CONFIG_BASE_PATH`: The path to the directory containing instrument JSON configuration files.
+-   `DEFAULT_INSTRUMENT`: The name of the default instrument configuration to use if none is specified.
+
+Ensure these are set correctly in your `.env` file or your deployment environment before starting the worker.

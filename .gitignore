@@ -161,3 +161,4 @@ gpuphot_database/
 
 # But keep the .gitkeep files
 !.gitkeep
+/tools/

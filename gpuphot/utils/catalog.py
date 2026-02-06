@@ -293,13 +293,33 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
     :return: A DataFrame containing the results of the query, filtered by the specified parameters.
     :rtype: pandas.DataFrame
     """
+    # Note: kwargs sanitization for internal parameters (like 'expected_columns') is
+    # performed by the caller `catalog_results` to avoid "multiple values for argument"
+    # errors. Do not repeat that sanitization here; Python guarantees that parameters
+    # present in the function signature will not be present in `kwargs` of this function.
+
     if custom_vizier_search_func is not None:
         try:
+            # Allow users to provide a custom timeout name so they don't overwrite
+            # the internal `vizier_timeout` by accident. We pop it so it won't leak
+            # into the custom function kwargs if present.
+            custom_vizier_timeout = kwargs.pop('custom_vizier_timeout', None)
+
+            # Determine effective timeout for the custom function: prefer custom_vizier_timeout
+            # if provided, otherwise use the vizier_timeout parameter.
+            try:
+                effective_timeout = int(custom_vizier_timeout) if custom_vizier_timeout is not None else int(vizier_timeout)
+            except Exception:
+                # In case the provided value is not integer-convertible, fallback to vizier_timeout
+                effective_timeout = int(vizier_timeout)
+
             logger.debug(
                 f'Using custom Vizier search function: {custom_vizier_search_func.__name__} for catalog: {catalog}')
             if expected_columns is None:
                 expected_columns = []
-            executor = TimeoutExecutor(timeout=int(vizier_timeout) + 2)
+
+            # Use a slightly larger timeout for the executor wrapper than the query itself
+            executor = TimeoutExecutor(timeout=effective_timeout + 2)
             result = executor.execute(
                 custom_vizier_search_func,
                 coocenter=coocenter,
@@ -309,7 +329,7 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                 ref_filter=ref_filter,
                 row_limit=int(vizier_row_limit),
                 expected_columns=list(set(expected_columns)),
-                timeout=vizier_timeout
+                timeout=effective_timeout
             )
             if _is_valid_result(result, expected_columns):
                 return result
@@ -401,6 +421,18 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     logger.info(
         f'Attempting to retrieve data from catalog for filter {filter}, radius: {radius:.2f} deg, maglimit: {maglimit:.2f}, coordinates: {coocenter}')
     start_time = time.time()
+
+    # --- SANITIZE KWARGS ---
+    # Prevent user-supplied kwargs from colliding with parameters that catalog_results
+    # computes and passes explicitly to __getVizier. If a user passes one of these keys
+    # in kwargs, Python would raise "multiple values for argument" when calling
+    # __getVizier(..., expected_columns=..., **kwargs).
+    internal_params = ['catalog', 'coocenter', 'radii', 'radius', 'maglimit', 'ref_filter', 'expected_columns']
+    for _p in internal_params:
+        if _p in kwargs:
+            logger.warning(f"Ignoring user-supplied '{_p}' in kwargs to avoid collision with internal parameters.")
+            kwargs.pop(_p, None)
+
     if coocenter.dec.deg < -30:
         def get_filter(_filter):
             filter_map = {
