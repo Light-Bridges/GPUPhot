@@ -2,118 +2,86 @@
 # ==============================================================================
 # GPUPhot External Worker Launcher
 #
-# Author: Light-Bridges
-# Date: 2024-08-02
-#
 # Description:
-# This script is designed to launch one or more external `gpuphot_worker`
-# containers on a separate machine (a "worker node") and connect them to a
-# central `GPUPhot` cluster (the "master node").
-#
-# It automates the process of:
-#   1. Detecting available GPUs on the worker node.
-#   2. Launching a specified number of worker containers using a dedicated
-#      `docker-compose.worker.yml` file.
-#   3. Assigning a unique GPU ID to each worker container, ensuring that
-#      each worker utilizes a different GPU.
-#
-# Prerequisites:
-#   - Docker and Docker Compose must be installed on the worker node.
-#   - The NVIDIA Container Toolkit must be installed to enable GPU access.
-#   - The master node's IP address must be accessible from the worker node.
+# This script launches one or more `gpuphot_worker` containers on the current
+# machine, configured to connect to a master node at a specified IP address.
+# It scales the number of workers based on the number of available GPUs and
+# assigns a unique GPU_ID to each worker container.
 #
 # Usage:
 #   ./launch_external_worker.sh <MASTER_IP> [MAX_GPUS]
 #
 # Arguments:
-#   <MASTER_IP>: (Required) The IP address of the master node running the
-#                main GPUPhot services (RabbitMQ, PostgreSQL, etc.).
-#   [MAX_GPUS]:  (Optional) The maximum number of worker containers to launch.
-#                If not provided, it defaults to the total number of GPUs
-#                detected on the system.
-#
+#   <MASTER_IP>: (Required) The IP address of the master node.
+#   [MAX_GPUS]:  (Optional) The maximum number of workers to launch. Defaults
+#                to the total number of GPUs detected.
 # ==============================================================================
 
-# --- 1. ARGUMENT VALIDATION AND PARSING ---
-# This section checks if the required master IP is provided and sets up the
-# variables for the script.
+# --- 1. Argument Validation and Parsing ---
+# This section validates that the script was called with the required arguments
+# and sets the MASTER_IP and MAX_GPUS variables.
 
-# Check if the first argument (MASTER_IP) is empty.
+# Exit if the first argument (MASTER_IP) is not provided.
 if [ -z "$1" ]; then
   echo "Usage: ./launch_external_worker.sh <MASTER_IP> [MAX_GPUS]"
   echo "Example: ./launch_external_worker.sh 192.168.1.50"
   exit 1
 fi
 
-# Assign the first argument to MASTER_IP.
+# Set MASTER_IP from the first argument.
 MASTER_IP=$1
-# Assign the second argument to MAX_GPUS. If it's not provided, default to
-# the number of GPUs found by `nvidia-smi`.
-# `nvidia-smi -L` lists GPUs, and `wc -l` counts the lines.
+# Set MAX_GPUS from the second argument, or default to the number of GPUs found.
 MAX_GPUS=${2:-$(nvidia-smi -L | wc -l)}
 
 
-# --- 2. GPU DETECTION AND WORKER COUNT CALCULATION ---
-# This section determines how many worker containers to launch based on the
-# available GPUs and the user's request.
+# --- 2. GPU Detection and Worker Count Calculation ---
+# This section determines the number of worker containers to launch.
 
-# Get the total number of GPUs available on the system.
+# Count the number of NVIDIA GPUs available on the system.
 NUM_GPUS=$(nvidia-smi -L | wc -l)
 if [ "$NUM_GPUS" -eq 0 ]; then
-  echo "Error: No GPUs detected. This script requires at least one NVIDIA GPU."
+  echo "No GPUs detected."
   exit 1
 fi
 
-# Determine the final number of workers to launch.
-# It will be the minimum of the number of available GPUs and the max requested by the user.
-# This prevents trying to launch more workers than there are GPUs.
+# Calculate the number of workers, ensuring it does not exceed the available GPUs
+# or the user-specified maximum.
 if [ "$NUM_GPUS" -lt "$MAX_GPUS" ]; then
     NUM_WORKERS=$NUM_GPUS
 else
     NUM_WORKERS=$MAX_GPUS
 fi
 
-
 echo "Connecting to Cluster Master at: $MASTER_IP"
-echo "Detected $NUM_GPUS GPUs. Launching $NUM_WORKERS worker(s)..."
+echo "Launching $NUM_WORKERS workers..."
 
 
-# --- 3. LAUNCH DOCKER COMPOSE WORKERS ---
+# --- 3. Launch Docker Compose Services ---
 # This section starts the worker containers using the specified compose file.
 
-# Export the MASTER_IP so it can be used by the docker-compose.worker.yml file
-# for service discovery (e.g., connecting to RabbitMQ).
+# Export MASTER_IP as an environment variable, making it available to the
+# docker-compose.worker.yml file for service configuration.
 export MASTER_IP
-
-# Use `docker compose` to bring up the services defined in the worker file.
-# -f: Specifies the compose file to use.
-# up: Creates and starts the containers.
-# -d: Detached mode (runs in the background).
-# --scale: Specifies the number of containers to run for a given service.
+# Start the services defined in the worker-specific compose file.
+# -f: Specifies the compose file.
+# up -d: Creates and starts containers in detached mode.
+# --scale: Sets the number of containers for the `gpuphot_worker` service.
 docker compose -f docker-compose.worker.yml up -d --scale gpuphot_worker=$NUM_WORKERS
 
 
-# --- 4. ASSIGN GPU IDS TO CONTAINERS ---
-# This section is commented out as it represents a legacy or potentially
-# problematic approach. The modern and recommended way to assign GPUs is
-# through the `deploy.reservations.devices` section in the Docker Compose file,
-# which is what `docker-compose.worker.yml` should be using.
-#
-# This block is kept for historical context but should not be active. It
-# attempted to dynamically inject a GPU_ID environment variable into each
-# running container, which is less reliable than declarative assignment in the
-# compose file.
+# --- 4. Assign GPU IDs to Workers ---
+# This loop iterates through the launched workers to assign a unique GPU_ID
+# to each one.
 
-# for i in $(seq 0 $((NUM_WORKERS-1))); do
-#   # The container name is dynamically generated by Docker Compose, making this approach fragile.
-#   # Example: "gpuphot-gpuphot_worker-1"
-#   CONTAINER_NAME="gpuphot-gpuphot_worker-$((i+1))"
-#
-#   # This command would attempt to modify the /etc/environment file inside the container
-#   # to set the GPU_ID. This is not a standard or robust practice.
-#   docker compose -f docker-compose.worker.yml exec -e GPU_ID=$i gpuphot_worker bash -c 'sed -i "s/GPU_ID=0/GPU_ID=$GPU_ID/" /etc/environment'
-# done
+# Loop from 0 to (NUM_WORKERS - 1).
+for i in $(seq 0 $((NUM_WORKERS-1))); do
+  # This command executes a shell command inside a running `gpuphot_worker` container.
+  # `exec`: Runs a command in a running container.
+  # `-e GPU_ID=$i`: Sets the GPU_ID environment variable for the command being executed.
+  # `gpuphot_worker`: The service name to target. Docker Compose will pick one of the scaled containers.
+  # `bash -c '...'`: The command to run, which modifies the /etc/environment file
+  # to set the GPU_ID for the container's environment.
+  docker compose -f docker-compose.worker.yml exec -e GPU_ID=$i gpuphot_worker bash -c 'sed -i "s/GPU_ID=0/GPU_ID=$GPU_ID/" /etc/environment'
+done
 
-echo "External worker containers have been launched."
-echo "Use 'docker compose -f docker-compose.worker.yml ps' to see their status."
-echo "Use 'docker compose -f docker-compose.worker.yml logs -f' to follow their logs."
+echo "External workers active."
