@@ -50,7 +50,7 @@ BASE_IMAGE=nvidia/cuda:12.6.3-devel-ubuntu24.04
 
 # Python requirements file to be used during the build.
 # This should match the Python version installed in the base image.
-REQUIREMENTS_FILE=requirements_3_12.txt
+REQUIREMENTS_FILE=requirements-312.txt
 
 # ===================================================================
 #  GPUPhot Application Settings

@@ -50,7 +50,7 @@ x-common-worker-backend: &common-worker-backend
     target: worker
     args:
       - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
-      - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements_3_12.txt}
+      - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements-312.txt}
   #  env_file:
   #    - path: ./.env
   #      required: false
@@ -73,7 +73,7 @@ x-common-profiler: &common-profiler
       - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
       - SSSH_PORT=${PROFILER_SSSH_PORT:-2222}
       - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
-      - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements_3_12.txt}
+      - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements-312.txt}
   profiles: [ "debug" ]
   privileged: true
   environment:
@@ -144,7 +144,7 @@ services:
       target: lab
       args:
         - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
-        - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements_3_12.txt}
+        - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements-312.txt}
     #    env_file:
     #      - path: ./.env
     #        required: false
@@ -178,7 +178,7 @@ services:
       target: flower
       args:
         - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
-        - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements_3_12.txt}
+        - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements-312.txt}
     environment:
       <<: *celery-env
       NVIDIA_VISIBLE_DEVICES: "none"
