@@ -95,29 +95,40 @@ def task_error_handler(task, e, image_path):
 @shared_task
 def process_directory_task(path=None, filename=None, instrument_name=None, exclude_pattern=None, reprocess=False):
     """
-    Processes astronomical images (FITS and NPY) with customizable search and configuration options.
+    Orchestrator task that scans a directory and queues image processing tasks.
 
-    This task searches for images based on specified criteria and initiates individual
-    processing tasks for each image found.
+    This task acts as a generator, searching for FITS/NPY files in the specified
+    directory (relative to `BASE_IMAGES_PATH`) and dispatching a `process_image_task`
+    for each valid file found.
+
+    It supports filtering by filename patterns (glob) and exclusion regexes.
+    It also checks if the output file already exists to avoid redundant processing
+    (unless `reprocess=True`).
 
     Parameters
     ----------
     path : str, optional
-        Subdirectory to search for images. If None, searches in the base image path.
+        Subdirectory to search for images (e.g., '2023-10-25'). If None, searches root.
     filename : str, optional
-        Specific filename or pattern to match. Supports partial matches and wildcards.
+        Glob pattern to match filenames (e.g., '*.fits', 'target_A*').
     instrument_name : str, optional
-        Overrides the default instrument name.
+        Name of the instrument configuration to use (e.g., 'telescope_A').
+        Passed down to `process_image_task`.
     exclude_pattern : str, optional
-        Regular expression pattern to exclude certain filenames.
+        Regex pattern to exclude specific filenames (e.g., '.*bias.*').
     reprocess : bool, optional
-        If True, processes all found images; if False, skips images already processed.
+        If True, forces reprocessing of images even if the output file exists.
+        Default is False.
 
     Returns
     -------
     dict
-        A dictionary mapping relative input paths to Celery task IDs for the
-        individual image processing tasks initiated.
+        A dictionary mapping relative input file paths to their corresponding
+        Celery task IDs. Example:
+        {
+            '2023/image1.fits': 'task-uuid-1',
+            '2023/image2.fits': 'task-uuid-2'
+        }
     """
 
     base_path = BASE_IMAGES_PATH
@@ -178,34 +189,38 @@ def process_directory_task(path=None, filename=None, instrument_name=None, exclu
 @shared_task(bind=True, base=BaseTaskWithFailureHandling)
 def process_image_task(self, image_path, instrument_name=None):
     """
-    Processes a single astronomical image file (FITS or NPY).
+    Core task to process a single astronomical image.
 
-    This task is designed to be called by `process_directory_task` for each individual image,
-    but it can also be used independently to process a single image file.
-
-    Key Features:
-    - Supports configurable image processing and reduction strategies.
-    - Handles different image reduction methods.
-    - Generates and stores processing metadata.
+    This task executes the full photometry pipeline for a given image file.
+    It handles:
+    1. Loading the image and instrument configuration.
+    2. Executing the GPU-accelerated processing (`processor.process_image`).
+    3. Persisting results to PostgreSQL (photometry and stats).
+    4. Saving the processed FITS file with updated headers.
+    5. **Automatic Fallback**: If a `MemoryError` occurs (OOM), it can automatically
+       retry processing with a reduced version of the image (binned/cropped),
+       depending on the instrument configuration (`image_reduction`).
 
     Parameters
     ----------
     image_path : str
-        The path to the image file to be processed (relative to BASE_IMAGES_PATH).
-    instrument_name : str or None
-        The name of the instrument for processing. If None, the default instrument is used.
+        Relative path to the image file (from `BASE_IMAGES_PATH`).
+    instrument_name : str, optional
+        Name of the instrument configuration to use.
 
     Returns
     -------
     dict
-        Processing results containing various keys depending on success or failure.
+        A summary of the processing result, including:
+        - 'input_file': Original file path.
+        - 'process_file': Path of the file actually processed (original or reduced).
+        - 'imaphot': Statistics of detected objects and transients.
+        - 'imastats': Database insertion status.
 
     Raises
     ------
     SerializableTaskError
-        A serializable exception with error details.
-    MemoryError
-        If memory issues occur during processing.
+        Wraps any unhandled exception for Celery serialization.
     """
 
     base_path = BASE_IMAGES_PATH
@@ -220,6 +235,11 @@ def process_image_task(self, image_path, instrument_name=None):
     apply_reduction = reduction_config['apply_reduction']
 
     def call_process_image(file_path_call):
+        """
+        Internal helper to execute the processing pipeline on a specific file.
+        This allows reusing the logic for both the original image and the
+        reduced (binned/cropped) version.
+        """
         process_file = os.path.relpath(file_path_call, base_path)
         logger.debug(f"Processing file: {process_file}")
         reset_cupy_allocators()
@@ -284,7 +304,7 @@ def process_image_task(self, image_path, instrument_name=None):
         method = binning_config.get('method', 'sum')
 
     try:
-
+        # Strategy: Check if reduction is forced ('always') or conditional ('on_failure')
         if apply_reduction == ImageReduction.ALWAYS.value:
             logger.info(f"Applying image reduction to: {image_path}")
             result = call_process_image(
@@ -298,11 +318,14 @@ def process_image_task(self, image_path, instrument_name=None):
             )
 
         else:
+            # Try processing the original image first
             result = call_process_image(file_path)
 
         reset_cupy_allocators()
         return result
+
     except MemoryError as e:
+        # Handle Out-Of-Memory errors by attempting reduction if configured
         reset_cupy_allocators()
         if apply_reduction == ImageReduction.ON_FAILURE.value:
             try:
@@ -318,9 +341,12 @@ def process_image_task(self, image_path, instrument_name=None):
                     )
                 )
             except Exception as e:
+                # If reduction also fails, log and raise
                 task_error_handler(self, e, image_path)
 
         else:
+            # If reduction is not enabled for failures, just fail
             task_error_handler(self, e, image_path)
     except Exception as e:
+        # Handle generic exceptions
         task_error_handler(self, e, image_path)
