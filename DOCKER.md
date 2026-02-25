@@ -185,7 +185,27 @@ The `launch_gpuphot.sh` script is designed to detect and launch one `gpuphot_wor
 
     This script will launch all base services and scale the `gpuphot_worker` service to match the desired number of GPUs.
 
-### 3.C. Launching for Profiling and Debugging
+### 3.C. Distributed Deployment (Multi-Node)
+
+GPUPhot supports horizontal scaling across multiple machines. You can run the core services (Database, RabbitMQ, Redis) on a "Master Node" and launch additional workers on "Worker Nodes".
+
+**On the Worker Node:**
+
+1.  Ensure the machine has NVIDIA GPUs and Docker installed.
+2.  Clone the repository and set up the `.env` file (ensure paths exist).
+3.  Use the `launch_external_worker.sh` script to connect to the Master Node:
+
+```bash
+chmod +x launch_external_worker.sh
+./launch_external_worker.sh <MASTER_IP> [MAX_GPUS]
+```
+
+*   `<MASTER_IP>`: The IP address of the machine running the RabbitMQ/Redis services.
+*   `[MAX_GPUS]`: (Optional) Limit the number of GPUs to use on this worker node.
+
+This script uses `docker-compose.worker.yml` to launch only the worker containers, configured to communicate with the remote master.
+
+### 3.D. Launching for Profiling and Debugging
 
 The `docker-compose.yml` includes special `profiler` services for detailed performance analysis with NVIDIA Nsight Systems. These services are not started by default. To launch them, use the `debug` profile:
 
