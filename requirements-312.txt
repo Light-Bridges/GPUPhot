@@ -1,7 +1,7 @@
 astrometry==4.3.0
 astropy==7.0.2
 astroquery==0.4.11
-cupy-cuda12x==14.0.1
+cupy-cuda12x
 docker==7.1.0
 ephem==4.2
 GPUtil==1.4.0
