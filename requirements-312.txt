@@ -25,4 +25,4 @@ nvidia-cupynumeric
 # RAPIDS (for GPU crossmatch) - Matches cupy-cuda12x
 pylibraft-cu12
 # cuml-cu12 no aparece en el freeze, se mantiene comentado o se omite si no está instalado
-# cuml-cu12
+cuml-cu12
