@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 try:
     import cupynumeric as np
@@ -217,7 +217,7 @@ def update_header_with_photometry(imheader, dic_calib, header_descriptions=None)
     imheader.insert(
         'COMINIT',
         ('DATEPROC',
-         datetime.utcnow().isoformat()[:-7],
+         datetime.now(timezone.utc).isoformat()[:-7],
          dateproc_value)
     )
 
