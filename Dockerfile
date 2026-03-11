@@ -219,7 +219,7 @@ WORKDIR /home/jovyan
 
 ENTRYPOINT ["/usr/local/bin/initialize_notebooks.sh"]
 
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--NotebookApp.token=''", "--notebook-dir=/home/jovyan/work"]
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--ServerApp.token=''", "--notebook-dir=/home/jovyan/work"]
 #CMD []
 
 # Flower target
