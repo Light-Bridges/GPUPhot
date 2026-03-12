@@ -130,7 +130,12 @@ def capture_cuda_exception(func):
     :rtype: callable
     """
     import os
-    from cupy_backends.cuda.api.runtime import CUDARuntimeError
+    try:
+        # Try importing from the public API first (CuPy 10+)
+        from cupy.cuda.runtime import CUDARuntimeError
+    except ImportError:
+        # Fallback for older versions or internal paths
+        from cupy_backends.cuda.api.runtime import CUDARuntimeError
 
     def is_running_in_docker():
         return os.path.exists('/.dockerenv') or os.path.exists('/run/.containerenv')
@@ -141,14 +146,20 @@ def capture_cuda_exception(func):
             try:
                 return func(*args, **kwargs)
             except CUDARuntimeError as e:
+                error_str = str(e)
                 nvtx.mark(f"CUDA error in {func.__name__}: {e}", color="red", category="error")
-                try:
-                    from .utils.gpu import free_gpu_mem
-                    free_gpu_mem()  # Free GPU memory before handling the error
-                except Exception:
-                    pass
 
-                if any(error in str(e) for error in
+                # Check for critical initialization error to avoid further CUDA calls
+                is_init_error = "cudaErrorInitializationError" in error_str
+
+                if not is_init_error:
+                    try:
+                        from .utils.gpu import free_gpu_mem
+                        free_gpu_mem()  # Liberar memoria GPU antes de manejar el error
+                    except Exception:
+                        pass
+
+                if any(error in error_str for error in
                        ("cudaErrorIllegalAddress", "cudaErrorInitializationError", "cudaErrorInvalidValue")):
                     if is_running_in_docker():
                         logger.critical("Exiting due to CUDA error in Docker container.")
@@ -186,7 +197,10 @@ def capture_cuda_exception(func):
 
 if __name__ == '__main__':
     import sys
-    from cupy_backends.cuda.api.runtime import CUDARuntimeError
+    try:
+        from cupy.cuda.runtime import CUDARuntimeError
+    except ImportError:
+        from cupy_backends.cuda.api.runtime import CUDARuntimeError
 
 
     @capture_cuda_exception
