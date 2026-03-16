@@ -10,7 +10,6 @@ import time
 import traceback
 from datetime import datetime
 
-import GPUtil
 import cupy as cp
 try:
     import cupynumeric as np
@@ -31,6 +30,37 @@ except ImportError:
 load_dotenv()
 
 LOGGER_NAME = "gpuphot"
+
+_NA_VALUES = ('[N/A]', '[Not Supported]', 'N/A', '')
+
+def _safe_float(val):
+    """Parse a float from nvidia-smi output, returning None on failure."""
+    if val is None or val in _NA_VALUES:
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
+
+def _safe_int(val):
+    """Parse an int from nvidia-smi output, returning None on failure."""
+    if val is None or val in _NA_VALUES:
+        return None
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return None
+
+def _safe_str(val):
+    """Return a string from nvidia-smi output, or None for N/A values."""
+    if val is None or val in _NA_VALUES:
+        return None
+    return str(val)
+
+def _safe_percent(val):
+    """Parse a utilization percentage (0-100) into a 0.0-1.0 float."""
+    f = _safe_float(val)
+    return f / 100.0 if f is not None else None
 
 
 class IndentFormatter(logging.Formatter):
@@ -161,23 +191,53 @@ class SystemInfo:
             # print(f"Error al obtener la información de Git: {e}")
             return None
 
+    # nvidia-smi fields queried in a single call (avoids duplicate subprocess calls)
+    _NVML_QUERY_FIELDS = (
+        'index', 'name', 'driver_version', 'uuid',
+        'memory.total', 'memory.free', 'memory.used',
+        'temperature.gpu', 'utilization.gpu',
+        'power.draw', 'power.limit',
+    )
+
     def get_gpu_info(self):
+        """Query all GPU info in a single nvidia-smi call.
+
+        Each field is handled individually so that a single [N/A] value
+        does not discard the rest of the GPU data.
+        """
+        import subprocess
         try:
-            # Obtener información de las GPUs usando GPUtil
-            gpus = GPUtil.getGPUs()
-            if gpus:
-                return [{
-                    'id': gpu.id,
-                    'name': gpu.name,
-                    'driver_version': gpu.driver,
-                    'memory_total': gpu.memoryTotal,
-                    'memory_free': gpu.memoryFree,
-                    'memory_used': gpu.memoryUsed,
-                    'temperature': gpu.temperature,
-                    'load': gpu.load,
-                } for gpu in gpus]
-            else:
+            result = subprocess.run(
+                ['nvidia-smi',
+                 '--query-gpu=' + ','.join(self._NVML_QUERY_FIELDS),
+                 '--format=csv,noheader,nounits'],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode != 0 or not result.stdout.strip():
                 return [{'id': -1, 'name': "No GPUs found", 'error': None}]
+
+            gpus = []
+            for line in result.stdout.strip().splitlines():
+                parts = [p.strip() for p in line.split(', ')]
+                raw = {}
+                for i, field in enumerate(self._NVML_QUERY_FIELDS):
+                    raw[field] = parts[i] if i < len(parts) else None
+
+                info = {
+                    'id':              _safe_int(raw.get('index')),
+                    'name':            _safe_str(raw.get('name')),
+                    'driver_version':  _safe_str(raw.get('driver_version')),
+                    'uuid':            _safe_str(raw.get('uuid')),
+                    'memory_total':    _safe_float(raw.get('memory.total')),
+                    'memory_free':     _safe_float(raw.get('memory.free')),
+                    'memory_used':     _safe_float(raw.get('memory.used')),
+                    'temperature':     _safe_float(raw.get('temperature.gpu')),
+                    'load':            _safe_percent(raw.get('utilization.gpu')),
+                    'power_draw_w':    _safe_float(raw.get('power.draw')),
+                    'power_limit_w':   _safe_float(raw.get('power.limit')),
+                }
+                gpus.append(info)
+            return gpus if gpus else [{'id': -1, 'name': "No GPUs found", 'error': None}]
         except Exception as e:
             return [{'id': -1, 'name': "Error retrieving GPU info", 'error': str(e)}]
 
