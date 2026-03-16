@@ -300,6 +300,15 @@ def main():
     df = load_data(args.csv)
     print(f"\nTotal records loaded: {len(df)}")
 
+    # -- Filter invalid GPU entries (error messages, not real GPUs)
+    INVALID_GPU_NAMES = {"Error retrieving GPU info", "No GPUs found"}
+    if "gpu_name" in df.columns:
+        n_before = len(df)
+        df = df[~df["gpu_name"].isin(INVALID_GPU_NAMES)].copy()
+        n_removed = n_before - len(df)
+        if n_removed:
+            print(f"  Removed {n_removed:,} records with invalid GPU names")
+
     # 1. Cardinality
     cols_to_check = [
         'instrume', 'inmodel', 'camera', 'naxis1', 'naxis2', 'obid', 'orid', 
