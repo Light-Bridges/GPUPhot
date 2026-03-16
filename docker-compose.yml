@@ -72,8 +72,8 @@ x-common-profiler: &common-profiler
     args:
       - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
       - SSSH_PORT=${PROFILER_SSSH_PORT:-2222}
-      - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
-      - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements-312.txt}
+      - BASE_IMAGE=${PROFILER_BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
+      - REQUIREMENTS_FILE=${PROFILER_REQUIREMENTS_FILE:-requirements-312.txt}
   profiles: [ "debug" ]
   privileged: true
   environment:
@@ -92,8 +92,6 @@ x-common-profiler: &common-profiler
     - SYS_RESOURCE
   security_opt:
     - seccomp=unconfined
-  ports:
-    - "${PROFILER_SSSH_PORT:-2222}:22"
   stdin_open: true
   tty: true
   restart: unless-stopped
@@ -208,8 +206,59 @@ services:
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     restart: unless-stopped
 
+  # ---------------------------------------------------------------
+  #  Profiler (Python 3.12) — default, with RAPIDS cuML
+  # ---------------------------------------------------------------
   profiler:
     <<: *common-profiler
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: profiler
+      args:
+        - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+        - SSSH_PORT=${PROFILER_SSSH_PORT:-2222}
+        - BASE_IMAGE=${PROFILER_BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
+        - REQUIREMENTS_FILE=${PROFILER_REQUIREMENTS_FILE:-requirements-312.txt}
+    ports:
+      - "${PROFILER_SSSH_PORT:-2222}:22"
+    devices:
+      - "/dev/nvidiactl:/dev/nvidiactl"
+      - "/dev/nvidia-uvm:/dev/nvidia-uvm"
+      - "/dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools"
+      - "/dev/nvidia-modeset:/dev/nvidia-modeset"
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+      - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
+      - /var/run/nvidia-persistenced/socket:/var/run/nvidia-persistenced/socket
+      - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
+      - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ "${GPU_ID:-0}" ]
+              capabilities: [ gpu ]
+
+  # ---------------------------------------------------------------
+  #  Profiler (Python 3.8) — legacy, CPU fallbacks for cuML tasks
+  # ---------------------------------------------------------------
+  profiler_38:
+    <<: *common-profiler
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: profiler
+      args:
+        - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+        - SSSH_PORT=${PROFILER_38_SSSH_PORT:-2223}
+        - BASE_IMAGE=${PROFILER_38_BASE_IMAGE:-nvidia/cuda:12.2.2-devel-ubuntu22.04}
+        - REQUIREMENTS_FILE=${PROFILER_38_REQUIREMENTS_FILE:-requirements.txt}
+    ports:
+      - "${PROFILER_38_SSSH_PORT:-2223}:22"
     devices:
       - "/dev/nvidiactl:/dev/nvidiactl"
       - "/dev/nvidia-uvm:/dev/nvidia-uvm"
