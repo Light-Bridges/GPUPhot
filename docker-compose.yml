@@ -257,6 +257,7 @@ services:
         - SSSH_PORT=${PROFILER_38_SSSH_PORT:-2223}
         - BASE_IMAGE=${PROFILER_38_BASE_IMAGE:-nvidia/cuda:12.2.2-devel-ubuntu22.04}
         - REQUIREMENTS_FILE=${PROFILER_38_REQUIREMENTS_FILE:-requirements.txt}
+        - FORCE_PYTHON_VERSION=${PROFILER_38_PYTHON_VERSION:-3.8}
     ports:
       - "${PROFILER_38_SSSH_PORT:-2223}:22"
     devices:

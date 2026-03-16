@@ -22,8 +22,33 @@ RUN apt-get update && apt-get upgrade -y && \
         pkg-config \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Python and pip
-RUN \
+# Optional: force a specific Python version instead of auto-detecting.
+# When set (e.g., FORCE_PYTHON_VERSION=3.8), the auto-detection is skipped
+# and only that version is installed via deadsnakes PPA.
+ARG FORCE_PYTHON_VERSION=""
+
+# If FORCE_PYTHON_VERSION is set, install it and create the venv immediately,
+# skipping the entire auto-detection block below.
+RUN if [ -n "${FORCE_PYTHON_VERSION}" ]; then \
+        apt-get update && \
+        apt-get install -y --no-install-recommends software-properties-common && \
+        add-apt-repository ppa:deadsnakes/ppa -y && \
+        apt-get update && \
+        apt-get install -y --no-install-recommends \
+            "python${FORCE_PYTHON_VERSION}" \
+            "python${FORCE_PYTHON_VERSION}-dev" \
+            "python${FORCE_PYTHON_VERSION}-venv" \
+            "python${FORCE_PYTHON_VERSION}-distutils" && \
+        update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python${FORCE_PYTHON_VERSION}" 200 && \
+        update-alternatives --install /usr/bin/python  python  "/usr/bin/python${FORCE_PYTHON_VERSION}" 200 && \
+        python3 -m venv "$VIRTUAL_ENV" && \
+        apt-get clean && rm -rf /var/lib/apt/lists/* && \
+        echo "Forced Python ${FORCE_PYTHON_VERSION} installed and venv created." ; \
+    fi
+
+# Install Python via auto-detection (only runs if FORCE_PYTHON_VERSION is empty)
+RUN if [ -n "${FORCE_PYTHON_VERSION}" ]; then echo "Skipping auto-detection (forced=${FORCE_PYTHON_VERSION})." ; exit 0 ; fi && \
+    \
     # --- Configuration ---
     PYTHON_VERSIONS_TO_TRY="3.12 3.11 3.10" && \
     MIN_PYTHON_VERSION="3.10" && \
@@ -135,11 +160,11 @@ RUN \
         # Clean apt cache after the fallback attempt
         apt-get clean && rm -rf /var/lib/apt/lists/* ; \
     fi && \
+    \
     # --- Final Check ---
-    # This check runs regardless of INSTALL_NEEDED. It ensures we have *some* target version.
+    # This check runs regardless of method. It ensures we have *some* target version.
     if [ -z "$TARGET_PYTHON_VERSION" ]; then \
-        # This can only happen now if INSTALL_NEEDED was true, the preferred loop failed, AND the fallback failed.
-        echo "CRITICAL ERROR: Failed to install any required Python version (${PYTHON_VERSIONS_TO_TRY} or fallback ${FALLBACK_PYTHON_VERSION}). Base version ($current_py_version) is lower than minimum ($MIN_PYTHON_VERSION)." >&2 ; \
+        echo "CRITICAL ERROR: Failed to install any required Python version." >&2 ; \
         exit 1 ; \
     fi && \
     # --- Final Verification and Venv Creation ---
@@ -166,7 +191,6 @@ RUN \
     # The 'venv' module, provided by pythonX.Y-venv or python3-venv, will install pip inside the venv.
     python3 -m venv "$VIRTUAL_ENV" && \
     echo "Virtual environment created successfully."
-
 
 # Set working directory
 WORKDIR /app
