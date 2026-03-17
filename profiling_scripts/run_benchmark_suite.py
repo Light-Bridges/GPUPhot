@@ -279,6 +279,9 @@ def run_local_profiling(
         print(f"    SKIP: image not found at {image_path}")
         return False, 0
 
+    # Mount profiling_scripts from host to get latest scripts without rebuilding
+    scripts_dir = Path(__file__).resolve().parent
+
     # Build docker run command
     docker_cmd = [
         "docker", "run", "--rm", "--gpus", "all",
@@ -288,17 +291,18 @@ def run_local_profiling(
         "-v", f"{configs_dir}:/data/instrument_configs:z",
         "-v", f"{astro_cache}:/data/astrometry_cache:z",
         "-v", f"{results_dir}:/app/profiling_results:z",
+        "-v", f"{scripts_dir}:/app/profiling_scripts:z",
         "-e", "INSTRUMENT_CONFIG_BASE_PATH=/data/instrument_configs",
         "-e", "IMAGE_BASE_PATH=/data/images",
         "-e", "GPU_ID=0",
         docker_image,
     ]
 
-    # -- Warmup --
+    # -- Warmup (uses profile_process_image.py: direct call, no Celery/DB) --
     if warmup > 0:
         print(f"    Warmup: {warmup} run(s)...")
         warmup_cmd = docker_cmd + [
-            "python3", "/app/profiling_scripts/profile_image_processing.py",
+            "python3", "/app/profiling_scripts/profile_process_image.py",
             image.filename, image.instrument,
         ]
         for w in range(warmup):
@@ -316,14 +320,14 @@ def run_local_profiling(
                 return False, 0
             # Extract time and objects from output
             for line in result.stdout.split("\n"):
-                if "Time elapsed" in line:
-                    print(f"      warmup {w+1}: {line.strip().split(': ', 1)[-1]} ({elapsed_w:.1f}s wall)")
+                if "Time:" in line and "(" in line:
+                    print(f"      warmup {w+1}: {line.strip().split('Time:', 1)[-1].strip()} ({elapsed_w:.1f}s wall)")
                     break
 
-    # -- Measured runs with nsys --
+    # -- Measured runs with nsys (uses profile_process_image.py: no Celery/DB) --
     print(f"    Measured: {repetitions} run(s) with nsys profiling...")
     nsys_cmd = docker_cmd + [
-        "bash", "/app/profiling_scripts/run_profiling.sh",
+        "bash", "/app/profiling_scripts/run_benchmark_profiling.sh",
         image.filename, image.instrument, str(repetitions),
     ]
 
@@ -345,8 +349,8 @@ def run_local_profiling(
     # Parse timing from output
     times = []
     for line in result.stdout.split("\n"):
-        if "Time elapsed" in line:
-            time_str = line.strip().split(": ", 1)[-1]
+        if "Time:" in line and "(" in line:
+            time_str = line.strip().split("Time:", 1)[-1].strip()
             times.append(time_str)
         if verbose and line.strip():
             print(f"      {line.strip()}")

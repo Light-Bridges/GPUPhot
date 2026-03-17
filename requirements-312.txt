@@ -16,7 +16,7 @@ pandas==2.2.3
 python-dotenv==1.2.2
 python-logstash-async==4.1.0
 scikit-learn==1.8.0
-scipy==1.17.1
+scipy==1.15.2
 setuptools==82.0.0
 # nvidia-cupynumeric no aparece en pip freeze, se mantiene comentado
 # nvidia-cupynumeric
