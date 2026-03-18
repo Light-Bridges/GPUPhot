@@ -86,6 +86,57 @@ def main():
         print(f"ERROR: Could not create ImageProcessor: {e}", file=sys.stderr)
         sys.exit(2)
 
+    # --- GPU info helper ---
+    def gpu_info():
+        """Collect GPU state via nvidia-smi and CuPy."""
+        info = {}
+        try:
+            info['python_version'] = sys.version.split()[0]
+        except Exception:
+            pass
+        try:
+            import cupy
+            info['cupy_version'] = cupy.__version__
+            dev = cupy.cuda.Device(0)
+            mem_free, mem_total = dev.mem_info
+            info['gpu_mem_total_mb'] = round(mem_total / 1e6, 1)
+            info['gpu_mem_used_mb'] = round((mem_total - mem_free) / 1e6, 1)
+            info['gpu_mem_free_mb'] = round(mem_free / 1e6, 1)
+        except Exception:
+            pass
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['nvidia-smi', '--query-gpu=name,uuid,driver_version,temperature.gpu,power.draw,power.max_limit,power.default_limit,memory.total,memory.used',
+                 '--format=csv,noheader,nounits', '-i', '0'],
+                capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                parts = [p.strip() for p in result.stdout.strip().split(',')]
+                info['gpu_name'] = parts[0]
+                info['gpu_uuid'] = parts[1]
+                info['gpu_driver'] = parts[2]
+                info['gpu_temp_c'] = float(parts[3]) if parts[3] not in ('[N/A]', '') else None
+                info['gpu_power_draw_w'] = float(parts[4]) if parts[4] not in ('[N/A]', '') else None
+                info['gpu_power_max_w'] = float(parts[5]) if parts[5] not in ('[N/A]', '') else None
+                info['gpu_power_default_w'] = float(parts[6]) if parts[6] not in ('[N/A]', '') else None
+                info['gpu_mem_total_mb'] = float(parts[7]) if parts[7] not in ('[N/A]', '') else None
+                info['gpu_mem_used_mb'] = float(parts[8]) if parts[8] not in ('[N/A]', '') else None
+        except Exception:
+            pass
+        return info
+
+    # --- GPU state before processing ---
+    gpu_before = gpu_info()
+    if gpu_before.get('gpu_name'):
+        print(f"GPU:        {gpu_before.get('gpu_name', '?')}")
+        print(f"GPU UUID:   {gpu_before.get('gpu_uuid', '?')}")
+        print(f"GPU driver: {gpu_before.get('gpu_driver', '?')}")
+        print(f"GPU power:  max={gpu_before.get('gpu_power_max_w', '?')}W default={gpu_before.get('gpu_power_default_w', '?')}W draw={gpu_before.get('gpu_power_draw_w', '?')}W")
+        print(f"GPU VRAM:   {gpu_before.get('gpu_mem_used_mb', '?')} / {gpu_before.get('gpu_mem_total_mb', '?')} MB")
+        print(f"GPU temp:   {gpu_before.get('gpu_temp_c', '?')} C")
+        print(f"CuPy:       {gpu_before.get('cupy_version', '?')}")
+        print(f"Python:     {gpu_before.get('python_version', '?')}")
+
     # --- Run process_image ---
     print(f"Processing...", flush=True)
     success = False
@@ -110,9 +161,18 @@ def main():
         print(f"Status:     FAILED")
         print(f"Error:      {type(e).__name__}: {e}")
 
-    # Always report time
+    # --- GPU state after processing ---
+    gpu_after = gpu_info()
+
+    # Always report time and GPU memory
     readable_time = str(timedelta(seconds=elapsed))
     print(f"Time:       {readable_time} ({elapsed:.3f}s)")
+    if gpu_after.get('gpu_mem_used_mb'):
+        print(f"GPU VRAM after: {gpu_after.get('gpu_mem_used_mb', '?')} / {gpu_after.get('gpu_mem_total_mb', '?')} MB")
+        print(f"GPU temp after: {gpu_after.get('gpu_temp_c', '?')} C")
+        peak_mb = gpu_after.get('gpu_mem_used_mb', 0) - gpu_before.get('gpu_mem_used_mb', 0)
+        if peak_mb > 0:
+            print(f"GPU VRAM delta: +{peak_mb:.1f} MB")
 
     sys.exit(0 if success else 1)
 
