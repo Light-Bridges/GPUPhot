@@ -34,11 +34,11 @@ RUN if [ -n "${FORCE_PYTHON_VERSION}" ]; then \
         apt-get install -y --no-install-recommends software-properties-common && \
         add-apt-repository ppa:deadsnakes/ppa -y && \
         apt-get update && \
-        apt-get install -y --no-install-recommends \
-            "python${FORCE_PYTHON_VERSION}" \
-            "python${FORCE_PYTHON_VERSION}-dev" \
-            "python${FORCE_PYTHON_VERSION}-venv" \
-            "python${FORCE_PYTHON_VERSION}-distutils" && \
+        PKGS="python${FORCE_PYTHON_VERSION} python${FORCE_PYTHON_VERSION}-dev python${FORCE_PYTHON_VERSION}-venv" && \
+        if apt-cache show "python${FORCE_PYTHON_VERSION}-distutils" >/dev/null 2>&1; then \
+            PKGS="$PKGS python${FORCE_PYTHON_VERSION}-distutils" ; \
+        fi && \
+        apt-get install -y --no-install-recommends $PKGS && \
         update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python${FORCE_PYTHON_VERSION}" 200 && \
         update-alternatives --install /usr/bin/python  python  "/usr/bin/python${FORCE_PYTHON_VERSION}" 200 && \
         python3 -m venv "$VIRTUAL_ENV" && \
