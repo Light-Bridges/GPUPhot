@@ -31,7 +31,7 @@ ARG FORCE_PYTHON_VERSION=""
 # skipping the entire auto-detection block below.
 RUN if [ -n "${FORCE_PYTHON_VERSION}" ]; then \
         apt-get update && \
-        apt-get install -y --no-install-recommends software-properties-common && \
+        apt-get install -y --no-install-recommends software-properties-common gpg-agent && \
         add-apt-repository ppa:deadsnakes/ppa -y && \
         apt-get update && \
         PKGS="python${FORCE_PYTHON_VERSION} python${FORCE_PYTHON_VERSION}-dev python${FORCE_PYTHON_VERSION}-venv" && \
