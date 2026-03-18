@@ -196,7 +196,7 @@ class SystemInfo:
         'index', 'name', 'driver_version', 'uuid',
         'memory.total', 'memory.free', 'memory.used',
         'temperature.gpu', 'utilization.gpu',
-        'power.draw', 'power.limit',
+        'power.draw', 'power.limit', 'power.max_limit', 'power.default_limit',
     )
 
     def get_gpu_info(self):
@@ -235,6 +235,8 @@ class SystemInfo:
                     'load':            _safe_percent(raw.get('utilization.gpu')),
                     'power_draw_w':    _safe_float(raw.get('power.draw')),
                     'power_limit_w':   _safe_float(raw.get('power.limit')),
+                    'power_max_w':     _safe_float(raw.get('power.max_limit')),
+                    'power_default_w': _safe_float(raw.get('power.default_limit')),
                 }
                 gpus.append(info)
             return gpus if gpus else [{'id': -1, 'name': "No GPUs found", 'error': None}]
