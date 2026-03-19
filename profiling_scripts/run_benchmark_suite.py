@@ -189,9 +189,9 @@ TARGETS: Dict[str, TargetMachine] = {
 }
 
 # Profiling parameters
-DEFAULT_WARMUP = 1        # warmup iterations (discarded)
-DEFAULT_REPETITIONS = 3   # measured iterations
-PROFILE_TIMEOUT_S = 900   # timeout per profiling run (15 min, for 151MP images)
+DEFAULT_WARMUP = 2        # warmup iterations (discarded)
+DEFAULT_REPETITIONS = 10  # measured iterations (10 for Q1 statistical significance)
+PROFILE_TIMEOUT_S = 1200  # timeout per profiling run (20 min, for 151MP images)
 
 # GPU contention thresholds
 GPU_LOAD_THRESHOLD_PCT = 15
