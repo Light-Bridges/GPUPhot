@@ -281,8 +281,20 @@ services:
               device_ids: [ "${GPU_ID:-0}" ]
               capabilities: [ gpu ]
 
+  # ---------------------------------------------------------------
+  #  Profiler Jetson Nano (JetPack 4.x, legacy)
+  # ---------------------------------------------------------------
   profiler_jetson:
     <<: *common-profiler
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: profiler
+      args:
+        - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+        - SSSH_PORT=${PROFILER_JETSON_SSSH_PORT:-2224}
+        - BASE_IMAGE=${PROFILER_JETSON_BASE_IMAGE:-nvcr.io/nvidia/l4t-ml:r32.7.1-py3}
+        - REQUIREMENTS_FILE=${PROFILER_JETSON_REQUIREMENTS_FILE:-requirements_jetson.txt}
     devices:
       - "/dev/nvhost-ctrl:/dev/nvhost-ctrl"
       - "/dev/nvhost-ctrl-gpu:/dev/nvhost-ctrl-gpu"
@@ -295,7 +307,7 @@ services:
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
       - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
       - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
-      - ${NSYS_PATH:-/opt/nvidia/nsight-systems/2024.2.2/}:/opt/nsight-systems-host         #readlink -f $(which nsys)
+      - ${NSYS_PATH:-/opt/nvidia/nsight-systems/2024.2.2/}:/opt/nsight-systems-host
     deploy:
       resources:
         reservations:
@@ -304,8 +316,21 @@ services:
               device_ids: [ "${GPU_ID:-0}" ]
               capabilities: [ gpu ]
 
+  # ---------------------------------------------------------------
+  #  Profiler Jetson Orin — JetPack 5.x (L4T R35, Python 3.8)
+  #  Use on: Jetson Orin with JetPack 5.x / L4T R35
+  # ---------------------------------------------------------------
   profiler_jetson_orin:
     <<: *common-profiler
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: profiler
+      args:
+        - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+        - SSSH_PORT=${PROFILER_JETSON_ORIN_SSSH_PORT:-2225}
+        - BASE_IMAGE=${PROFILER_JETSON_ORIN_BASE_IMAGE:-nvcr.io/nvidia/l4t-ml:r35.2.1-py3}
+        - REQUIREMENTS_FILE=${PROFILER_JETSON_ORIN_REQUIREMENTS_FILE:-requirements_jetson_orin.txt}
     runtime: nvidia
     devices:
       - "/dev/nvhost-ctrl:/dev/nvhost-ctrl"
@@ -320,7 +345,86 @@ services:
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
       - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
       - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
-      - ${NSYS_PATH:-/opt/nvidia/nsight-systems/2023.2.4/}:/opt/nsight-systems-host         #readlink -f $(which nsys)
+      - ${NSYS_PATH:-/opt/nvidia/nsight-systems/2023.2.4/}:/opt/nsight-systems-host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ "${GPU_ID:-0}" ]
+              capabilities: [ gpu ]
+
+  # ---------------------------------------------------------------
+  #  Profiler Jetson Orin Super — JetPack 6.x (L4T R36, Python 3.12)
+  #  Use on: Jetson Orin Nano Super with JetPack 6.x / L4T R36
+  #  Note: cuML/RAPIDS not available for ARM/aarch64
+  # ---------------------------------------------------------------
+  profiler_jetson_orin_super:
+    <<: *common-profiler
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: profiler
+      args:
+        - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+        - SSSH_PORT=${PROFILER_JETSON_SUPER_SSSH_PORT:-2226}
+        - BASE_IMAGE=${PROFILER_JETSON_SUPER_BASE_IMAGE:-nvcr.io/nvidia/l4t-cuda:12.2.12-devel}
+        - REQUIREMENTS_FILE=${PROFILER_JETSON_SUPER_REQUIREMENTS_FILE:-requirements_jetson_312.txt}
+        - FORCE_PYTHON_VERSION=3.12
+    runtime: nvidia
+    devices:
+      - "/dev/nvhost-ctrl:/dev/nvhost-ctrl"
+      - "/dev/nvhost-ctrl-gpu:/dev/nvhost-ctrl-gpu"
+      - "/dev/nvhost-prof-gpu:/dev/nvhost-prof-gpu"
+      - "/dev/nvmap:/dev/nvmap"
+      - "/dev/nvhost-gpu:/dev/nvhost-gpu"
+      - "/dev/nvhost-as-gpu:/dev/nvhost-as-gpu"
+      - "/dev/nvhost-dbg-gpu:/dev/nvhost-dbg-gpu"
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+      - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
+      - ${NSYS_PATH:-/opt/nvidia/nsight-systems/2023.4.1/}:/opt/nsight-systems-host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ "${GPU_ID:-0}" ]
+              capabilities: [ gpu ]
+
+  # ---------------------------------------------------------------
+  #  Profiler Jetson Orin Super 3.10 — JetPack 6.x (L4T R36, Python 3.10 system)
+  #  Same hardware as above but with system Python 3.10 (no FORCE)
+  #  Note: cuML/RAPIDS not available for ARM/aarch64
+  # ---------------------------------------------------------------
+  profiler_jetson_orin_super_38:
+    <<: *common-profiler
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: profiler
+      args:
+        - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+        - SSSH_PORT=${PROFILER_JETSON_SUPER_38_SSSH_PORT:-2228}
+        - BASE_IMAGE=${PROFILER_JETSON_SUPER_38_BASE_IMAGE:-nvcr.io/nvidia/l4t-cuda:12.2.12-devel}
+        - REQUIREMENTS_FILE=${PROFILER_JETSON_SUPER_38_REQUIREMENTS_FILE:-requirements.txt}
+    runtime: nvidia
+    devices:
+      - "/dev/nvhost-ctrl:/dev/nvhost-ctrl"
+      - "/dev/nvhost-ctrl-gpu:/dev/nvhost-ctrl-gpu"
+      - "/dev/nvhost-prof-gpu:/dev/nvhost-prof-gpu"
+      - "/dev/nvmap:/dev/nvmap"
+      - "/dev/nvhost-gpu:/dev/nvhost-gpu"
+      - "/dev/nvhost-as-gpu:/dev/nvhost-as-gpu"
+      - "/dev/nvhost-dbg-gpu:/dev/nvhost-dbg-gpu"
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+      - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
+      - ${NSYS_PATH:-/opt/nvidia/nsight-systems/2023.4.1/}:/opt/nsight-systems-host
     deploy:
       resources:
         reservations:
