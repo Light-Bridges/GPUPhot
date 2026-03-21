@@ -18,7 +18,7 @@ python-dotenv~=1.0.1
 python-logstash-async~=2.5.0
 scikit-learn~=1.2.0
 scipy~=1.9.3
-setuptools>=44.0
+setuptools>=44.0,<70.0   # Pin <70 for Python 3.8 compatibility with nvtx pyproject.toml
 
 
 # RAPIDS (for GPU crossmatch) - Matches cupy-cuda12x
