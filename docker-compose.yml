@@ -69,6 +69,7 @@ x-common-profiler: &common-profiler
     context: .
     dockerfile: Dockerfile
     target: profiler
+    network: host
     args:
       - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
       - SSSH_PORT=${PROFILER_SSSH_PORT:-2222}
