@@ -85,6 +85,13 @@ x-common-profiler: &common-profiler
     NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-all,compute,utility,graphics}
     NSYS_PROFILING: 1
     NSYS_CUDA_TRACE: 1
+    LOGSTASH_LOGGING: ${LOGSTASH_LOGGING:-True}
+    LOGSTASH_HOST: ${LOGSTASH_HOST:-10.0.210.30}
+    LOGSTASH_PORT: ${LOGSTASH_PORT:-5000}
+    GPUPHOT_ENVIRONMENT: ${GPUPHOT_ENVIRONMENT:-profiler}
+    GPUPHOT_DEBUG: ${GPUPHOT_DEBUG:-True}
+    GPUPHOT_LOG_LEVEL: ${GPUPHOT_LOG_LEVEL:-DEBUG}
+    POSTGRES_HOST: ${POSTGRES_HOST:-nostore}
   cap_add:
     - SYS_ADMIN
     - SYS_PTRACE
@@ -256,9 +263,8 @@ services:
       args:
         - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
         - SSSH_PORT=${PROFILER_38_SSSH_PORT:-2223}
-        - BASE_IMAGE=${PROFILER_38_BASE_IMAGE:-nvidia/cuda:12.2.2-devel-ubuntu22.04}
+        - BASE_IMAGE=${PROFILER_38_BASE_IMAGE:-nvidia/cuda:12.2.2-devel-ubuntu20.04}
         - REQUIREMENTS_FILE=${PROFILER_38_REQUIREMENTS_FILE:-requirements.txt}
-        - FORCE_PYTHON_VERSION=${PROFILER_38_PYTHON_VERSION:-3.8}
     ports:
       - "${PROFILER_38_SSSH_PORT:-2223}:22"
     devices:
