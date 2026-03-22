@@ -6,4 +6,4 @@ scikit-image
 SQLAlchemy
 psycopg2-binary
 celery-redbeat
-gevent==21.12.0          # Pin for aarch64/Jetson binary wheel compatibility
+gevent

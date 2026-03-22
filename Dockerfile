@@ -203,6 +203,10 @@ RUN pip install --upgrade pip setuptools wheel pipenv
 
 # Copy requirements
 COPY requirements-worker.txt ./
+# Pre-install gevent binary wheel on aarch64 (avoids Cython compilation failure)
+RUN if [ "$(uname -m)" = "aarch64" ]; then \
+        pip install --no-cache-dir gevent==21.12.0; \
+    fi
 RUN pip install --no-cache-dir -r requirements-worker.txt
 
 # Copy requirements
