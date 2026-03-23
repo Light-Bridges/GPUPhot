@@ -368,6 +368,8 @@ services:
   # ---------------------------------------------------------------
   profiler_jetson_orin_super:
     <<: *common-profiler
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     build:
       context: .
       dockerfile: Dockerfile
@@ -408,6 +410,8 @@ services:
   # ---------------------------------------------------------------
   profiler_jetson_orin_super_38:
     <<: *common-profiler
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     build:
       context: .
       dockerfile: Dockerfile
