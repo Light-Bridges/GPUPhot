@@ -15,6 +15,18 @@
 
 set -uo pipefail
 
+# --- Cron environment setup ---
+# Cron runs with minimal env; we need SSH agent and PATH
+export PATH="/usr/local/bin:/usr/bin:/bin:$HOME/.local/bin:$PATH"
+export SSH_AUTH_SOCK="/run/user/$(id -u)/keyring/ssh"
+export HOME="${HOME:-/home/slemes}"
+
+# Verify SSH works before proceeding
+if ! ssh -o ConnectTimeout=5 -o BatchMode=yes lenovo_tttserver "echo ok" &>/dev/null; then
+    echo "FATAL: SSH not working (agent not available?). Aborting." >&2
+    exit 1
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
