@@ -19,6 +19,7 @@ import gc
 import os
 import time
 import traceback
+import warnings
 
 import cupy as cp
 from ..phot.cosmetics import CR_filter, SP_filter
@@ -154,6 +155,10 @@ def gen_moff_filter2(alpha, beta, **kwargs):
     """
      Generate a Moffat filter with adjusted alpha.
 
+     .. deprecated::
+         This function is unused and will be removed in a future version.
+         Use :func:`gen_moff_filter` instead.
+
      :param alpha: Alpha parameter for Moffat filter.
      :type alpha: float
      :param beta: Beta parameter for Moffat filter.
@@ -161,6 +166,12 @@ def gen_moff_filter2(alpha, beta, **kwargs):
      :return: Moffat filter kernel and kernel size.
      :rtype: tuple(cupy.ndarray, int)
      """
+    warnings.warn(
+        "gen_moff_filter2 is deprecated and will be removed in a future version. "
+        "Use gen_moff_filter instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     alpha = alpha / 2
     fw = alpha * (2 * np.sqrt(2 ** (1 / beta) - 1))
     sigma_r = fw / (2.0 * np.sqrt(2.0 * np.log(2.0)))
@@ -256,11 +267,21 @@ def calculate_aperture_corrections(corr: np.ndarray) -> cp.ndarray:
     """
     Calculate aperture corrections for all stars in an optimized way.
 
+    .. deprecated::
+        This CPU-only version is deprecated and will be removed in a future version.
+        Use :func:`calculate_aperture_corrections_gpu` instead.
+
     :param corr: Array of aperture corrections.
     :type corr: numpy.ndarray
     :return: Aperture correction factors and errors.
     :rtype: tuple(numpy.ndarray, numpy.ndarray)
     """
+    warnings.warn(
+        "calculate_aperture_corrections is deprecated and will be removed in a future version. "
+        "Use calculate_aperture_corrections_gpu instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     if corr.size == 0 or corr.shape[0] == 0:
         if corr.ndim == 2 and corr.shape[1] > 0:
@@ -3151,6 +3172,11 @@ def aperture_photometry(img, positions, aper_rad, **kwargs):
     """
     Perform aperture photometry.
 
+    .. deprecated::
+        This function is deprecated and will be removed in a future version.
+        Use :func:`batch_aperture_photometry` instead, which supports streams
+        and OOM handling.
+
     :param img: Image data.
     :type img: cupy.ndarray
     :param positions: Positions of sources.
@@ -3160,6 +3186,12 @@ def aperture_photometry(img, positions, aper_rad, **kwargs):
     :return: Flux and area of the aperture.
     :rtype: tuple(cupy.ndarray, float)
     """
+    warnings.warn(
+        "aperture_photometry is deprecated and will be removed in a future version. "
+        "Use batch_aperture_photometry instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     kernel, area = get_aper_kernel(aper_rad)
     conv_ima = convolve_fft(img, kernel, **kwargs)
     positions = cp.array(cp.round(positions)).astype(cp.int32)

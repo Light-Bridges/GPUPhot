@@ -920,6 +920,8 @@ def main():
             "query": {
                 "bool": {
                     "filter": [
+                        # {"match_phrase": {"extra.environment": "profiler"}},
+                        # {"match_phrase": {"extra.environment": "nvtx"}},
                         {"match_phrase": {"extra.application": "gpuphot"}},
                         {"match_phrase": {"extra.function_name": "process_image"}},
                         {"exists": {"field": "extra.execution_time"}},
