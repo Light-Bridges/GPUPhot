@@ -39,7 +39,7 @@ STOP_WORKERS=false
 MAX_MP=0
 IMAGE_FILTER=""
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-LOG_DIR="/tmp/benchmark_${TIMESTAMP}"
+LOG_DIR="${BENCHMARK_LOG_DIR:-/tmp/benchmark_${TIMESTAMP}}"
 
 # Parse args
 while [[ $# -gt 0 ]]; do
@@ -71,7 +71,8 @@ ALL_IMAGES=(
     "10|151.2|TST_QHY411-3_2026-02-14-23-09-41-463160_M81_SDSSr.fits|QHY411-3|QHY411-3_SDSSr_full"
 )
 
-# Machine definitions: host|profiler_container_312|profiler_container_38|label
+# Machine definitions: host|profiler_container_312|profiler_container_38|label|flags
+# flags: production = has workers to stop; workers field = comma-separated container names
 MACHINES=(
     "lenovo_tttserver|gpuphot-profiler-1|gpuphot-profiler_38-1|lenovo_A100|production"
     "hp3|gpuphot-profiler-1|gpuphot-profiler_38-1|hp3_L40S|production"
@@ -79,8 +80,15 @@ MACHINES=(
     "ttt_server|gpuphot-profiler-1|gpuphot-profiler_38-1|ttt_server_RTX3090|"
     "ttt1|gpuphot-profiler-1|gpuphot-profiler_38-1|ttt1_RTX3060|"
     "local|gpuphotfinal-profiler-1|gpuphotfinal-profiler_38-1|local_RTX3050Ti|"
-    "jetson_orin|gpuphot-profiler_jetson_orin-1||jetson_orin|"
+    "jetson_orin|gpuphot-profiler_jetson_orin-1||jetson_orin_Orin8GB|"
+    "jetson_local|gpuphot-profiler_jetson_orin_super-1|gpuphot-profiler_jetson_orin_super_38-1|jetson_local_OrinSuper|"
 )
+
+# Workers to stop/start on production machines (per host)
+declare -A WORKERS
+WORKERS[lenovo_tttserver]="dto-worker0-1 dto-worker-ast-1"
+WORKERS[hp3]="dto-worker0-1"
+WORKERS[azken]="dto-worker0-1"
 
 # Filter images
 IMAGES=()
@@ -113,7 +121,13 @@ if $STOP_WORKERS; then
     for machine_def in "${MACHINES[@]}"; do
         IFS='|' read -r host c312 c38 label flags <<< "$machine_def"
         if echo "$flags" | grep -q "production"; then
-            ssh -o ConnectTimeout=10 "$host" "docker stop dto312-worker0-1 2>/dev/null" &
+            worker_list="${WORKERS[$host]:-}"
+            if [ -n "$worker_list" ]; then
+                for w in $worker_list; do
+                    ssh -o ConnectTimeout=10 "$host" "docker stop $w 2>/dev/null" &
+                done
+                echo "  $host: stopping $worker_list"
+            fi
         fi
     done
     wait
@@ -217,9 +231,16 @@ if $STOP_WORKERS; then
     for machine_def in "${MACHINES[@]}"; do
         IFS='|' read -r host c312 c38 label flags <<< "$machine_def"
         if echo "$flags" | grep -q "production"; then
-            ssh -o ConnectTimeout=10 "$host" "docker start dto312-worker0-1 2>/dev/null" && echo "  $host restored"
+            worker_list="${WORKERS[$host]:-}"
+            if [ -n "$worker_list" ]; then
+                for w in $worker_list; do
+                    ssh -o ConnectTimeout=10 "$host" "docker start $w 2>/dev/null" &
+                done
+                echo "  $host: restored $worker_list"
+            fi
         fi
     done
+    wait
 fi
 
 echo "Logs in: $LOG_DIR"
