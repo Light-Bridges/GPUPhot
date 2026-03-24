@@ -186,7 +186,7 @@ run_benchmark() {
     done
 }
 
-# Launch all machines
+# Launch all machines (parallel between machines, sequential between profilers per machine)
 IFS=',' read -ra PROF_LIST <<< "$PROFILERS"
 
 for machine_def in "${MACHINES[@]}"; do
@@ -197,19 +197,21 @@ for machine_def in "${MACHINES[@]}"; do
         ssh -o ConnectTimeout=5 -o BatchMode=yes "$host" "echo ok" &>/dev/null || { echo "SKIP $host (offline)"; continue; }
     fi
 
-    for prof in "${PROF_LIST[@]}"; do
-        container="$c312"
-        [ "$prof" = "38" ] && container="$c38"
-        [ -z "$container" ] && continue
+    # Each machine runs in background, but profilers run SEQUENTIALLY within
+    # each machine to avoid GPU contention (both profilers share GPU 0)
+    echo "Launching: $label (profilers: ${PROFILERS})"
+    (
+        for prof in "${PROF_LIST[@]}"; do
+            container="$c312"
+            [ "$prof" = "38" ] && container="$c38"
+            [ -z "$container" ] && continue
 
-        log_file="${LOG_DIR}/${label}_py${prof}.log"
-        echo "Launching: $label py${prof} -> $log_file"
-        (
-            echo "=== $label py${prof} ($(date)) ==="
-            run_benchmark "$host" "$container" "${label}_py${prof}"
-            echo "=== DONE $(date) ==="
-        ) > "$log_file" 2>&1 &
-    done
+            log_file="${LOG_DIR}/${label}_py${prof}.log"
+            echo "=== $label py${prof} ($(date)) ===" > "$log_file"
+            run_benchmark "$host" "$container" "${label}_py${prof}" >> "$log_file" 2>&1
+            echo "=== DONE $(date) ===" >> "$log_file"
+        done
+    ) &
 done
 
 echo ""
