@@ -1,10 +1,15 @@
 import os
+import re
 
 from setuptools import setup, find_packages
 
 this_directory = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
+
+# Read version from gpuphot/__init__.py (single source of truth)
+with open(os.path.join(this_directory, 'gpuphot', '__init__.py'), encoding='utf-8') as f:
+    version = re.search(r"^__version__\s*=\s*['\"]([^'\"]+)['\"]", f.read(), re.M).group(1)
 
 # Core dependencies: everything EXCEPT CuPy and RAPIDS.
 # CuPy must be installed separately by the user because the correct package
@@ -43,7 +48,7 @@ extras_require = {
 
 setup(
     name='gpuphot',
-    version='0.1.0',
+    version=version,
     packages=find_packages(exclude=['tests', 'tests.*', 'dev', 'dev.*',
                                     'benchmarks', 'benchmarks.*',
                                     'profiling_scripts', 'profiling_scripts.*']),

@@ -2857,9 +2857,9 @@ def batch_aperture_photometry(
 @nvtx.annotate('calibrate_image', category='phot.photo_gpu')
 def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, rdnoise: float,
                     exptime: float, satlevel: float, target_ra: float, target_dec: float = None, n_images: int = 1,
-                    SP_filt: bool = True, CR_filt: bool = False, border: int = 10, center_factor: float = 0.7,
+                    SP_filt: bool = True, CR_filt: bool = False, border: int = 20, center_factor: float = 0.7,
                     pca_method: bool = True, tile_section: int = 1000, max_stars_ref: int = 15, min_snr: int = 5,
-                    color_range: float = 0.6, tile_section_psf: int = 2500, zp_maxmag: float = 21,
+                    color_range: float = 0.6, tile_section_psf: int = 3000, zp_maxmag: float = 21,
                     sip_order: int = 1, **kwargs):
     """
     Calibrate an image.

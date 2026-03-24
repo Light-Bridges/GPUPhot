@@ -87,4 +87,6 @@ from . import utils
 #     logger.error(f"Could not set the GPU {gpu_id}. Using GPU 0 by default.")
 #     cp.cuda.Device(0).use()
 
+__version__ = '0.1.0'
+
 __all__ = ['logger', 'phot', 'stats', 'utils', 'instrument_config_parser', 'image_processor']
