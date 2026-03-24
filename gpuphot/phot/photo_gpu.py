@@ -3055,7 +3055,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     # img_cp = cp.asarray(imdata)
     # with gpu_array_manager(imdata, mempool) as img_cp:
 
-    # TODO: Revisar por Miguel: dejamos center_factor y min_conv_snr con valor dor defecto de la función, o por defecto de DEFAULT_PROCESSING_PARAMS
+    # Note: center_factor and min_conv_snr use function defaults, not DEFAULT_PROCESSING_PARAMS
 
     optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry(
         img_ori=img_cp,

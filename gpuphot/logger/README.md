@@ -104,24 +104,6 @@ Developer notes and extension points
   keys to the `extra` parameter in logger calls (e.g. `logger.debug("msg",
   extra={'user': user_id})`) to keep handlers generic.
 
-Non-documentation fixes
------------------------
-If you spot required code fixes while reviewing documentation, we will not
-apply functional changes directly on the documentation pass. Instead:
-
-- Add entries to `gpuphot/logger/FIXERS.md` describing the issue, the
-  rationale and a suggested patch. This file will be reviewed and fixes will
-  be implemented in a dedicated code-fix phase.
-
-Example `FIXERS.md` entry format:
-
-```
-- file: gpuphot/logger/hierarchical_logging.py
-  issue: AsynchronousLogstashHandler variable may be referenced even when import fails
-  suggestion: Guard references to AsynchronousLogstashHandler and LogstashFormatter
-              with explicit None checks or initialize them to None at import time.
-```
-
 Testing and validation
 ----------------------
 - Unit tests for logging behavior should mock external dependencies (GPUtil,

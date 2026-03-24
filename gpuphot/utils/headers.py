@@ -37,9 +37,12 @@ def delete_header_from(header, val):
     :return: Modified FITS header.
     :rtype: dict
     """
+    idx = -1
     for i, v in enumerate(header.values()):
         if val in str(v):
             idx = i - 1
+    if idx < 0:
+        return header
     for i in range(len(header) - idx):
         del header[idx]
 

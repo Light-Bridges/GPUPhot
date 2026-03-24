@@ -38,11 +38,11 @@ except ImportError:
 
 
     def binary_erosion(*args, **kwargs):
-        raise ImportError("CuPy no instalado")
+        raise ImportError("CuPy is not installed")
 
 
     def shift(*args, **kwargs):
-        raise ImportError("CuPy no instalado")
+        raise ImportError("CuPy is not installed")
 
 try:
     from ..phot.cosmetics import SP_filter

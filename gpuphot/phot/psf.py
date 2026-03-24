@@ -573,11 +573,8 @@ def get_eigen_psfs(normed_star_dataset: cp.array, n_components: int = 5) -> cp.a
     # eigen_psfs = pca.components_.reshape(-1, normed_star_dataset.shape[1], normed_star_dataset.shape[2])
     # return eigen_psfs
 
-    # Instanciar PCA con el número de componentes deseado
     pca = PCA(n_components=n_components)
-    # Aplanar cada estrella (manteniendo datos en GPU; no se usa .get())
-    # (N, H, W) a (N, H*W). Usar -1 en reshape
-    # deja que Cupy calcule H*W sin suponer que W == H.
+    # Flatten each star (N, H, W) -> (N, H*W). Transfer to CPU for PCA.fit.
     starset_flattened = normed_star_dataset.reshape(normed_star_dataset.shape[0], -1).get()
     # Ajustar PCA directamente en GPU
     pca.fit(starset_flattened)
