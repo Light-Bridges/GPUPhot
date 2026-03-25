@@ -159,6 +159,19 @@ celerybeat.pid
 astrometry_cache/
 gpuphot_database/
 
+# Test data and cache (large binary files)
+tests/data/
+tests/astronomy_cache/
+
+# Benchmark large binaries
+benchmarks/benchmark_images/*.fits
+benchmarks/benchmark_results/**/*.sqlite
+benchmarks/benchmark_results/**/*.nsys-rep
+benchmarks/benchmark_results/**/*.fits
+
+# Profiling results
+profiling_results/
+
 # Ignore all .log files
 *.log
 
