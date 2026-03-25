@@ -62,10 +62,10 @@ Conventions & priorities
   2. value extracted from the FITS header using `header_keywords`
   3. `camera_specs` (fallback defaults)
 
-- The file intentionally includes comments to explain each field. When using
-  JSON parsers that do not accept comments, prefer to maintain a per-instrument
-  JSON without comments or convert the commented file to strict JSON before
-  programmatic parsing.
+- The file intentionally includes `//` comments to explain each field. It is
+  **not valid standard JSON** and cannot be parsed with Python's `json` module.
+  The pipeline uses the `json-with-comments` library (see `requirements.txt`)
+  to handle these files.
 
 Editing and per-instrument overrides
 -----------------------------------

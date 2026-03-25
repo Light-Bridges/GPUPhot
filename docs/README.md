@@ -51,8 +51,6 @@ docs/
     index.rst       # Documentation entry point
     *.rst           # Module reference pages (auto-generated from docstrings)
     references.bib  # BibTeX references
-    _static/        # Custom CSS / images
-    _templates/     # Custom Jinja templates
   build/            # Generated output (not committed)
 ```
 

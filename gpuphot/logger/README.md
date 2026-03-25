@@ -105,7 +105,7 @@ Developer notes and extension points
 
 Testing and validation
 ----------------------
-- Unit tests for logging behavior should mock external dependencies (GPUtil,
+- Unit tests for logging behavior should mock external dependencies (nvidia-smi subprocess calls,
   logstash_async) and assert that `hierarchical_debug` logs start/finish and
   exceptions with expected extras.
 

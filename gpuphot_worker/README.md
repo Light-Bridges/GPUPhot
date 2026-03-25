@@ -15,6 +15,7 @@ The core of this component is a Celery application that exposes high-level tasks
 -   `celeryconfig.py`: Contains the configuration for the Celery app, such as broker URL, result backend, and task routing.
 -   `tasks.py`: **(Most important for users)** Defines the Celery tasks that can be called remotely to process data.
 -   `database_insert_utils.py`: Contains utility functions for inserting photometry results and image statistics into the PostgreSQL database.
+-   `database_search_utils.py`: Read-only database helper functions for searching and querying photometry results.
 -   `utils.py`: Provides helper functions for the worker, such as opening image files and managing processed image paths.
 -   `celery_exceptions.py`: Defines custom, serializable exceptions for robust error handling across the distributed system.
 -   `header_descriptions.py`: Stores the descriptions for custom FITS header keywords added by the pipeline.
@@ -40,7 +41,7 @@ process_directory_task.delay(
 
 **Parameters:**
 
--   `path` (str, optional): The subdirectory within the main image data folder (`BASE_IMAGES_PATH`) to search. If `None`, it searches from the root of the data folder.
+-   `path` (str, optional): The subdirectory within the main image data folder (`IMAGE_BASE_PATH`) to search. If `None`, it searches from the root of the data folder.
 -   `filename` (str, optional): A specific filename or a pattern with wildcards (e.g., `*object_A*.fits`) to match.
 -   `instrument_name` (str, optional): The name of the instrument configuration to use for processing. If `None`, the default configuration is used.
 -   `exclude_pattern` (str, optional): A regular expression to exclude certain filenames from processing.
@@ -79,7 +80,7 @@ process_image_task.delay(
 
 **Parameters:**
 
--   `image_path` (str): The path to the image file, relative to the `BASE_IMAGES_PATH` directory.
+-   `image_path` (str): The path to the image file, relative to the `IMAGE_BASE_PATH` directory.
 -   `instrument_name` (str, optional): The instrument configuration to use.
 
 **Behavior:**
@@ -112,10 +113,10 @@ print(f"Image processing task started with ID: {task.id}")
 
 The worker's behavior is configured through environment variables, which are loaded by `celeryconfig.py`. Key variables include:
 
--   `RABBITMQ_USER`, `RABBITMQ_PASS`, `RABBITMQ_HOST`, `RABBITMQ_PORT`: Credentials for the Celery message broker.
+-   `CELERY_BROKER_URL`: Celery message broker URL (e.g. `amqp://user:pass@host:5672/`). The `celeryconfig.py` loads all `CELERY_`-prefixed env vars dynamically.
 -   `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_DB`, `POSTGRES_PORT`: Credentials for the results database.
--   `BASE_IMAGES_PATH`: The absolute path to the root directory where raw image data is stored.
+-   `IMAGE_BASE_PATH`: The absolute path to the root directory where raw image data is stored (default: `/data/images`).
 -   `INSTRUMENT_CONFIG_BASE_PATH`: The path to the directory containing instrument JSON configuration files.
--   `DEFAULT_INSTRUMENT`: The name of the default instrument configuration to use if none is specified.
+-   `INSTRUMENT_NAME`: The name of the default instrument configuration to use if none is specified (default: `default_instrument`).
 
 Ensure these are set correctly in your `.env` file or your deployment environment before starting the worker.

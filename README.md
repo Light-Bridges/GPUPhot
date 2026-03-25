@@ -42,7 +42,7 @@ See the detailed installation instructions in [INSTALL.md](INSTALL.md).  Briefly
 
 **Crucial Step:** GPUPhot runs inside a container. To access your files (images and configs) stored on your host machine, you must map your local folders to the container's expected paths.
 
-1.  Create a `.env` file in the project root (you can copy `env.example` if available).
+1.  Create a `.env` file in the project root (you can copy `.env.example` if available).
 2.  Define your local paths in the `.env` file:
 
 ```bash
@@ -85,13 +85,13 @@ GPUPhot allows you to easily scale processing across all available GPUs on your 
 
 ```bash
 # Make the script executable
-chmod +x launch_workers.sh
+chmod +x launch_gpuphot.sh
 
 # Launch workers (auto-detects number of GPUs and assigns one worker per GPU)
-./launch_workers.sh
+./launch_gpuphot.sh
 
 # Or force a specific number of workers (e.g., 2)
-./launch_workers.sh 2
+./launch_gpuphot.sh 2
 ```
 
 This script ensures that each Docker worker is assigned a unique `GPU_ID` to prevent resource contention.
