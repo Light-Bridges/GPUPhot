@@ -209,17 +209,20 @@ This script uses `docker-compose.worker.yml` to launch only the worker container
 
 The `docker-compose.yml` includes special `profiler` services for detailed performance analysis with NVIDIA Nsight Systems. These services are not started by default. To launch them, use the `debug` profile:
 
-1.  **Launch profiling services (x86):**
+1.  **Launch profiling services (x86 — Python 3.12 + 3.8):**
     ```bash
-    docker compose --profile debug up -d profiler
+    docker compose --profile debug up -d profiler profiler_38
     ```
 2.  **Launch profiling services (Jetson):**
     ```bash
-    # For standard Jetson
-    docker compose --profile debug up -d profiler_jetson
-
-    # For Jetson Orin
+    # Jetson Orin — JetPack 5.x (Python 3.8)
     docker compose --profile debug up -d profiler_jetson_orin
+
+    # Jetson Orin Super — JetPack 6.x (Python 3.12 + 3.10)
+    docker compose --profile debug up -d profiler_jetson_orin_super profiler_jetson_orin_super_38
+
+    # Jetson Nano — JetPack 4.x (legacy)
+    docker compose --profile debug up -d profiler_jetson
     ```
 
 Once running, you can connect to the container via SSH to run profiling tools:
@@ -238,20 +241,18 @@ ssh root@localhost -p ${PROFILER_SSSH_PORT:-2222}
 
 ## 5. Initializing the Environment (First-Time Setup)
 
-After launching the services for the first time, you should initialize your JupyterLab environment by generating the example notebooks. These notebooks will guide you through the usage of GPUPhot.
+The `lab` service automatically generates example notebooks on first startup
+via its entrypoint script (`initialize_notebooks.sh`). These notebooks will
+guide you through the usage of GPUPhot.
 
-**Run the following command in your terminal:**
+Simply start the service and open JupyterLab in your browser — the example
+notebooks will appear in the file browser. If you need to regenerate them,
+restart the container after deleting the marker file:
 
 ```bash
-docker compose exec lab /usr/local/bin/initialize_notebooks.sh
+docker compose exec lab rm /home/jovyan/work/.notebooks_generated
+docker compose restart lab
 ```
-
-This script will:
-*   Check if the notebooks have already been generated.
-*   If not, it will create a set of example `.ipynb` files inside the directory you specified in `NOTEBOOKS_PATH`.
-*   If you run it again, it will do nothing, preserving any changes you have made.
-
-After running the command, refresh your JupyterLab browser window. The example notebooks should appear in the file browser.
 
 ## 6. Stopping the Services
 
@@ -278,9 +279,12 @@ This will stop and remove the containers, networks, and volumes.
 | `gpuphot_worker`       | Celery worker that processes images on the GPU.                      | -               | -                                | `default`   |
 | `lab`                  | Interactive JupyterLab environment with GPU access.                  | `8888`          | (no token)                       | `default`   |
 | `flower`               | Web interface for monitoring Celery workers and tasks.               | `5555`          | (no auth)                        | `default`   |
-| `profiler`             | Container with Nsight Systems and SSH for profiling on x86.          | `2222`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
-| `profiler_jetson`      | Profiling container for Jetson platforms.                            | `2222`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
-| `profiler_jetson_orin` | Profiling container for Jetson Orin platforms.                       | `2222`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+| `profiler`             | x86 profiler, Python 3.12 with cuML/RAPIDS.                         | `2222`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+| `profiler_38`          | x86 profiler, Python 3.8 (Ubuntu 20.04, no cuML).                   | `2223`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+| `profiler_jetson`      | Jetson Nano (JetPack 4.x, legacy).                                  | `2224`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+| `profiler_jetson_orin` | Jetson Orin (JetPack 5.x, Python 3.8).                              | `2225`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+| `profiler_jetson_orin_super` | Jetson Orin Super (JetPack 6.x, Python 3.12).                  | `2226`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+| `profiler_jetson_orin_super_38` | Jetson Orin Super (JetPack 6.x, Python 3.10).               | `2228`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
 
 ## Customization
 

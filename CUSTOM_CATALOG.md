@@ -267,12 +267,12 @@ To ensure compatibility, the `DataFrame` returned by the custom function must us
 Finally, to use your custom function, it's good practice to group the advanced parameters into a dictionary and pass them to `process_image`. This makes the call cleaner and easier to manage.
 
 ```python
-from gpuphot import get_processor
+from gpuphot.image_processor import create_processor
 from gpuphot_worker.utils import open_image_file
 from .custom_search_logic import custom_vizier_catalog  # Import your function
 
 # 1. Create the processor
-processor = get_processor(instrument_name='my_instrument')
+processor = create_processor('my_instrument')
 
 # 2. Load the image
 imdata, imheader = open_image_file('path/to/image.fits')

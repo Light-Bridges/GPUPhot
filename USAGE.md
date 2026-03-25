@@ -104,8 +104,8 @@ processor = create_processor('default')
 # Using a custom configuration
 processor = create_processor('my_instrument', '/path/to/your/instrument_configs') #INSTRUMENT_CONFIG_BASE_PATH
 
-#Using the instrument name defined in the .env
-processor = create_processor()
+# Using the default instrument
+processor = create_processor('default')
 
 ```
 The `config_dir` argument in `create_processor` is optional. By default, it uses the value defined by `INSTRUMENT_CONFIG_BASE_PATH`.
@@ -131,11 +131,11 @@ get_solver()
 ## 3. Basic Usage
 
 ```python
-import gpuphot
+from gpuphot.image_processor import create_processor
 from gpuphot_worker.utils import open_image_file
 
 # 1. Create an ImageProcessor (using the default configuration)
-processor = gpuphot.get_processor()
+processor = create_processor('default')
 
 # 2. Load an image
 imdata, imheader = open_image_file('path/to/your/image.fits')  # Replace with your image path
@@ -231,7 +231,7 @@ print(result)
 
 When using the provided Docker Compose setup, keep in mind:
 
-1.  **Image Location:** Place your FITS images in the directory you mapped to `/data/images` inside the container (this is controlled by the `IMAGE_BASE_PATH` environment variable in your `.env` file).
+1.  **Image Location:** Place your FITS images in the directory you mapped to `/data/images` inside the container (this is controlled by the `IMAGE_PATH` environment variable in your `.env` file).
 2.  **JupyterLab:** Access JupyterLab at `http://localhost:8888` to interact with GPUPhot interactively, run notebooks, and analyze results.
 3.  **Flower:** Monitor Celery tasks at `http://localhost:5555`.
 4. **RabbitMQ**: You can access it using `http://localhost:15672` with the credentials `gpuphot:gpuphot`.
@@ -297,12 +297,12 @@ To enable this, you pass your custom function and its related parameters to `pro
 Here is how you would call `process_image` with your custom catalog function. This method makes it clear that these parameters are part of an advanced, self-contained configuration.
 
 ```python
-from gpuphot import get_processor
+from gpuphot.image_processor import create_processor
 from gpuphot_worker.utils import open_image_file
 from my_project.catalog_search import my_custom_search_function # Your implementation
 
 # 1. Create a processor
-processor = get_processor('my_instrument')
+processor = create_processor('my_instrument')
 
 # 2. Load image data and header
 imdata, imheader = open_image_file('path/to/your/image.fits')
