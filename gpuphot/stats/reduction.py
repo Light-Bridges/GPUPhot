@@ -125,8 +125,8 @@ def register_shift(fc, uf=100, n=1000):
                                                     upsample_factor=uf)
         if (np.abs(shifted[0]) > 300) | (np.abs(shifted[1]) > 300):
             shifted = 0, 0
-        fc1[i] = shift(cp.asarray(fc[i]), shift=(shifted[0], shifted[1]),
-                       order=1, mode='constant').get()
+        fc1[i] = shift(cp.asarray(fc[i]), shift=(float(shifted[0]), float(shifted[1])),
+                       order=1, mode='constant')
         logger.debug(f'Detected subpixel offset (y, x): {shifted}')
 
         del im1, shifted

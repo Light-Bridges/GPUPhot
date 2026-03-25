@@ -3192,7 +3192,7 @@ def aperture_photometry(img, positions, aper_rad, **kwargs):
         DeprecationWarning,
         stacklevel=2,
     )
-    kernel, area = get_aper_kernel(aper_rad)
+    kernel, area = get_aper_kernel(aper_rad, size=2 * int(aper_rad) + 1)
     conv_ima = convolve_fft(img, kernel, **kwargs)
     positions = cp.array(cp.round(positions)).astype(cp.int32)
     flux = conv_ima[positions[:, 0], positions[:, 1]]
