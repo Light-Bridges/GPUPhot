@@ -90,8 +90,7 @@ Operational notes
 - The indentation feature in `IndentFormatter` is thread-local to avoid
   cross-thread interference when many tasks are processed concurrently.
 - Avoid changing runtime logic in this package during documentation-only
-  passes. If you find a code issue that should be fixed, put the fix
-  suggestion in `gpuphot/logger/FIXERS.md` (see "Non-documentation fixes" below).
+  passes.
 
 Developer notes and extension points
 ------------------------------------

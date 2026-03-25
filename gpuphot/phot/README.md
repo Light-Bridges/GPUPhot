@@ -25,7 +25,7 @@ Design notes
   paths only when necessary. The code contains many NVTX ranges for
   profiling and careful calls to free GPU memory.
 - `photo_gpu.py` is intentionally large; it orchestrates the full
-  photometric pipeline. Consider reviewing `FIXERS.md` for suggested refactors.
+  photometric pipeline.
 
 Environment variables and runtime
 ---------------------------------
@@ -33,12 +33,6 @@ The photometry code reads certain environment and configuration values from
 `instrument_configs` and other parser modules. During runtime it expects
 CuPy-enabled CUDA environment for GPU acceleration; fallback to CPU may be
 slower.
-
-Non-documentation fixes
------------------------
-Any functional changes discovered while documenting files were recorded in
-`FIXERS.md` within this directory. Please review and address those in a
-separate code-fix pass.
 
 Testing recommendations
 -----------------------
@@ -65,7 +59,3 @@ logger = setup_logger('gpuphot.phot')
 logger.info('Starting photometry')
 ```
 
-Contact
--------
-If you want, I can proceed to implement fixes in `FIXERS.md` in a dedicated
-branch and open a PR for review.

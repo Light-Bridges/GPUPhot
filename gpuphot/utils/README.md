@@ -32,6 +32,3 @@ Notes & Usage
 - Ensure the runtime environment contains the expected GPU libraries when
   running GPU-accelerated code (CuPy, cuML). Where GPU features are optional,
   the code logs warnings and falls back to CPU implementations.
-- When you encounter a `FIXERS.md` file in a subpackage, it lists
-  non-documentation code improvements that were intentionally deferred during
-  the documentation-only pass.
