@@ -1,8 +1,9 @@
 # GPUPhot: Execution Flow and Data Processing Analysis
 
-**Version:** 2.0
-**Date:** 2026-03-24
+**Version:** 2.1
+**Date:** 2026-03-25
 **Consolidated from:** callgraph iterations 1-5, process_image_flow.md, process_image_flow_tree.md, process_image_kwargs.md, PARAMETER_CONSISTENCY.md
+**Changes v2.1:** Added GPU memory management (S9), NVTX instrumentation and profiling (S10), exception hierarchy (S10.3), updated line references and dead code audit (S11)
 
 ---
 
@@ -389,36 +390,115 @@ Parameters merge: `ImageProcessor.process_image` builds `params = {**self.proces
 
 ## 8. Parameter Consistency Audit
 
-Three discrepancies exist between `DEFAULT_PROCESSING_PARAMS` values and function signature defaults:
+All `DEFAULT_PROCESSING_PARAMS` values are now consistent with function
+signature defaults. No discrepancies remain.
 
-| Parameter | Config Default | Function Default | Function | Impact |
-| :--- | :--- | :--- | :--- | :--- |
-| `border` | `20` | `10` | `calibrate_image` | Direct calls use 10px border (more edge contamination) |
-| `color_range` | `0.6` | `0.3` | `get_zeropoint` | Direct calls use stricter range (fewer calibration stars) |
-| `tile_section_psf` | `3000` | `2500` | `calibrate_image` | Direct calls create smaller tiles (more groups) |
+If new parameters are added, verify that the default in `DEFAULT_PROCESSING_PARAMS`
+(`gpuphot/instrument_config_parser.py`) matches the function signature default where
+the parameter is consumed. The merge happens in `process_image`:
+`params = {**self.processing_params, **kwargs}` -> `calibrate_image(..., **params)`.
 
-**Recommendation:** Unify function signature defaults with `DEFAULT_PROCESSING_PARAMS` to ensure consistent behavior regardless of call path.
+**Current `DEFAULT_PROCESSING_PARAMS`:**
+
+| Parameter | Default | Where Consumed |
+| :--- | :--- | :--- |
+| `border` | `20` | `calibrate_image` |
+| `center_factor` | `0.7` | `calibrate_image` |
+| `color_range` | `0.6` | `get_zeropoint` |
+| `CR_filt` | `False` | `calibrate_image` |
+| `do_pad` | `True` | `convolve_fft` |
+| `lum_gmag_coeff` | `0.5` | `catalog_results` |
+| `lum_rmag_coeff` | `0.5` | `catalog_results` |
+| `max_stars_ref` | `15` | `calibrate_image` |
+| `min_conv_snr` | `300` | `perform_opt_photometry` |
+| `pca_method` | `True` | `calibrate_image` |
+| `SP_filt` | `True` | `calibrate_image` |
+| `tile_section` | `1000` | `get_local_background_fft` |
+| `tile_section_psf` | `3000` | `create_aperture_corrections_map_gpu` |
+| `zp_maxmag` | `21` | `calibrate_image`, `catalog_results` |
 
 ---
 
-## 9. Standalone and Dead Code
+## 9. GPU Memory Management (`gpuphot/utils/gpu.py`)
+
+The pipeline uses a layered memory management strategy:
+
+| Function | Purpose |
+| :--- | :--- |
+| `free_gpu_mem()` | Basic `mempool.free_all_blocks()` + `gc.collect()` |
+| `force_free_gpu_memory()` | Aggressive: clears pinned memory pool + sets new default allocators |
+| `reset_cupy_allocators()` | Full reset: creates new memory pools (called in `process_image` finally block) |
+| `adaptive_memory_management()` | Context manager that monitors memory ratio and triggers cleanup at configurable thresholds |
+| `check_memory_availability()` | Pre-check: estimates if an operation will fit in available VRAM |
+| `offload_to_cpu()` / `load_to_gpu()` | Reactive spill: moves arrays between CPU and GPU when pressure is high |
+| `get_gpu_var_reactive()` | Transparent accessor: loads from CPU if offloaded, manages memory automatically |
+| `cleanup_cupy()` | Deletes CuPy arrays and frees pool (utility for explicit cleanup) |
+
+**Memory pressure levels** (in `adaptive_memory_management`):
+- Level 0 (< 0.7): Normal operation
+- Level 1 (0.7-0.85): Warning, start cleanup
+- Level 2 (> 0.85): Critical, force `free_all_blocks()`
+
+---
+
+## 10. Instrumentation and Profiling
+
+### 10.1 NVTX Annotations
+
+The pipeline is instrumented with ~120 NVTX markers across all major functions, enabling GPU timeline profiling with NVIDIA Nsight Systems. Key annotated phases:
+
+- `process_image`, `calibrate_image`
+- `get_local_background_fft`, `convolve_fft`
+- `detect_isolated_stars`, `detect_sources_psf`
+- `create_star_dataset`, `fit_moffat`
+- `perform_opt_photometry`, `batch_aperture_photometry`
+- `crossmatch_sources`, `catalog_results`, `get_zeropoint`
+
+Usage:
+```bash
+nsys profile --trace=cuda,nvtx --nvtx-capture=range \
+    python3 profile_process_image.py <image> <instrument>
+```
+
+### 10.2 Hierarchical Logging (`gpuphot/logger/hierarchical_logging.py`)
+
+The `@hierarchical_debug` decorator adds structured entry/exit logging with timing, memory snapshots, and indented call trees. It works alongside NVTX to provide both human-readable logs and GPU-traceable timelines.
+
+### 10.3 Exception Hierarchy (`gpuphot/exceptions.py`)
+
+| Exception | Trigger |
+| :--- | :--- |
+| `GPUPhotError` | Base class for all pipeline errors |
+| `InsufficientStarsError` | Too few stars detected (< 5 isolated stars) |
+| `MoffatFitError` | PSF fitting failure |
+| `ImageQualityError` | Image too crowded or too noisy |
+| `UnableToAstrometrizeError` | Astrometry solving failed |
+| `AstrometrizationTimeoutError` | Astrometry timed out |
+| `DataValidationError` | Invalid input data |
+| `InvalidGroupSizeError` | Star group size below threshold |
+
+The `@capture_cuda_exception` decorator on `process_image` catches any uncaught CUDA error and wraps it in `GPUPhotError`.
+
+---
+
+## 11. Standalone and Dead Code
 
 Functions defined but not integrated in the main `process_image` pipeline:
 
 | Function | File:Lines | Status | Notes |
 | :--- | :--- | :--- | :--- |
-| `gen_moff_filter2` | `photo_gpu.py:153-175` | Dead code | Alternative Moffat filter, never called. |
-| `calculate_aperture_corrections` | `photo_gpu.py:255-298` | Dead code | Legacy CPU version, replaced by GPU version. |
-| `aperture_photometry` | `photo_gpu.py:3150-3169` | Dead code | Superseded by `batch_aperture_photometry`. |
-| `get_fwhm_mof` | `photo_gpu.py:3174-3196` | Standalone | ML model inference helper, not integrated. |
-| `get_sky` | `photo_gpu.py:116-147` | Standalone | Sky estimation utility, not called from pipeline. |
-| `recreate_normed_star_vectorized` | `psf.py:754-777` | Standalone | Unused vectorized variant. |
-| `recreate_normed_stars_batch` | `psf.py:781-800` | Standalone | Unused batch variant. |
-| `filter_centroids_kdtree` | `psf.py:896-909` | Standalone | Utility not integrated. |
+| `gen_moff_filter2` | `photo_gpu.py:154` | Dead code | Alternative Moffat filter, never called. |
+| `aperture_photometry` | `photo_gpu.py:3171` | Dead code | Superseded by `batch_aperture_photometry`. |
+| `get_fwhm_mof` | `photo_gpu.py:3206` | Standalone | ML model inference helper, not integrated. |
+| `get_sky` | `photo_gpu.py:117` | Standalone | Sky estimation utility, not called from pipeline. |
+| `recreate_normed_star_vectorized` | `psf.py:751` | Standalone | Unused vectorized variant. |
+| `recreate_normed_stars_batch` | `psf.py:778` | Standalone | Unused batch variant. |
+| `filter_centroids_kdtree` | `psf.py:893` | Standalone | Utility not integrated. |
+| `perform_opt_photometry_optimized` | `photo_gpu.py:1035` | Commented out | Experimental optimized version. |
 
 ---
 
-## 10. Visual Graph
+## 12. Visual Graph
 
 The annotated call graph is available as:
 - **PNG:** `callgraph/process_image_graph_iter6_annotated.png`
