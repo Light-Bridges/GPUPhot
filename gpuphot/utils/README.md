@@ -22,10 +22,6 @@ Modules
 - `headers.py` – FITS header utilities used to insert astrometry and photometry
   metadata into image headers in a consistent way.
 
-- `smartgpudecoratorclass.py` – A decorator class implementing adaptive
-  strategies for functions that allocate GPU memory. Useful for long-running
-  GPU workloads to avoid out-of-memory failures.
-
 - `timeout.py` – Small, process-based executor wrapper to run functions with a
   timeout. Used to guard network or blocking catalog calls.
 
