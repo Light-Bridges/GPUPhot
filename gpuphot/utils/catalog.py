@@ -12,6 +12,7 @@ module docstring. No functional changes performed.
 
 from __future__ import annotations
 
+import os
 import time
 
 import cupy as cp
@@ -37,10 +38,30 @@ try:
     from cuml.neighbors import NearestNeighbors as cuNearestNeighbors
 
     CUML_AVAILABLE = True
-    logger.debug("RAPIDS cuML found. Using GPU for crossmatch.")
+    logger.debug("RAPIDS cuML found.")
 except ImportError:
-    logger.warning("Warning: RAPIDS cuML not found. Falling back to CPU crossmatch or GPU crossmatch will fail.")
+    logger.warning("RAPIDS cuML not found. Falling back to CPU crossmatch (cKDTree).")
     CUML_AVAILABLE = False
+
+# cuML crossmatch control via environment variables.
+# By default cuML is DISABLED because cKDTree O(N log N) outperforms
+# cuML brute-force O(N^2) for the source counts typical of this pipeline.
+# Set GPUPHOT_USE_CUML_CROSSMATCH=1 to force cuML for all crossmatches.
+# Set GPUPHOT_CUML_MIN_SOURCES and GPUPHOT_CUML_MAX_SOURCES to enable
+# adaptive mode: cuML is used only when source count falls within the
+# GPU-beneficial window (varies by GPU, see benchmark_cuml_crossover.py).
+_USE_CUML = os.environ.get('GPUPHOT_USE_CUML_CROSSMATCH', '0') == '1'
+_CUML_MIN_SOURCES = int(os.environ.get('GPUPHOT_CUML_MIN_SOURCES', '0'))
+_CUML_MAX_SOURCES = int(os.environ.get('GPUPHOT_CUML_MAX_SOURCES', '0'))
+_CUML_ADAPTIVE = _CUML_MIN_SOURCES > 0 and _CUML_MAX_SOURCES > _CUML_MIN_SOURCES
+
+if CUML_AVAILABLE:
+    if _USE_CUML:
+        logger.info("cuML crossmatch FORCED via GPUPHOT_USE_CUML_CROSSMATCH=1")
+    elif _CUML_ADAPTIVE:
+        logger.info(f"cuML crossmatch ADAPTIVE: enabled for {_CUML_MIN_SOURCES}-{_CUML_MAX_SOURCES} sources")
+    else:
+        logger.info("cuML crossmatch DISABLED (default). cKDTree used for all crossmatches.")
 
 
 # --- GPU Implementation Detail ---
@@ -167,9 +188,23 @@ def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
         raise TypeError("Inputs must be NumPy or CuPy arrays.")
 
     use_gpu_attempt = False  # Flag to track if we even try GPU
+    n_sources = len(source_coords)
+
+    # Determine whether to use cuML for this crossmatch call
+    should_use_cuml = False
     if CUML_AVAILABLE and is_gpu_input:
+        if _USE_CUML:
+            # Forced mode: always use cuML
+            should_use_cuml = True
+        elif _CUML_ADAPTIVE and _CUML_MIN_SOURCES <= n_sources <= _CUML_MAX_SOURCES:
+            # Adaptive mode: use cuML only within the beneficial source-count window
+            should_use_cuml = True
+            logger.debug(f"cuML adaptive: {n_sources} sources within [{_CUML_MIN_SOURCES}, {_CUML_MAX_SOURCES}]")
+        # else: cuML disabled (default) — fall through to cKDTree
+
+    if should_use_cuml:
         use_gpu_attempt = True
-        logger.debug("Attempting GPU crossmatch.")
+        logger.debug(f"Attempting GPU crossmatch ({n_sources} sources).")
         try:
             result = _crossmatch_sources_gpu_impl(source_coords, ref_coords, thres_px)
             logger.debug("GPU crossmatch successful.")
