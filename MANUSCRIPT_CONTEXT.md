@@ -145,6 +145,15 @@ Future work: re-run benchmarks with adaptive cuML thresholds (use cuML only
 when source count falls in the GPU-beneficial window per GPU). This requires
 implementing the GPUPHOT_CUML_MIN_SOURCES / GPUPHOT_CUML_MAX_SOURCES env vars.
 
+### Code not in the repository (do NOT reference in manuscript)
+
+- **SmartGPUDecoratorClass** (`gpuphot/utils/smartgpudecoratorclass.py`):
+  Experimental decorator for per-function GPU memory monitoring. This file
+  exists locally but is NOT part of the committed project — it is a prototype
+  from development experiments. Do not reference it in the manuscript.
+  The offload_to_cpu/load_to_gpu functions in gpu.py ARE in the repo but
+  are not called from the main pipeline (infrastructure for future use).
+
 ### What NOT to write
 
 - Do NOT claim cuML accelerates the pipeline
