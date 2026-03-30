@@ -99,9 +99,19 @@ Data: `cuml_ablation_a100_20260329.csv`
 is O(N log N). The pipeline makes multiple crossmatch calls per image, each
 paying cuML initialization overhead.
 
-Synthetic crossover benchmark confirms: even in isolation, cuML only wins in
-a narrow window (2K-50K sources on powerful GPUs), and NEVER on small GPUs.
-Data: `cuml_crossover_synthetic_all_gpus_20260328.csv`
+Synthetic crossover benchmark (extended to 500K sources on clean GPUs, 30 Mar 2026):
+
+| GPU | cuML wins from | Peak speedup | Loses again at |
+|-----|----------------|--------------|----------------|
+| H100 PCIe | 5K | 4.8x @ 20K | Not in range (1.27x @ 500K, trending down) |
+| A100-SXM4 | 2K | 4.4x @ 20K | 200K (0.43x @ 500K) |
+| L40S | 2K | 5.5x @ 20K | ~500K (0.86x @ 500K) |
+| RTX 3090 | 2K | 3.7x @ 10K | 200K (0.46x @ 500K) |
+| RTX 3060 | 2K | 2.0x @ 10K | 50K (0.14x @ 500K) |
+| RTX 3050 Ti | Never | — | CPU always wins |
+
+All benchmarks run with workers stopped and GPU memory verified clean (< 5 MiB).
+Data: `cuml_crossover_synthetic_clean_20260330.csv` (supersedes 20260328 version)
 
 ### Correct manuscript narrative
 
