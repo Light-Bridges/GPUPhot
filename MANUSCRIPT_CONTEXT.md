@@ -129,12 +129,29 @@ Data: `cuml_crossover_synthetic_clean_20260330.csv` (supersedes 20260328 version
 > cKDTree (O(N^2) vs O(N log N)) for the low-dimensional case. We recommend
 > using cKDTree as the default crossmatch backend.
 
+### IMPORTANT: cuML was active in py3.12 benchmarks
+
+The profiler benchmarks (25-26 Mar 2026) for py3.12 were run with cuML
+ENABLED by default (catalog.py line 170: `if CUML_AVAILABLE and is_gpu_input`).
+This means the py3.12 latency numbers in the tables INCLUDE cuML crossmatch
+overhead (71-256% per image). The py3.8 environment does not have cuML installed,
+so it always used cKDTree.
+
+Consequence: part of the latency gap between py3.8 and py3.12 is due to cuML,
+not just CuPy 14/NumPy 2.0 overhead. This must be stated transparently in the
+manuscript.
+
+Future work: re-run benchmarks with adaptive cuML thresholds (use cuML only
+when source count falls in the GPU-beneficial window per GPU). This requires
+implementing the GPUPHOT_CUML_MIN_SOURCES / GPUPHOT_CUML_MAX_SOURCES env vars.
+
 ### What NOT to write
 
 - Do NOT claim cuML accelerates the pipeline
 - Do NOT present py3.12 as "faster" without qualifying it as memory-efficient
 - Do NOT attribute the memory improvement to "Python 3.12 interpreter" — it's
   the dependency versions (CuPy 14, NumPy 2.0) that matter
+- Do NOT hide the fact that cuML was active in py3.12 benchmarks — state it
 
 ## 3. Hardware Tested
 
