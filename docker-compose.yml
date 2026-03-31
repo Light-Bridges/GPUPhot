@@ -241,8 +241,6 @@ services:
       - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
       - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
       - /var/run/nvidia-persistenced/socket:/var/run/nvidia-persistenced/socket
-      - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
-      - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:ro
     deploy:
       resources:
         reservations:
@@ -278,8 +276,6 @@ services:
       - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
       - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
       - /var/run/nvidia-persistenced/socket:/var/run/nvidia-persistenced/socket
-      - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
-      - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:ro
     deploy:
       resources:
         reservations:
