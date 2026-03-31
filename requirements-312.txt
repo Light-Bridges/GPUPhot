@@ -4,6 +4,11 @@ astrometry==4.3.0
 astropy==7.2.0
 astroquery==0.4.11
 cupy-cuda12x==14.0.1
+# Pin NVIDIA runtime libs to versions compatible with CUDA 12.6 base image.
+# Newer versions (e.g., nvrtc 12.9.86) ship CCCL headers that reference
+# __nv_fp8_e8m0 (Blackwell FP8), causing NVRTC compilation failures on
+# Hopper/Ampere/Ada GPUs. See: CuPy CCCL issue 2026-03-31.
+nvidia-cublas-cu12==12.9.1.4
 docker==7.1.0
 ephem==4.2.1
 json-with-comments==1.2.10
