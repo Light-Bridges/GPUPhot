@@ -1,0 +1,25 @@
+\begin{table}
+\caption{Top pipeline stages by time contribution. \texttt{mean\_ms} is the mean duration of the stage; stages are direct children of \texttt{calibrate\_image} (non-overlapping).}
+\label{tab:profiling_stages}
+\begin{tabular}{lllrrr}
+\toprule
+Configuration & stage & category & mean_ms & std_ms & pct_of_total \\
+\midrule
+unknown & perform_opt_photometry & GPU & 25095.5 & 0.0 & 274.2 \\
+unknown & get_local_background_fft & GPU & 6103.9 & 0.0 & 66.7 \\
+unknown & CR_filter & CPU & 5403.1 & 0.0 & 59.0 \\
+unknown & calculate_tile_nanmean_sigclip & GPU & 1176.8 & 3.7 & 12.9 \\
+unknown & SP_filter & CPU & 1088.1 & 0.0 & 11.9 \\
+unknown & update_header_with_astrometry & I/O & 581.4 & 0.0 & 6.4 \\
+unknown & detect_isolated_stars & GPU & 579.1 & 0.0 & 6.3 \\
+unknown & detect_sources_psf & GPU & 559.8 & 0.0 & 6.1 \\
+unknown & get_eigen_psfs & GPU & 238.5 & 0.0 & 2.6 \\
+unknown & free_gpu_mem & Overhead & 228.3 & 355.6 & 2.5 \\
+unknown & create_coeff_map & GPU & 147.0 & 0.0 & 1.6 \\
+unknown & catalog_results & I/O & 95.9 & 1.0 & 1.0 \\
+unknown & create_star_dataset & GPU & 85.9 & 0.0 & 0.9 \\
+unknown & project_all_stars_onto_eigenpsfs & GPU & 66.8 & 0.0 & 0.7 \\
+unknown & reset_cupy_allocators & Overhead & 63.0 & 0.0 & 0.7 \\
+\bottomrule
+\end{tabular}
+\end{table}

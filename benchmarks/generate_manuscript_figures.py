@@ -1,20 +1,28 @@
 #!/usr/bin/env python3
 """
-Generate all 5 data figures for the GPUPhot manuscript.
+Generate all data figures for the GPUPhot manuscript.
 
 Figures:
-  2 - Latency vs Image Size (log-log)
-  3 - Memory py3.8 vs py3.12 (grouped bar, A100)
-  4 - Heatmap (GPU x image size, median latency)
-  5 - cuML Crossover (speedup vs N sources)
-  6 - Concurrency (grouped bar, concurrent images per GPU)
+  2  - Latency vs Image Size (log-log), py3.12+adaptive recommended config
+  3  - Memory py3.8 vs py3.12 (grouped bar, A100)          [data unchanged]
+  4  - Heatmap GPU × image, py3.12+adaptive (10 images)
+  5  - cuML Crossover synthetic benchmark                   [data unchanged]
+  6  - Concurrency (grouped bar)                            [data unchanged]
+  7  - py3.8 vs py3.12+adaptive: % overhead per image (real pipeline)
+  8  - cuML always vs adaptive: % improvement per image
 
-Outputs saved to: figures_profiler/ as PDF + PNG at 300 dpi.
+Data sources:
+  benchmark_all_cuml_v2.csv              → figs 2, 4, 7, 8
+  profiler_nsys_memory_summary_*.csv     → fig 3
+  cuml_crossover_synthetic_*.csv         → fig 5
+
+Outputs saved to: GPUPhotFinal/figures_profiler/  (PDF + PNG)
+Then copied to:   GPUPhotFinal/GPUPHOT_manuscript/figures/
 """
 
 import os
-import sys
 import math
+import shutil
 import numpy as np
 import pandas as pd
 
@@ -24,7 +32,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib.colors import LinearSegmentedColormap
 
-# ── Global style ─────────────────────────────────────────────────────────────
+# ── Global style ──────────────────────────────────────────────────────────────
 plt.rcParams.update({
     'figure.dpi': 300,
     'savefig.dpi': 300,
@@ -45,24 +53,73 @@ CB_COLORS = [
     '#F0E442',  # yellow
     '#000000',  # black
 ]
-
 MARKERS = ['o', 's', '^', 'D', 'v', 'P', 'X', '*']
 
-# ── Paths ────────────────────────────────────────────────────────────────────
+# ── Paths ─────────────────────────────────────────────────────────────────────
 BASE = os.path.dirname(os.path.abspath(__file__))
 PROJECT = os.path.dirname(BASE)
 DATA_DIR = os.path.join(BASE, 'results_collected')
 OUT_DIR = os.path.join(PROJECT, 'figures_profiler')
+MANUSCRIPT_FIGURES_DIR = os.path.join(PROJECT, 'GPUPHOT_manuscript', 'figures')
 os.makedirs(OUT_DIR, exist_ok=True)
 
-UNIFIED_CSV = os.path.join(DATA_DIR, 'profiler_unified_timing_memory_20260327.csv')
-MEMORY_CSV = os.path.join(DATA_DIR, 'profiler_nsys_memory_summary_20260326.csv')
-CUML_CSV = os.path.join(DATA_DIR, 'cuml_crossover_synthetic_all_gpus_20260328.csv')
-JETSON_CSV = os.path.join(DATA_DIR, 'jetson_orin_8gb_timing_20260329.csv')
+BENCHMARK_CSV = os.path.join(DATA_DIR, 'benchmark_all_cuml_v2.csv')
+MEMORY_CSV    = os.path.join(DATA_DIR, 'profiler_nsys_memory_summary_20260326.csv')
+CUML_CSV      = os.path.join(DATA_DIR, 'cuml_crossover_synthetic_all_gpus_20260328.csv')
+
+# ── GPU label normalisation ───────────────────────────────────────────────────
+GPU_LABEL_MAP = {
+    'H100 PCIe':                      'H100 (80 GB)',
+    'A100-SXM4-80GB':                 'A100 (80 GB)',
+    'L40S':                           'L40S (48 GB)',
+    'GeForce RTX 3090':               'RTX 3090 (24 GB)',
+    'GeForce RTX 3060':               'RTX 3060 (12 GB)',
+    'GeForce RTX 3050 Ti Laptop GPU': 'RTX 3050 Ti (4 GB)',
+    'Orin Super 8GB (nvgpu)':         'Orin Super (8 GB)',
+    'Orin NX 8GB (nvgpu)':            'Orin NX (8 GB)',
+}
+GPU_ORDER = [
+    'H100 (80 GB)', 'A100 (80 GB)', 'L40S (48 GB)',
+    'RTX 3090 (24 GB)', 'RTX 3060 (12 GB)', 'RTX 3050 Ti (4 GB)',
+    'Orin Super (8 GB)', 'Orin NX (8 GB)',
+]
+# Short names for axes/legends
+GPU_SHORT = {
+    'H100 (80 GB)':       'H100',
+    'A100 (80 GB)':       'A100',
+    'L40S (48 GB)':       'L40S',
+    'RTX 3090 (24 GB)':   'RTX 3090',
+    'RTX 3060 (12 GB)':   'RTX 3060',
+    'RTX 3050 Ti (4 GB)': 'RTX 3050 Ti',
+    'Orin Super (8 GB)':  'Orin Super',
+    'Orin NX (8 GB)':     'Orin NX',
+}
+
+# Image label order for plots (ascending MP, then source count within MP)
+IMAGE_ORDER = [
+    'iKon936_SDSSg',      # 4.2 MP, 412 src
+    'iKon936_Lum',        # 4.2 MP, 296 src
+    'QHY600-3_Lum',       # 6.8 MP, 112 src
+    'QHY600-4_Ha',        # 15.3 MP, 318 src
+    'QHY600-4_SDSSg',     # 15.3 MP, 218 src
+    'QHY411-1_Lum_bin2',  # 37.8 MP, 154 src
+    'QHY411-1_SDSSi_bin2',# 37.8 MP, 247 src
+    'QHY411-1_Lum_full',  # 151.2 MP, 428 src
+    'QHY411-3_SDSSr_full',# 151.2 MP, 14241 src
+    'QHY411-3_Lum_full',  # 151.2 MP, 18888 src
+]
+IMAGE_MP = {
+    'iKon936_SDSSg': 4.2,   'iKon936_Lum': 4.2,
+    'QHY600-3_Lum': 6.8,
+    'QHY600-4_Ha': 15.3,    'QHY600-4_SDSSg': 15.3,
+    'QHY411-1_Lum_bin2': 37.8, 'QHY411-1_SDSSi_bin2': 37.8,
+    'QHY411-1_Lum_full': 151.2,
+    'QHY411-3_SDSSr_full': 151.2, 'QHY411-3_Lum_full': 151.2,
+}
 
 
 def save(fig, name):
-    """Save figure as PDF and PNG."""
+    """Save figure as PDF and PNG in OUT_DIR."""
     for ext in ('pdf', 'png'):
         path = os.path.join(OUT_DIR, f'{name}.{ext}')
         fig.savefig(path, bbox_inches='tight')
@@ -70,134 +127,121 @@ def save(fig, name):
     plt.close(fig)
 
 
+def load_benchmark(profiler_labels=None):
+    """Load benchmark_all_cuml_v2.csv, normalise GPU names, drop warmup rows."""
+    df = pd.read_csv(BENCHMARK_CSV)
+    df['execution_time'] = pd.to_numeric(df['execution_time'], errors='coerce')
+    df['mp'] = pd.to_numeric(df['mp'], errors='coerce')
+    df['n_sources_detected'] = pd.to_numeric(df['n_sources_detected'], errors='coerce')
+    df = df[df['execution_time'].notna()]
+
+    # Normalise GPU names (strip NVIDIA prefix, then map to label)
+    df['gpu_name'] = df['gpu_name'].str.replace('NVIDIA ', '', regex=False)
+    df['gpu_label'] = df['gpu_name'].map(GPU_LABEL_MAP).fillna(df['gpu_name'])
+
+    if profiler_labels:
+        df = df[df['profiler_label'].isin(profiler_labels)]
+
+    # Drop warmup: first 2 reps per (machine, profiler_label, image_label)
+    df = df[df['image_label'].notna() & (df['image_label'] != '')]
+    parts = []
+    for _, grp in df.groupby(['machine', 'profiler_label', 'image_label'], sort=False):
+        if grp['timestamp'].notna().any():
+            grp = grp.sort_values('timestamp')
+        parts.append(grp.iloc[2:])
+    return pd.concat(parts, ignore_index=True) if parts else df
+
+
 # ═════════════════════════════════════════════════════════════════════════════
-# FIGURE 2: Latency vs Image Size (log-log)
+# FIGURE 2 — Latency vs Image Size (log-log), py3.12+adaptive
 # ═════════════════════════════════════════════════════════════════════════════
 def figure2():
     print('Figure 2: Latency vs Image Size ...')
-    df = pd.read_csv(UNIFIED_CSV)
+    df = load_benchmark(['py312_cuml_adaptive'])
 
-    # Filter py3.12 only, and rows with timing data
-    # For Orin Super, use "Orin (nvgpu)" rows which have timing from Elastic
-    # For Orin NX 8GB, use separate Jetson CSV
-    df312 = df[(df['pyver'].astype(str).isin(['3.12', '3.10'])) & df['median_time_s'].notna()].copy()
+    # Only x86 GPUs: Jetson ARM times (~150 s for 4 MP) would collapse the log-log scale.
+    # Jetson performance is discussed separately in the text.
+    x86_gpus = [g for g in GPU_ORDER if 'Orin' not in g]
+    df = df[df['gpu_label'].isin(x86_gpus)]
 
-    # Build Orin NX data from jetson CSV
-    jdf = pd.read_csv(JETSON_CSV)
-    jdf_clean = jdf[jdf['type'] == 'clean']
-    orin_nx = jdf_clean.groupby('megapixels')['time_s'].median().reset_index()
-    orin_nx.rename(columns={'time_s': 'median_time_s'}, inplace=True)
-    orin_nx['gpu_short'] = 'Orin NX 8GB'
-
-    # Normalise GPU short names for the plot
-    gpu_map = {
-        'H100 PCIe': 'H100 (80 GB)',
-        'A100-SXM4-80GB': 'A100 (80 GB)',
-        'L40S': 'L40S (48 GB)',
-        'RTX 3090': 'RTX 3090 (24 GB)',
-        'RTX 3060': 'RTX 3060 (12 GB)',
-        'RTX 3050 Ti Laptop GPU': 'RTX 3050 Ti (4 GB)',
-        'Orin (nvgpu)': 'Orin Super (8 GB)',
-        'Orin NX 8GB': 'Orin NX (8 GB)',
-    }
-
-    # Order for legend (fast to slow conceptually)
-    gpu_order = [
-        'H100 (80 GB)', 'A100 (80 GB)', 'L40S (48 GB)',
-        'RTX 3090 (24 GB)', 'RTX 3060 (12 GB)', 'RTX 3050 Ti (4 GB)',
-        'Orin Super (8 GB)', 'Orin NX (8 GB)',
-    ]
-
-    df312['gpu_label'] = df312['gpu_short'].map(gpu_map)
-    orin_nx['gpu_label'] = orin_nx['gpu_short'].map(gpu_map)
+    # Median per (gpu_label, mp) — aggregates across machines and images at same size
+    grp = df.groupby(['gpu_label', 'mp'])['execution_time'].median().reset_index()
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
 
-    for idx, gpu_label in enumerate(gpu_order):
-        color = CB_COLORS[idx % len(CB_COLORS)]
-        marker = MARKERS[idx % len(MARKERS)]
-
-        if gpu_label == 'Orin NX (8 GB)':
-            subset = orin_nx.sort_values('megapixels')
-        else:
-            subset = df312[df312['gpu_label'] == gpu_label].sort_values('megapixels')
-
+    for idx, gpu_label in enumerate(x86_gpus):
+        subset = grp[grp['gpu_label'] == gpu_label].sort_values('mp')
         if subset.empty:
             continue
-
-        ax.plot(
-            subset['megapixels'], subset['median_time_s'],
-            color=color, marker=marker, markersize=5,
-            label=gpu_label, zorder=3,
-        )
+        color  = CB_COLORS[idx % len(CB_COLORS)]
+        marker = MARKERS[idx % len(MARKERS)]
+        # Need ≥2 points to draw a line; otherwise scatter only
+        if len(subset) >= 2:
+            ax.plot(subset['mp'], subset['execution_time'],
+                    color=color, marker=marker, markersize=5,
+                    label=gpu_label, zorder=3)
+        else:
+            ax.scatter(subset['mp'], subset['execution_time'],
+                       color=color, marker=marker, s=40,
+                       label=gpu_label, zorder=3)
 
     ax.set_xscale('log')
     ax.set_yscale('log')
     ax.set_xlabel('Image size (megapixels)')
-    ax.set_ylabel('Median latency (s)')
-    ax.set_title('End-to-end latency vs image size (py3.12)')
-
-    # Custom tick labels
+    ax.set_ylabel('Median end-to-end latency (s)')
+    ax.set_title('GPUPhot latency vs image size — py3.12 + adaptive cuML')
     ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{x:g}'))
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{x:g}'))
-
     ax.legend(fontsize=7.5, loc='upper left', framealpha=0.9, ncol=2)
     ax.grid(True, which='both', ls=':', alpha=0.4)
+    ax.text(0.99, 0.02,
+            'Jetson Orin (ARM) not shown — ~150 s for 4.2 MP (no RAPIDS)',
+            transform=ax.transAxes, fontsize=7, color='#666666',
+            ha='right', va='bottom', style='italic')
     fig.tight_layout()
     save(fig, 'fig2_latency_vs_size')
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# FIGURE 3: Memory py3.8 vs py3.12 (grouped bar, A100)
+# FIGURE 3 — Memory py3.8 vs py3.12 (A100)  [data unchanged]
 # ═════════════════════════════════════════════════════════════════════════════
 def figure3():
     print('Figure 3: Memory comparison py3.8 vs py3.12 ...')
     df = pd.read_csv(MEMORY_CSV)
-
-    # Filter A100
     a100 = df[df['gpu_name'] == 'A100-SXM4-80GB'].copy()
-
-    # Map camera to megapixels (use the megapixels column)
-    # Get unique megapixel groups
     mp_values = sorted(a100['megapixels'].unique())
-
-    # Camera labels for x-axis
-    cam_map = {4.2: 'iKon936\n4.2 MP', 6.8: 'QHY600\n6.8 MP',
-               15.3: 'QHY600\n15.3 MP', 37.8: 'QHY411\n37.8 MP',
-               151.2: 'QHY411\n151.2 MP'}
+    cam_map = {
+        4.2: 'iKon936\n4.2 MP',   6.8: 'QHY600\n6.8 MP',
+        15.3: 'QHY600\n15.3 MP', 37.8: 'QHY411\n37.8 MP',
+        151.2: 'QHY411\n151.2 MP',
+    }
 
     fig, ax = plt.subplots(figsize=(7, 4))
-
     x = np.arange(len(mp_values))
     width = 0.35
-
-    py38_vals = []
-    py312_vals = []
+    py38_vals, py312_vals = [], []
     for mp in mp_values:
-        row38 = a100[(a100['megapixels'] == mp) & (a100['python_ver'].astype(str) == '3.8')]
-        row312 = a100[(a100['megapixels'] == mp) & (a100['python_ver'].astype(str) == '3.12')]
-        py38_vals.append(row38['median_peak_MB'].values[0] if len(row38) > 0 else 0)
-        py312_vals.append(row312['median_peak_MB'].values[0] if len(row312) > 0 else 0)
+        r38  = a100[(a100['megapixels'] == mp) & (a100['python_ver'].astype(str) == '3.8')]
+        r312 = a100[(a100['megapixels'] == mp) & (a100['python_ver'].astype(str) == '3.12')]
+        py38_vals.append(r38['median_peak_MB'].values[0]  if len(r38)  > 0 else 0)
+        py312_vals.append(r312['median_peak_MB'].values[0] if len(r312) > 0 else 0)
 
-    py38_vals = np.array(py38_vals)
+    py38_vals  = np.array(py38_vals)
     py312_vals = np.array(py312_vals)
 
-    bars38 = ax.bar(x - width/2, py38_vals, width, label='py3.8 (CuPy 12)',
-                    color='#2c3e50', edgecolor='white', linewidth=0.5)
-    bars312 = ax.bar(x + width/2, py312_vals, width, label='py3.12 (CuPy 14)',
-                     color='#85c1e9', edgecolor='white', linewidth=0.5)
+    ax.bar(x - width/2, py38_vals,  width, label='py3.8 (CuPy 12)',
+           color='#2c3e50', edgecolor='white', linewidth=0.5)
+    ax.bar(x + width/2, py312_vals, width, label='py3.12 (CuPy 14)',
+           color='#85c1e9', edgecolor='white', linewidth=0.5)
 
-    # Annotate % saving above py3.12 bars
     for i in range(len(mp_values)):
         if py38_vals[i] > 0 and py312_vals[i] > 0:
             saving = (py38_vals[i] - py312_vals[i]) / py38_vals[i] * 100
-            ax.annotate(
-                f'{saving:.0f}%',
-                xy=(x[i] + width/2, py312_vals[i]),
-                xytext=(0, 5), textcoords='offset points',
-                ha='center', va='bottom', fontsize=8, fontweight='bold',
-                color='#0072B2',
-            )
+            ax.annotate(f'{saving:.0f}%',
+                        xy=(x[i] + width/2, py312_vals[i]),
+                        xytext=(0, 5), textcoords='offset points',
+                        ha='center', va='bottom', fontsize=8, fontweight='bold',
+                        color='#0072B2')
 
     ax.set_xlabel('Image')
     ax.set_ylabel('Peak VRAM (MB)')
@@ -211,146 +255,114 @@ def figure3():
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# FIGURE 4: Heatmap (GPU x image size, median latency)
+# FIGURE 4 — Heatmap GPU × image (10 images, py3.12+adaptive)
 # ═════════════════════════════════════════════════════════════════════════════
 def figure4():
     print('Figure 4: Heatmap ...')
-    df = pd.read_csv(UNIFIED_CSV)
+    df = load_benchmark(['py312_cuml_adaptive'])
+    med = df.groupby(['gpu_label', 'image_label'])['execution_time'].median()
 
-    # Use py3.12 (and py3.10 for Orin nvgpu)
-    df_sel = df[df['pyver'].astype(str).isin(['3.12', '3.10'])].copy()
+    gpu_cols_short = [GPU_SHORT[g] for g in GPU_ORDER if g in df['gpu_label'].values or
+                      any(df['gpu_label'] == g)]
+    gpu_cols_full  = [g for g in GPU_ORDER]
 
-    # Also add Orin NX 8GB from jetson CSV
-    jdf = pd.read_csv(JETSON_CSV)
-    jdf_clean = jdf[jdf['type'] == 'clean']
-    orin_nx_medians = jdf_clean.groupby('megapixels')['time_s'].median().to_dict()
+    n_imgs = len(IMAGE_ORDER)
+    n_gpus = len(GPU_ORDER)
+    matrix = np.full((n_imgs, n_gpus), np.nan)
 
-    # GPU order for columns
-    gpu_order_map = {
-        'H100 PCIe': 'H100',
-        'A100-SXM4-80GB': 'A100',
-        'L40S': 'L40S',
-        'RTX 3090': 'RTX 3090',
-        'RTX 3060': 'RTX 3060',
-        'RTX 3050 Ti Laptop GPU': 'RTX 3050 Ti',
-        'Orin (nvgpu)': 'Orin Super',
-        'Orin NX 8GB': 'Orin NX',
-    }
-    gpu_col_order = ['H100', 'A100', 'L40S', 'RTX 3090', 'RTX 3060',
-                     'RTX 3050 Ti', 'Orin Super', 'Orin NX']
+    for i, img in enumerate(IMAGE_ORDER):
+        for j, gpu in enumerate(GPU_ORDER):
+            try:
+                matrix[i, j] = med.loc[(gpu, img)]
+            except KeyError:
+                pass  # NaN = OOM or not tested
 
-    mp_order = [4.2, 6.8, 15.3, 37.8, 151.2]
-    mp_labels = ['4.2 MP', '6.8 MP', '15.3 MP', '37.8 MP', '151.2 MP']
+    # Row labels: image_label + (n_src annotation)
+    row_labels = [
+        'iKon936 SDSSg\n(4.2 MP, 412 src)',
+        'iKon936 Lum\n(4.2 MP, 296 src)',
+        'QHY600-3 Lum\n(6.8 MP, 112 src)',
+        'QHY600-4 Ha\n(15.3 MP, 318 src)',
+        'QHY600-4 SDSSg\n(15.3 MP, 218 src)',
+        'QHY411-1 Lum bin2\n(37.8 MP, 154 src)',
+        'QHY411-1 SDSSi bin2\n(37.8 MP, 247 src)',
+        'QHY411-1 Lum full\n(151.2 MP, 428 src)',
+        'QHY411-3 SDSSr\n(151.2 MP, 14 241 src)',
+        'QHY411-3 Lum\n(151.2 MP, 18 888 src)',
+    ]
+    col_labels = [GPU_SHORT.get(g, g) for g in GPU_ORDER]
 
-    df_sel['gpu_label'] = df_sel['gpu_short'].map(gpu_order_map)
+    fig, ax = plt.subplots(figsize=(9, 5.5))
+    cmap = LinearSegmentedColormap.from_list(
+        'latency', ['#FFFFB2', '#FED976', '#FEB24C', '#FD8D3C',
+                    '#FC4E2A', '#E31A1C', '#B10026'])
+    cmap.set_bad(color='#CCCCCC')
 
-    # Build matrix
-    matrix = np.full((len(mp_order), len(gpu_col_order)), np.nan)
+    vmin = np.nanmin(matrix)
+    vmax = np.nanmax(matrix)
+    im = ax.imshow(matrix, cmap=cmap, aspect='auto', vmin=vmin, vmax=vmax)
 
-    for i, mp in enumerate(mp_order):
-        for j, gpu in enumerate(gpu_col_order):
-            if gpu == 'Orin NX':
-                val = orin_nx_medians.get(mp, np.nan)
-            else:
-                rows = df_sel[(df_sel['gpu_label'] == gpu) &
-                              (np.isclose(df_sel['megapixels'], mp, atol=0.5))]
-                if len(rows) > 0 and rows['median_time_s'].notna().any():
-                    val = rows['median_time_s'].dropna().values[0]
-                else:
-                    val = np.nan
-            matrix[i, j] = val
-
-    fig, ax = plt.subplots(figsize=(8, 3.5))
-
-    # Custom colormap: yellow (fast) -> red (slow)
-    cmap = LinearSegmentedColormap.from_list('latency', ['#FFFFB2', '#FED976', '#FEB24C', '#FD8D3C', '#FC4E2A', '#E31A1C', '#B10026'])
-    cmap.set_bad(color='#CCCCCC')  # gray for NaN/OOM
-
-    # Use log scale for color
-    matrix_log = np.where(np.isnan(matrix), np.nan, matrix)
-    vmin = np.nanmin(matrix_log)
-    vmax = np.nanmax(matrix_log)
-
-    im = ax.imshow(matrix_log, cmap=cmap, aspect='auto',
-                   vmin=vmin, vmax=vmax)
-
-    # Annotate cells
-    for i in range(len(mp_order)):
-        for j in range(len(gpu_col_order)):
+    for i in range(n_imgs):
+        for j in range(n_gpus):
             val = matrix[i, j]
             if np.isnan(val):
                 ax.text(j, i, 'OOM', ha='center', va='center',
-                        fontsize=8, fontweight='bold', color='#555555')
+                        fontsize=7.5, fontweight='bold', color='#666666')
             else:
-                # Choose text color based on brightness
                 normed = (val - vmin) / (vmax - vmin) if vmax > vmin else 0
-                text_color = 'white' if normed > 0.65 else 'black'
+                tc = 'white' if normed > 0.65 else 'black'
                 ax.text(j, i, f'{val:.1f}s', ha='center', va='center',
-                        fontsize=8, fontweight='bold', color=text_color)
+                        fontsize=7.5, fontweight='bold', color=tc)
 
-    ax.set_xticks(range(len(gpu_col_order)))
-    ax.set_xticklabels(gpu_col_order, fontsize=8.5, rotation=30, ha='right')
-    ax.set_yticks(range(len(mp_order)))
-    ax.set_yticklabels(mp_labels, fontsize=9)
-    ax.set_title('Median end-to-end latency by GPU and image size (py3.12)', fontsize=10)
+    ax.set_xticks(range(n_gpus))
+    ax.set_xticklabels(col_labels, fontsize=8.5, rotation=30, ha='right')
+    ax.set_yticks(range(n_imgs))
+    ax.set_yticklabels(row_labels, fontsize=7.5)
+    ax.set_title('End-to-end latency (s) — py3.12 + adaptive cuML', fontsize=10)
 
-    cbar = fig.colorbar(im, ax=ax, shrink=0.85, pad=0.02)
+    cbar = fig.colorbar(im, ax=ax, shrink=0.8, pad=0.02)
     cbar.set_label('Latency (s)', fontsize=9)
-
     fig.tight_layout()
     save(fig, 'fig4_heatmap')
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# FIGURE 5: cuML Crossover
+# FIGURE 5 — cuML Crossover synthetic  [data unchanged]
 # ═════════════════════════════════════════════════════════════════════════════
 def figure5():
     print('Figure 5: cuML Crossover ...')
     df = pd.read_csv(CUML_CSV)
-
-    # Exclude Jetsons (they don't have cuML)
-    # GPU names in data: H100 PCIe, A100-SXM4-80GB, L40S, RTX 3090, RTX 3060, RTX 3050 Ti
-    gpu_order = ['H100 PCIe', 'A100-SXM4-80GB', 'L40S', 'RTX 3090', 'RTX 3060', 'RTX 3050 Ti']
+    gpu_order  = ['H100 PCIe', 'A100-SXM4-80GB', 'L40S', 'RTX 3090', 'RTX 3060', 'RTX 3050 Ti']
     gpu_labels = {
-        'H100 PCIe': 'H100 PCIe',
-        'A100-SXM4-80GB': 'A100-SXM4',
-        'L40S': 'L40S',
-        'RTX 3090': 'RTX 3090',
-        'RTX 3060': 'RTX 3060',
-        'RTX 3050 Ti': 'RTX 3050 Ti',
+        'H100 PCIe': 'H100 PCIe', 'A100-SXM4-80GB': 'A100-SXM4',
+        'L40S': 'L40S', 'RTX 3090': 'RTX 3090',
+        'RTX 3060': 'RTX 3060', 'RTX 3050 Ti': 'RTX 3050 Ti',
     }
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
-
-    # Shade "cKDTree faster" region (below 1.0)
     ax.axhspan(0, 1.0, alpha=0.10, color='#E31A1C', zorder=0)
     ax.axhline(y=1.0, color='#555555', linestyle='--', linewidth=1.0, zorder=2)
     ax.text(120, 1.05, 'break-even', fontsize=8, color='#555555', va='bottom')
-
-    # Label regions
     ax.text(80000, 0.15, 'cKDTree faster', fontsize=8, color='#B10026',
             ha='center', fontstyle='italic', alpha=0.7)
     ax.text(80000, 4.5, 'cuML faster', fontsize=8, color='#009E73',
             ha='center', fontstyle='italic', alpha=0.7)
 
     for idx, gpu in enumerate(gpu_order):
-        color = CB_COLORS[idx % len(CB_COLORS)]
-        marker = MARKERS[idx % len(MARKERS)]
         subset = df[df['gpu_name'] == gpu].sort_values('N')
         if subset.empty:
             continue
         ax.plot(subset['N'], subset['speedup'],
-                color=color, marker=marker, markersize=5,
+                color=CB_COLORS[idx % len(CB_COLORS)],
+                marker=MARKERS[idx % len(MARKERS)], markersize=5,
                 label=gpu_labels[gpu], zorder=3)
 
     ax.set_xscale('log')
     ax.set_xlabel('Number of sources (N)')
     ax.set_ylabel('Speedup (cKDTree time / cuML time)')
     ax.set_title('cuML vs cKDTree crossmatch: synthetic benchmark')
-
     ax.xaxis.set_major_formatter(ticker.FuncFormatter(
         lambda x, _: f'{int(x):,}' if x >= 1000 else f'{int(x)}'))
-
     ax.legend(fontsize=8, loc='upper left', framealpha=0.9)
     ax.grid(True, which='both', ls=':', alpha=0.4)
     fig.tight_layout()
@@ -358,77 +370,46 @@ def figure5():
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# FIGURE 6: Concurrency (grouped bar)
+# FIGURE 6 — Concurrency  [data unchanged]
 # ═════════════════════════════════════════════════════════════════════════════
 def figure6():
     print('Figure 6: Concurrency ...')
-
-    # VRAM totals (MB)
     vram_total = {
-        'H100': 80 * 1024,
-        'A100': 80 * 1024,
-        'L40S': 48 * 1024,
-        'RTX 3090': 24 * 1024,
-        'RTX 3060': 12 * 1024,
-        'RTX 3050 Ti': 4 * 1024,
+        'H100': 80*1024, 'A100': 80*1024, 'L40S': 48*1024,
+        'RTX 3090': 24*1024, 'RTX 3060': 12*1024, 'RTX 3050 Ti': 4*1024,
     }
-
-    # Peak VRAM for 4.2 MP iKon936 (from manuscript context / data)
-    peak_38 = 2018   # MB, py3.8
-    peak_312 = 1718  # MB, py3.12
-
+    peak_38  = 2018   # MB, py3.8  (iKon936, A100 nsys data)
+    peak_312 = 1718   # MB, py3.12 (iKon936, A100 nsys data)
     gpu_order = ['H100', 'A100', 'L40S', 'RTX 3090', 'RTX 3060', 'RTX 3050 Ti']
 
-    conc_38 = []
-    conc_312 = []
-    for gpu in gpu_order:
-        total = vram_total[gpu] * 0.95  # 95% usable
-        conc_38.append(math.floor(total / peak_38))
-        conc_312.append(math.floor(total / peak_312))
-
-    conc_38 = np.array(conc_38)
-    conc_312 = np.array(conc_312)
+    conc_38  = np.array([math.floor(vram_total[g]*0.95/peak_38)  for g in gpu_order])
+    conc_312 = np.array([math.floor(vram_total[g]*0.95/peak_312) for g in gpu_order])
 
     fig, ax = plt.subplots(figsize=(7, 4))
-
     x = np.arange(len(gpu_order))
     width = 0.35
 
-    bars38 = ax.bar(x - width/2, conc_38, width, label='py3.8 (CuPy 12)',
-                    color='#2c3e50', edgecolor='white', linewidth=0.5)
+    bars38  = ax.bar(x - width/2, conc_38,  width, label='py3.8 (CuPy 12)',
+                     color='#2c3e50', edgecolor='white', linewidth=0.5)
     bars312 = ax.bar(x + width/2, conc_312, width, label='py3.12 (CuPy 14)',
                      color='#85c1e9', edgecolor='white', linewidth=0.5)
 
-    # Annotate gain % above py3.12 bar
-    for i in range(len(gpu_order)):
+    for i, g in enumerate(gpu_order):
         if conc_38[i] > 0:
             gain = (conc_312[i] - conc_38[i]) / conc_38[i] * 100
-            text = f'+{gain:.0f}%'
-        else:
-            text = 'N/A'
+            color = '#D55E00' if g == 'RTX 3050 Ti' else '#0072B2'
+            ax.annotate(f'+{gain:.0f}%',
+                        xy=(x[i] + width/2, conc_312[i]),
+                        xytext=(0, 5), textcoords='offset points',
+                        ha='center', va='bottom', fontsize=8, fontweight='bold',
+                        color=color)
 
-        # Highlight RTX 3050 Ti specially
-        fontw = 'bold'
-        color = '#0072B2'
-        if gpu_order[i] == 'RTX 3050 Ti':
-            color = '#D55E00'
-            fontw = 'bold'
-
-        ax.annotate(
-            text,
-            xy=(x[i] + width/2, conc_312[i]),
-            xytext=(0, 5), textcoords='offset points',
-            ha='center', va='bottom', fontsize=8, fontweight=fontw,
-            color=color,
-        )
-
-    # Add value labels on bars
-    for bar_group in [bars38, bars312]:
-        for bar in bar_group:
-            height = bar.get_height()
-            if height > 0:
-                ax.text(bar.get_x() + bar.get_width()/2, height/2,
-                        f'{int(height)}', ha='center', va='center',
+    for bars in (bars38, bars312):
+        for bar in bars:
+            h = bar.get_height()
+            if h > 0:
+                ax.text(bar.get_x() + bar.get_width()/2, h/2,
+                        f'{int(h)}', ha='center', va='center',
                         fontsize=7.5, color='white', fontweight='bold')
 
     ax.set_xlabel('GPU')
@@ -443,10 +424,156 @@ def figure6():
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+# FIGURE 7 — py3.8 vs py3.12+adaptive: % overhead per image (real pipeline)
+# ═════════════════════════════════════════════════════════════════════════════
+def figure7():
+    print('Figure 7: py3.8 vs py3.12+adaptive overhead ...')
+    df = load_benchmark(['py38_baseline', 'py312_cuml_adaptive'])
+
+    datacenter_gpus = ['H100 (80 GB)', 'A100 (80 GB)', 'L40S (48 GB)']
+    df = df[df['gpu_label'].isin(datacenter_gpus)]
+
+    med = df.groupby(['gpu_label', 'profiler_label', 'image_label'])['execution_time'].median().unstack('profiler_label')
+    med = med.rename(columns={'py38_baseline': 'py38', 'py312_cuml_adaptive': 'adaptive'})
+    med = med.dropna(subset=['py38', 'adaptive'])
+    med['pct'] = (med['adaptive'] - med['py38']) / med['py38'] * 100
+    med = med.reset_index()
+    med['img_order'] = med['image_label'].map({img: i for i, img in enumerate(IMAGE_ORDER)})
+    med = med.sort_values(['img_order', 'gpu_label'])
+
+    pct_pivot = med.pivot(index='image_label', columns='gpu_label', values='pct')
+    pct_pivot = pct_pivot.reindex([img for img in IMAGE_ORDER if img in pct_pivot.index])
+
+    # QHY411-1_Lum_full is an outlier (250-300%) unrelated to cuML — pipeline overhead
+    # for 151.2 MP sparse field. Cap y-axis at 100% and annotate separately.
+    CAP = 100.0
+    outlier_img = 'QHY411-1_Lum_full'
+
+    x = np.arange(len(pct_pivot))
+    width = 0.25
+
+    fig, ax = plt.subplots(figsize=(11, 4.5))
+
+    for i, gpu in enumerate(datacenter_gpus):
+        if gpu not in pct_pivot.columns:
+            continue
+        raw_vals = pct_pivot[gpu].values
+        capped    = np.clip(raw_vals, -CAP, CAP)
+        colors    = ['#D55E00' if v > 0 else '#009E73' for v in raw_vals]
+        offset    = (i - 1) * width
+        ax.bar(x + offset, capped, width,
+               label=GPU_SHORT[gpu], color=colors,
+               edgecolor='white', linewidth=0.4, alpha=0.85)
+
+        # Annotate bars that were clipped
+        for j, (raw, cap) in enumerate(zip(raw_vals, capped)):
+            if raw > CAP:
+                ax.text(x[j] + offset, CAP + 1.5, f'{raw:.0f}%',
+                        ha='center', va='bottom', fontsize=6.5,
+                        color='#D55E00', fontweight='bold', rotation=90)
+
+    ax.axhline(0, color='black', linewidth=0.8, zorder=5)
+    ax.set_ylim(-15, CAP + 20)
+    ax.set_xticks(x)
+    xlabels = [img.replace('_', '\n') for img in pct_pivot.index]
+    ax.set_xticklabels(xlabels, fontsize=7, rotation=0, ha='center')
+    ax.set_ylabel('Overhead vs py3.8 (%)\n(positive = py3.12 slower)')
+    ax.set_title('End-to-end latency: py3.12 + adaptive cuML vs py3.8 baseline\n'
+                 'Datacenter GPUs — orange = py3.12 slower, green = py3.12 faster  '
+                 '(values above axis capped; real value annotated)')
+    ax.legend(fontsize=9, loc='upper left')
+    ax.grid(axis='y', ls=':', alpha=0.4)
+
+    # MP group separators and labels (placed after ylim is set)
+    mp_groups = [
+        (-0.5, 1.5, '4.2 MP'), (1.5, 2.5, '6.8 MP'),
+        (2.5, 4.5, '15.3 MP'), (4.5, 6.5, '37.8 MP'), (6.5, 9.5, '151.2 MP'),
+    ]
+    ymax = ax.get_ylim()[1]
+    for xstart, xend, label in mp_groups:
+        if xend < len(pct_pivot) - 0.5:
+            ax.axvline(xend, color='#AAAAAA', linewidth=0.6, ls='--', zorder=1)
+        mid = (xstart + xend) / 2
+        ax.text(mid, ymax * 0.97, label,
+                fontsize=7, color='#555555', ha='center', va='top')
+
+    fig.tight_layout()
+    save(fig, 'fig7_py38_vs_adaptive')
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# FIGURE 8 — cuML always vs adaptive: % improvement per image (datacenter)
+# ═════════════════════════════════════════════════════════════════════════════
+def figure8():
+    print('Figure 8: cuML always vs adaptive improvement ...')
+    df = load_benchmark(['py312_cuml_always', 'py312_cuml_adaptive'])
+
+    datacenter_gpus = ['H100 (80 GB)', 'A100 (80 GB)', 'L40S (48 GB)']
+    df = df[df['gpu_label'].isin(datacenter_gpus)]
+
+    med = df.groupby(['gpu_label', 'profiler_label', 'image_label'])['execution_time'].median().unstack('profiler_label')
+    med = med.rename(columns={'py312_cuml_always': 'always', 'py312_cuml_adaptive': 'adaptive'})
+    med = med.dropna(subset=['always', 'adaptive'])
+    # Positive = adaptive is faster (improvement)
+    med['improvement'] = (med['always'] - med['adaptive']) / med['always'] * 100
+    med = med.reset_index()
+    med['img_order'] = med['image_label'].map({img: i for i, img in enumerate(IMAGE_ORDER)})
+    med = med.sort_values(['img_order', 'gpu_label'])
+
+    pct_pivot = med.pivot(index='image_label', columns='gpu_label', values='improvement')
+    pct_pivot = pct_pivot.reindex([img for img in IMAGE_ORDER if img in pct_pivot.index])
+
+    n_imgs = len(pct_pivot)
+    x = np.arange(n_imgs)
+    width = 0.25
+
+    fig, ax = plt.subplots(figsize=(11, 4.5))
+
+    for i, gpu in enumerate(datacenter_gpus):
+        if gpu not in pct_pivot.columns:
+            continue
+        vals = pct_pivot[gpu].values
+        colors = ['#009E73' if v > 0 else '#D55E00' for v in vals]
+        offset = (i - 1) * width
+        ax.bar(x + offset, vals, width,
+               label=GPU_SHORT[gpu], color=colors,
+               edgecolor='white', linewidth=0.4, alpha=0.85)
+
+    ax.axhline(0, color='black', linewidth=0.8, zorder=5)
+    ax.set_xticks(x)
+    xlabels = [img.replace('_', '\n') for img in pct_pivot.index]
+    ax.set_xticklabels(xlabels, fontsize=7, rotation=0, ha='center')
+    ax.set_ylabel('Improvement of adaptive vs always (%)\n(positive = adaptive faster)')
+    ax.set_title('Adaptive cuML vs always-on cuML\n'
+                 'Datacenter GPUs — green = adaptive faster, orange = adaptive slower')
+    ax.legend(fontsize=9, loc='upper right')
+    ax.grid(axis='y', ls=':', alpha=0.4)
+    fig.tight_layout()
+    save(fig, 'fig8_always_vs_adaptive')
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# COPY TO MANUSCRIPT
+# ═════════════════════════════════════════════════════════════════════════════
+def copy_to_manuscript():
+    """Copy all generated fig*.{pdf,png} to GPUPHOT_manuscript/figures/."""
+    os.makedirs(MANUSCRIPT_FIGURES_DIR, exist_ok=True)
+    copied = 0
+    for fname in sorted(os.listdir(OUT_DIR)):
+        if fname.startswith('fig') and fname.endswith(('.pdf', '.png')):
+            src = os.path.join(OUT_DIR, fname)
+            dst = os.path.join(MANUSCRIPT_FIGURES_DIR, fname)
+            shutil.copy2(src, dst)
+            copied += 1
+    print(f'  Copied {copied} files → {MANUSCRIPT_FIGURES_DIR}')
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ═════════════════════════════════════════════════════════════════════════════
 if __name__ == '__main__':
-    print(f'Output directory: {OUT_DIR}')
+    print(f'Output directory : {OUT_DIR}')
+    print(f'Manuscript target: {MANUSCRIPT_FIGURES_DIR}')
     print()
     figure2()
     print()
@@ -458,4 +585,10 @@ if __name__ == '__main__':
     print()
     figure6()
     print()
-    print('All figures generated.')
+    figure7()
+    print()
+    figure8()
+    print()
+    copy_to_manuscript()
+    print()
+    print('Done — all figures generated and copied to manuscript.')

@@ -82,6 +82,7 @@ x-common-profiler: &common-profiler
     NVIDIA_PERSISTENCE_MODE: "on"
     CUDA_DEVICE_ORDER: PCI_BUS_ID
     NVIDIA_VISIBLE_DEVICES: all
+    CUDA_VISIBLE_DEVICES: ${GPU_ID:-0}
     NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-all,compute,utility,graphics}
     NSYS_PROFILING: 1
     NSYS_CUDA_TRACE: 1
@@ -243,7 +244,7 @@ services:
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
       - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
       - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
-      - /var/run/nvidia-persistenced/socket:/var/run/nvidia-persistenced/socket
+      - ${NVIDIA_PERSISTENCED_SOCKET:-/var/run/nvidia-persistenced/socket}:/var/run/nvidia-persistenced/socket
     deploy:
       resources:
         reservations:
@@ -278,7 +279,7 @@ services:
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
       - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
       - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
-      - /var/run/nvidia-persistenced/socket:/var/run/nvidia-persistenced/socket
+      - ${NVIDIA_PERSISTENCED_SOCKET:-/var/run/nvidia-persistenced/socket}:/var/run/nvidia-persistenced/socket
     deploy:
       resources:
         reservations:

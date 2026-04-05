@@ -13,6 +13,8 @@
 #   --stop-workers  Stop GPU0 workers on production machines before benchmark
 #   --images LIST   Comma-separated image indices 1-10 (default: all)
 #   --max-mp N      Max megapixels (0=all, default: 0)
+#   --machines LIST Comma-separated hostnames to run (default: all)
+#                   e.g. --machines local,ttt1,ttt_server
 #
 # Examples:
 #   # Full benchmark: 2 warmup + 10 reps + 2 nsys, both profilers
@@ -26,6 +28,12 @@
 #
 #   # Specific images only (1=iKon SDSSg, 2=iKon Lum, 3=QHY600-3, etc.)
 #   ./dev/run_benchmark_all_machines.sh --images 1,2,3 --reps 5
+#
+#   # Single machine (for sequential runs)
+#   ./dev/run_benchmark_all_machines.sh --machines local --stop-workers
+#
+#   # All machines sequentially (no GPU contention between machines)
+#   ./dev/run_benchmark_all_machines.sh --sequential --stop-workers
 # =============================================================================
 
 set -uo pipefail
@@ -38,6 +46,8 @@ PROFILERS="312,38"
 STOP_WORKERS=false
 MAX_MP=0
 IMAGE_FILTER=""
+MACHINE_FILTER=""
+SEQUENTIAL=false
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_DIR="${BENCHMARK_LOG_DIR:-/tmp/benchmark_${TIMESTAMP}}"
 
@@ -51,6 +61,8 @@ while [[ $# -gt 0 ]]; do
         --stop-workers) STOP_WORKERS=true; shift ;;
         --max-mp) MAX_MP="$2"; shift 2 ;;
         --images) IMAGE_FILTER="$2"; shift 2 ;;
+        --machines) MACHINE_FILTER="$2"; shift 2 ;;
+        --sequential) SEQUENTIAL=true; shift ;;
         *) echo "Unknown: $1"; exit 1 ;;
     esac
 done
@@ -186,21 +198,29 @@ run_benchmark() {
     done
 }
 
-# Launch all machines (parallel between machines, sequential between profilers per machine)
+# Launch machines (parallel by default, sequential if --sequential or single --machines)
 IFS=',' read -ra PROF_LIST <<< "$PROFILERS"
+
+# Single machine in --machines implies sequential (no point in &)
+[[ -n "$MACHINE_FILTER" && "$MACHINE_FILTER" != *","* ]] && SEQUENTIAL=true
 
 for machine_def in "${MACHINES[@]}"; do
     IFS='|' read -r host c312 c38 label flags <<< "$machine_def"
+
+    # Apply --machines filter
+    if [ -n "$MACHINE_FILTER" ]; then
+        echo ",$MACHINE_FILTER," | grep -q ",$host," || continue
+    fi
 
     # Check connectivity
     if [ "$host" != "local" ]; then
         ssh -o ConnectTimeout=5 -o BatchMode=yes "$host" "echo ok" &>/dev/null || { echo "SKIP $host (offline)"; continue; }
     fi
 
-    # Each machine runs in background, but profilers run SEQUENTIALLY within
-    # each machine to avoid GPU contention (both profilers share GPU 0)
+    # Profilers run SEQUENTIALLY within each machine (share GPU 0)
     echo "Launching: $label (profilers: ${PROFILERS})"
-    (
+    if $SEQUENTIAL; then
+        # Run this machine fully before moving to the next
         for prof in "${PROF_LIST[@]}"; do
             container="$c312"
             [ "$prof" = "38" ] && container="$c38"
@@ -211,16 +231,35 @@ for machine_def in "${MACHINES[@]}"; do
             run_benchmark "$host" "$container" "${label}_py${prof}" >> "$log_file" 2>&1
             echo "=== DONE $(date) ===" >> "$log_file"
         done
-    ) &
+        echo "  $label DONE ($(date))"
+    else
+        # Run in background (parallel across machines)
+        (
+            for prof in "${PROF_LIST[@]}"; do
+                container="$c312"
+                [ "$prof" = "38" ] && container="$c38"
+                [ -z "$container" ] && continue
+
+                log_file="${LOG_DIR}/${label}_py${prof}.log"
+                echo "=== $label py${prof} ($(date)) ===" > "$log_file"
+                run_benchmark "$host" "$container" "${label}_py${prof}" >> "$log_file" 2>&1
+                echo "=== DONE $(date) ===" >> "$log_file"
+            done
+        ) &
+    fi
 done
 
 echo ""
-echo "All launched in background."
-echo "Monitor:  tail -1 ${LOG_DIR}/*.log"
-echo "Status:   grep -l 'DONE' ${LOG_DIR}/*.log | wc -l"
+if $SEQUENTIAL; then
+    echo "All machines completed sequentially."
+else
+    echo "All launched in background."
+    echo "Monitor:  tail -1 ${LOG_DIR}/*.log"
+    echo "Status:   grep -l 'DONE' ${LOG_DIR}/*.log | wc -l"
+fi
 echo ""
 
-# Wait for all background jobs
+# Wait for background jobs (no-op if sequential)
 wait
 
 echo "======================================================================"

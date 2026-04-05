@@ -1,0 +1,13 @@
+image,camera,megapixels,sources,rep,time_s,type
+TTT3_iKon936-1_SDSSg,iKon936-1,4.2,412,warmup,73.864,warmup
+TTT3_iKon936-1_SDSSg,iKon936-1,4.2,412,1,28.810,clean
+TTT3_iKon936-1_SDSSg,iKon936-1,4.2,412,2,28.768,clean
+TTT3_iKon936-1_SDSSg,iKon936-1,4.2,412,3,28.857,clean
+TTT3_iKon936-1_SDSSg,iKon936-1,4.2,412,4,28.869,clean
+TTT3_iKon936-1_SDSSg,iKon936-1,4.2,412,5,28.870,clean
+TTT3_QHY600-3_Lum,QHY600-3,6.8,112,warmup,64.966,warmup
+TTT3_QHY600-3_Lum,QHY600-3,6.8,112,1,66.640,clean
+TTT3_QHY600-3_Lum,QHY600-3,6.8,112,2,66.381,clean
+TTT3_QHY600-3_Lum,QHY600-3,6.8,112,3,57.142,clean
+TTT3_QHY600-3_Lum,QHY600-3,6.8,112,4,57.448,clean
+TTT3_QHY600-3_Lum,QHY600-3,6.8,112,5,55.001,clean
