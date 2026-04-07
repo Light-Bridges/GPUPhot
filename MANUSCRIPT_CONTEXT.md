@@ -11,7 +11,8 @@
 
 | What you need | Section |
 |---------------|---------|
-| Editorial rules, narrative thread, what NOT to write | **§13** ← read first |
+| **Journal rules** (abstract, highlights, keywords, word limits) | **§0** ← check before submitting |
+| Editorial rules, narrative thread, what NOT to write | **§13** ← read before writing |
 | What GPUPhot is, key differentiators | §1 |
 | All verified numbers (latency, VRAM, speedups) | **§5** |
 | Current manuscript state, which file has what | §12 |
@@ -23,6 +24,62 @@
 
 **Manuscript repo**: `slemesp/GPUPHOT_manuscript`, branch `main`, commit `bf27dfb`
 **Code repo**: `Light-Bridges/GPUPhot`, branch `documentation`, commit `3712545`
+
+## 0. Journal Requirements — Astronomy & Computing (Elsevier)
+
+> Source: https://www.sciencedirect.com/journal/astronomy-and-computing/publish/guide-for-authors
+> Verified 2026-04-06. The ScienceDirect page does not render full content
+> via automated fetch; requirements below come from the guide + Elsevier
+> general author policies + analysis of published A&C papers.
+
+### Article type
+This paper is a **Full Length Article** (not a Software Release Note).
+Software Release Papers are shorter and require a stable public repository URL
+with professional packaging — keep that distinction if scope changes.
+
+### Abstract
+- **No explicit word limit** specified by A&C (unlike many Elsevier journals)
+- Published papers range ~170–290 words; target **~200 words**
+- **One continuous paragraph** — no blank lines inside `\begin{abstract}`
+- **No references** inside the abstract
+- **No undefined abbreviations** (define on first use or avoid)
+- **No bullet lists or numbered items** — prose only
+- Do NOT use "validate" to describe performance benchmarks — "validate"
+  implies scientific accuracy (photometric precision, astrometric RMS),
+  which belongs to Alarcon et al. Use "benchmark", "evaluate", or "assess"
+- **Structure** (conventional for A&C tool papers, per ZTF/HSC/ClusterPyXT):
+  1. "We present [TOOL]..." — tool named in sentence 1
+  2. What it does (capabilities, stages, deployment)
+  3. "We benchmark/evaluate on [DATA]..." — results as evidence
+  4. Close with scientific mission / open-source availability — NOT with
+     a negative result or benchmark number
+
+### Highlights (required by Elsevier)
+- 3–5 bullet points, **max 85 characters each** (including spaces)
+- Should capture the novel contributions, not restate the abstract
+- Written as complete sentences in present tense
+- **Currently missing from the manuscript** — needs to be added before submission
+  Example format in cas-dc:
+  ```latex
+  \begin{highlights}
+  \item GPUPhot executes six of seven photometric pipeline stages on GPU via CuPy
+  \item Adaptive memory management deploys unchanged across a 20x VRAM range
+  \item CuPy 14 / NumPy 2.0 reduces peak VRAM 6--8\%, increasing GPU concurrency
+  \item cuML nearest-neighbour crossmatch is slower than cKDTree for 2D queries
+  \end{highlights}
+  ```
+
+### Keywords
+- Required; typically 4–6 keywords for A&C
+- **Currently in manuscript** — verify they are present and relevant
+- Suggested: GPU computing, photometry pipeline, real-time astronomy,
+  CuPy, robotic telescope, image processing
+
+### What to check before submission
+- [ ] Highlights block added to main.tex
+- [ ] Keywords verified
+- [ ] Abstract: one paragraph, no references, ~200 words, ends with mission
+- [ ] All abbreviations defined on first use in main text
 
 ## 1. What GPUPhot Is
 
