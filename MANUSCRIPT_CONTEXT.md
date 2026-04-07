@@ -5,6 +5,25 @@
 > of truth — do NOT contradict these findings based on assumptions or outdated
 > information. All data referenced here is in `benchmarks/results_collected/`.
 
+## Quick Navigation
+
+**Start here before writing anything:**
+
+| What you need | Section |
+|---------------|---------|
+| Editorial rules, narrative thread, what NOT to write | **§13** ← read first |
+| What GPUPhot is, key differentiators | §1 |
+| All verified numbers (latency, VRAM, speedups) | **§5** |
+| Current manuscript state, which file has what | §12 |
+| The py3.8 vs py3.12 + cuML full story | §2 |
+| Hardware platforms and specs | §3 |
+| Benchmark images (cameras, MP, source counts) | §4 |
+| CPU comparison framing (scope-mismatch) | §10 |
+| Known limitations to state honestly | §11 |
+
+**Manuscript repo**: `slemesp/GPUPHOT_manuscript`, branch `main`, commit `bf27dfb`
+**Code repo**: `Light-Bridges/GPUPhot`, branch `documentation`, commit `3712545`
+
 ## 1. What GPUPhot Is
 
 GPUPhot is a **GPU-accelerated Python pipeline for real-time photometry and
@@ -619,6 +638,8 @@ pdflatex main.tex && bibtex main && pdflatex main.tex && pdflatex main.tex
 
 > **This section is the editorial ground truth. Read it before writing any
 > new content for the manuscript.**
+> Additional "What NOT to write" rules specific to cuML/py3.12 are in §2.
+> Rules for the CPU comparison framing are in §10.
 
 ### The correct main thread
 
