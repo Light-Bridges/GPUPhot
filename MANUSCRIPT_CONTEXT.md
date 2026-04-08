@@ -76,10 +76,11 @@ with professional packaging — keep that distinction if scope changes.
   CuPy, robotic telescope, image processing
 
 ### What to check before submission
-- [ ] Highlights block added to main.tex
-- [ ] Keywords verified
-- [ ] Abstract: one paragraph, no references, ~200 words, ends with mission
+- [x] Highlights block added to main.tex (commit 290459d, 4 bullets)
+- [x] Keywords verified (6 terms in main.tex)
+- [x] Abstract: one paragraph, no references, ~200 words, ends with mission
 - [ ] All abbreviations defined on first use in main text
+- [ ] 151.2 MP NVTX profiling data (corrupted during collection — re-acquire before final revision)
 
 ## 1. What GPUPhot Is
 
