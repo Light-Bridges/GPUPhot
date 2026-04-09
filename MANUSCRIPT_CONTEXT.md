@@ -80,7 +80,11 @@ with professional packaging — keep that distinction if scope changes.
 - [x] Keywords verified (6 terms in main.tex)
 - [x] Abstract: one paragraph, no references, ~200 words, ends with mission
 - [ ] All abbreviations defined on first use in main text
-- [ ] 151.2 MP NVTX profiling data (corrupted during collection — re-acquire before final revision)
+- [x] 151.2 MP NVTX profiling data re-acquired on A100 (2026-04-09, 2 new runs of QHY411-3_SDSSr_full):
+        `nvtx_detection_vs_sep_a100.csv` updated with QHY411-3 row (speedup=5.63x vs sep).
+        `nvtx_stage_breakdown_a100.csv` updated with 14 QHY411-3 stage rows (medians from 4 runs).
+        New raw file: `nvtx_qhy411_3_a100_new.csv` (195 rows).
+        L40S new raw file also downloaded: `nvtx_qhy411_3_l40s_new.csv` (313 rows).
 
 ## 1. What GPUPhot Is
 
@@ -508,12 +512,30 @@ All in `benchmarks/results_collected/`:
 
 ### Edge devices
 - `jetson_orin_8gb_timing_20260329.csv` — Orin NX 8GB (max 6.8 MP)
+- `benchmark_jetson_local.csv` — Orin Super 8GB (py312, py310): iKon936_SDSSg OK×10,
+  iKon936_Lum OK×10, QHY600-3_Lum OK×9, larger images OOM
+- `benchmark_jetson_orin.csv` — Orin NX 8GB (py38), CORRECTED 2026-04-09:
+  - iKon936_SDSSg: OK×10, **median 188.7s** (correct; old 28.8s was from wrong Docker image)
+  - iKon936_Lum: FAILED×10 — AstrometrizationTimeoutError (C/2025 A6 unsolvable with py38)
+  - QHY600-3_Lum: **71.3s** (OK×10, March 2026 benchmark, correct Jetson image)
+    * The Jetson Orin NX NEVER processes QHY600-3 in production (it's dedicated to TTT3/iKon936)
+    * ES query confirms: 0 QHY600-3 docs from aarch64 in Elasticsearch
+    * Data source: March 2026 benchmark (warm cache, no nsys → comparable to x86 production data)
+  - Old wrong data root cause: `gpuphotfinal-profiler_38` image used instead of
+    `gpuphot-profiler_jetson_orin`; artificially fast because x86 image ran without GPU
+- `benchmark_jetson_local_20260409.csv` — NEW (2026-04-09): py312 iKon936_Lum×10
+  and iKon936_SDSSg×10 OK; py38 iKon936_SDSSg×10 OK, QHY600-3_Lum×2 OK;
+  larger images OOM (Orin Super has 8GB VRAM limit)
+
+**benchmark_all_cuml_v2.csv rebuilt 2026-04-09** (3408 rows) with corrected Jetson data.
+**body_latency_py38.tex regenerated**: Orin NX now shows 188.7s / `---` / `---` for 4.2/6.8/15.3+ MP.
 
 ### Scripts
 - `benchmark_cuml_crossover.py` — synthetic crossover benchmark (user-runnable)
 - `analyze_times_v2_profiler.py` — profiler data analysis
 - `analyze_times_v2.py` — production data analysis
-- `analyze_profiling.py` — nsys NVTX stage breakdown
+- `extract_benchmark_csv.py` — nsys NVTX stage breakdown from sqlite files
+  (Note: old name was `analyze_profiling.py`, now renamed)
 
 ### Full documentation
 - `README_benchmark_data.md` — complete methodology, known issues, reproduction steps
@@ -629,9 +651,11 @@ crossmatching — none of which sep or Photutils perform.
    on CPU; only the source detection and photometry are GPU-accelerated
 6. **Single-GPU only**: no multi-GPU support within a single image; scaling
    is through Celery workers (one GPU per worker)
-7. **Per-stage fair comparison extracted (A100, 4 of 5 images)**: NVTX data
+7. **Per-stage fair comparison extracted (A100, ALL 5 images)**: NVTX data
    shows GPU detection is 2.3-10.5x faster than sep on identical images.
-   Data: `nvtx_detection_vs_sep_a100.csv`. 151.2 MP sqlite was corrupted.
+   Data: `nvtx_detection_vs_sep_a100.csv` (now complete — 151.2 MP QHY411-3
+   row added 2026-04-09 after re-running nsys on A100, 5.63x speedup vs sep).
+   Stage breakdown in `nvtx_stage_breakdown_a100.csv` (all 5 cameras complete).
 
 ## 12. Manuscript .tex File Status (as of 2026-04-06) — ALL SECTIONS COMPLETE
 

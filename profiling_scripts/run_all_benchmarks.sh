@@ -62,6 +62,7 @@ MACHINES=(
     "ttt1|ttt1|312,38|~/GPUPhot/benchmarks/benchmark_images|~/DTO/ttt/tasks/cameras_config|~/GPUPhot/tests/astronomy_cache|"
     "local|local|312,38|${PROJECT_DIR}/benchmarks/benchmark_images|/mnt/vast/samueltest/gpuphot/cameras_config|${PROJECT_DIR}/tests/astronomy_cache|"
     "jetson_local|jetson_local|312,38|~/GPUPhot/benchmarks/benchmark_images|~/GPUPhot/gpuphot/instrument_configs|~/GPUPhot/tests/astronomy_cache|--runtime nvidia --privileged --network host -v /usr/local/cuda:/usr/local/cuda:ro -v /usr/lib/aarch64-linux-gnu/nvidia:/usr/lib/aarch64-linux-gnu/nvidia:ro -e LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/aarch64-linux-gnu/nvidia"
+    "jetson_orin|jetson_orin|38|~/GPUPhot/benchmarks/benchmark_images|~/GPUPhot/gpuphot/instrument_configs|~/GPUPhot/tests/astronomy_cache|--runtime nvidia --privileged --network host -v /usr/local/cuda:/usr/local/cuda:ro -v /usr/lib/aarch64-linux-gnu/nvidia:/usr/lib/aarch64-linux-gnu/nvidia:ro -e LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/aarch64-linux-gnu/nvidia"
 )
 
 # ---- Helper: run benchmark on one machine, one profiler ----

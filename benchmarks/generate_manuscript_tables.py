@@ -203,12 +203,27 @@ def latency_median(profiler_label, gpu_cols):
 
 
 def vram_median(python_ver, gpu_cols):
-    """Return dict[mp][gpu_label] = median peak VRAM in MB (NaN if missing)."""
+    """Return dict[mp][gpu_label] = median peak VRAM in MB (NaN if missing).
+
+    Only rows with capture_complete=True are used to avoid including
+    partial measurements from OOM crashes (where Nsight records the peak
+    allocation before the crash rather than the true steady-state peak).
+    Rows where peak_gpu_memory_MB > gpu_total_MB are also dropped: these
+    are physically impossible and are Nsight artefacts (typically observed
+    on cards that OOM'd mid-profiling or produced very few nsys_events).
+    """
     df = pd.read_csv(MEMORY_CSV)
     df['python_ver'] = pd.to_numeric(df['python_ver'], errors='coerce')
     df['gpu_name'] = df['gpu_name'].str.replace('NVIDIA ', '', regex=False)
     df['gpu_label'] = df['gpu_name'].map(GPU_LABEL_MAP).fillna(df['gpu_name'])
     df['megapixels'] = pd.to_numeric(df['megapixels'], errors='coerce')
+    df['gpu_total_MB'] = pd.to_numeric(df['gpu_total_MB'], errors='coerce')
+    df['peak_gpu_memory_MB'] = pd.to_numeric(df['peak_gpu_memory_MB'], errors='coerce')
+    # Keep only successful profiling captures
+    if 'capture_complete' in df.columns:
+        df = df[df['capture_complete'].astype(str).str.strip().str.lower() == 'true']
+    # Drop physically impossible readings (artefacts from crashed/truncated profiling)
+    df = df[df['peak_gpu_memory_MB'] <= df['gpu_total_MB']]
     df = df[df['python_ver'].round(2) == round(python_ver, 2)]
     mp_vals = sorted(df['megapixels'].dropna().unique())
     med = df.groupby(['gpu_label', 'megapixels'])['peak_gpu_memory_MB'].median()
@@ -231,16 +246,18 @@ def gen_latency_py312():
     """
     tab:latency_py312 — Median latency (s), py3.12 + adaptive cuML.
     Source: benchmark_all_cuml_v2.csv (profiler_label=py312_cuml_adaptive)
-    GPUs: H100, A100, L40S, RTX 3090, RTX 3060
+    GPUs: H100, A100, L40S, RTX 3090, RTX 3060, RTX 3050 Ti
+    Note: RTX 3050 Ti has data for 4.2 MP; larger images will show --- until
+    the full adaptive benchmark is run on that machine (images 3-7).
     """
     print('Generating body_latency_py312.tex ...')
     gpu_cols = [
         'H100 (80 GB)', 'A100 (80 GB)', 'L40S (48 GB)',
-        'RTX 3090 (24 GB)', 'RTX 3060 (12 GB)',
+        'RTX 3090 (24 GB)', 'RTX 3060 (12 GB)', 'RTX 3050 Ti (4 GB)',
     ]
     data = latency_median('py312_cuml_adaptive', gpu_cols)
 
-    col_spec = r'{rlr rrrrr}'
+    col_spec = r'{rlr rrrrrr}'
     header = (
         r'\textbf{MP} & \textbf{Target} & \textbf{Sources}' + '\n'
         r'            & ' + ' & '.join(GPU_TEX_HEADER[g] for g in gpu_cols) + r' \\'
@@ -292,99 +309,64 @@ def gen_latency_py38():
     save_tex('body_latency_py38.tex', body)
 
 
-def gen_vram_py312():
+def gen_vram_merged():
     """
-    tab:vram_py312 — Peak GPU memory (MB), py3.12.
-    Source: profiler_nsys_memory_20260326.csv (python_ver=3.12)
+    tab:vram_merged — Peak GPU memory (MB) and py3.8→py3.12 saving per image size.
+    Uses A100-SXM4-80GB as the representative GPU (chosen because it has complete
+    data for all 10 benchmark images and is the most broadly deployed 80 GB card).
+    Cross-GPU variation for the same image is <0.3% (see Figure fig:memory_comparison).
+    Replaces the former tab:vram_py312, tab:vram_py38, and tab:vram_savings.
+    Source: profiler_nsys_memory_20260326.csv
     """
-    print('Generating body_vram_py312.tex ...')
-    gpu_cols = [
-        'H100 (80 GB)', 'A100 (80 GB)', 'L40S (48 GB)',
-        'RTX 3090 (24 GB)', 'RTX 3060 (12 GB)', 'RTX 3050 Ti (4 GB)',
-    ]
-    data, mp_vals = vram_median(3.12, gpu_cols)
+    print('Generating body_vram_merged.tex ...')
+    rep_gpu = 'A100 (80 GB)'
+    data312, mp_vals = vram_median(3.12, [rep_gpu])
+    data38,  _       = vram_median(3.8,  [rep_gpu])
 
-    col_spec = r'{r rrrrrrr}'
+    col_spec = r'{r rrr}'
     header = (
-        r'\textbf{MP} & '
-        + ' & '.join(GPU_TEX_HEADER[g] for g in gpu_cols) + r' \\'
+        r'\textbf{MP} & \textbf{py3.8 (MB)} & \textbf{py3.12 (MB)} & '
+        r'\textbf{Saving (\%)} \\'
     )
     rows = []
     for mp in mp_vals:
-        vals = ' & '.join(fmt_mb(data[mp][g]) for g in gpu_cols)
-        rows.append(rf'{mp:5.1f} & {vals} \\')
-
-    body = _tabular(col_spec, header, rows)
-    save_tex('body_vram_py312.tex', body)
-
-
-def gen_vram_py38():
-    """
-    tab:vram_py38 — Peak GPU memory (MB), py3.8.
-    Source: profiler_nsys_memory_20260326.csv (python_ver=3.8)
-    """
-    print('Generating body_vram_py38.tex ...')
-    gpu_cols = [
-        'H100 (80 GB)', 'A100 (80 GB)', 'L40S (48 GB)',
-        'RTX 3090 (24 GB)', 'RTX 3060 (12 GB)', 'RTX 3050 Ti (4 GB)',
-    ]
-    data, mp_vals = vram_median(3.8, gpu_cols)
-
-    col_spec = r'{r rrrrrrr}'
-    header = (
-        r'\textbf{MP} & '
-        + ' & '.join(GPU_TEX_HEADER[g] for g in gpu_cols) + r' \\'
-    )
-    rows = []
-    for mp in mp_vals:
-        vals = ' & '.join(fmt_mb(data[mp][g]) for g in gpu_cols)
-        rows.append(rf'{mp:5.1f} & {vals} \\')
-
-    body = _tabular(col_spec, header, rows)
-    save_tex('body_vram_py38.tex', body)
-
-
-def gen_vram_savings():
-    """
-    tab:vram_savings — Average VRAM reduction (%) when upgrading py3.8→py3.12.
-    Source: profiler_nsys_memory_20260326.csv (both python_ver values)
-    Computed as mean over all MP sizes processable by each GPU.
-    """
-    print('Generating body_vram_savings.tex ...')
-    gpu_cols = [
-        'H100 (80 GB)', 'A100 (80 GB)', 'L40S (48 GB)',
-        'RTX 3090 (24 GB)', 'RTX 3060 (12 GB)', 'RTX 3050 Ti (4 GB)',
-    ]
-    data38, mp_vals = vram_median(3.8,  gpu_cols)
-    data312, _      = vram_median(3.12, gpu_cols)
-
-    gpu_short = {
-        'H100 (80 GB)':       'H100',
-        'A100 (80 GB)':       'A100',
-        'L40S (48 GB)':       'L40S',
-        'RTX 3090 (24 GB)':   'RTX 3090',
-        'RTX 3060 (12 GB)':   'RTX 3060',
-        'RTX 3050 Ti (4 GB)': 'RTX 3050 Ti',
-    }
-
-    col_spec = r'{lc}'
-    header = r'\textbf{GPU} & \textbf{VRAM Saving (\%)} \\'
-    rows = []
-    for gpu in gpu_cols:
-        savings = []
-        for mp in mp_vals:
-            v38  = data38[mp].get(gpu, float('nan'))
-            v312 = data312[mp].get(gpu, float('nan'))
-            if not _is_missing(v38) and not _is_missing(v312) and v38 > 0:
-                savings.append((v38 - v312) / v38 * 100.0)
-        if savings:
-            avg = np.mean(savings)
-            rows.append(rf'{gpu_short[gpu]:<14s} & {avg:.1f} \\')
+        v38  = data38[mp][rep_gpu]
+        v312 = data312[mp][rep_gpu]
+        if _is_missing(v38) or _is_missing(v312):
+            saving_str = OOM
         else:
-            rows.append(rf'{gpu_short[gpu]:<14s} & {OOM} \\')
+            saving_str = f'{100.0 * (v38 - v312) / v38:.1f}'
+        rows.append(
+            rf'{mp:5.1f} & {fmt_mb(v38)} & {fmt_mb(v312)} & {saving_str} \\'
+        )
 
     body = _tabular(col_spec, header, rows)
-    save_tex('body_vram_savings.tex', body)
+    save_tex('body_vram_merged.tex', body)
+
+    # Keep the per-GPU tables as well (still generated, but no longer \input{}'d
+    # from the manuscript). Kept for reference and reproducibility.
+    _gen_vram_all_gpus(3.12, 'body_vram_py312.tex')
+    _gen_vram_all_gpus(3.8,  'body_vram_py38.tex')
+
+
+def _gen_vram_all_gpus(python_ver, filename):
+    """Internal helper: per-GPU VRAM table (kept for reference, not in manuscript)."""
+    gpu_cols = [
+        'H100 (80 GB)', 'A100 (80 GB)', 'L40S (48 GB)',
+        'RTX 3090 (24 GB)', 'RTX 3060 (12 GB)', 'RTX 3050 Ti (4 GB)',
+    ]
+    data, mp_vals = vram_median(python_ver, gpu_cols)
+    col_spec = r'{r rrrrrrr}'
+    header = (
+        r'\textbf{MP} & '
+        + ' & '.join(GPU_TEX_HEADER[g] for g in gpu_cols) + r' \\'
+    )
+    rows = []
+    for mp in mp_vals:
+        vals = ' & '.join(fmt_mb(data[mp][g]) for g in gpu_cols)
+        rows.append(rf'{mp:5.1f} & {vals} \\')
+    body = _tabular(col_spec, header, rows)
+    save_tex(filename, body)
 
 
 def gen_concurrency():
@@ -602,11 +584,7 @@ if __name__ == '__main__':
     print()
     gen_latency_py38()
     print()
-    gen_vram_py312()
-    print()
-    gen_vram_py38()
-    print()
-    gen_vram_savings()
+    gen_vram_merged()   # replaces gen_vram_py312 + gen_vram_py38 + gen_vram_savings
     print()
     gen_concurrency()
     print()
