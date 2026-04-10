@@ -8,9 +8,8 @@ Fuentes:
   1. ES environment=profiler_cuml_always_v2   → py3.12, cuML forzado, todas las GPUs x86
   2. ES environment=profiler_cuml_adaptive_v2 → py3.12, cuML dinámico, todas las GPUs x86
   3. ES environment=profiler_py38_v2          → py3.8 baseline, todas las GPUs x86
-  4. CSV benchmarks/results_collected/benchmark_jetson_orin_20260409.csv → Jetson Orin NX 8GB (py3.8)
-     (rerun corregido 2026-04-09; el archivo original benchmark_jetson_orin.csv usaba la imagen
-      Docker equivocada, dando tiempos falsos de ~28 s en lugar de los correctos ~188 s)
+  4. ES per-hit CSV benchmarks/es_times_orin_20260410_per_hit_per_hit.csv → Jetson Orin NX 8GB (py3.8)
+     (benchmark 2026-04-10 con rutas locales correctas; datos extraídos de ES environment=nvtx)
   5. CSV benchmarks/results_collected/benchmark_jetson_local.csv  → Jetson Orin Super (py3.12, py3.10)
 
 Columnas clave del fichero de salida:
@@ -266,6 +265,47 @@ def load_jetson_csv(path: str, machine: str, gpu_name: str, python_ver_map: dict
     return rows
 
 
+def load_jetson_es_csv(path: str, machine: str, gpu_name: str,
+                       profiler_label: str, python_ver: str) -> list[dict]:
+    """Carga un CSV de ES per-hit (salida de collect_times_from_elastic.py) para un Jetson.
+
+    Incluye todas las filas (warmup + clean) para que generate_manuscript_tables.py
+    pueda descartar las 2 primeras por grupo de forma consistente con los datos x86.
+    El image_label se deriva de (object, filter) usando OBJECT_FILTER_TO_LABEL.
+    """
+    rows = []
+    try:
+        with open(path, newline="") as f:
+            for row in csv.DictReader(f):
+                obj_key = (row.get("object", ""), row.get("filter", ""))
+                label = OBJECT_FILTER_TO_LABEL.get(obj_key, "")
+                if not label:
+                    continue
+                rows.append({
+                    "machine":            machine,
+                    "gpu_name":           gpu_name,
+                    "python_ver":         python_ver,
+                    "profiler_label":     profiler_label,
+                    "environment":        "nvtx",
+                    "image_label":        label,
+                    "mp":                 LABEL_TO_MP.get(label, ""),
+                    "execution_time":     row.get("execution_time", ""),
+                    "n_sources_detected": row.get("n_sources_detected", ""),
+                    "timestamp":          row.get("timestamp", ""),
+                    "naxis1":             row.get("naxis1", ""),
+                    "naxis2":             row.get("naxis2", ""),
+                    "filter":             row.get("filter", ""),
+                    "object":             row.get("object", ""),
+                    "gpu_mem_total":      row.get("gpu_mem_total", ""),
+                    "gpu_mem_used":       row.get("gpu_mem_used", ""),
+                    "gpu_temp":           row.get("gpu_temp", ""),
+                })
+    except FileNotFoundError:
+        print(f"  WARN: no encontrado {path}")
+    print(f"  {machine}: {len(rows)} filas de {path}")
+    return rows
+
+
 def main():
     p = argparse.ArgumentParser(description="Recolecta y unifica todos los datos de benchmark")
     p.add_argument("--time-from", default="2026-04-02T08:00:00",
@@ -295,7 +335,7 @@ def main():
         with open(args.base_csv, newline="") as f:
             for row in csv.DictReader(f):
                 if row.get("machine") == "jetson_orin":
-                    continue  # se reemplaza con benchmark_jetson_orin_20260409.csv
+                    continue  # se reemplaza con es_times_orin_20260410_per_hit_per_hit.csv
                 all_rows.append({col: row.get(col, "") for col in OUTPUT_COLS})
         print(f"  → {len(all_rows)} filas (jetson_orin excluido)")
     elif not args.skip_es:
@@ -313,14 +353,16 @@ def main():
         print(f"  → {len(all_rows)} filas")
 
     # ------------------------------------------------------------------
-    # 2. Datos de Jetson (CSV históricos)
+    # 2. Datos de Jetson
     # ------------------------------------------------------------------
     base = Path(__file__).parent / "results_collected"
+    es_dir = Path(__file__).parent
     print("\nCargando datos de Jetson...")
-    all_rows += load_jetson_csv(
-        str(base / "benchmark_jetson_orin_20260409.csv"),
+    # Orin NX: datos de ES (environment=nvtx, benchmark 2026-04-10)
+    all_rows += load_jetson_es_csv(
+        str(es_dir / "es_times_orin_20260410_per_hit_per_hit.csv"),
         machine="jetson_orin", gpu_name="Orin NX 8GB (nvgpu)",
-        python_ver_map={"py38": "3.8"},
+        profiler_label="py38_baseline", python_ver="3.8",
     )
     all_rows += load_jetson_csv(
         str(base / "benchmark_jetson_local.csv"),
