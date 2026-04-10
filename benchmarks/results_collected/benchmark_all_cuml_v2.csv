@@ -698,11 +698,9 @@ ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,28.383041,218,2026-04-04T08:01:42.922Z,4787,3193,SDSSg,WASP-43-b,24576.0,277.0,55.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,11.280651,218,2026-04-04T08:01:45.659Z,4787,3193,SDSSg,WASP-43-b,46068.0,430.0,38.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,10.9625435,218,2026-04-04T08:01:40.350Z,4787,3193,SDSSg,WASP-43-b,81920.0,424.0,35.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,21.071611,296,2026-04-04T08:01:41.171Z,2048,2048,Lum,C2025A6,4096.0,95.0,74.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,8.291947,112,2026-04-04T08:01:33.551Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,8.471862,112,2026-04-04T08:01:51.056Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,19.926174,218,2026-04-04T08:01:47.570Z,4787,3193,SDSSg,WASP-43-b,12288.0,142.0,51.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,23.510462,296,2026-04-04T08:02:09.776Z,2048,2048,Lum,C2025A6,4096.0,95.0,75.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,10.188647,218,2026-04-04T08:02:14.589Z,4787,3193,SDSSg,WASP-43-b,81920.0,424.0,35.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,11.462643,218,2026-04-04T08:01:27.161Z,4787,3193,SDSSg,WASP-43-b,46068.0,430.0,38.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,10.54987,218,2026-04-04T08:01:57.196Z,4787,3193,SDSSg,WASP-43-b,81920.0,424.0,35.0
@@ -718,9 +716,7 @@ lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GC
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,19.738758,218,2026-04-04T08:02:36.378Z,4787,3193,SDSSg,WASP-43-b,12288.0,142.0,51.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,16.380949,218,2026-04-04T08:02:29.127Z,4787,3193,SDSSg,WASP-43-b,24576.0,277.0,55.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,10.104786,218,2026-04-04T08:02:31.352Z,4787,3193,SDSSg,WASP-43-b,81920.0,424.0,34.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,20.738873,296,2026-04-04T08:02:35.427Z,2048,2048,Lum,C2025A6,4096.0,95.0,75.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,16.426994,218,2026-04-04T08:02:51.939Z,4787,3193,SDSSg,WASP-43-b,24576.0,277.0,54.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,21.8378,296,2026-04-04T08:03:02.766Z,2048,2048,Lum,C2025A6,4096.0,95.0,75.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,11.257646,218,2026-04-04T08:03:05.092Z,4787,3193,SDSSg,WASP-43-b,46068.0,430.0,36.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,11.851452,218,2026-04-04T08:03:05.509Z,4787,3193,SDSSg,WASP-43-b,81920.0,424.0,34.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,19.921143,218,2026-04-04T08:03:00.939Z,4787,3193,SDSSg,WASP-43-b,12288.0,142.0,51.0
@@ -739,7 +735,6 @@ lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GC
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,7.968498,296,2026-04-04T07:56:21.726Z,2048,2048,Lum,C2025A6,81559.0,458.0,42.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,8.186818,296,2026-04-04T07:56:20.545Z,2048,2048,Lum,C2025A6,24576.0,277.0,53.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,7.327754,296,2026-04-04T07:56:27.466Z,2048,2048,Lum,C2025A6,12288.0,142.0,48.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,15.693295,412,2026-04-04T07:56:28.701Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,5.131514,296,2026-04-04T07:56:29.072Z,2048,2048,Lum,C2025A6,81920.0,424.0,33.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,7.274952,296,2026-04-04T07:56:39.373Z,2048,2048,Lum,C2025A6,12288.0,142.0,48.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,8.0707035,296,2026-04-04T07:56:34.476Z,2048,2048,Lum,C2025A6,24576.0,277.0,53.0
@@ -749,16 +744,13 @@ azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,7.385242,296,2026-04-04T07:56:03.820Z,2048,2048,Lum,C2025A6,12288.0,142.0,47.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,5.031101,296,2026-04-04T07:56:05.788Z,2048,2048,Lum,C2025A6,81920.0,424.0,33.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,8.102135,296,2026-04-04T07:56:06.581Z,2048,2048,Lum,C2025A6,24576.0,277.0,52.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,16.001755,412,2026-04-04T07:56:08.403Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,69.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,6.2638087,296,2026-04-04T07:56:09.310Z,2048,2048,Lum,C2025A6,46068.0,430.0,34.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,15.832822,296,2026-04-04T07:56:04.587Z,2048,2048,Lum,C2025A6,81559.0,458.0,41.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,8.152504,296,2026-04-04T07:56:48.625Z,2048,2048,Lum,C2025A6,24576.0,277.0,53.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,15.666588,412,2026-04-04T07:56:48.829Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,71.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,7.1594315,112,2026-04-04T07:58:46.823Z,3191,2129,Lum,C2025R2,12288.0,142.0,48.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,5.8316517,112,2026-04-04T07:58:53.794Z,3191,2129,Lum,C2025R2,46068.0,430.0,36.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,5.7371573,112,2026-04-04T07:58:53.391Z,3191,2129,Lum,C2025R2,81920.0,424.0,34.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,4.66981,112,2026-04-04T07:59:04.524Z,3191,2129,Lum,C2025R2,81920.0,424.0,34.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,21.579382,296,2026-04-04T07:58:52.998Z,2048,2048,Lum,C2025A6,4096.0,95.0,74.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,8.323474,112,2026-04-04T07:58:57.562Z,3191,2129,Lum,C2025R2,24576.0,277.0,54.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,7.892601,296,2026-04-04T07:58:55.078Z,2048,2048,Lum,C2025A6,81559.0,458.0,43.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,7.203016,112,2026-04-04T07:58:58.592Z,3191,2129,Lum,C2025R2,12288.0,142.0,48.0
@@ -773,7 +765,6 @@ ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]"
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,13.399769,296,2026-04-04T07:55:09.354Z,2048,2048,Lum,C2025A6,46068.0,430.0,33.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,7.301023,296,2026-04-04T07:55:16.257Z,2048,2048,Lum,C2025A6,12288.0,142.0,48.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,9.214066,296,2026-04-04T07:54:56.161Z,2048,2048,Lum,C2025A6,81920.0,424.0,32.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,18.84348,412,2026-04-04T07:55:01.837Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,64.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,4.7550607,296,2026-04-04T07:55:19.388Z,2048,2048,Lum,C2025A6,81920.0,424.0,32.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,4.042864,112,2026-04-04T07:58:08.494Z,3191,2129,Lum,C2025R2,81920.0,424.0,34.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,7.2730756,112,2026-04-04T07:58:11.724Z,3191,2129,Lum,C2025R2,12288.0,142.0,48.0
@@ -781,7 +772,6 @@ hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_a
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,4.017355,112,2026-04-04T07:58:18.677Z,3191,2129,Lum,C2025R2,81920.0,424.0,34.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,9.427404,296,2026-04-04T07:57:46.291Z,2048,2048,Lum,C2025A6,81559.0,458.0,42.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,7.258377,112,2026-04-04T07:57:48.109Z,3191,2129,Lum,C2025R2,12288.0,142.0,47.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,25.350763,296,2026-04-04T07:58:00.994Z,2048,2048,Lum,C2025A6,4096.0,95.0,73.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,4.2124157,112,2026-04-04T07:57:47.532Z,3191,2129,Lum,C2025R2,81920.0,424.0,34.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,8.940715,296,2026-04-04T07:58:04.213Z,2048,2048,Lum,C2025A6,81559.0,458.0,42.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,5.8890986,296,2026-04-04T07:57:52.252Z,2048,2048,Lum,C2025A6,46068.0,430.0,35.0
@@ -798,7 +788,6 @@ azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,5.426956,412,2026-04-04T07:52:53.350Z,2048,2048,SDSSg,QSO0957+561,46068.0,430.0,29.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,4.3968954,412,2026-04-04T07:52:51.081Z,2048,2048,SDSSg,QSO0957+561,81920.0,424.0,31.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,5.989216,412,2026-04-04T07:52:46.692Z,2048,2048,SDSSg,QSO0957+561,12288.0,142.0,47.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,16.15115,412,2026-04-04T07:57:30.248Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,72.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,7.1772995,112,2026-04-04T07:57:36.301Z,3191,2129,Lum,C2025R2,12288.0,142.0,48.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,4.9164705,112,2026-04-04T07:57:36.884Z,3191,2129,Lum,C2025R2,81920.0,424.0,34.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,5.722516,296,2026-04-04T07:57:37.823Z,2048,2048,Lum,C2025A6,46068.0,430.0,35.0
@@ -909,7 +898,6 @@ lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GC
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,6.059828,412,2026-04-04T07:53:07.896Z,2048,2048,SDSSg,QSO0957+561,12288.0,142.0,49.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,7.462573,412,2026-04-04T07:53:01.517Z,2048,2048,SDSSg,QSO0957+561,24576.0,277.0,47.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,4.21803,412,2026-04-04T07:53:11.707Z,2048,2048,SDSSg,QSO0957+561,81920.0,424.0,32.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,100.496445,412,2026-04-04T07:53:12.437Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,59.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,7.3568926,412,2026-04-04T07:53:14.963Z,2048,2048,SDSSg,QSO0957+561,24576.0,277.0,48.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,6.0522194,412,2026-04-04T07:53:29.051Z,2048,2048,SDSSg,QSO0957+561,12288.0,142.0,48.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,7.3895044,412,2026-04-04T07:53:28.874Z,2048,2048,SDSSg,QSO0957+561,24576.0,277.0,49.0
@@ -923,7 +911,6 @@ hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_a
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,4.5732374,412,2026-04-04T07:53:33.601Z,2048,2048,SDSSg,QSO0957+561,81920.0,424.0,32.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,7.2551055,412,2026-04-04T07:53:42.194Z,2048,2048,SDSSg,QSO0957+561,24576.0,277.0,49.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,5.955831,412,2026-04-04T07:53:39.492Z,2048,2048,SDSSg,QSO0957+561,12288.0,142.0,47.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,18.777895,412,2026-04-04T07:53:40.511Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,62.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,5.4819746,412,2026-04-04T07:54:18.293Z,2048,2048,SDSSg,QSO0957+561,46068.0,430.0,32.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,4.245279,412,2026-04-04T07:54:19.009Z,2048,2048,SDSSg,QSO0957+561,81920.0,424.0,32.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,4.214262,412,2026-04-04T07:53:57.142Z,2048,2048,SDSSg,QSO0957+561,81920.0,424.0,32.0
@@ -935,7 +922,6 @@ ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,7.3827233,412,2026-04-04T07:54:09.105Z,2048,2048,SDSSg,QSO0957+561,24576.0,277.0,50.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,5.98781,412,2026-04-04T07:54:11.583Z,2048,2048,SDSSg,QSO0957+561,12288.0,142.0,46.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,4.6133432,412,2026-04-04T07:54:07.990Z,2048,2048,SDSSg,QSO0957+561,81920.0,424.0,32.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,18.584688,412,2026-04-04T07:54:06.823Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,63.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,8.436033,412,2026-04-04T07:54:10.352Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,41.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,5.351502,412,2026-04-04T07:54:04.157Z,2048,2048,SDSSg,QSO0957+561,46068.0,430.0,32.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,5.990785,412,2026-04-04T07:54:01.116Z,2048,2048,SDSSg,QSO0957+561,12288.0,142.0,46.0
@@ -943,12 +929,10 @@ ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]"
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,7.240585,412,2026-04-04T07:54:23.425Z,2048,2048,SDSSg,QSO0957+561,24576.0,277.0,50.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,4.5745625,412,2026-04-04T07:54:29.785Z,2048,2048,SDSSg,QSO0957+561,81920.0,424.0,32.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,5.3339863,412,2026-04-04T07:54:32.404Z,2048,2048,SDSSg,QSO0957+561,46068.0,430.0,33.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,19.224201,412,2026-04-04T07:54:34.823Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,63.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,8.913162,412,2026-04-04T07:54:28.383Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,41.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,7.871464,112,2026-04-04T07:59:56.219Z,3191,2129,Lum,C2025R2,24576.0,277.0,55.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,8.151121,112,2026-04-04T07:59:56.288Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,5.462953,112,2026-04-04T07:59:46.909Z,3191,2129,Lum,C2025R2,46068.0,430.0,36.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,21.847057,296,2026-04-04T07:59:51.984Z,2048,2048,Lum,C2025A6,4096.0,95.0,74.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,21.931152,218,2026-04-04T07:59:55.804Z,4787,3193,SDSSg,WASP-43-b,81920.0,424.0,34.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,8.422025,112,2026-04-04T07:59:41.763Z,3191,2129,Lum,C2025R2,24576.0,277.0,54.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,29.73357,218,2026-04-04T07:59:44.682Z,4787,3193,SDSSg,WASP-43-b,12288.0,142.0,48.0
@@ -960,7 +944,6 @@ ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,10.393332,218,2026-04-04T08:00:13.399Z,4787,3193,SDSSg,WASP-43-b,81920.0,424.0,34.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,8.37196,112,2026-04-04T08:00:13.916Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,5.9463687,112,2026-04-04T08:00:15.297Z,3191,2129,Lum,C2025R2,46068.0,430.0,37.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,21.441113,296,2026-04-04T08:00:19.616Z,2048,2048,Lum,C2025A6,4096.0,95.0,74.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,8.0730095,112,2026-04-04T08:00:25.062Z,3191,2129,Lum,C2025R2,24576.0,277.0,55.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,8.28899,112,2026-04-04T08:00:31.631Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,5.7002826,112,2026-04-04T08:00:29.434Z,3191,2129,Lum,C2025R2,46068.0,430.0,37.0
@@ -970,7 +953,6 @@ ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,5.8213453,112,2026-04-04T08:00:40.241Z,3191,2129,Lum,C2025R2,46068.0,430.0,38.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,6.444939,112,2026-04-04T08:00:47.088Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,11.149141,218,2026-04-04T08:00:47.544Z,4787,3193,SDSSg,WASP-43-b,81920.0,424.0,35.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,21.384806,296,2026-04-04T08:00:45.837Z,2048,2048,Lum,C2025A6,4096.0,95.0,75.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,7.9116135,112,2026-04-04T08:00:53.652Z,3191,2129,Lum,C2025R2,24576.0,277.0,55.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,6.802681,112,2026-04-04T08:01:02.248Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,19.939798,218,2026-04-04T08:00:58.711Z,4787,3193,SDSSg,WASP-43-b,12288.0,142.0,50.0
@@ -978,7 +960,6 @@ lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GC
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,20.523394,218,2026-04-04T08:01:09.118Z,4787,3193,SDSSg,WASP-43-b,46068.0,430.0,37.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,7.928899,112,2026-04-04T08:01:08.011Z,3191,2129,Lum,C2025R2,24576.0,277.0,55.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,6.115303,112,2026-04-04T08:01:16.457Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,21.459806,296,2026-04-04T08:01:13.885Z,2048,2048,Lum,C2025A6,4096.0,95.0,74.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,10.219197,218,2026-04-04T08:01:22.951Z,4787,3193,SDSSg,WASP-43-b,81920.0,424.0,35.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-4_SDSSg,15.3,19.750097,218,2026-04-04T08:01:23.030Z,4787,3193,SDSSg,WASP-43-b,12288.0,142.0,50.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,8.0688305,296,2026-04-04T07:55:38.501Z,2048,2048,Lum,C2025A6,24576.0,277.0,51.0
@@ -986,20 +967,17 @@ hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_a
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,8.677596,412,2026-04-04T07:55:39.261Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,41.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,7.3510046,296,2026-04-04T07:55:39.992Z,2048,2048,Lum,C2025A6,12288.0,142.0,48.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,5.1470594,296,2026-04-04T07:55:30.753Z,2048,2048,Lum,C2025A6,81920.0,424.0,33.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,16.03252,412,2026-04-04T07:55:26.269Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,64.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,6.163392,296,2026-04-04T07:55:24.581Z,2048,2048,Lum,C2025A6,46068.0,430.0,33.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,7.335699,296,2026-04-04T07:55:28.121Z,2048,2048,Lum,C2025A6,12288.0,142.0,48.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,14.405892,296,2026-04-04T07:55:24.347Z,2048,2048,Lum,C2025A6,24576.0,277.0,51.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,7.041258,412,2026-04-04T07:55:21.311Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,41.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,5.239483,296,2026-04-04T07:55:42.289Z,2048,2048,Lum,C2025A6,81920.0,424.0,33.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,15.942213,412,2026-04-04T07:55:46.708Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,69.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,7.3767447,296,2026-04-04T07:55:51.927Z,2048,2048,Lum,C2025A6,12288.0,142.0,47.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,5.434227,296,2026-04-04T07:55:54.235Z,2048,2048,Lum,C2025A6,81920.0,424.0,32.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,6.1764746,296,2026-04-04T07:55:54.426Z,2048,2048,Lum,C2025A6,46068.0,430.0,33.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,7.946864,296,2026-04-04T07:55:52.373Z,2048,2048,Lum,C2025A6,24576.0,277.0,51.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,7.1695547,112,2026-04-04T07:58:23.424Z,3191,2129,Lum,C2025R2,12288.0,142.0,48.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,18.862751,112,2026-04-04T07:58:28.050Z,3191,2129,Lum,C2025R2,24576.0,277.0,54.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,20.507278,296,2026-04-04T07:58:26.535Z,2048,2048,Lum,C2025A6,4096.0,95.0,73.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,9.430345,296,2026-04-04T07:58:23.065Z,2048,2048,Lum,C2025A6,81559.0,458.0,42.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,4.9176626,112,2026-04-04T07:58:29.835Z,3191,2129,Lum,C2025R2,81920.0,424.0,34.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,7.220442,112,2026-04-04T07:58:35.188Z,3191,2129,Lum,C2025R2,12288.0,142.0,47.0
@@ -1016,7 +994,6 @@ ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,7.267079,112,2026-04-04T07:57:12.579Z,3191,2129,Lum,C2025R2,12288.0,142.0,48.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,8.712122,296,2026-04-04T07:56:56.600Z,2048,2048,Lum,C2025A6,81559.0,458.0,42.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,8.68351,296,2026-04-04T07:57:17.394Z,2048,2048,Lum,C2025A6,24576.0,277.0,53.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,15.9517565,412,2026-04-04T07:57:09.685Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,72.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,5.3765,112,2026-04-04T07:58:28.934Z,3191,2129,Lum,C2025R2,46068.0,430.0,35.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,7.6648865,296,2026-04-04T07:58:39.126Z,2048,2048,Lum,C2025A6,81559.0,458.0,43.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,5.6195416,112,2026-04-04T07:58:40.038Z,3191,2129,Lum,C2025R2,46068.0,430.0,36.0
@@ -1028,7 +1005,6 @@ azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,8.341444,112,2026-04-04T07:59:12.343Z,3191,2129,Lum,C2025R2,24576.0,277.0,54.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,4.8963165,112,2026-04-04T07:59:27.374Z,3191,2129,Lum,C2025R2,81920.0,424.0,34.0
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,5.780496,112,2026-04-04T07:59:18.482Z,3191,2129,Lum,C2025R2,46068.0,430.0,37.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,22.740158,296,2026-04-04T07:59:22.740Z,2048,2048,Lum,C2025A6,4096.0,95.0,74.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,4.595269,112,2026-04-04T07:59:16.029Z,3191,2129,Lum,C2025R2,81920.0,424.0,34.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY600-3_Lum,6.8,7.985052,112,2026-04-04T07:59:26.724Z,3191,2129,Lum,C2025R2,24576.0,277.0,54.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,QHY411-1_Lum_full,151.2,66.50493,428,2026-04-04T08:21:20.973Z,14200,10650,Lum,2025PR1,81920.0,424.0,31.0
@@ -2210,30 +2186,6 @@ hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_a
 hp3,NVIDIA L40S,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY411-1_SDSSi_bin2,37.8,16.606247,247,2026-04-04T09:38:26.987Z,7100,5325,SDSSi,GaiaDR33534005919872722560,46068.0,430.0,38.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY411-1_Lum_full,151.2,66.651535,428,2026-04-04T09:39:21.724Z,14200,10650,Lum,2025PR1,81920.0,424.0,32.0
 azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY411-1_Lum_full,151.2,34.58256,428,2026-04-04T09:39:21.242Z,14200,10650,Lum,2025PR1,81559.0,458.0,52.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,59.752434,412,2026-04-04T08:09:50.153Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,75.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,16.333588,412,2026-04-04T08:10:11.344Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,75.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,16.091043,412,2026-04-04T08:10:32.426Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,76.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,16.841383,412,2026-04-04T08:10:54.436Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,77.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,16.648165,412,2026-04-04T08:11:16.053Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,78.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,16.85147,412,2026-04-04T08:13:26.541Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,79.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,20.717571,296,2026-04-04T08:16:04.308Z,2048,2048,Lum,C2025A6,4096.0,95.0,80.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,20.827753,296,2026-04-04T08:16:30.889Z,2048,2048,Lum,C2025A6,4096.0,95.0,80.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,20.706476,296,2026-04-04T08:15:12.022Z,2048,2048,Lum,C2025A6,4096.0,95.0,80.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,21.326756,296,2026-04-04T08:15:38.204Z,2048,2048,Lum,C2025A6,4096.0,95.0,80.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,16.81286,412,2026-04-04T08:11:59.234Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,78.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,16.881647,412,2026-04-04T08:12:21.151Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,79.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,16.194736,412,2026-04-04T08:11:37.494Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,78.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,16.262302,412,2026-04-04T08:12:42.756Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,79.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,21.332962,296,2026-04-04T08:16:57.163Z,2048,2048,Lum,C2025A6,4096.0,95.0,81.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,16.749762,412,2026-04-04T08:13:04.498Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,79.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,16.717352,412,2026-04-04T08:13:48.737Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,79.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,25.207708,296,2026-04-04T08:14:20.112Z,2048,2048,Lum,C2025A6,4096.0,95.0,79.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,21.29937,296,2026-04-04T08:14:46.381Z,2048,2048,Lum,C2025A6,4096.0,95.0,80.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,20.749613,296,2026-04-04T08:17:22.829Z,2048,2048,Lum,C2025A6,4096.0,95.0,81.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,21.268934,296,2026-04-04T08:17:49.254Z,2048,2048,Lum,C2025A6,4096.0,95.0,81.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,21.03578,296,2026-04-04T08:18:42.023Z,2048,2048,Lum,C2025A6,4096.0,95.0,81.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,21.069452,296,2026-04-04T08:19:07.844Z,2048,2048,Lum,C2025A6,4096.0,95.0,81.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,20.653238,296,2026-04-04T08:18:15.546Z,2048,2048,Lum,C2025A6,4096.0,95.0,81.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,42.867725,412,2026-04-04T08:22:49.176Z,2048,2048,SDSSg,QSO0957+561,12288.0,142.0,47.0
 ttt1,NVIDIA GeForce RTX 3060,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,5.9713554,412,2026-04-04T08:22:59.840Z,2048,2048,SDSSg,QSO0957+561,12288.0,142.0,45.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,49.660492,412,2026-04-04T08:23:19.137Z,2048,2048,SDSSg,QSO0957+561,24576.0,277.0,44.0
@@ -3287,54 +3239,6 @@ ttt_server,NVIDIA GeForce RTX 3090,"3.8.10 (default, Mar 18 2025, 20:04:55)
 [GCC 9.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,6.359748,296,2026-04-02T08:32:01.907Z,2048,2048,Lum,C2025A6,24576.0,277.0,52.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.8.10 (default, Mar 18 2025, 20:04:55) 
 [GCC 9.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,5.813958,296,2026-04-02T08:31:41.706Z,2048,2048,Lum,C2025A6,24576.0,277.0,50.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,85.412224,412,2026-04-02T08:05:53.768Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,78.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,13.928429,412,2026-04-02T08:06:09.984Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,77.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,13.899591,412,2026-04-02T08:07:17.853Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,79.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,13.386366,412,2026-04-02T08:07:34.240Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,80.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,13.646879,412,2026-04-02T08:07:52.055Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,80.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,14.336922,412,2026-04-02T08:08:09.547Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,80.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,13.549463,412,2026-04-02T08:08:27.680Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,80.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,16.802612,296,2026-04-02T08:09:46.441Z,2048,2048,Lum,C2025A6,4096.0,95.0,80.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.745354,296,2026-04-02T08:11:23.515Z,2048,2048,Lum,C2025A6,4096.0,95.0,78.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.97662,296,2026-04-02T08:12:13.566Z,2048,2048,Lum,C2025A6,4096.0,95.0,76.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.807358,296,2026-04-02T08:13:03.275Z,2048,2048,Lum,C2025A6,4096.0,95.0,75.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,13.768185,412,2026-04-02T08:06:43.941Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,78.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,13.339863,412,2026-04-02T08:06:26.690Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,78.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,13.201536,412,2026-04-02T08:07:00.000Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,79.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,13.823592,412,2026-04-02T08:08:45.206Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,80.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,13.060827,412,2026-04-02T08:09:01.558Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,80.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,23.034342,296,2026-04-02T08:09:27.522Z,2048,2048,Lum,C2025A6,4096.0,95.0,80.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,43.779716,296,2026-04-02T08:10:34.040Z,2048,2048,Lum,C2025A6,4096.0,95.0,81.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.88938,296,2026-04-02T08:13:53.615Z,2048,2048,Lum,C2025A6,4096.0,95.0,74.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,48.436825,296,2026-04-02T08:18:08.650Z,2048,2048,Lum,C2025A6,4096.0,95.0,72.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,47.793736,296,2026-04-02T08:16:24.587Z,2048,2048,Lum,C2025A6,4096.0,95.0,73.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,47.035053,296,2026-04-02T08:14:43.341Z,2048,2048,Lum,C2025A6,4096.0,95.0,74.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.918907,296,2026-04-02T08:15:33.957Z,2048,2048,Lum,C2025A6,4096.0,95.0,73.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,47.703403,296,2026-04-02T08:17:16.656Z,2048,2048,Lum,C2025A6,4096.0,95.0,72.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.8.10 (default, Mar 18 2025, 20:04:55) 
 [GCC 9.4.0]",py38_baseline,profiler_py38_v2,QHY600-4_SDSSg,15.3,13.214864,217,2026-04-02T08:35:51.939Z,4787,3193,SDSSg,WASP-43-b,24576.0,277.0,53.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.8.10 (default, Mar 18 2025, 20:04:55) 
@@ -4087,32 +3991,6 @@ lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.8.10 (default, Mar 18 2025, 20:04:55)
 [GCC 9.4.0]",py38_baseline,profiler_py38_v2,QHY411-3_Lum_full,151.2,80.33246,18888,2026-04-04T10:54:15.201Z,14200,10650,Lum,24P,81920.0,424.0,36.0
 hp3,NVIDIA L40S,"3.8.10 (default, Mar 18 2025, 20:04:55) 
 [GCC 9.4.0]",py38_baseline,profiler_py38_v2,QHY411-1_Lum_full,151.2,27.164196,440,2026-04-04T10:54:44.508Z,14200,10650,Lum,2025PR1,46068.0,430.0,51.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,35.482796,412,2026-04-04T08:37:20.100Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,52.265068,296,2026-04-04T08:40:49.124Z,2048,2048,Lum,C2025A6,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,36.060173,412,2026-04-04T08:39:15.210Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,35.553173,412,2026-04-04T08:39:54.280Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,35.674397,412,2026-04-04T08:34:07.871Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,35.666428,412,2026-04-04T08:38:36.524Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,35.700867,412,2026-04-04T08:34:46.181Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,35.516827,412,2026-04-04T08:37:58.217Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,35.5757,412,2026-04-04T08:33:29.514Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,35.513256,412,2026-04-04T08:36:03.739Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,98.965866,412,2026-04-04T08:32:51.542Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,36.099594,412,2026-04-04T08:35:24.934Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,35.533066,412,2026-04-04T08:36:41.998Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,71.0
 ttt1,NVIDIA GeForce RTX 3060,"3.8.20 (default, Sep  7 2024, 18:35:08) 
 [GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,4.5817103,412,2026-04-04T08:54:21.303Z,2048,2048,SDSSg,QSO0957+561,12288.0,142.0,46.0
 ttt1,NVIDIA GeForce RTX 3060,"3.8.20 (default, Sep  7 2024, 18:35:08) 
@@ -4155,20 +4033,6 @@ ttt1,NVIDIA GeForce RTX 3060,"3.8.20 (default, Sep  7 2024, 18:35:08)
 [GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,5.438364,296,2026-04-04T08:55:21.207Z,2048,2048,Lum,C2025A6,12288.0,142.0,47.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.8.10 (default, Mar 18 2025, 20:04:55) 
 [GCC 9.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,6.1549826,412,2026-04-04T08:55:25.671Z,2048,2048,SDSSg,QSO0957+561,24576.0,277.0,51.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.54904,296,2026-04-04T08:44:06.146Z,2048,2048,Lum,C2025A6,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.65117,296,2026-04-04T08:43:16.895Z,2048,2048,Lum,C2025A6,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.734783,296,2026-04-04T08:45:44.729Z,2048,2048,Lum,C2025A6,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.591312,296,2026-04-04T08:46:34.099Z,2048,2048,Lum,C2025A6,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.56344,296,2026-04-04T08:48:12.570Z,2048,2048,Lum,C2025A6,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.632477,296,2026-04-04T08:49:50.972Z,2048,2048,Lum,C2025A6,4096.0,95.0,71.0
-local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.70548,296,2026-04-04T08:41:38.455Z,2048,2048,Lum,C2025A6,4096.0,95.0,71.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.8.10 (default, Mar 18 2025, 20:04:55) 
 [GCC 9.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,6.2711644,412,2026-04-04T08:55:35.928Z,2048,2048,SDSSg,QSO0957+561,24576.0,277.0,51.0
 ttt_server,NVIDIA GeForce RTX 3090,"3.8.10 (default, Mar 18 2025, 20:04:55) 
@@ -4463,14 +4327,104 @@ ttt_server,NVIDIA GeForce RTX 3090,"3.8.10 (default, Mar 18 2025, 20:04:55)
 [GCC 9.4.0]",py38_baseline,profiler_py38_v2,QHY411-1_Lum_bin2,37.8,17.532024,158,2026-04-04T09:12:09.494Z,7100,5325,Lum,2012QD8,24576.0,277.0,54.0
 ttt1,NVIDIA GeForce RTX 3060,"3.8.20 (default, Sep  7 2024, 18:35:08) 
 [GCC 11.4.0]",py38_baseline,profiler_py38_v2,QHY411-1_SDSSi_bin2,37.8,23.153307,248,2026-04-04T09:12:32.693Z,7100,5325,SDSSi,GaiaDR33534005919872722560,12288.0,142.0,50.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,55.18834161758423,296,2026-04-10T16:43:33.707Z,2048,2048,Lum,C2025A6,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,46.43084192276001,412,2026-04-10T15:57:03.727Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,44.85029339790344,412,2026-04-10T15:57:57.600Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,69.0
 local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.611286,296,2026-04-04T08:44:55.328Z,2048,2048,Lum,C2025A6,4096.0,95.0,71.0
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,49.349655628204346,296,2026-04-10T15:49:20.026Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,42.296541690826416,412,2026-04-10T16:00:37.227Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
 local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.542213,296,2026-04-04T08:49:01.731Z,2048,2048,Lum,C2025A6,4096.0,95.0,71.0
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,48.52693247795105,296,2026-04-10T15:51:04.811Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
 local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.511295,296,2026-04-04T08:42:27.640Z,2048,2048,Lum,C2025A6,4096.0,95.0,71.0
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,48.534711837768555,296,2026-04-10T15:51:57.151Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,43.240764141082764,412,2026-04-10T15:58:52.683Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,55.87913775444031,296,2026-04-10T16:11:54.695Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,57.27677273750305,296,2026-04-10T16:16:16.575Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,56.918803453445435,296,2026-04-10T16:17:21.862Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,56.8880455493927,296,2026-04-10T16:18:27.768Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,42.44007158279419,412,2026-04-10T16:22:00.171Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,44.71330809593201,412,2026-04-10T16:22:54.923Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,43.84543061256409,412,2026-04-10T16:23:47.272Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,45.286537408828735,412,2026-04-10T16:25:41.726Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,43.06215167045593,412,2026-04-10T16:26:33.045Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,44.7322154045105,412,2026-04-10T16:28:18.873Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,41.9499089717865,412,2026-04-10T16:29:09.404Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,43.62251329421997,412,2026-04-10T16:30:00.214Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,41.99426531791687,412,2026-04-10T16:30:49.800Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,55.28497815132141,296,2026-04-10T16:32:54.432Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,57.015175580978394,296,2026-04-10T16:33:58.409Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,55.14987325668335,296,2026-04-10T16:35:00.064Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,54.947444677352905,296,2026-04-10T16:36:01.300Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,54.2216739654541,296,2026-04-10T16:37:02.132Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,55.9685320854187,296,2026-04-10T16:10:50.724Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,56.333027601242065,296,2026-04-10T16:19:31.754Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,44.06137156486511,412,2026-04-10T16:24:47.642Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,42.790201902389526,412,2026-04-10T16:27:26.446Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,55.02389907836914,296,2026-04-10T16:31:51.842Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,54.98655986785889,296,2026-04-10T16:08:43.991Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,56.57756590843201,296,2026-04-10T16:09:47.645Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,56.260582447052,296,2026-04-10T16:12:58.179Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,57.2917275428772,296,2026-04-10T16:15:07.873Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,56.208622455596924,296,2026-04-10T16:14:01.870Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,44.272045850753784,412,2026-04-10T16:21:07.738Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,54.505563735961914,296,2026-04-10T16:38:04.493Z,2048,2048,Lum,C2025A6,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,56.305593729019165,296,2026-04-10T16:39:13.574Z,2048,2048,Lum,C2025A6,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,55.23888921737671,296,2026-04-10T16:40:19.277Z,2048,2048,Lum,C2025A6,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,55.1510066986084,296,2026-04-10T16:41:24.438Z,2048,2048,Lum,C2025A6,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,55.16057515144348,296,2026-04-10T16:42:29.195Z,2048,2048,Lum,C2025A6,4096.0,95.0,69.0
 local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
-[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,46.588284,296,2026-04-04T08:47:23.391Z,2048,2048,Lum,C2025A6,4096.0,95.0,71.0
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,48.235634565353394,296,2026-04-10T15:50:12.108Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,48.23212456703186,296,2026-04-10T15:52:50.776Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,47.89940524101257,296,2026-04-10T15:54:36.085Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,45.3637216091156,412,2026-04-10T15:59:46.280Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,44.521061182022095,412,2026-04-10T16:04:03.934Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,43.17750787734985,412,2026-04-10T16:04:58.189Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,43.596556663513184,412,2026-04-10T16:05:50.226Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,40.97820472717285,412,2026-04-10T15:31:24.292Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,67.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,42.995537519454956,412,2026-04-10T16:01:28.222Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,42.470203161239624,412,2026-04-10T16:02:18.200Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,43.546082735061646,412,2026-04-10T16:03:10.879Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_SDSSg,4.2,41.89200282096863,412,2026-04-10T16:06:39.398Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,48.69665598869324,296,2026-04-10T15:48:26.313Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,49.388941049575806,296,2026-04-10T15:53:44.144Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,48.63792133331299,296,2026-04-10T15:55:28.840Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_always,profiler_cuml_always_v2,iKon936_Lum,4.2,55.356303215026855,296,2026-04-10T16:07:41.983Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,38.90164279937744,412,2026-04-10T15:38:14.383Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,68.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,37.57037591934204,412,2026-04-10T15:38:58.106Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,41.56073594093323,412,2026-04-10T15:42:38.994Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,38.04298448562622,412,2026-04-10T15:43:24.057Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,51.66262984275818,296,2026-04-10T15:45:44.936Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,39.99028396606445,412,2026-04-10T15:36:46.046Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,67.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,37.11674785614014,412,2026-04-10T15:39:39.182Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,38.27434301376343,412,2026-04-10T15:41:07.234Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,38.743141412734985,412,2026-04-10T15:41:49.829Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,49.821070432662964,296,2026-04-10T15:46:38.663Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,37.86354422569275,412,2026-04-10T15:37:30.712Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,68.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,37.90110659599304,412,2026-04-10T15:40:22.882Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,37.160810708999634,412,2026-04-10T15:44:06.143Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_SDSSg,4.2,37.877384185791016,412,2026-04-10T15:44:47.863Z,2048,2048,SDSSg,QSO0957+561,4096.0,95.0,69.0
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,"3.8.20 (default, Sep  7 2024, 18:35:08) 
+[GCC 11.4.0]",py38_baseline,profiler_py38_v2,iKon936_Lum,4.2,48.749213218688965,296,2026-04-10T15:47:31.716Z,2048,2048,Lum,C2025A6,4096.0,95.0,70.0
 jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,249.05564260482788,412,2026-04-10T12:25:15.469Z,2048,2048,SDSSg,QSO0957+561,,,
 jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,41.59421491622925,412,2026-04-10T12:26:15.219Z,2048,2048,SDSSg,QSO0957+561,,,
 jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,29.271769762039185,412,2026-04-10T12:26:54.926Z,2048,2048,SDSSg,QSO0957+561,,,

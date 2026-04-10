@@ -177,8 +177,57 @@ def save_tex(name, content):
 
 
 # ── Data loading ───────────────────────────────────────────────────────────────
+def _drop_warmup_per_session(grp: pd.DataFrame, n_warmup: int = 2,
+                              session_gap_s: float = 1800.0) -> pd.DataFrame:
+    """Drop the first n_warmup rows of each benchmark session within a group.
+
+    A new session is detected when the gap between consecutive timestamps
+    exceeds session_gap_s seconds (default 30 min).  Rows without timestamps
+    are treated as a single session.
+    """
+    if grp['timestamp'].notna().any():
+        grp = grp.sort_values('timestamp').reset_index(drop=True)
+        ts = pd.to_datetime(grp['timestamp'], utc=True, errors='coerce')
+        deltas = ts.diff().dt.total_seconds().fillna(0)
+        # Mark start of each new session
+        session_ids = (deltas > session_gap_s).cumsum()
+        keep = []
+        for _, sess in grp.groupby(session_ids, sort=False):
+            keep.append(sess.iloc[n_warmup:])
+        return pd.concat(keep, ignore_index=True) if keep else grp.iloc[0:0]
+    else:
+        return grp.iloc[n_warmup:]
+
+
+def _mad_filter(grp: pd.DataFrame, col: str = 'execution_time',
+                k: float = 3.0) -> pd.DataFrame:
+    """Remove upper outliers using Median Absolute Deviation.
+
+    Keeps rows where col <= median + k * MAD.  Only the upper tail is
+    filtered because warmup and throttling artefacts always inflate latency;
+    values below the median are never discarded.
+    """
+    vals = grp[col].dropna()
+    if len(vals) < 4:
+        return grp
+    med = vals.median()
+    mad = (vals - med).abs().median()
+    if mad == 0:
+        return grp
+    upper = med + k * mad
+    return grp[grp[col] <= upper]
+
+
 def load_benchmark(profiler_labels):
-    """Load benchmark_all_cuml_v2.csv, drop first 2 warmup reps, return DataFrame."""
+    """Load benchmark_all_cuml_v2.csv, remove warmup reps and outliers, return DataFrame.
+
+    Pipeline per (machine, profiler_label, image_label) group:
+      1. Sort by timestamp.
+      2. Detect session boundaries (gap > 30 min) and drop the first 2 rows
+         of every session as warmup — handles multiple merged benchmark runs.
+      3. Apply a 3-MAD upper-outlier filter to remove any remaining slow artefacts
+         (GPU throttling, background load spikes, etc.).
+    """
     if isinstance(profiler_labels, str):
         profiler_labels = [profiler_labels]
     df = pd.read_csv(BENCHMARK_CSV)
@@ -190,8 +239,10 @@ def load_benchmark(profiler_labels):
     df = df[df['execution_time'].notna()]
     parts = []
     for _, grp in df.groupby(['machine', 'profiler_label', 'image_label'], sort=False):
-        grp = grp.sort_values('timestamp') if grp['timestamp'].notna().any() else grp
-        parts.append(grp.iloc[2:])  # drop first 2 warmup reps
+        cleaned = _drop_warmup_per_session(grp)
+        cleaned = _mad_filter(cleaned)
+        if len(cleaned):
+            parts.append(cleaned)
     return pd.concat(parts, ignore_index=True) if parts else df
 
 

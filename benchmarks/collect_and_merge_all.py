@@ -266,6 +266,61 @@ def load_jetson_csv(path: str, machine: str, gpu_name: str, python_ver_map: dict
     return rows
 
 
+def load_local_es_csv(path: str) -> list[dict]:
+    """Carga el CSV de ES per-hit del benchmark 3050 Ti (2026-04-10) al esquema unificado.
+
+    Asigna environment/profiler_label por python_ver y orden temporal:
+      - py3.8           → profiler_py38_v2 / py38_baseline
+      - py3.12 primera mitad → profiler_cuml_always_v2 / py312_cuml_always
+      - py3.12 segunda mitad → profiler_cuml_adaptive_v2 / py312_cuml_adaptive
+    El corte entre always/adaptive es el gap de ~90 s entre las dos rondas py312.
+    """
+    # Umbral temporal: fin del bloque cuml_always / inicio del adaptive
+    CUML_ALWAYS_CUTOFF = "2026-04-10T16:20:30Z"
+    rows = []
+    try:
+        with open(path, newline="") as f:
+            for row in csv.DictReader(f):
+                obj_key = (row.get("object", ""), row.get("filter", ""))
+                label = OBJECT_FILTER_TO_LABEL.get(obj_key, "")
+                if not label:
+                    continue
+                py = row.get("python_ver", "")
+                ts  = row.get("timestamp", "")
+                if py.startswith("3.8"):
+                    env          = "profiler_py38_v2"
+                    profiler_lbl = "py38_baseline"
+                elif ts < CUML_ALWAYS_CUTOFF:
+                    env          = "profiler_cuml_always_v2"
+                    profiler_lbl = "py312_cuml_always"
+                else:
+                    env          = "profiler_cuml_adaptive_v2"
+                    profiler_lbl = "py312_cuml_adaptive"
+                rows.append({
+                    "machine":            "local",
+                    "gpu_name":           row.get("gpu_name", ""),
+                    "python_ver":         py,
+                    "profiler_label":     profiler_lbl,
+                    "environment":        env,
+                    "image_label":        label,
+                    "mp":                 LABEL_TO_MP.get(label, ""),
+                    "execution_time":     row.get("execution_time", ""),
+                    "n_sources_detected": row.get("n_sources_detected", ""),
+                    "timestamp":          ts,
+                    "naxis1":             row.get("naxis1", ""),
+                    "naxis2":             row.get("naxis2", ""),
+                    "filter":             row.get("filter", ""),
+                    "object":             row.get("object", ""),
+                    "gpu_mem_total":      row.get("gpu_mem_total", ""),
+                    "gpu_mem_used":       row.get("gpu_mem_used", ""),
+                    "gpu_temp":           row.get("gpu_temp", ""),
+                })
+    except FileNotFoundError:
+        print(f"  WARN: no encontrado {path}")
+    print(f"  local (3050 Ti 2026-04-10): {len(rows)} filas de {path}")
+    return rows
+
+
 def load_jetson_es_csv(path: str, machine: str, gpu_name: str,
                        profiler_label: str, python_ver: str) -> list[dict]:
     """Carga un CSV de ES per-hit (salida de collect_times_from_elastic.py) para un Jetson.
@@ -321,7 +376,10 @@ def main():
                    help="CSV de ES ya descargado en formato raw (usar con --skip-es)")
     p.add_argument("--base-csv", default=None,
                    help="CSV unificado ya existente (esquema OUTPUT_COLS) a usar como base en lugar de ES. "
-                        "Las filas de machine==jetson_orin se descartan y se reemplazan con el CSV corregido.")
+                        "Las filas de machine==jetson_* y machine==local se descartan para recargarlas.")
+    p.add_argument("--local-csv", default=None,
+                   help="CSV de ES per-hit del benchmark 3050 Ti (e.g. es_times_3050ti_20260410_per_hit_per_hit.csv). "
+                        "Si se indica, reemplaza todos los datos de machine==local del base-csv.")
     args = p.parse_args()
 
     all_rows: list[dict] = []
@@ -333,13 +391,19 @@ def main():
         # Carga un CSV unificado ya existente directamente (sin pasar por es_row_to_unified).
         # Se eliminan las filas de jetson_orin para sustituirlas por el rerun corregido.
         # Filtra todas las máquinas Jetson — se recargan desde los CSVs fuente para evitar duplicados.
-        print(f"Cargando base unificada desde {args.base_csv} (sin filas Jetson)...")
+        # Excluir jetson_* (se recargan abajo) y local (si hay --local-csv, se reemplaza)
+        exclude_local = args.local_csv is not None
+        skip_note = "jetson_* + local" if exclude_local else "jetson_*"
+        print(f"Cargando base unificada desde {args.base_csv} (sin {skip_note})...")
         with open(args.base_csv, newline="") as f:
             for row in csv.DictReader(f):
-                if row.get("machine", "").startswith("jetson_"):
+                mach = row.get("machine", "")
+                if mach.startswith("jetson_"):
+                    continue
+                if exclude_local and mach == "local":
                     continue
                 all_rows.append({col: row.get(col, "") for col in OUTPUT_COLS})
-        print(f"  → {len(all_rows)} filas (jetson_* excluido)")
+        print(f"  → {len(all_rows)} filas ({skip_note} excluido)")
     elif not args.skip_es:
         with tempfile.TemporaryDirectory() as tmpdir:
             print("Descargando desde Elasticsearch (una query por environment)...")
@@ -355,7 +419,14 @@ def main():
         print(f"  → {len(all_rows)} filas")
 
     # ------------------------------------------------------------------
-    # 2. Datos de Jetson
+    # 2. Datos de la 3050 Ti local (nuevo benchmark 2026-04-10)
+    # ------------------------------------------------------------------
+    if args.local_csv:
+        print(f"\nCargando datos 3050 Ti desde {args.local_csv}...")
+        all_rows += load_local_es_csv(args.local_csv)
+
+    # ------------------------------------------------------------------
+    # 3. Datos de Jetson
     # ------------------------------------------------------------------
     base = Path(__file__).parent / "results_collected"
     es_dir = Path(__file__).parent
