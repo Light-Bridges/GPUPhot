@@ -8,7 +8,9 @@ Fuentes:
   1. ES environment=profiler_cuml_always_v2   → py3.12, cuML forzado, todas las GPUs x86
   2. ES environment=profiler_cuml_adaptive_v2 → py3.12, cuML dinámico, todas las GPUs x86
   3. ES environment=profiler_py38_v2          → py3.8 baseline, todas las GPUs x86
-  4. CSV benchmarks/results_collected/benchmark_jetson_orin.csv   → Jetson Orin Nano 8GB (py3.8)
+  4. CSV benchmarks/results_collected/benchmark_jetson_orin_20260409.csv → Jetson Orin NX 8GB (py3.8)
+     (rerun corregido 2026-04-09; el archivo original benchmark_jetson_orin.csv usaba la imagen
+      Docker equivocada, dando tiempos falsos de ~28 s en lugar de los correctos ~188 s)
   5. CSV benchmarks/results_collected/benchmark_jetson_local.csv  → Jetson Orin Super (py3.12, py3.10)
 
 Columnas clave del fichero de salida:
@@ -227,6 +229,9 @@ def load_jetson_csv(path: str, machine: str, gpu_name: str, python_ver_map: dict
             for row in csv.DictReader(f):
                 if row.get("status", "OK") != "OK":
                     continue
+                # Si el CSV tiene columna 'mode', saltar filas de warmup
+                if row.get("mode", "clean") == "warmup":
+                    continue
                 profiler = row.get("profiler", "py38")
                 py_ver = python_ver_map.get(profiler, profiler)
                 if "312" in profiler:
@@ -272,7 +277,10 @@ def main():
     p.add_argument("--skip-es", action="store_true",
                    help="No descargar de ES, solo mergear los Jetson con un CSV de ES ya existente")
     p.add_argument("--es-csv",  default=None,
-                   help="CSV de ES ya descargado (usar con --skip-es)")
+                   help="CSV de ES ya descargado en formato raw (usar con --skip-es)")
+    p.add_argument("--base-csv", default=None,
+                   help="CSV unificado ya existente (esquema OUTPUT_COLS) a usar como base en lugar de ES. "
+                        "Las filas de machine==jetson_orin se descartan y se reemplazan con el CSV corregido.")
     args = p.parse_args()
 
     all_rows: list[dict] = []
@@ -280,7 +288,17 @@ def main():
     # ------------------------------------------------------------------
     # 1. Datos de ES — tres environments del run 2026-04-02
     # ------------------------------------------------------------------
-    if not args.skip_es:
+    if args.base_csv:
+        # Carga un CSV unificado ya existente directamente (sin pasar por es_row_to_unified).
+        # Se eliminan las filas de jetson_orin para sustituirlas por el rerun corregido.
+        print(f"Cargando base unificada desde {args.base_csv} (sin filas jetson_orin)...")
+        with open(args.base_csv, newline="") as f:
+            for row in csv.DictReader(f):
+                if row.get("machine") == "jetson_orin":
+                    continue  # se reemplaza con benchmark_jetson_orin_20260409.csv
+                all_rows.append({col: row.get(col, "") for col in OUTPUT_COLS})
+        print(f"  → {len(all_rows)} filas (jetson_orin excluido)")
+    elif not args.skip_es:
         with tempfile.TemporaryDirectory() as tmpdir:
             print("Descargando desde Elasticsearch (una query por environment)...")
             es_rows = collect_from_es(args.time_from, args.time_to, tmpdir)
@@ -300,7 +318,7 @@ def main():
     base = Path(__file__).parent / "results_collected"
     print("\nCargando datos de Jetson...")
     all_rows += load_jetson_csv(
-        str(base / "benchmark_jetson_orin.csv"),
+        str(base / "benchmark_jetson_orin_20260409.csv"),
         machine="jetson_orin", gpu_name="Orin NX 8GB (nvgpu)",
         python_ver_map={"py38": "3.8"},
     )
