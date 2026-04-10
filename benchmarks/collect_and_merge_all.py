@@ -226,8 +226,9 @@ def load_jetson_csv(path: str, machine: str, gpu_name: str, python_ver_map: dict
     try:
         with open(path, newline="") as f:
             for row in csv.DictReader(f):
-                if row.get("status", "OK") != "OK":
-                    continue
+                status = row.get("status", "").strip()
+                if status and status != "OK":
+                    continue  # excluir solo si status está explícitamente marcado como fallo
                 # Si el CSV tiene columna 'mode', saltar filas de warmup
                 if row.get("mode", "clean") == "warmup":
                     continue
@@ -331,13 +332,14 @@ def main():
     if args.base_csv:
         # Carga un CSV unificado ya existente directamente (sin pasar por es_row_to_unified).
         # Se eliminan las filas de jetson_orin para sustituirlas por el rerun corregido.
-        print(f"Cargando base unificada desde {args.base_csv} (sin filas jetson_orin)...")
+        # Filtra todas las máquinas Jetson — se recargan desde los CSVs fuente para evitar duplicados.
+        print(f"Cargando base unificada desde {args.base_csv} (sin filas Jetson)...")
         with open(args.base_csv, newline="") as f:
             for row in csv.DictReader(f):
-                if row.get("machine") == "jetson_orin":
-                    continue  # se reemplaza con es_times_orin_20260410_per_hit_per_hit.csv
+                if row.get("machine", "").startswith("jetson_"):
+                    continue
                 all_rows.append({col: row.get(col, "") for col in OUTPUT_COLS})
-        print(f"  → {len(all_rows)} filas (jetson_orin excluido)")
+        print(f"  → {len(all_rows)} filas (jetson_* excluido)")
     elif not args.skip_es:
         with tempfile.TemporaryDirectory() as tmpdir:
             print("Descargando desde Elasticsearch (una query por environment)...")
