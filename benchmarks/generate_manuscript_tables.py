@@ -72,7 +72,7 @@ GPU_TEX_HEADER = {
     'RTX 3090 (24 GB)':   r'\textbf{3090}',
     'RTX 3060 (12 GB)':   r'\textbf{3060}',
     'RTX 3050 Ti (4 GB)': r'\textbf{3050\,Ti}',
-    'Orin Super (8 GB)':  r'\textbf{Orin S.}',
+    'Orin Super (8 GB)':  r'\textbf{Orin S.}$^*$',
     'Orin NX (8 GB)':     r'\textbf{Orin NX}',
 }
 
@@ -255,7 +255,10 @@ def gen_latency_py312():
     """
     tab:latency_py312 — Median latency (s), py3.12 + adaptive cuML.
     Source: benchmark_all_cuml_v2.csv (profiler_label=py312_cuml_adaptive)
-    GPUs: H100, A100, L40S, RTX 3090, RTX 3060, RTX 3050 Ti
+    GPUs: H100, A100, L40S, RTX 3090, RTX 3060, RTX 3050 Ti, Orin Super
+    Orin Super runs py3.12 on ARM without cuML (unavailable on aarch64);
+    its data is stored under profiler_label=py312_cuml_adaptive in the CSV.
+    Orin NX has no py3.12 data and is therefore omitted from this table.
     Note: RTX 3050 Ti has data for 4.2 MP; larger images will show --- until
     the full adaptive benchmark is run on that machine (images 3-7).
     """
@@ -263,10 +266,11 @@ def gen_latency_py312():
     gpu_cols = [
         'H100 (80 GB)', 'A100 (80 GB)', 'L40S (48 GB)',
         'RTX 3090 (24 GB)', 'RTX 3060 (12 GB)', 'RTX 3050 Ti (4 GB)',
+        'Orin Super (8 GB)',
     ]
     data = latency_median('py312_cuml_adaptive', gpu_cols)
 
-    col_spec = r'{rr rrrrrr}'
+    col_spec = r'{rr rrrrrrr}'
     header = (
         r'\textbf{MP} & \textbf{Sources}' + '\n'
         r'            & ' + ' & '.join(GPU_TEX_HEADER[g] for g in gpu_cols) + r' \\'

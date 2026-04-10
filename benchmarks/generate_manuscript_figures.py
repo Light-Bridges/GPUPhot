@@ -91,9 +91,15 @@ GPU_SHORT = {
     'RTX 3090 (24 GB)':   'RTX 3090',
     'RTX 3060 (12 GB)':   'RTX 3060',
     'RTX 3050 Ti (4 GB)': 'RTX 3050 Ti',
-    'Orin Super (8 GB)':  'Orin Super',
+    'Orin Super (8 GB)':  'Orin S.*',   # * ARM, cuML unavailable
     'Orin NX (8 GB)':     'Orin NX',
 }
+# GPU order for heatmap (py3.12): Orin NX excluded — no py3.12 data (runs py38_baseline only)
+HEATMAP_GPU_ORDER = [
+    'H100 (80 GB)', 'A100 (80 GB)', 'L40S (48 GB)',
+    'RTX 3090 (24 GB)', 'RTX 3060 (12 GB)', 'RTX 3050 Ti (4 GB)',
+    'Orin Super (8 GB)',
+]
 
 # Image label order for plots (ascending MP, then source count within MP)
 IMAGE_ORDER = [
@@ -276,25 +282,23 @@ def figure4():
     df = load_benchmark(['py312_cuml_adaptive'])
     med = df.groupby(['gpu_label', 'image_label'])['execution_time'].median()
 
-    gpu_cols_short = [GPU_SHORT[g] for g in GPU_ORDER if g in df['gpu_label'].values or
-                      any(df['gpu_label'] == g)]
-    gpu_cols_full  = [g for g in GPU_ORDER]
-
+    # Use HEATMAP_GPU_ORDER: excludes Orin NX (no py3.12 data; all-grey columns
+    # would misleadingly imply OOM rather than "not tested under this config").
+    # Orin Super is included with asterisk (py3.12 ARM, cuML unavailable).
     n_imgs = len(IMAGE_ORDER)
-    n_gpus = len(GPU_ORDER)
+    n_gpus = len(HEATMAP_GPU_ORDER)
     matrix = np.full((n_imgs, n_gpus), np.nan)
 
     for i, img in enumerate(IMAGE_ORDER):
-        for j, gpu in enumerate(GPU_ORDER):
+        for j, gpu in enumerate(HEATMAP_GPU_ORDER):
             try:
                 matrix[i, j] = med.loc[(gpu, img)]
             except KeyError:
                 pass  # NaN = OOM or not tested
 
     # Row labels: MP + source count only
-    row_labels = [_img_display(img) for img in IMAGE_ORDER
-                  if img in [img for img in IMAGE_ORDER]]
-    col_labels = [GPU_SHORT.get(g, g) for g in GPU_ORDER]
+    row_labels = [_img_display(img) for img in IMAGE_ORDER]
+    col_labels = [GPU_SHORT.get(g, g) for g in HEATMAP_GPU_ORDER]
 
     fig, ax = plt.subplots(figsize=(9, 5.5))
     cmap = LinearSegmentedColormap.from_list(
