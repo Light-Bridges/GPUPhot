@@ -88,56 +88,65 @@ GPU_VRAM_MB = {
 GPU_VRAM_GB = {k: v // 1024 for k, v in GPU_VRAM_MB.items()}
 
 # ── Image definitions ─────────────────────────────────────────────────────────
-# (image_label, LaTeX target name, MP, source count)
+# (image_label, MP, source count)
+# Tables and figures identify images by MP + source count only.
+# Camera, filter, and target names are implementation details not relevant to
+# pipeline performance; removing them keeps all tables consistent.
 IMAGE_DEFS = [
-    ('iKon936_Lum',         r'C/2025\,A6',    4.2,   296),
-    ('iKon936_SDSSg',       r'QSO\,0957+561', 4.2,   412),
-    ('QHY600-3_Lum',        r'C/2025\,R2',    6.8,   112),
-    ('QHY600-4_Ha',         r'NGC\,2903',     15.3,  318),
-    ('QHY600-4_SDSSg',      r'WASP-43\,b',    15.3,  218),
-    ('QHY411-1_Lum_bin2',   r'2012\,QD8',     37.8,  154),
-    ('QHY411-1_SDSSi_bin2', r'Gaia\,DR3',     37.8,  247),
-    ('QHY411-1_Lum_full',   r'2025\,PR1',    151.2,  428),
-    ('QHY411-3_SDSSr_full', r'M\,81',        151.2, 14241),
-    ('QHY411-3_Lum_full',   r'24P',          151.2, 18888),
+    ('iKon936_Lum',          4.2,   296),
+    ('iKon936_SDSSg',        4.2,   412),
+    ('QHY600-3_Lum',         6.8,   112),
+    ('QHY600-4_Ha',         15.3,   318),
+    ('QHY600-4_SDSSg',      15.3,   218),
+    ('QHY411-1_Lum_bin2',   37.8,   154),
+    ('QHY411-1_SDSSi_bin2', 37.8,   247),
+    ('QHY411-1_Lum_full',  151.2,   428),
+    ('QHY411-3_SDSSr_full',151.2, 14241),
+    ('QHY411-3_Lum_full',  151.2, 18888),
 ]
-IMAGE_ORDER  = [d[0] for d in IMAGE_DEFS]
-IMAGE_TARGET = {d[0]: d[1] for d in IMAGE_DEFS}
-IMAGE_MP     = {d[0]: d[2] for d in IMAGE_DEFS}
-IMAGE_SRC    = {d[0]: d[3] for d in IMAGE_DEFS}
+IMAGE_ORDER = [d[0] for d in IMAGE_DEFS]
+IMAGE_MP    = {d[0]: d[1] for d in IMAGE_DEFS}
+IMAGE_SRC   = {d[0]: d[2] for d in IMAGE_DEFS}
 
-# cuml_ablation: map image filename keyword → (camera, filter_label, n_sources)
-# Key is matched with `in filename`.
-# NOTE: The QHY411-1 Lum full row (2025PR1, 151.2 MP, 428 sources) is present in the
-# ablation CSV but excluded here because its cuML penalty (+664%) reflects a pathological
-# case (few sources on a very large frame) and would distort the table's message.
-# The raw data is still in cuml_ablation_a100_20260329.csv for transparency.
+def _mp_str(mp):
+    """Format MP value: strip trailing zeros (4.2, 6.8, 15.3, 37.8, 151.2)."""
+    return f'{mp:.1f}'.rstrip('0').rstrip('.')
+
+def _img_label(mp, src):
+    """Short LaTeX display label used in tables: 'X.X MP & N,NNN'."""
+    return _mp_str(mp), fmt_src(src)
+
+# cuml_ablation: map image filename keyword → (MP, n_sources)
+# NOTE: QHY411-1 Lum full (151.2 MP, 428 src) excluded — its cuML penalty
+# (+664%) is pathological (sparse field on large frame) and distorts the table.
 ABLATION_FILE_MAP = [
-    ('QSO0957',   'iKon936-1', r'SDSSg',         412),
-    ('C2025A6',   'iKon936-1', r'Lum',            296),
-    ('C2025R2',   'QHY600-3',  r'Lum',            112),
-    ('WASP-43-b', 'QHY600-4',  r'SDSSg',          218),
-    ('NGC2903',   'QHY600-4',  r'H$\alpha$',      318),
-    ('2012QD8',   'QHY411-1',  r'Lum',            154),
-    ('GaiaDR3',   'QHY411-1',  r'SDSSi',          247),
-    ('M81',       'QHY411-3',  r'M\,81 SDSSr', 14241),
-    ('24P_Lum',   'QHY411-3',  r'24P Lum',     18888),
+    ('QSO0957',    4.2,   412),
+    ('C2025A6',    4.2,   296),
+    ('C2025R2',    6.8,   112),
+    ('WASP-43-b', 15.3,   218),
+    ('NGC2903',   15.3,   318),
+    ('2012QD8',   37.8,   154),
+    ('GaiaDR3',   37.8,   247),
+    ('M81',      151.2, 14241),
+    ('24P_Lum',  151.2, 18888),
 ]
 
-# cpu_baseline: map filename keyword → (LaTeX target, MP, benchmark image_label)
-# The image_label is used to look up GPUPhot A100 py3.12 times in benchmark_all_cuml_v2.csv.
+# cpu_baseline: map filename keyword → (MP, sources, benchmark image_label)
 CPU_BASELINE_FILE_MAP = [
-    ('C2025A6',   r'C/2025\,A6',    4.2,  'iKon936_Lum'),
-    ('QSO0957',   r'QSO\,0957+561', 4.2,  'iKon936_SDSSg'),
-    ('C2025R2',   r'C/2025\,R2',    6.8,  'QHY600-3_Lum'),
-    ('NGC2903',   r'NGC\,2903',     15.3, 'QHY600-4_Ha'),
-    ('WASP-43-b', r'WASP-43\,b',    15.3, 'QHY600-4_SDSSg'),
-    ('2012QD8',   r'2012\,QD8',     37.8, 'QHY411-1_Lum_bin2'),
-    ('GaiaDR3',   r'Gaia\,DR3',     37.8, 'QHY411-1_SDSSi_bin2'),
-    ('2025PR1',   r'2025\,PR1',    151.2, 'QHY411-1_Lum_full'),
-    ('M81',       r'M\,81',        151.2, 'QHY411-3_SDSSr_full'),
-    ('24P',       r'24P',          151.2, 'QHY411-3_Lum_full'),
+    ('C2025A6',    4.2,   296, 'iKon936_Lum'),
+    ('QSO0957',    4.2,   412, 'iKon936_SDSSg'),
+    ('C2025R2',    6.8,   112, 'QHY600-3_Lum'),
+    ('NGC2903',   15.3,   318, 'QHY600-4_Ha'),
+    ('WASP-43-b', 15.3,   218, 'QHY600-4_SDSSg'),
+    ('2012QD8',   37.8,   154, 'QHY411-1_Lum_bin2'),
+    ('GaiaDR3',   37.8,   247, 'QHY411-1_SDSSi_bin2'),
+    ('2025PR1',  151.2,   428, 'QHY411-1_Lum_full'),
+    ('M81',      151.2, 14241, 'QHY411-3_SDSSr_full'),
+    ('24P',      151.2, 18888, 'QHY411-3_Lum_full'),
 ]
+
+# NVTX table: source counts for the single representative image per MP size
+NVTX_SRC = {4.2: 296, 6.8: 112, 15.3: 318, 37.8: 154, 151.2: 428}
 
 OOM = r' --- '  # LaTeX OOM / not-tested marker
 
@@ -257,20 +266,17 @@ def gen_latency_py312():
     ]
     data = latency_median('py312_cuml_adaptive', gpu_cols)
 
-    col_spec = r'{rlr rrrrrr}'
+    col_spec = r'{rr rrrrrr}'
     header = (
-        r'\textbf{MP} & \textbf{Target} & \textbf{Sources}' + '\n'
+        r'\textbf{MP} & \textbf{Sources}' + '\n'
         r'            & ' + ' & '.join(GPU_TEX_HEADER[g] for g in gpu_cols) + r' \\'
     )
     rows = []
     for img in IMAGE_ORDER:
         mp  = IMAGE_MP[img]
-        tgt = IMAGE_TARGET[img]
         src = IMAGE_SRC[img]
         vals = ' & '.join(fmt_time(data[img][g]) for g in gpu_cols)
-        src_fmt = fmt_src(src)
-        mp_str = f'{mp:5.1f}'.rstrip('0').rstrip('.')
-        rows.append(rf'{mp_str:5s} & {tgt:<18s} & {src_fmt:>8s} & {vals} \\')
+        rows.append(rf'{_mp_str(mp):5s} & {fmt_src(src):>8s} & {vals} \\')
 
     body = _tabular(col_spec, header, rows)
     save_tex('body_latency_py312.tex', body)
@@ -290,20 +296,17 @@ def gen_latency_py38():
     ]
     data = latency_median('py38_baseline', gpu_cols)
 
-    col_spec = r'{rlr rrrrrrr}'
+    col_spec = r'{rr rrrrrrr}'
     header = (
-        r'\textbf{MP} & \textbf{Target} & \textbf{Sources}' + '\n'
+        r'\textbf{MP} & \textbf{Sources}' + '\n'
         r'            & ' + ' & '.join(GPU_TEX_HEADER[g] for g in gpu_cols) + r' \\'
     )
     rows = []
     for img in IMAGE_ORDER:
         mp  = IMAGE_MP[img]
-        tgt = IMAGE_TARGET[img]
         src = IMAGE_SRC[img]
         vals = ' & '.join(fmt_time(data[img][g]) for g in gpu_cols)
-        src_fmt = fmt_src(src)
-        mp_str = f'{mp:5.1f}'.rstrip('0').rstrip('.')
-        rows.append(rf'{mp_str:5s} & {tgt:<18s} & {src_fmt:>8s} & {vals} \\')
+        rows.append(rf'{_mp_str(mp):5s} & {fmt_src(src):>8s} & {vals} \\')
 
     body = _tabular(col_spec, header, rows)
     save_tex('body_latency_py38.tex', body)
@@ -449,13 +452,13 @@ def gen_cuml_ablation():
     # sources per image (same for all reps)
     src_map = df.groupby('image')['sources'].first()
 
-    col_spec = r'{llrrrr}'
+    col_spec = r'{rrrrr}'
     header = (
-        r'Camera & Image & Sources & With cuML (s) & '
-        r'Without cuML (s) & Penalty (\%) \\'
+        r'\textbf{MP} & \textbf{Sources} & \textbf{With cuML (s)} & '
+        r'\textbf{Without cuML (s)} & \textbf{Penalty (\%)} \\'
     )
     rows = []
-    for keyword, camera, filter_label, _ in ABLATION_FILE_MAP:
+    for keyword, mp, _ in ABLATION_FILE_MAP:
         # Find matching row by filename keyword
         matches = [idx for idx in med.index if keyword in idx]
         if not matches:
@@ -471,7 +474,7 @@ def gen_cuml_ablation():
             pen_str = OOM
         nsrc_str = fmt_src(nsrc) if not _is_missing(nsrc) else OOM
         rows.append(
-            rf'{camera:<12s} & {filter_label:<18s} & {nsrc_str:>8s} & '
+            rf'{_mp_str(mp):5s} & {nsrc_str:>8s} & '
             rf'{fmt_time(t_yes)} & {fmt_time(t_no)} & {pen_str} \\'
         )
 
@@ -497,25 +500,24 @@ def gen_cpu_baseline():
     a100 = df[df['gpu_label'] == 'A100 (80 GB)']
     gpuphot_med = a100.groupby('image_label')['execution_time'].median()
 
-    col_spec = r'{rlrrr}'
+    col_spec = r'{rrrrr}'
     header = (
-        r'\textbf{MP} & \textbf{Target} & '
+        r'\textbf{MP} & \textbf{Sources} & '
         r'\textbf{sep (s)} & \textbf{Photutils (s)} & '
         r'\textbf{\gpuphot\ (s)} \\'
     )
     rows = []
-    for keyword, tex_target, mp, img_label in CPU_BASELINE_FILE_MAP:
+    for keyword, mp, src, img_label in CPU_BASELINE_FILE_MAP:
         # sep / Photutils: match by filename keyword in cpu_baseline_results.csv
         match = cpu[cpu['filename'].str.contains(keyword, na=False)]
-        sep_t      = match.iloc[0]['sep_median_s']       if not match.empty else float('nan')
-        photutils_t = match.iloc[0]['photutils_median_s'] if not match.empty else float('nan')
+        sep_t       = match.iloc[0]['sep_median_s']        if not match.empty else float('nan')
+        photutils_t = match.iloc[0]['photutils_median_s']  if not match.empty else float('nan')
 
         # GPUPhot: direct lookup by image_label in the benchmark CSV
         gpu_t = gpuphot_med.get(img_label, float('nan'))
 
-        mp_str = f'{mp:5.1f}'.rstrip('0').rstrip('.')
         rows.append(
-            rf'{mp_str:5s} & {tex_target:<18s} & '
+            rf'{_mp_str(mp):5s} & {fmt_src(src):>8s} & '
             rf'{fmt_time(sep_t, 2)} & {fmt_time(photutils_t, 1)} & '
             rf'{fmt_time(gpu_t, 1)} \\'
         )
@@ -537,17 +539,19 @@ def gen_nvtx_detection():
     df['MP']                   = pd.to_numeric(df['MP'],                  errors='coerce')
     df = df.sort_values('MP')
 
-    col_spec = r'{lrrrr}'
+    col_spec = r'{rrrrr}'
     header = (
-        r'\textbf{Camera} & \textbf{MP} & \textbf{GPU det.\ (s)} & '
+        r'\textbf{MP} & \textbf{Sources} & \textbf{GPU det.\ (s)} & '
         r'\textbf{sep (s)} & \textbf{GPU speedup} \\'
     )
     rows = []
     for _, row in df.iterrows():
         speedup = row['gpu_speedup_vs_sep']
         sp_str  = f'{speedup:.1f}$\\times$' if not _is_missing(speedup) else OOM
+        mp = row['MP']
+        src = NVTX_SRC.get(mp, 0)
         rows.append(
-            rf'{row["camera"]:<12s} & {row["MP"]:5.1f} & '
+            rf'{_mp_str(mp):5s} & {fmt_src(src):>8s} & '
             rf'{fmt_time(row["gpuphot_detection_s"], 3)} & '
             rf'{fmt_time(row["sep_median_s"], 3)} & '
             rf'{sp_str} \\'

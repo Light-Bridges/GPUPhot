@@ -97,25 +97,41 @@ GPU_SHORT = {
 
 # Image label order for plots (ascending MP, then source count within MP)
 IMAGE_ORDER = [
-    'iKon936_SDSSg',      # 4.2 MP, 412 src
-    'iKon936_Lum',        # 4.2 MP, 296 src
-    'QHY600-3_Lum',       # 6.8 MP, 112 src
-    'QHY600-4_Ha',        # 15.3 MP, 318 src
-    'QHY600-4_SDSSg',     # 15.3 MP, 218 src
-    'QHY411-1_Lum_bin2',  # 37.8 MP, 154 src
-    'QHY411-1_SDSSi_bin2',# 37.8 MP, 247 src
-    'QHY411-1_Lum_full',  # 151.2 MP, 428 src
-    'QHY411-3_SDSSr_full',# 151.2 MP, 14241 src
-    'QHY411-3_Lum_full',  # 151.2 MP, 18888 src
+    'iKon936_SDSSg',       # 4.2 MP,   412 src
+    'iKon936_Lum',         # 4.2 MP,   296 src
+    'QHY600-3_Lum',        # 6.8 MP,   112 src
+    'QHY600-4_Ha',         # 15.3 MP,  318 src
+    'QHY600-4_SDSSg',      # 15.3 MP,  218 src
+    'QHY411-1_Lum_bin2',   # 37.8 MP,  154 src
+    'QHY411-1_SDSSi_bin2', # 37.8 MP,  247 src
+    'QHY411-1_Lum_full',   # 151.2 MP, 428 src
+    'QHY411-3_SDSSr_full', # 151.2 MP, 14 241 src
+    'QHY411-3_Lum_full',   # 151.2 MP, 18 888 src
 ]
 IMAGE_MP = {
-    'iKon936_SDSSg': 4.2,   'iKon936_Lum': 4.2,
+    'iKon936_SDSSg': 4.2,    'iKon936_Lum': 4.2,
     'QHY600-3_Lum': 6.8,
-    'QHY600-4_Ha': 15.3,    'QHY600-4_SDSSg': 15.3,
+    'QHY600-4_Ha': 15.3,     'QHY600-4_SDSSg': 15.3,
     'QHY411-1_Lum_bin2': 37.8, 'QHY411-1_SDSSi_bin2': 37.8,
     'QHY411-1_Lum_full': 151.2,
     'QHY411-3_SDSSr_full': 151.2, 'QHY411-3_Lum_full': 151.2,
 }
+IMAGE_SRC = {
+    'iKon936_SDSSg': 412,    'iKon936_Lum': 296,
+    'QHY600-3_Lum': 112,
+    'QHY600-4_Ha': 318,      'QHY600-4_SDSSg': 218,
+    'QHY411-1_Lum_bin2': 154, 'QHY411-1_SDSSi_bin2': 247,
+    'QHY411-1_Lum_full': 428,
+    'QHY411-3_SDSSr_full': 14241, 'QHY411-3_Lum_full': 18888,
+}
+
+def _img_display(img, sep='\n'):
+    """Short display label: 'X.X MP{sep}N,NNN src'."""
+    mp  = IMAGE_MP[img]
+    src = IMAGE_SRC[img]
+    mp_s = f'{mp:.1f}'.rstrip('0').rstrip('.')
+    src_s = f'{src:,}'.replace(',', '\u202f')  # narrow no-break space as thousands sep
+    return f'{mp_s} MP{sep}{src_s} src'
 
 
 def save(fig, name):
@@ -210,11 +226,9 @@ def figure3():
     df = pd.read_csv(MEMORY_CSV)
     a100 = df[df['gpu_name'] == 'A100-SXM4-80GB'].copy()
     mp_values = sorted(a100['megapixels'].unique())
-    cam_map = {
-        4.2: 'iKon936\n4.2 MP',   6.8: 'QHY600\n6.8 MP',
-        15.3: 'QHY600\n15.3 MP', 37.8: 'QHY411\n37.8 MP',
-        151.2: 'QHY411\n151.2 MP',
-    }
+    # Memory figure uses one value per MP size (aggregated): label = MP only
+    cam_map = {mp: f'{mp:.1f}'.rstrip("0").rstrip(".") + ' MP'
+               for mp in [4.2, 6.8, 15.3, 37.8, 151.2]}
 
     fig, ax = plt.subplots(figsize=(7, 4))
     x = np.arange(len(mp_values))
@@ -277,19 +291,9 @@ def figure4():
             except KeyError:
                 pass  # NaN = OOM or not tested
 
-    # Row labels: image_label + (n_src annotation)
-    row_labels = [
-        'iKon936 SDSSg\n(4.2 MP, 412 src)',
-        'iKon936 Lum\n(4.2 MP, 296 src)',
-        'QHY600-3 Lum\n(6.8 MP, 112 src)',
-        'QHY600-4 Ha\n(15.3 MP, 318 src)',
-        'QHY600-4 SDSSg\n(15.3 MP, 218 src)',
-        'QHY411-1 Lum bin2\n(37.8 MP, 154 src)',
-        'QHY411-1 SDSSi bin2\n(37.8 MP, 247 src)',
-        'QHY411-1 Lum full\n(151.2 MP, 428 src)',
-        'QHY411-3 SDSSr\n(151.2 MP, 14 241 src)',
-        'QHY411-3 Lum\n(151.2 MP, 18 888 src)',
-    ]
+    # Row labels: MP + source count only
+    row_labels = [_img_display(img) for img in IMAGE_ORDER
+                  if img in [img for img in IMAGE_ORDER]]
     col_labels = [GPU_SHORT.get(g, g) for g in GPU_ORDER]
 
     fig, ax = plt.subplots(figsize=(9, 5.5))
@@ -475,7 +479,7 @@ def figure7():
     ax.axhline(0, color='black', linewidth=0.8, zorder=5)
     ax.set_ylim(-15, CAP + 20)
     ax.set_xticks(x)
-    xlabels = [img.replace('_', '\n') for img in pct_pivot.index]
+    xlabels = [_img_display(img) for img in pct_pivot.index]
     ax.set_xticklabels(xlabels, fontsize=7, rotation=0, ha='center')
     ax.set_ylabel('Overhead vs py3.8 (%)\n(positive = py3.12 slower)')
     ax.set_title('End-to-end latency: py3.12 + adaptive cuML vs py3.8 baseline\n'
@@ -541,7 +545,7 @@ def figure8():
 
     ax.axhline(0, color='black', linewidth=0.8, zorder=5)
     ax.set_xticks(x)
-    xlabels = [img.replace('_', '\n') for img in pct_pivot.index]
+    xlabels = [_img_display(img) for img in pct_pivot.index]
     ax.set_xticklabels(xlabels, fontsize=7, rotation=0, ha='center')
     ax.set_ylabel('Improvement of adaptive vs always (%)\n(positive = adaptive faster)')
     ax.set_title('Adaptive cuML vs always-on cuML\n'
