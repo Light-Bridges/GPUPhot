@@ -22,8 +22,8 @@
 | CPU comparison framing (scope-mismatch) | §10 |
 | Known limitations to state honestly | §11 |
 
-**Manuscript repo**: `slemesp/GPUPHOT_manuscript`, branch `main`, commit `bf27dfb`
-**Code repo**: `Light-Bridges/GPUPhot`, branch `documentation`, commit `3712545`
+**Manuscript repo**: `slemesp/GPUPHOT_manuscript`, branch `main` (commit hash changes — see git log)
+**Code repo**: `Light-Bridges/GPUPhot`, branch `documentation` (commit hash changes — see git log)
 
 ## 0. Journal Requirements — Astronomy & Computing (Elsevier)
 
@@ -189,7 +189,7 @@ Synthetic crossover benchmark (extended to 500K sources on clean GPUs, 30 Mar 20
 | L40S | 2K | 5.5x @ 20K | ~500K (0.86x @ 500K) |
 | RTX 3090 | 2K | 3.7x @ 10K | 200K (0.46x @ 500K) |
 | RTX 3060 | 2K | 2.0x @ 10K | 50K (0.14x @ 500K) |
-| RTX 3050 Ti | Never | — | CPU always wins |
+| RTX 3050 Ti | ~2K sources | 2.3x @ 10K | ~50K — **UPDATE 2026-04-02**: previous "Never" was on degraded GPU; clean system shows crossover. See `cuml_crossover_synthetic_rtx3050ti_20260402.csv` |
 
 All benchmarks run with workers stopped and GPU memory verified clean (< 5 MiB).
 Data: `cuml_crossover_synthetic_clean_20260330.csv` (supersedes 20260328 version)
@@ -395,8 +395,9 @@ RTX 3090/3060 OOM expected for 151.2 MP images (VRAM limit).
 - For QHY411-3_SDSSr_full (14241 sources): H100 py312_adaptive=61s is
   competitive with py38=59s — the cuML crossmatch benefit nearly offsets
   the py312 overhead.
-- Orin Super (py3.12 ARM, no cuML): 4.2 MP ~150s, 6.8 MP ~154s.
-  Data: `benchmark_jetson_local.csv`.
+- Orin Super (py3.12 ARM, no cuML): **integrated 2026-04-10** from ES (64 clean rows).
+  Medians: iKon936_SDSSg=21.1s, iKon936_Lum=26.4s, QHY600-3_Lum=30.3s.
+  Previous contaminated values (~150s) have been replaced in benchmark_all_cuml_v2.csv.
 
 ### Memory (median peak VRAM, py3.12)
 
@@ -498,7 +499,7 @@ All in `benchmarks/results_collected/`:
 - `cuml_crossover_synthetic_all_gpus_20260328.csv` — synthetic crossover, 6 GPUs
 
 ### Definitive benchmark (April 2026) — all 3 modes, all 6 x86 machines
-- `benchmark_all_cuml_v2.csv` — unified, 1676 rows (980 ES + 49 Jetson),
+- `benchmark_all_cuml_v2.csv` — unified, **3479 rows** (as of 2026-04-10, after 3050 Ti clean re-run),
   columns: machine, gpu_name, python_ver, profiler_label, environment,
   image_label, mp, execution_time, n_sources_detected, timestamp,
   naxis1, naxis2, filter, object, gpu_mem_total, gpu_mem_used, gpu_temp.
@@ -527,7 +528,7 @@ All in `benchmarks/results_collected/`:
   and iKon936_SDSSg×10 OK; py38 iKon936_SDSSg×10 OK, QHY600-3_Lum×2 OK;
   larger images OOM (Orin Super has 8GB VRAM limit)
 
-**benchmark_all_cuml_v2.csv rebuilt 2026-04-09** (3408 rows) with corrected Jetson data.
+**benchmark_all_cuml_v2.csv rebuilt 2026-04-10** (3514 rows): corrected Jetson NX data + clean 3050 Ti re-run + jetson_local (Orin Super) py312 integrated from ES (64 rows, 21-30s clean).
 **body_latency_py38.tex regenerated**: Orin NX now shows 188.7s / `---` / `---` for 4.2/6.8/15.3+ MP.
 
 ### Scripts
@@ -659,7 +660,7 @@ crossmatching — none of which sep or Photutils perform.
 
 ## 12. Manuscript .tex File Status (as of 2026-04-06) — ALL SECTIONS COMPLETE
 
-LaTeX repo: slemesp/GPUPHOT_manuscript, branch `main`, commit `3255aaf`.
+LaTeX repo: slemesp/GPUPHOT_manuscript, branch `main` (commit changes — use git log).
 All sections compiled successfully (21 pages). No pending edits.
 
 ### Figures — ALL IN USE

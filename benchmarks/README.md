@@ -1,5 +1,19 @@
 # Benchmarks GPUPhot — Metodologia, Infraestructura y Reproducibilidad
 
+> ⚠️ **ATENCIÓN — DOCUMENTO DE REFERENCIA HISTÓRICA**
+>
+> Este documento describe la infraestructura (§1-§5) y el experimento cuML de
+> marzo-abril 2026 (§9). Las secciones §9.8, §9.12 y §9.13 contienen datos
+> y notas **desactualizados** (estado 2026-04-03/04).
+>
+> **Para el flujo de trabajo actual (cómo ejecutar, recoger e integrar datos),
+> usar `benchmarks/BENCHMARK_MASTER.md`.**
+>
+> Secciones aún válidas: §1 Infraestructura, §2 Imágenes, §3 Metodología,
+> §4 Scripts, §5 Verificación pre-benchmark, §9.11 Reglas obligatorias.
+
+---
+
 ## Objetivo
 
 Medir de forma controlada y reproducible el rendimiento del pipeline GPUPhot
@@ -275,6 +289,47 @@ en GPU 0.
 | `benchmarks/analyze_profiling.py` | Analisis de datos NVTX (breakdown por fase) |
 | `profiling_scripts/extract_benchmark_csv.py` | Extrae NVTX de ficheros nsys `.sqlite` a CSV |
 
+### 4.3 Benchmark cuML crossover (usuario final)
+
+`benchmarks/benchmark_cuml_crossover.py` — Mide el punto de cruce entre
+cKDTree (CPU, O(N log N)) y cuML NearestNeighbors (GPU, O(N²)) para 2D
+crossmatch. Permite al usuario calibrar los umbrales `GPUPHOT_CUML_MIN_SOURCES`
+y `GPUPHOT_CUML_MAX_SOURCES` para su GPU específica.
+
+**Uso recomendado** (dentro del container py3.12):
+
+```bash
+# Barrido log-espaciado con refinamiento automático alrededor del cruce:
+docker exec gpuphot-profiler-1 python3 /app/benchmarks/benchmark_cuml_crossover.py \
+    --logspace 25 100 200000 --auto-refine --repeats 10 \
+    > cuml_crossover_$(hostname)_$(date +%Y%m%d).csv
+
+# Barrido rápido (20 puntos, 5 reps):
+docker exec gpuphot-profiler-1 python3 /app/benchmarks/benchmark_cuml_crossover.py
+
+# Rango explícito con pasos finos:
+docker exec gpuphot-profiler-1 python3 /app/benchmarks/benchmark_cuml_crossover.py \
+    --sizes 500 1000 1500 2000 3000 5000 7500 10000 15000 20000 50000
+```
+
+**Opciones clave:**
+
+| Opción | Descripción |
+|--------|-------------|
+| `--logspace N MIN MAX` | N puntos log-espaciados de MIN a MAX (recomendado) |
+| `--sizes N1 N2 ...` | Valores explícitos a medir |
+| `--auto-refine` | Añade puntos extra entre N donde cambia el ganador |
+| `--refine-points K` | Número de puntos extra por zona de cruce (default: 5) |
+| `--repeats R` | Repeticiones por N (default: 5; usar 10 para publicación) |
+
+**Resultado:** CSV a stdout con columnas `N,cpu_ms,gpu_ms,speedup_e2e,winner`.
+Al final imprime la recomendación concreta de `GPUPHOT_CUML_MIN_SOURCES` y
+`GPUPHOT_CUML_MAX_SOURCES` para la GPU medida.
+
+**Importante:** El cruce sintético (una sola llamada) no se traduce directamente
+al pipeline real (múltiples crossmatches por imagen + overhead de init cuML).
+Verificar siempre con `cuml_ablation_*.csv` antes de habilitar cuML en producción.
+
 **Recoleccion de datos de Elastic tras el benchmark:**
 
 ```bash
@@ -348,6 +403,8 @@ donde cuML no esta disponible para ARM, el speedup es < 5%.
 | Disco lleno por nsys `.sqlite` | Ficheros de 1.5-2.5 GB | Strategy D: extract NVTX a CSV, eliminar `.sqlite` |
 | jetson_local sin DNS en containers | iptables no permite trafico del bridge Docker | Reglas FORWARD + MASQUERADE para `br-<network_id>` |
 | jetson_local sin acceso a Logstash | Red aislada, sin ruta a 10.0.210.30 | Tunnel SSH inverso + `host.docker.internal` + iptables DNAT |
+| `failed to create symlink: libnvidia-ml.so.1: device or resource busy` (hp3) | `docker-compose.yml` tenia bind mounts explícitos para `/usr/bin/nvidia-smi` y `libnvidia-ml.so.1` que colisionan con el hook del NVIDIA Container Toolkit (que inyecta las mismas libs vía symlink) | Eliminar las 4 líneas de bind mount en los servicios `profiler` y `profiler_38` (commit `d40a425`). El `docker run --gpus` sin bind mounts funciona bien en el mismo host. |
+| `CompileException: incomplete type "__nv_fp8_e8m0" is not allowed` (ttt1) | El benchmark usaba el tag de imagen antiguo (`gpuphotfinal-profiler`) que no había sido reconstruido con el pin `nvidia-cublas-cu12==12.9.1.4` | `docker tag gpuphot-profiler:latest gpuphotfinal-profiler:latest` después de cada rebuild |
 
 ---
 
@@ -414,22 +471,36 @@ calientes), mismas imagenes, mismo numero de repeticiones:
 Derivados de datos sinteticos medidos con `benchmarks/benchmark_cuml_crossover.py`.
 Ficheros de referencia en `benchmarks/results_collected/`:
 
-| Maquina | GPU | `GPUPHOT_CUML_MIN_SOURCES` | `GPUPHOT_CUML_MAX_SOURCES` | Fichero de datos | Fecha medicion |
-|---------|-----|--------------------------|--------------------------|-----------------|----------------|
-| azken | H100 PCIe (80 GB) | 5000 | 500000 | `cuml_crossover_synthetic_all_gpus_20260328.csv` | 2026-03-28 |
-| hp3 | L40S (46 GB) | 2000 | 200000 | `cuml_crossover_synthetic_all_gpus_20260328.csv` | 2026-03-28 |
-| lenovo_tttserver | A100-SXM4 (80 GB) | 2000 | 100000 | `cuml_crossover_synthetic_all_gpus_20260328.csv` | 2026-03-28 |
-| ttt_server | RTX 3090 (24 GB) | 2000 | 100000 | `cuml_crossover_synthetic_all_gpus_20260328.csv` | 2026-03-28 |
-| ttt1 | RTX 3060 (12 GB) | 2000 | 20000 | `cuml_crossover_synthetic_all_gpus_20260328.csv` | 2026-03-28 |
-| **local** | **RTX 3050 Ti (4 GB)** | **2000** | **50000** | `cuml_crossover_synthetic_rtx3050ti_20260402.csv` | **2026-04-02** |
-| jetson_orin | Orin Nano 8 GB | — | — | — | — (cuML no disponible en ARM) |
-| jetson_local | Orin Super 8 GB | — | — | — | — (cuML no disponible en ARM) |
+**Umbrales usados en el experimento (Fase 2, 2026-04-01) — histórico:**
 
-**Nota RTX 3050 Ti**: El benchmark de marzo-2026 marcaba esta GPU como "cuML nunca
-beneficioso" (los datos mostraban que GPU perdia a partir de 10K fuentes). Repetido
-el 2026-04-02 en mejores condiciones del sistema, los resultados son significativamente
-distintos: cuML gana de 2K a 50K fuentes con speedup de hasta **2.3x** (pico en
-7K-10K fuentes). La GPU de produccion estaba degradada en la medicion original.
+| Maquina | GPU | `GPUPHOT_CUML_MIN_SOURCES` | `GPUPHOT_CUML_MAX_SOURCES` | Fecha medicion |
+|---------|-----|--------------------------|--------------------------|----------------|
+| azken | H100 PCIe (80 GB) | 5000 | 500000 | 2026-03-28 |
+| hp3 | L40S (46 GB) | 2000 | 200000 | 2026-03-28 |
+| lenovo_tttserver | A100-SXM4 (80 GB) | 2000 | 100000 | 2026-03-28 |
+| ttt_server | RTX 3090 (24 GB) | 2000 | 100000 | 2026-03-28 |
+| ttt1 | RTX 3060 (12 GB) | 2000 | 20000 | 2026-03-28 |
+| local | RTX 3050 Ti (4 GB) | 2000 | 50000 | 2026-04-02 |
+| jetson_orin | Orin Nano 8 GB | — | — | — (cuML no disponible en ARM) |
+| jetson_local | Orin Super 8 GB | — | — | — (cuML no disponible en ARM) |
+
+**Umbrales actualizados 2026-04-10** (mayor resolución con `--auto-refine`, fichero
+`cuml_crossover_synthetic_all_gpus_20260410.csv`):
+
+| Maquina | GPU | `MIN_SOURCES` | `MAX_SOURCES` | Nota |
+|---------|-----|--------------|--------------|------|
+| azken | H100 PCIe (80 GB) | 2374 | >200000 | límite de barrido: upper bound desconocido |
+| hp3 | L40S (46 GB) | 1729 | >200000 | límite de barrido |
+| lenovo_tttserver | A100-SXM4 (80 GB) | 1729 | 189717 | upper bound dentro del rango |
+| ttt_server | RTX 3090 (24 GB) | 1823 | >200000 | límite de barrido |
+| ttt1 | RTX 3060 (12 GB) | 2026 | 36937 | ventana acotada |
+| local | RTX 3050 Ti (4 GB) | 4242 | 5239 | ventana muy estrecha, speedup máx 1.6x |
+| jetson_orin / jetson_local | Orin (ARM) | — | — | cuML no disponible en ARM |
+
+> Los umbrales "históricos" (2026-04-01) son los que se usaron en el experimento y
+> están grabados en los datos ES. Los umbrales de 2026-04-10 son los recomendados
+> para producción. Para el RTX 3050 Ti la ventana es tan estrecha (4242–5239)
+> que en la práctica `GPUPHOT_USE_CUML_CROSSMATCH=0` es la opción razonable.
 
 Comparativa de resultados RTX 3050 Ti:
 
@@ -588,7 +659,7 @@ Columnas del CSV de salida: `machine`, `gpu_name`, `python_ver`,
 `n_sources_detected`, `timestamp`, `naxis1`, `naxis2`, `filter`, `object`,
 `gpu_mem_total`, `gpu_mem_used`, `gpu_temp`.
 
-### 9.8 Estado actual de los datos (2026-04-03)
+### 9.8 Estado actual de los datos (2026-04-03) — ⚠️ OBSOLETO — ver BENCHMARK_MASTER.md §1
 
 El run v2 se ejecuto el 2026-04-02 con `bash dev/run_cuml_comparison_sequential.sh`.
 Los datos se recogieron en `benchmarks/results_collected/benchmark_all_cuml_v2.csv`
@@ -860,7 +931,7 @@ El script `run_cuml_comparison_sequential.sh` gestiona esto automaticamente.
 
 ---
 
-## 9.12 Estado de los datos — benchmark definitivo completado (2026-04-04)
+## 9.12 Estado de los datos — benchmark definitivo completado (2026-04-04) — ⚠️ OBSOLETO — ver BENCHMARK_MASTER.md §1
 
 ### 9.12.1 Estado por maquina
 
@@ -879,9 +950,12 @@ Datos en `benchmarks/results_collected/benchmark_all_cuml_v2.csv`
 | jetson_orin (Orin NX) | 2 imgs (CSV local) | — | — | ARM, sin cuML |
 | jetson_local (Orin Super) | — | 3 imgs (CSV local) | — | ARM, sin cuML |
 
-**Nota:** los datos de local (RTX 3050 Ti) muestran py38 anormalmente lento
-(35-47s para 4.2 MP vs 4-6s en otras maquinas) indicando contención de CPU
-durante la fase py38. Excluir local de analisis comparativos py38 vs py312.
+**Nota (OBSOLETA — 2026-04-04):** ~~los datos de local (RTX 3050 Ti) muestran py38
+anormalmente lento (35-47s) ... Excluir local de análisis comparativos.~~
+**CORREGIDO 2026-04-10:** Se ejecutó un re-run limpio en sesión continua.
+Los tiempos de 38-48s para py38 y 35-50s para py312 son los valores correctos
+para esta GPU (thermal throttling estable, no contaminación). Los datos de local
+SÍ son válidos. Ver BENCHMARK_MASTER.md §1 para el estado actual.
 
 **Nota n_sources hp3:** `profiler_38` detecta 134-144 fuentes para
 `QHY411-1_Lum_bin2` mientras `profiler` (py3.12) detecta 154. Diferencia
@@ -927,7 +1001,7 @@ docker compose up -d --force-recreate profiler profiler_38
 
 ---
 
-## 9.13 Resultados del benchmark definitivo (2026-04-04)
+## 9.13 Resultados del benchmark definitivo (2026-04-04) — ⚠️ HISTÓRICO — valores pueden estar desactualizados
 
 ### 9.13.1 Hallazgo principal: py38 mas rapido por imagen, py312+adaptive mas eficiente en memoria
 
