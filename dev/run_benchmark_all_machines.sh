@@ -145,23 +145,26 @@ echo " Logs: $LOG_DIR"
 echo "======================================================================"
 
 # Stop workers if requested
+# Uses `docker rm -f` (not `docker stop`) because a system cron restarts stopped
+# containers. Removing them prevents restart until the cron recreates them after
+# the benchmark is complete.
 if $STOP_WORKERS; then
     echo ""
-    echo "Stopping GPU0 workers on production machines..."
+    echo "Removing GPU0 workers on production machines (docker rm -f)..."
     for machine_def in "${MACHINES[@]}"; do
         IFS='|' read -r host c312 c38 label flags <<< "$machine_def"
         if echo "$flags" | grep -q "production"; then
             worker_list="${WORKERS[$host]:-}"
             if [ -n "$worker_list" ]; then
                 for w in $worker_list; do
-                    ssh -o ConnectTimeout=10 "$host" "docker stop $w 2>/dev/null" &
+                    ssh -o ConnectTimeout=10 "$host" "docker rm -f $w 2>/dev/null" &
                 done
-                echo "  $host: stopping $worker_list"
+                echo "  $host: removing $worker_list"
             fi
         fi
     done
     wait
-    echo "  Workers stopped."
+    echo "  Workers removed. Production cron will recreate them after benchmark."
 fi
 
 # Run benchmark function
@@ -296,22 +299,10 @@ echo "======================================================================"
 echo " ALL BENCHMARKS COMPLETE — $(date '+%Y-%m-%d %H:%M:%S')"
 echo "======================================================================"
 
-# Restore workers
+# Workers were removed with `docker rm -f` — do NOT docker start (container doesn't exist).
+# The production cron will recreate them automatically.
 if $STOP_WORKERS; then
-    echo "Restoring workers..."
-    for machine_def in "${MACHINES[@]}"; do
-        IFS='|' read -r host c312 c38 label flags <<< "$machine_def"
-        if echo "$flags" | grep -q "production"; then
-            worker_list="${WORKERS[$host]:-}"
-            if [ -n "$worker_list" ]; then
-                for w in $worker_list; do
-                    ssh -o ConnectTimeout=10 "$host" "docker start $w 2>/dev/null" &
-                done
-                echo "  $host: restored $worker_list"
-            fi
-        fi
-    done
-    wait
+    echo "Workers were removed. Production cron will recreate them on next cycle."
 fi
 
 echo "Logs in: $LOG_DIR"
