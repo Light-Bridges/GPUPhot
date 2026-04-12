@@ -64,8 +64,8 @@ MANUSCRIPT_FIGURES_DIR = os.path.join(PROJECT, 'GPUPHOT_manuscript', 'figures')
 os.makedirs(OUT_DIR, exist_ok=True)
 
 BENCHMARK_CSV = os.path.join(DATA_DIR, 'benchmark_all_cuml_v2.csv')
-MEMORY_CSV    = os.path.join(DATA_DIR, 'profiler_nsys_memory_summary_20260326.csv')
-CUML_CSV      = os.path.join(DATA_DIR, 'cuml_crossover_synthetic_all_gpus_20260328.csv')
+MEMORY_CSV    = os.path.join(DATA_DIR, 'profiler_nsys_memory_summary_20260411.csv')
+CUML_CSV      = os.path.join(DATA_DIR, 'cuml_crossover_synthetic_all_gpus_20260412.csv')
 
 # ── GPU label normalisation ───────────────────────────────────────────────────
 GPU_LABEL_MAP = {
@@ -340,11 +340,17 @@ def figure4():
 def figure5():
     print('Figure 5: cuML Crossover ...')
     df = pd.read_csv(CUML_CSV)
-    gpu_order  = ['H100 PCIe', 'A100-SXM4-80GB', 'L40S', 'RTX 3090', 'RTX 3060', 'RTX 3050 Ti']
+    # Strip "NVIDIA " prefix for robustness (older CSVs don't have it)
+    df['gpu_name'] = df['gpu_name'].str.replace(r'^NVIDIA\s+', '', regex=True)
+    gpu_order  = ['H100 PCIe', 'A100-SXM4-80GB', 'L40S',
+                  'GeForce RTX 3090', 'GeForce RTX 3060', 'GeForce RTX 3050 Ti Laptop GPU']
     gpu_labels = {
-        'H100 PCIe': 'H100 PCIe', 'A100-SXM4-80GB': 'A100-SXM4',
-        'L40S': 'L40S', 'RTX 3090': 'RTX 3090',
-        'RTX 3060': 'RTX 3060', 'RTX 3050 Ti': 'RTX 3050 Ti',
+        'H100 PCIe':                      'H100 PCIe',
+        'A100-SXM4-80GB':                 'A100-SXM4',
+        'L40S':                           'L40S',
+        'GeForce RTX 3090':               'RTX 3090',
+        'GeForce RTX 3060':               'RTX 3060',
+        'GeForce RTX 3050 Ti Laptop GPU': 'RTX 3050 Ti',
     }
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
@@ -360,9 +366,22 @@ def figure5():
         subset = df[df['gpu_name'] == gpu].sort_values('N')
         if subset.empty:
             continue
-        ax.plot(subset['N'], subset['speedup'],
-                color=CB_COLORS[idx % len(CB_COLORS)],
-                marker=MARKERS[idx % len(MARKERS)], markersize=5,
+        color = CB_COLORS[idx % len(CB_COLORS)]
+        speedup_med = subset['speedup'].values
+
+        # IQR band: speedup_low = cpu_q25/gpu_q75 (conservative),
+        #           speedup_high = cpu_q75/gpu_q25 (optimistic).
+        # Requires columns added in benchmark_cuml_crossover.py v2.
+        has_iqr = all(c in subset.columns for c in ('cpu_q25', 'cpu_q75', 'gpu_q25', 'gpu_q75'))
+        if has_iqr:
+            sp_lo = subset['cpu_q25'] / subset['gpu_q75'].replace(0, float('nan'))
+            sp_hi = subset['cpu_q75'] / subset['gpu_q25'].replace(0, float('nan'))
+            ax.fill_between(subset['N'], sp_lo, sp_hi,
+                            alpha=0.18, color=color, zorder=1)
+
+        ax.plot(subset['N'], speedup_med,
+                color=color,
+                marker=MARKERS[idx % len(MARKERS)], markersize=4, linewidth=1.4,
                 label=gpu_labels[gpu], zorder=3)
 
     ax.set_xscale('log')

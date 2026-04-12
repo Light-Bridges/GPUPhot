@@ -362,6 +362,92 @@ def load_jetson_es_csv(path: str, machine: str, gpu_name: str,
     return rows
 
 
+def _load_jetson_local_filter(path: str, gpu_name: str,
+                               exclude_profilers: set[str]) -> list[dict]:
+    """Igual que load_jetson_csv pero omite perfiles cuya clave contenga cualquier token de exclude_profilers."""
+    rows = []
+    try:
+        with open(path, newline="") as f:
+            for row in csv.DictReader(f):
+                if row.get("status", "").strip() not in ("", "OK"):
+                    continue
+                if row.get("mode", "clean") == "warmup":
+                    continue
+                profiler = row.get("profiler", "py38")
+                if any(tok in profiler for tok in exclude_profilers):
+                    continue
+                if "310" in profiler:
+                    profiler_label = "py310_baseline"
+                    py_ver = "3.10"
+                else:
+                    profiler_label = "py38_baseline"
+                    py_ver = "3.8"
+                label = row.get("image_label", "")
+                rows.append({
+                    "machine":            "jetson_local",
+                    "gpu_name":           gpu_name,
+                    "python_ver":         py_ver,
+                    "profiler_label":     profiler_label,
+                    "environment":        "jetson_jetson_local",
+                    "image_label":        label,
+                    "mp":                 LABEL_TO_MP.get(label, ""),
+                    "execution_time":     row.get("time_s", ""),
+                    "n_sources_detected": row.get("objects", ""),
+                    "timestamp":          "",
+                    "naxis1":             "",
+                    "naxis2":             "",
+                    "filter":             "",
+                    "object":             "",
+                    "gpu_mem_total":      "",
+                    "gpu_mem_used":       "",
+                    "gpu_temp":           "",
+                })
+    except FileNotFoundError:
+        print(f"  WARN: no encontrado {path}")
+    print(f"  jetson_local (py310/py38 filtrado): {len(rows)} filas de {path}")
+    return rows
+
+
+def _load_jetson_local_from_es(path: str) -> list[dict]:
+    """Carga el CSV de ES per-hit del benchmark jetson_local py3.12 (2026-04-10).
+
+    El benchmark usaba GPUPHOT_ENVIRONMENT=profiler_cuml_adaptive_v2 pero cuML no está
+    disponible en ARM, por lo que equivale a py312 sin cuML (cKDTree siempre).
+    GPU name normalizado a 'Orin Super 8GB (nvgpu)' para compatibilidad con GPU_LABEL_MAP.
+    """
+    rows = []
+    try:
+        with open(path, newline="") as f:
+            for row in csv.DictReader(f):
+                obj_key = (row.get("object", ""), row.get("filter", ""))
+                label = OBJECT_FILTER_TO_LABEL.get(obj_key, "")
+                if not label:
+                    continue
+                rows.append({
+                    "machine":            "jetson_local",
+                    "gpu_name":           "Orin Super 8GB (nvgpu)",
+                    "python_ver":         "3.12",
+                    "profiler_label":     "py312_cuml_adaptive",
+                    "environment":        "jetson_jetson_local",
+                    "image_label":        label,
+                    "mp":                 LABEL_TO_MP.get(label, ""),
+                    "execution_time":     row.get("execution_time", ""),
+                    "n_sources_detected": row.get("n_sources_detected", ""),
+                    "timestamp":          row.get("timestamp", ""),
+                    "naxis1":             row.get("naxis1", ""),
+                    "naxis2":             row.get("naxis2", ""),
+                    "filter":             row.get("filter", ""),
+                    "object":             row.get("object", ""),
+                    "gpu_mem_total":      row.get("gpu_mem_total", ""),
+                    "gpu_mem_used":       row.get("gpu_mem_used", ""),
+                    "gpu_temp":           row.get("gpu_temp", ""),
+                })
+    except FileNotFoundError:
+        print(f"  WARN: no encontrado {path}")
+    print(f"  jetson_local (py312 ES 2026-04-10): {len(rows)} filas de {path}")
+    return rows
+
+
 def main():
     p = argparse.ArgumentParser(description="Recolecta y unifica todos los datos de benchmark")
     p.add_argument("--time-from", default="2026-04-02T08:00:00",
@@ -380,6 +466,10 @@ def main():
     p.add_argument("--local-csv", default=None,
                    help="CSV de ES per-hit del benchmark 3050 Ti (e.g. es_times_3050ti_20260410_per_hit_per_hit.csv). "
                         "Si se indica, reemplaza todos los datos de machine==local del base-csv.")
+    p.add_argument("--jetson-local-es-csv", default=None,
+                   help="CSV de ES per-hit del benchmark jetson_local py3.12 (e.g. es_times_jetson_local_20260410_per_hit.csv). "
+                        "Sustituye las filas py312_cuml_adaptive de benchmark_jetson_local.csv. "
+                        "GPU normalizado a 'Orin Super 8GB (nvgpu)'; environment='jetson_jetson_local'.")
     args = p.parse_args()
 
     all_rows: list[dict] = []
@@ -437,11 +527,25 @@ def main():
         machine="jetson_orin", gpu_name="Orin NX 8GB (nvgpu)",
         profiler_label="py38_baseline", python_ver="3.8",
     )
-    all_rows += load_jetson_csv(
-        str(base / "benchmark_jetson_local.csv"),
-        machine="jetson_local", gpu_name="Orin Super 8GB (nvgpu)",
-        python_ver_map={"py312": "3.12", "py310": "3.10"},
-    )
+
+    # Orin Super: benchmark_jetson_local.csv tiene py312 (contaminado ~150s) + py310
+    # Si se pasa --jetson-local-es-csv, se descartan las filas py312 del CSV y se usan las de ES
+    if args.jetson_local_es_csv:
+        # Cargar solo py310 desde benchmark_jetson_local.csv
+        all_rows += _load_jetson_local_filter(
+            str(base / "benchmark_jetson_local.csv"),
+            gpu_name="Orin Super 8GB (nvgpu)",
+            exclude_profilers={"py312", "312"},
+        )
+        # Cargar py312 desde el CSV de ES (benchmark 2026-04-10, datos limpios ~21-30s)
+        all_rows += _load_jetson_local_from_es(args.jetson_local_es_csv)
+    else:
+        # Sin datos ES nuevos: cargar benchmark_jetson_local.csv completo (incluye py312 contaminado)
+        all_rows += load_jetson_csv(
+            str(base / "benchmark_jetson_local.csv"),
+            machine="jetson_local", gpu_name="Orin Super 8GB (nvgpu)",
+            python_ver_map={"py312": "3.12", "py310": "3.10"},
+        )
 
     # ------------------------------------------------------------------
     # 3. Escribir CSV unificado

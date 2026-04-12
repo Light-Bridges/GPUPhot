@@ -9,9 +9,10 @@
 #   --warmup N      Warmup iterations (default: 2)
 #   --reps N        Measured repetitions (default: 10)
 #   --nsys N        Nsys profiling reps after clean reps (default: 0)
-#   --profilers X   Comma-separated: 312,38 (default: 312,38)
+#   --profilers X   Comma-separated: 312,312_always,38 (default: 312,38)
+#                   312=py312 cuml-adaptive, 312_always=py312 cuml-always, 38=py38 baseline
 #   --stop-workers  Stop GPU0 workers on production machines before benchmark
-#   --images LIST   Comma-separated image indices 1-10 (default: all)
+#   --images LIST   Comma-separated image indices 1-22 (default: all)
 #   --max-mp N      Max megapixels (0=all, default: 0)
 #   --machines LIST Comma-separated hostnames to run (default: all)
 #                   e.g. --machines local,ttt1,ttt_server
@@ -81,6 +82,23 @@ ALL_IMAGES=(
     "8|151.2|TTT1_QHY411-1_2025-08-14-23-52-42-828197_2025PR1_Lum.fits|QHY411-1|QHY411-1_Lum_full"
     "9|151.2|TST_QHY411-3_2026-02-14-06-35-10-547282_24P_Lum.fits|QHY411-3|QHY411-3_Lum_full"
     "10|151.2|TST_QHY411-3_2026-02-14-23-09-41-463160_M81_SDSSr.fits|QHY411-3|QHY411-3_SDSSr_full"
+    # --- High-source-count candidates (cuML validation) ---
+    # 6.8 MP / QHY600-3 — ~2K sources (cuML activates on all GPUs except H100)
+    "11|6.8|TTT3_QHY600-3_2026-03-16-05-18-39-643993_Atira_SDSSi.fits|QHY600-3|QHY600-3_SDSSi_2k"
+    "12|6.8|TTT3_QHY600-3_2026-03-16-05-22-20-937513_Atira_SDSSi.fits|QHY600-3|QHY600-3_SDSSi_2k"
+    "13|6.8|TTT3_QHY600-3_2026-03-16-05-24-48-710462_Atira_SDSSi.fits|QHY600-3|QHY600-3_SDSSi_2k"
+    # 15.3 MP / QHY600-4 — 2K, 4K, 10K sources
+    "14|15.3|TTT2_QHY600-4_2026-03-28-20-58-11-266552_1620_Lum.fits|QHY600-4|QHY600-4_Lum_2k"
+    "15|15.3|TTT2_QHY600-4_2026-03-31-03-42-50-839737_hermione_SDSSg.fits|QHY600-4|QHY600-4_SDSSg_4k"
+    "16|15.3|TTT2_QHY600-4_2026-04-03-03-21-23-435107_MAXIJ1820+070_SDSSi.fits|QHY600-4|QHY600-4_SDSSi_10k"
+    # 37.8 MP / QHY411_bin2 — 2K, 7K sources (cuML activates on all GPUs)
+    "17|37.8|TTT1_QHY411-1_2026-04-07-21-24-09-765452_Eugenia_SDSSg.fits|QHY411-1|QHY411-1_SDSSg_2k"
+    "18|37.8|TTT1_QHY411-1_2026-04-07-21-58-09-908367_Eugenia_SDSSg.fits|QHY411-1|QHY411-1_SDSSg_2k"
+    "19|37.8|TTT1_QHY411-1_2026-03-16-20-27-44-616412_V445Pup-griz_SDSSr.fits|QHY411-1|QHY411-1_SDSSr_7k"
+    # 151.2 MP / QHY411_full — 10K, 19K, 131K sources (vast machines only; RTX3060 skip)
+    "20|151.2|TST_QHY411-3_2026-03-17-04-00-21-799080_M106_SDSSg.fits|QHY411-3|QHY411-3_SDSSg_10k"
+    "21|151.2|TST_QHY411-3_2026-03-16-22-54-47-549608_NGC2683_SDSSr.fits|QHY411-3|QHY411-3_SDSSr_19k"
+    "22|151.2|TST_QHY411-3_2026-03-16-20-28-14-304289_C2025N1_Lum.fits|QHY411-3|QHY411-3_Lum_131k"
 )
 
 # Machine definitions: host|profiler_container_312|profiler_container_38|label|flags
@@ -147,8 +165,10 @@ if $STOP_WORKERS; then
 fi
 
 # Run benchmark function
+# Args: host container label [docker_env_flags]
+# docker_env_flags: optional extra "-e KEY=VAL" flags for docker exec (used for cuml_always mode)
 run_benchmark() {
-    local host=$1 container=$2 label=$3
+    local host=$1 container=$2 label=$3 docker_env=${4:-}
 
     for img in "${IMAGES[@]}"; do
         IFS='|' read -r idx mp file inst img_label <<< "$img"
@@ -159,9 +179,9 @@ run_benchmark() {
         for w in $(seq 1 $WARMUP); do
             echo -n "  warmup $w: "
             if [ "$host" = "local" ]; then
-                OUT=$(docker exec "$container" python3 /app/profiling_scripts/profile_process_image.py "$file" "$inst" 2>&1)
+                OUT=$(docker exec $docker_env "$container" python3 /app/profiling_scripts/profile_process_image.py "$file" "$inst" 2>&1)
             else
-                OUT=$(ssh -o ServerAliveInterval=30 "$host" "docker exec $container python3 /app/profiling_scripts/profile_process_image.py '$file' '$inst'" 2>&1)
+                OUT=$(ssh -o ServerAliveInterval=30 "$host" "docker exec $docker_env $container python3 /app/profiling_scripts/profile_process_image.py '$file' '$inst'" 2>&1)
             fi
             STATUS=$(echo "$OUT" | grep "^Status:" | awk '{print $2}')
             TIME=$(echo "$OUT" | grep "^Time:" | sed 's/.*(\([0-9.]*\)s)/\1/')
@@ -172,9 +192,9 @@ run_benchmark() {
         for rep in $(seq 1 $REPS); do
             echo -n "  rep $rep/$REPS: "
             if [ "$host" = "local" ]; then
-                OUT=$(docker exec "$container" python3 /app/profiling_scripts/profile_process_image.py "$file" "$inst" 2>&1)
+                OUT=$(docker exec $docker_env "$container" python3 /app/profiling_scripts/profile_process_image.py "$file" "$inst" 2>&1)
             else
-                OUT=$(ssh -o ServerAliveInterval=30 "$host" "docker exec $container python3 /app/profiling_scripts/profile_process_image.py '$file' '$inst'" 2>&1)
+                OUT=$(ssh -o ServerAliveInterval=30 "$host" "docker exec $docker_env $container python3 /app/profiling_scripts/profile_process_image.py '$file' '$inst'" 2>&1)
             fi
             STATUS=$(echo "$OUT" | grep "^Status:" | awk '{print $2}')
             TIME=$(echo "$OUT" | grep "^Time:" | sed 's/.*(\([0-9.]*\)s)/\1/')
@@ -186,9 +206,9 @@ run_benchmark() {
             for rep in $(seq 1 $NSYS_REPS); do
                 echo -n "  nsys $rep/$NSYS_REPS: "
                 if [ "$host" = "local" ]; then
-                    OUT=$(docker exec "$container" bash /app/profiling_scripts/run_benchmark_profiling.sh "$file" "$inst" 1 2>&1)
+                    OUT=$(docker exec $docker_env "$container" bash /app/profiling_scripts/run_benchmark_profiling.sh "$file" "$inst" 1 2>&1)
                 else
-                    OUT=$(ssh -o ServerAliveInterval=30 "$host" "docker exec $container bash /app/profiling_scripts/run_benchmark_profiling.sh '$file' '$inst' 1" 2>&1)
+                    OUT=$(ssh -o ServerAliveInterval=30 "$host" "docker exec $docker_env $container bash /app/profiling_scripts/run_benchmark_profiling.sh '$file' '$inst' 1" 2>&1)
                 fi
                 STATUS=$(echo "$OUT" | grep "^Status:" | awk '{print $2}')
                 TIME=$(echo "$OUT" | grep "^Time:" | sed 's/.*(\([0-9.]*\)s)/\1/')
@@ -223,12 +243,17 @@ for machine_def in "${MACHINES[@]}"; do
         # Run this machine fully before moving to the next
         for prof in "${PROF_LIST[@]}"; do
             container="$c312"
-            [ "$prof" = "38" ] && container="$c38"
+            docker_env=""
+            if [ "$prof" = "38" ]; then
+                container="$c38"
+            elif [ "$prof" = "312_always" ]; then
+                docker_env="-e GPUPHOT_USE_CUML_CROSSMATCH=1 -e GPUPHOT_ENVIRONMENT=profiler_cuml_always_v2"
+            fi
             [ -z "$container" ] && continue
 
             log_file="${LOG_DIR}/${label}_py${prof}.log"
             echo "=== $label py${prof} ($(date)) ===" > "$log_file"
-            run_benchmark "$host" "$container" "${label}_py${prof}" >> "$log_file" 2>&1
+            run_benchmark "$host" "$container" "${label}_py${prof}" "$docker_env" >> "$log_file" 2>&1
             echo "=== DONE $(date) ===" >> "$log_file"
         done
         echo "  $label DONE ($(date))"
@@ -237,12 +262,17 @@ for machine_def in "${MACHINES[@]}"; do
         (
             for prof in "${PROF_LIST[@]}"; do
                 container="$c312"
-                [ "$prof" = "38" ] && container="$c38"
+                docker_env=""
+                if [ "$prof" = "38" ]; then
+                    container="$c38"
+                elif [ "$prof" = "312_always" ]; then
+                    docker_env="-e GPUPHOT_USE_CUML_CROSSMATCH=1 -e GPUPHOT_ENVIRONMENT=profiler_cuml_always_v2"
+                fi
                 [ -z "$container" ] && continue
 
                 log_file="${LOG_DIR}/${label}_py${prof}.log"
                 echo "=== $label py${prof} ($(date)) ===" > "$log_file"
-                run_benchmark "$host" "$container" "${label}_py${prof}" >> "$log_file" 2>&1
+                run_benchmark "$host" "$container" "${label}_py${prof}" "$docker_env" >> "$log_file" 2>&1
                 echo "=== DONE $(date) ===" >> "$log_file"
             done
         ) &

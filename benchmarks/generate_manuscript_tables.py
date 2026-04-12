@@ -21,7 +21,7 @@ Tables generated (tabular body: \\begin{tabular}...\\end{tabular}):
 
 Data sources (relative paths from this file):
   results_collected/benchmark_all_cuml_v2.csv          → latency tables, cpu_baseline
-  results_collected/profiler_nsys_memory_20260326.csv  → VRAM tables
+  results_collected/profiler_nsys_memory_20260411.csv  → VRAM tables
   results_collected/cuml_ablation_a100_20260329.csv    → body_cuml_ablation
   results_collected/nvtx_detection_vs_sep_a100.csv     → body_nvtx_detection
   cpu_baseline_results.csv                             → body_cpu_baseline (sep/Photutils)
@@ -48,7 +48,7 @@ os.makedirs(OUT_DIR, exist_ok=True)
 
 # ── Source CSVs ────────────────────────────────────────────────────────────────
 BENCHMARK_CSV      = os.path.join(DATA_DIR, 'benchmark_all_cuml_v2.csv')
-MEMORY_CSV         = os.path.join(DATA_DIR, 'profiler_nsys_memory_20260326.csv')
+MEMORY_CSV         = os.path.join(DATA_DIR, 'profiler_nsys_memory_20260411.csv')
 CUML_ABLATION_CSV  = os.path.join(DATA_DIR, 'cuml_ablation_a100_20260329.csv')
 NVTX_DETECTION_CSV = os.path.join(DATA_DIR, 'nvtx_detection_vs_sep_a100.csv')
 CPU_BASELINE_CSV   = os.path.join(BASE, 'cpu_baseline_results.csv')
@@ -374,7 +374,7 @@ def gen_vram_merged():
     data for all 10 benchmark images and is the most broadly deployed 80 GB card).
     Cross-GPU variation for the same image is <0.3% (see Figure fig:memory_comparison).
     Replaces the former tab:vram_py312, tab:vram_py38, and tab:vram_savings.
-    Source: profiler_nsys_memory_20260326.csv
+    Source: profiler_nsys_memory_20260411.csv
     """
     print('Generating body_vram_merged.tex ...')
     rep_gpu = 'A100 (80 GB)'
@@ -430,7 +430,7 @@ def _gen_vram_all_gpus(python_ver, filename):
 def gen_concurrency():
     """
     tab:concurrency — Max concurrent 4.2 MP images per GPU.
-    Source: profiler_nsys_memory_20260326.csv (4.2 MP median peak VRAM per py ver)
+    Source: profiler_nsys_memory_20260411.csv (4.2 MP median peak VRAM per py ver)
     Formula: floor(GPU_VRAM_total / peak_VRAM_per_image)
     GPU_VRAM_total is read from the gpu_total_MB column of the memory CSV
     (e.g. RTX 3050 Ti Laptop GPU reports 3964 MB, not the nominal 4096 MB).
