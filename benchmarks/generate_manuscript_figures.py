@@ -103,13 +103,13 @@ HEATMAP_GPU_ORDER = [
 
 # Image label order for plots (ascending MP, then source count within MP)
 IMAGE_ORDER = [
-    # Original set (images 1-10), ascending MP then source count
-    'iKon936_SDSSg',       # 4.2 MP,     412 src
+    # Ordered by MP ascending, then source count ascending within each MP group
     'iKon936_Lum',         # 4.2 MP,     296 src
+    'iKon936_SDSSg',       # 4.2 MP,     412 src
     'QHY600-3_Lum',        # 6.8 MP,     112 src
     'QHY600-3_SDSSi_2k',   # 6.8 MP,   2 060 src
-    'QHY600-4_Ha',         # 15.3 MP,    318 src
     'QHY600-4_SDSSg',      # 15.3 MP,    218 src
+    'QHY600-4_Ha',         # 15.3 MP,    318 src
     'QHY600-4_Lum_2k',     # 15.3 MP,  1 993 src
     'QHY600-4_SDSSg_4k',   # 15.3 MP,  4 361 src
     'QHY600-4_SDSSi_10k',  # 15.3 MP, 10 532 src
@@ -118,9 +118,9 @@ IMAGE_ORDER = [
     'QHY411-1_SDSSg_2k',   # 37.8 MP,  1 998 src
     'QHY411-1_SDSSr_7k',   # 37.8 MP,  6 932 src
     'QHY411-1_Lum_full',   # 151.2 MP,   428 src
+    'QHY411-3_SDSSg_10k',  # 151.2 MP, 10 005 src
     'QHY411-3_SDSSr_full', # 151.2 MP, 14 241 src
     'QHY411-3_Lum_full',   # 151.2 MP, 18 888 src
-    'QHY411-3_SDSSg_10k',  # 151.2 MP, 10 005 src
     'QHY411-3_SDSSr_19k',  # 151.2 MP, 19 565 src
     'QHY411-3_Lum_131k',   # 151.2 MP, 131 397 src
 ]

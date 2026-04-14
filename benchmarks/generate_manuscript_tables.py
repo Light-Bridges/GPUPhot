@@ -93,25 +93,24 @@ GPU_VRAM_GB = {k: v // 1024 for k, v in GPU_VRAM_MB.items()}
 # Camera, filter, and target names are implementation details not relevant to
 # pipeline performance; removing them keeps all tables consistent.
 IMAGE_DEFS = [
-    # Original set (images 1-10)
+    # Ordered by MP ascending, then source count ascending within each MP group
     ('iKon936_Lum',          4.2,    296),
     ('iKon936_SDSSg',        4.2,    412),
     ('QHY600-3_Lum',         6.8,    112),
-    ('QHY600-4_Ha',         15.3,    318),
-    ('QHY600-4_SDSSg',      15.3,    218),
-    ('QHY411-1_Lum_bin2',   37.8,    154),
-    ('QHY411-1_SDSSi_bin2', 37.8,    247),
-    ('QHY411-1_Lum_full',  151.2,    428),
-    ('QHY411-3_SDSSr_full',151.2,  14241),
-    ('QHY411-3_Lum_full',  151.2,  18888),
-    # High-source-count set (images 11-22)
     ('QHY600-3_SDSSi_2k',    6.8,   2060),
+    ('QHY600-4_SDSSg',      15.3,    218),
+    ('QHY600-4_Ha',         15.3,    318),
     ('QHY600-4_Lum_2k',     15.3,   1993),
     ('QHY600-4_SDSSg_4k',   15.3,   4361),
     ('QHY600-4_SDSSi_10k',  15.3,  10532),
+    ('QHY411-1_Lum_bin2',   37.8,    154),
+    ('QHY411-1_SDSSi_bin2', 37.8,    247),
     ('QHY411-1_SDSSg_2k',   37.8,   1998),
     ('QHY411-1_SDSSr_7k',   37.8,   6932),
+    ('QHY411-1_Lum_full',  151.2,    428),
     ('QHY411-3_SDSSg_10k', 151.2,  10005),
+    ('QHY411-3_SDSSr_full',151.2,  14241),
+    ('QHY411-3_Lum_full',  151.2,  18888),
     ('QHY411-3_SDSSr_19k', 151.2,  19565),
     ('QHY411-3_Lum_131k',  151.2, 131397),
 ]
