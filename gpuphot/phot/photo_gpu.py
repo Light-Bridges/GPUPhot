@@ -3129,7 +3129,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
             logger.warning('Error calculating limiting magnitude: {}'.format(e))
         dic_calib['MAGLIM'] = maglim3
 
-        # Get all the sources
+        #Get all the sources
         logger.info('Getting all sources from catalog until magnitude limit {}'.format(zp_maxmag))
         result, catalog, ref_filter = catalog_results(coocenter, FOV / 2,
                                                         filter, maglimit=zp_maxmag, **kwargs)
