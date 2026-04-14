@@ -18,12 +18,14 @@ Tables generated (tabular body: \\begin{tabular}...\\end{tabular}):
   body_cuml_ablation.tex   — tab:cuml_ablation  cuML vs cKDTree ablation (A100)
   body_cpu_baseline.tex    — tab:cpu_baseline   sep / Photutils / GPUPhot (A100 py3.12)
   body_nvtx_detection.tex  — tab:nvtx_detection stage-level GPU detection vs sep (A100)
+  body_stage_breakdown.tex — tab:stage_breakdown full per-stage timing (4.2 MP & 151.2 MP)
 
 Data sources (relative paths from this file):
   results_collected/benchmark_all_cuml_v2.csv          → latency tables, cpu_baseline
   results_collected/profiler_nsys_memory_20260411.csv  → VRAM tables
   results_collected/cuml_ablation_a100_20260329.csv    → body_cuml_ablation
   results_collected/nvtx_detection_vs_sep_a100.csv     → body_nvtx_detection
+  results_collected/nvtx_stage_breakdown_a100.csv      → body_stage_breakdown
   cpu_baseline_results.csv                             → body_cpu_baseline (sep/Photutils)
 
 Usage:
@@ -51,6 +53,7 @@ BENCHMARK_CSV      = os.path.join(DATA_DIR, 'benchmark_all_cuml_v2.csv')
 MEMORY_CSV         = os.path.join(DATA_DIR, 'profiler_nsys_memory_20260411.csv')
 CUML_ABLATION_CSV  = os.path.join(DATA_DIR, 'cuml_ablation_a100_20260329.csv')
 NVTX_DETECTION_CSV = os.path.join(DATA_DIR, 'nvtx_detection_vs_sep_a100.csv')
+NVTX_STAGE_CSV     = os.path.join(DATA_DIR, 'nvtx_stage_breakdown_a100.csv')
 CPU_BASELINE_CSV   = os.path.join(BASE, 'cpu_baseline_results.csv')
 
 # ── GPU label normalisation ────────────────────────────────────────────────────
@@ -626,6 +629,119 @@ def gen_nvtx_detection():
     save_tex('body_nvtx_detection.tex', body)
 
 
+def gen_stage_breakdown():
+    """
+    tab:stage_breakdown — Full per-stage timing breakdown (A100, py3.12).
+    Shows each pipeline stage for iKon936 (4.2 MP) and QHY411-3 (151.2 MP),
+    with GPU/CPU/I-O classification and % of total wall-clock time.
+    Source: results_collected/nvtx_stage_breakdown_a100.csv
+    """
+    print('Generating body_stage_breakdown.tex ...')
+    df = pd.read_csv(NVTX_STAGE_CSV)
+
+    # Stage display order and grouping annotations
+    # (stage name in CSV, display label, type label)
+    STAGE_ORDER = [
+        # GPU stages
+        ('Background (FFT)',       'Background estimation (FFT)',   'GPU'),
+        ('Star detection',         'Star detection',                'GPU'),
+        ('Source detection (PSF)', 'PSF source detection',          'GPU'),
+        ('PSF cutout extraction',  'PSF cutout extraction',         'GPU'),
+        ('Eigen-PSF (PCA)',        'Eigen-PSF computation (PCA)',   'GPU'),
+        ('Coeff map',              'PSF coefficient map',           'GPU'),
+        ('Tile statistics',        'Tile statistics',               'GPU'),
+        ('Aperture photometry',    'Aperture photometry',           'GPU'),
+        ('Optimal photometry',     'Optimal photometry',            'GPU'),
+        ('FFT convolution',        'FFT convolution',               'GPU'),
+        ('Crossmatch',             'Source crossmatch',             'GPU'),
+        # CPU stages
+        ('Moffat fitting (CPU)',   'Moffat PSF fitting',            'CPU'),
+        ('Salt-pepper filter',     'Salt-and-pepper filter',        'CPU'),
+        ('Cosmic ray filter',      'Cosmic-ray filter',             'CPU'),
+        ('Zero-point (CPU)',       'Zero-point calibration',        'CPU'),
+        # I/O / CPU stages
+        ('Astrometry (solver)',    r'Astrometry.net solver',        'CPU'),
+        ('Astrometry (CPU)',       'WCS fitting \& header update',  'CPU'),
+        ('Catalog query (I/O)',    'Catalog query (network I/O)',   'I/O'),
+    ]
+
+    cameras = {
+        'iKon936-1':  4.2,
+        'QHY411-3':   151.2,
+    }
+
+    # Build per-camera dicts: stage -> median_s
+    cam_data = {}
+    for cam, mp in cameras.items():
+        sub = df[df['camera'] == cam].set_index('stage')['median_s']
+        total = sub.sum()
+        cam_data[cam] = (sub, total)
+
+    col_spec = r'{llrrrrr}'
+    header = (
+        r'\multicolumn{3}{l}{\textbf{Stage}} & '
+        r'\multicolumn{2}{c}{\textbf{4.2 MP (iKon-L)}} & '
+        r'\multicolumn{2}{c}{\textbf{151.2 MP (QHY411-3)}} \\'
+        '\n'
+        r'\cmidrule(lr){4-5}\cmidrule(lr){6-7}'
+        '\n'
+        r'& & \textbf{Type} & \textbf{Time (s)} & \textbf{\%} & '
+        r'\textbf{Time (s)} & \textbf{\%} \\'
+    )
+
+    rows = []
+    last_type = None
+    for stage_key, stage_label, stage_type in STAGE_ORDER:
+        # Collect values for all cameras
+        vals = {}
+        for cam, mp in cameras.items():
+            sub, total = cam_data[cam]
+            val = sub.get(stage_key, float('nan'))
+            vals[cam] = val
+
+        # Skip rows where no camera has data
+        if all(pd.isna(v) for v in vals.values()):
+            continue
+
+        # Insert midrule between type groups
+        if last_type is not None and stage_type != last_type:
+            rows.append(r'\midrule')
+        last_type = stage_type
+
+        row_parts = [f' & {stage_label} & {stage_type}']
+        for cam, mp in cameras.items():
+            _, total = cam_data[cam]
+            val = vals[cam]
+            if pd.isna(val) or total == 0:
+                row_parts.append(r' & --- & ---')
+            else:
+                pct = val / total * 100
+                row_parts.append(f' & {val:.3f} & {pct:.1f}')
+
+        rows.append(''.join(row_parts) + r' \\')
+
+    # Totals row
+    rows.append(r'\midrule')
+    total_parts = [r'\multicolumn{2}{l}{\textbf{Total}} & ']
+    for cam, mp in cameras.items():
+        _, total = cam_data[cam]
+        total_parts.append(f'& \\textbf{{{total:.2f}}} & \\textbf{{100.0}} ')
+    rows.append(''.join(total_parts) + r'\\')
+
+    # Rebuild as proper tabular with merged header
+    lines = [
+        r'\begin{tabular}' + col_spec,
+        r'\toprule',
+        header,
+        r'\midrule',
+    ] + rows + [
+        r'\bottomrule',
+        r'\end{tabular}',
+    ]
+    body = '\n'.join(lines) + '\n'
+    save_tex('body_stage_breakdown.tex', body)
+
+
 # ── Tabular builder ────────────────────────────────────────────────────────────
 def _tabular(col_spec, header, rows):
     """Assemble a complete LaTeX tabular environment string."""
@@ -662,6 +778,8 @@ if __name__ == '__main__':
     gen_cpu_baseline()
     print()
     gen_nvtx_detection()
+    print()
+    gen_stage_breakdown()
     print()
     print('Done — all table bodies generated.')
     print()
