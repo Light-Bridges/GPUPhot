@@ -103,32 +103,48 @@ HEATMAP_GPU_ORDER = [
 
 # Image label order for plots (ascending MP, then source count within MP)
 IMAGE_ORDER = [
-    'iKon936_SDSSg',       # 4.2 MP,   412 src
-    'iKon936_Lum',         # 4.2 MP,   296 src
-    'QHY600-3_Lum',        # 6.8 MP,   112 src
-    'QHY600-4_Ha',         # 15.3 MP,  318 src
-    'QHY600-4_SDSSg',      # 15.3 MP,  218 src
-    'QHY411-1_Lum_bin2',   # 37.8 MP,  154 src
-    'QHY411-1_SDSSi_bin2', # 37.8 MP,  247 src
-    'QHY411-1_Lum_full',   # 151.2 MP, 428 src
+    # Original set (images 1-10), ascending MP then source count
+    'iKon936_SDSSg',       # 4.2 MP,     412 src
+    'iKon936_Lum',         # 4.2 MP,     296 src
+    'QHY600-3_Lum',        # 6.8 MP,     112 src
+    'QHY600-3_SDSSi_2k',   # 6.8 MP,   2 060 src
+    'QHY600-4_Ha',         # 15.3 MP,    318 src
+    'QHY600-4_SDSSg',      # 15.3 MP,    218 src
+    'QHY600-4_Lum_2k',     # 15.3 MP,  1 993 src
+    'QHY600-4_SDSSg_4k',   # 15.3 MP,  4 361 src
+    'QHY600-4_SDSSi_10k',  # 15.3 MP, 10 532 src
+    'QHY411-1_Lum_bin2',   # 37.8 MP,    154 src
+    'QHY411-1_SDSSi_bin2', # 37.8 MP,    247 src
+    'QHY411-1_SDSSg_2k',   # 37.8 MP,  1 998 src
+    'QHY411-1_SDSSr_7k',   # 37.8 MP,  6 932 src
+    'QHY411-1_Lum_full',   # 151.2 MP,   428 src
     'QHY411-3_SDSSr_full', # 151.2 MP, 14 241 src
     'QHY411-3_Lum_full',   # 151.2 MP, 18 888 src
+    'QHY411-3_SDSSg_10k',  # 151.2 MP, 10 005 src
+    'QHY411-3_SDSSr_19k',  # 151.2 MP, 19 565 src
+    'QHY411-3_Lum_131k',   # 151.2 MP, 131 397 src
 ]
 IMAGE_MP = {
-    'iKon936_SDSSg': 4.2,    'iKon936_Lum': 4.2,
-    'QHY600-3_Lum': 6.8,
-    'QHY600-4_Ha': 15.3,     'QHY600-4_SDSSg': 15.3,
+    'iKon936_SDSSg': 4.2,      'iKon936_Lum': 4.2,
+    'QHY600-3_Lum': 6.8,       'QHY600-3_SDSSi_2k': 6.8,
+    'QHY600-4_Ha': 15.3,       'QHY600-4_SDSSg': 15.3,
+    'QHY600-4_Lum_2k': 15.3,   'QHY600-4_SDSSg_4k': 15.3,  'QHY600-4_SDSSi_10k': 15.3,
     'QHY411-1_Lum_bin2': 37.8, 'QHY411-1_SDSSi_bin2': 37.8,
+    'QHY411-1_SDSSg_2k': 37.8, 'QHY411-1_SDSSr_7k': 37.8,
     'QHY411-1_Lum_full': 151.2,
     'QHY411-3_SDSSr_full': 151.2, 'QHY411-3_Lum_full': 151.2,
+    'QHY411-3_SDSSg_10k': 151.2,  'QHY411-3_SDSSr_19k': 151.2, 'QHY411-3_Lum_131k': 151.2,
 }
 IMAGE_SRC = {
-    'iKon936_SDSSg': 412,    'iKon936_Lum': 296,
-    'QHY600-3_Lum': 112,
-    'QHY600-4_Ha': 318,      'QHY600-4_SDSSg': 218,
-    'QHY411-1_Lum_bin2': 154, 'QHY411-1_SDSSi_bin2': 247,
+    'iKon936_SDSSg': 412,       'iKon936_Lum': 296,
+    'QHY600-3_Lum': 112,        'QHY600-3_SDSSi_2k': 2060,
+    'QHY600-4_Ha': 318,         'QHY600-4_SDSSg': 218,
+    'QHY600-4_Lum_2k': 1993,    'QHY600-4_SDSSg_4k': 4361,   'QHY600-4_SDSSi_10k': 10532,
+    'QHY411-1_Lum_bin2': 154,   'QHY411-1_SDSSi_bin2': 247,
+    'QHY411-1_SDSSg_2k': 1998,  'QHY411-1_SDSSr_7k': 6932,
     'QHY411-1_Lum_full': 428,
-    'QHY411-3_SDSSr_full': 14241, 'QHY411-3_Lum_full': 18888,
+    'QHY411-3_SDSSr_full': 14241,  'QHY411-3_Lum_full': 18888,
+    'QHY411-3_SDSSg_10k': 10005,   'QHY411-3_SDSSr_19k': 19565, 'QHY411-3_Lum_131k': 131397,
 }
 
 def _img_display(img, sep='\n'):

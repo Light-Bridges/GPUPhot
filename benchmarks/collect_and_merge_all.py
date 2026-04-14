@@ -180,6 +180,7 @@ def collect_from_es(time_from: str, time_to: str, tmpdir: str) -> list[dict]:
 
 
 OBJECT_FILTER_TO_LABEL = {
+    # Images 1-10 (original set)
     ("QSO0957+561", "SDSSg"): "iKon936_SDSSg",
     ("C2025A6",     "Lum"):   "iKon936_Lum",
     ("C2025R2",     "Lum"):   "QHY600-3_Lum",
@@ -190,6 +191,16 @@ OBJECT_FILTER_TO_LABEL = {
     ("2025PR1",     "Lum"):   "QHY411-1_Lum_full",
     ("24P",         "Lum"):   "QHY411-3_Lum_full",
     ("M81",         "SDSSr"): "QHY411-3_SDSSr_full",
+    # Images 11-22 (high-source-count set, added 2026-04-12)
+    ("Atira",          "SDSSi"): "QHY600-3_SDSSi_2k",
+    ("1620",           "Lum"):   "QHY600-4_Lum_2k",
+    ("hermione",       "SDSSg"): "QHY600-4_SDSSg_4k",
+    ("MAXIJ1820+070",  "SDSSi"): "QHY600-4_SDSSi_10k",
+    ("Eugenia",        "SDSSg"): "QHY411-1_SDSSg_2k",
+    ("V445Pup-griz",   "SDSSr"): "QHY411-1_SDSSr_7k",
+    ("M106",           "SDSSg"): "QHY411-3_SDSSg_10k",
+    ("NGC2683",        "SDSSr"): "QHY411-3_SDSSr_19k",
+    ("C2025N1",        "Lum"):   "QHY411-3_Lum_131k",
 }
 
 
