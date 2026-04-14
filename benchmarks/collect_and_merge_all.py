@@ -36,6 +36,7 @@ from pathlib import Path
 # Mapa de image_label por fichero FITS (igual que en run_benchmark_all_machines.sh)
 # ---------------------------------------------------------------------------
 FITS_TO_LABEL = {
+    # Images 1-10 (original set)
     "TTT3_iKon936-1_2026-01-15-06-05-00-020013_QSO0957+561_SDSSg.fits": "iKon936_SDSSg",
     "TTT3_iKon936-1_2025-09-15-05-31-52-256207_C2025A6_Lum.fits":       "iKon936_Lum",
     "TTT3_QHY600-3_2025-12-01-23-02-47-487643_C2025R2_Lum.fits":        "QHY600-3_Lum",
@@ -46,14 +47,31 @@ FITS_TO_LABEL = {
     "TTT1_QHY411-1_2025-08-14-23-52-42-828197_2025PR1_Lum.fits":        "QHY411-1_Lum_full",
     "TST_QHY411-3_2026-02-14-06-35-10-547282_24P_Lum.fits":             "QHY411-3_Lum_full",
     "TST_QHY411-3_2026-02-14-23-09-41-463160_M81_SDSSr.fits":           "QHY411-3_SDSSr_full",
+    # Images 11-22 (high-source-count set, added 2026-04-12)
+    "TTT3_QHY600-3_2026-03-16-05-18-39-643993_Atira_SDSSi.fits":        "QHY600-3_SDSSi_2k",
+    "TTT3_QHY600-3_2026-03-16-05-22-20-937513_Atira_SDSSi.fits":        "QHY600-3_SDSSi_2k",
+    "TTT3_QHY600-3_2026-03-16-05-24-48-710462_Atira_SDSSi.fits":        "QHY600-3_SDSSi_2k",
+    "TTT2_QHY600-4_2026-03-28-20-58-11-266552_1620_Lum.fits":           "QHY600-4_Lum_2k",
+    "TTT2_QHY600-4_2026-03-31-03-42-50-839737_hermione_SDSSg.fits":     "QHY600-4_SDSSg_4k",
+    "TTT2_QHY600-4_2026-04-03-03-21-23-435107_MAXIJ1820+070_SDSSi.fits":"QHY600-4_SDSSi_10k",
+    "TTT1_QHY411-1_2026-04-07-21-24-09-765452_Eugenia_SDSSg.fits":      "QHY411-1_SDSSg_2k",
+    "TTT1_QHY411-1_2026-04-07-21-58-09-908367_Eugenia_SDSSg.fits":      "QHY411-1_SDSSg_2k",
+    "TTT1_QHY411-1_2026-03-16-20-27-44-616412_V445Pup-griz_SDSSr.fits": "QHY411-1_SDSSr_7k",
+    "TST_QHY411-3_2026-03-17-04-00-21-799080_M106_SDSSg.fits":          "QHY411-3_SDSSg_10k",
+    "TST_QHY411-3_2026-03-16-22-54-47-549608_NGC2683_SDSSr.fits":       "QHY411-3_SDSSr_19k",
+    "TST_QHY411-3_2026-03-16-20-28-14-304289_C2025N1_Lum.fits":         "QHY411-3_Lum_131k",
 }
 
 LABEL_TO_MP = {
     "iKon936_SDSSg": 4.2, "iKon936_Lum": 4.2,
-    "QHY600-3_Lum": 6.8,
+    "QHY600-3_Lum": 6.8,  "QHY600-3_SDSSi_2k": 6.8,
     "QHY600-4_SDSSg": 15.3, "QHY600-4_Ha": 15.3,
+    "QHY600-4_Lum_2k": 15.3, "QHY600-4_SDSSg_4k": 15.3, "QHY600-4_SDSSi_10k": 15.3,
     "QHY411-1_Lum_bin2": 37.8, "QHY411-1_SDSSi_bin2": 37.8,
-    "QHY411-1_Lum_full": 151.2, "QHY411-3_Lum_full": 151.2, "QHY411-3_SDSSr_full": 151.2,
+    "QHY411-1_SDSSg_2k": 37.8, "QHY411-1_SDSSr_7k": 37.8,
+    "QHY411-1_Lum_full": 151.2,
+    "QHY411-3_Lum_full": 151.2, "QHY411-3_SDSSr_full": 151.2,
+    "QHY411-3_SDSSg_10k": 151.2, "QHY411-3_SDSSr_19k": 151.2, "QHY411-3_Lum_131k": 151.2,
 }
 
 GPU_TO_MACHINE = {
@@ -479,9 +497,9 @@ def main():
     # ------------------------------------------------------------------
     if args.base_csv:
         # Carga un CSV unificado ya existente directamente (sin pasar por es_row_to_unified).
-        # Se eliminan las filas de jetson_orin para sustituirlas por el rerun corregido.
-        # Filtra todas las máquinas Jetson — se recargan desde los CSVs fuente para evitar duplicados.
-        # Excluir jetson_* (se recargan abajo) y local (si hay --local-csv, se reemplaza)
+        # Filtra jetson_* (se recargan abajo) y local (si hay --local-csv, se reemplaza).
+        # Si se pasa --time-from, también filtra filas de máquinas vast con timestamp >= time_from
+        # para evitar duplicados cuando se descarguen datos nuevos de ES a continuación.
         exclude_local = args.local_csv is not None
         skip_note = "jetson_* + local" if exclude_local else "jetson_*"
         print(f"Cargando base unificada desde {args.base_csv} (sin {skip_note})...")
@@ -492,9 +510,15 @@ def main():
                     continue
                 if exclude_local and mach == "local":
                     continue
+                # Si también vamos a descargar ES nuevos, excluir filas en ese rango para evitar dupes
+                if not args.skip_es and args.time_from:
+                    ts = row.get("timestamp", "")
+                    if ts and ts >= args.time_from:
+                        continue
                 all_rows.append({col: row.get(col, "") for col in OUTPUT_COLS})
         print(f"  → {len(all_rows)} filas ({skip_note} excluido)")
-    elif not args.skip_es:
+
+    if not args.skip_es and not args.es_csv:
         with tempfile.TemporaryDirectory() as tmpdir:
             print("Descargando desde Elasticsearch (una query por environment)...")
             es_rows = collect_from_es(args.time_from, args.time_to, tmpdir)

@@ -342,3 +342,28 @@ For a complete guide on how to:
 Please refer to the detailed developer documentation:
 
 **[>> Guide for Custom Catalog Integration (CUSTOM_CATALOG.md)](CUSTOM_CATALOG.md)**
+
+### 6.4. GPU Crossmatch Calibration (cuML)
+
+On x86_64 systems with cuML installed, GPUPhot can use GPU-accelerated catalog
+cross-matching.  The GPU is only faster for a specific source-count window that
+depends on your hardware, so you need to calibrate it once per GPU model.
+
+Run the calibration tool inside the profiler container:
+
+```bash
+docker exec gpuphotfinal-profiler-1 \
+    python3 /app/benchmarks/benchmark_cuml_crossover.py \
+    --logspace 25 100 200000 --auto-refine
+```
+
+The tool prints the recommended thresholds at the end.  Copy them to your `.env`:
+
+```bash
+GPUPHOT_USE_CUML_CROSSMATCH=0        # 0 = adaptive (use GPU only within the window)
+GPUPHOT_CUML_MIN_SOURCES=<MIN>       # from the "robust" recommendation
+GPUPHOT_CUML_MAX_SOURCES=<MAX>       # from the "robust" recommendation
+```
+
+For the full procedure, convergence options, and a reference table of known GPUs, see
+**[CUML_CALIBRATION.md](CUML_CALIBRATION.md)**.

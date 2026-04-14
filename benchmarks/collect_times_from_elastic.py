@@ -45,29 +45,30 @@ Output CSV Columns:
 
 from __future__ import annotations
 
-import os
-import sys
 import argparse
 import csv
 import json
 import logging
+import os
+import re
+import sys
 from typing import Dict, Any, Optional, Tuple
 
 # Networking and DB
 import requests
-import re
+
 try:
     import psycopg2
     from psycopg2.extras import RealDictCursor
 except Exception:
     psycopg2 = None
 
-
 LOG = logging.getLogger("collect_times")
 
 
 # Helper: safe_post with retries (used by many functions)
-def safe_post(url: str, headers: dict, payload: Any, auth: Optional[Tuple[str, str]] = None, timeout: int = 60, retries: int = 2):
+def safe_post(url: str, headers: dict, payload: Any, auth: Optional[Tuple[str, str]] = None, timeout: int = 60,
+              retries: int = 2):
     """Simple safe POST wrapper around requests.post with json payload and basic retries.
 
     Returns the requests.Response object or raises the underlying exception after retries.
@@ -170,35 +171,49 @@ def _parse_header_and_nrows_from_text(text: str) -> Tuple[Optional[int], Dict[st
 
 def parse_args():
     p = argparse.ArgumentParser(description="Collect processing times from ES and correlate with photometry DB")
-    p.add_argument("--es-url", default=os.environ.get("ELASTICSEARCH_HOST", "http://10.0.210.30:9200"), help="Elasticsearch base URL (ENV: ELASTICSEARCH_HOST)")
-    p.add_argument("--es-index", default="logstash-*", help="Elasticsearch index or index pattern to query (e.g. logstash-*)")
-    p.add_argument("--es-user", default=os.environ.get("ELASTICSEARCH_USER", 'elastic'), help="ES basic auth user (ENV: ELASTICSEARCH_USER)")
-    p.add_argument("--es-pass", default=os.environ.get("ELASTICSEARCH_PASSWORD", 'admin'), help="ES basic auth pass (ENV: ELASTICSEARCH_PASSWORD)")
+    p.add_argument("--es-url", default=os.environ.get("ELASTICSEARCH_HOST", "http://10.0.210.30:9200"),
+                   help="Elasticsearch base URL (ENV: ELASTICSEARCH_HOST)")
+    p.add_argument("--es-index", default="logstash-*",
+                   help="Elasticsearch index or index pattern to query (e.g. logstash-*)")
+    p.add_argument("--es-user", default=os.environ.get("ELASTICSEARCH_USER", 'elastic'),
+                   help="ES basic auth user (ENV: ELASTICSEARCH_USER)")
+    p.add_argument("--es-pass", default=os.environ.get("ELASTICSEARCH_PASSWORD", 'admin'),
+                   help="ES basic auth pass (ENV: ELASTICSEARCH_PASSWORD)")
     p.add_argument("--time-from", help="RFC3339 or ES date math string for range start, optional")
     p.add_argument("--time-to", help="RFC3339 or ES date math string for range end, optional")
     # Do NOT auto-consume DATABASE_URL environment variable here to avoid
     # accidentally using a read-only or CI-specific URL during local tests.
     # If the user wants to use a custom database, they can pass --db-url explicitly.
-    p.add_argument("--db-url", default=None, help="Postgres DSN (sqlalchemy style or libpq). If omitted the script will assemble a default from IMA_STATS_* env vars")
+    p.add_argument("--db-url", default=None,
+                   help="Postgres DSN (sqlalchemy style or libpq). If omitted the script will assemble a default from IMA_STATS_* env vars")
     p.add_argument("--out", dest="out_csv", default="benchmarks/es_times_by_image.csv", help="Output CSV file")
-    p.add_argument("--es-size", type=int, default=10000, help="Max number of image buckets to request from ES (terms size)")
-    p.add_argument("--es-query-file", help="Path to a JSON file with the exact ES request body to POST (if provided, used as-is)")
+    p.add_argument("--es-size", type=int, default=10000,
+                   help="Max number of image buckets to request from ES (terms size)")
+    p.add_argument("--es-query-file",
+                   help="Path to a JSON file with the exact ES request body to POST (if provided, used as-is)")
     # By default group by the full extra.return_value blob and extract OBID via regex
-    p.add_argument("--es-group-field", default="extra.return_value", help="Field used to group events (can be in fields[] or _source). Default: extra.return_value")
-    p.add_argument("--es-duration-field", default="extra.execution_time", help="Field that stores execution time/duration (seconds). Default: extra.execution_time")
-    p.add_argument("--es-timestamp-field", default="@timestamp", help="Timestamp field name to use (default @timestamp)")
-    p.add_argument("--es-group-regex", default=r"OBLINEID\s*=\s*(\d+)|OBID\s*=\s*(\d+)", help="Regex to extract OBLINEID or OBID from the group field content (prefers OBLINEID)")
+    p.add_argument("--es-group-field", default="extra.return_value",
+                   help="Field used to group events (can be in fields[] or _source). Default: extra.return_value")
+    p.add_argument("--es-duration-field", default="extra.execution_time",
+                   help="Field that stores execution time/duration (seconds). Default: extra.execution_time")
+    p.add_argument("--es-timestamp-field", default="@timestamp",
+                   help="Timestamp field name to use (default @timestamp)")
+    p.add_argument("--es-group-regex", default=r"OBLINEID\s*=\s*(\d+)|OBID\s*=\s*(\d+)",
+                   help="Regex to extract OBLINEID or OBID from the group field content (prefers OBLINEID)")
     # enable scroll by default; provide --no-scroll to disable
-    p.add_argument("--no-scroll", action="store_false", dest="use_scroll", help="Disable Elasticsearch scroll API (enabled by default)")
+    p.add_argument("--no-scroll", action="store_false", dest="use_scroll",
+                   help="Disable Elasticsearch scroll API (enabled by default)")
     p.set_defaults(use_scroll=True)
     p.add_argument("--scroll-ttl", default="2m", help="Scroll context TTL (e.g. 2m)")
     p.add_argument("--scroll-size", type=int, default=500, help="Number of hits per scroll page")
     p.add_argument("--max-hits", type=int, default=0, help="Optional max number of hits to fetch (0 = unlimited)")
     # per-hit export enabled by default; provide --no-per-hit to disable
-    p.add_argument("--no-per-hit", action="store_false", dest="per_hit", help="Disable per-hit export (enabled by default)")
+    p.add_argument("--no-per-hit", action="store_false", dest="per_hit",
+                   help="Disable per-hit export (enabled by default)")
     p.set_defaults(per_hit=True)
     p.add_argument("--verbose", action="store_true")
-    p.add_argument("--dump-samples", type=int, default=0, help="If >0, write up to N raw extra.return_value samples to a JSONL file for inspection")
+    p.add_argument("--dump-samples", type=int, default=0,
+                   help="If >0, write up to N raw extra.return_value samples to a JSONL file for inspection")
     p.add_argument("--samples-out", default=None, help="Path to write samples JSONL (default: <out>.samples.jsonl)")
     #    p.add_argument("--db-date-from", default=None, help="Optional lower bound on image date (dateobs) to filter DB queries (ISO format or ES date math).")
     #    p.add_argument("--db-date-to", default=None, help="Optional upper bound on image date (dateobs) to filter DB queries (ISO format or ES date math).")
@@ -206,7 +221,8 @@ def parse_args():
     return p.parse_args()
 
 
-def build_es_agg_query(time_from: Optional[str], time_to: Optional[str], size: int = 10000, group_field: str = "extra.path", duration_field: str = "extra.execution_time") -> Dict[str, Any]:
+def build_es_agg_query(time_from: Optional[str], time_to: Optional[str], size: int = 10000,
+                       group_field: str = "extra.path", duration_field: str = "extra.execution_time") -> Dict[str, Any]:
     # Build a lightweight aggregation query to compute per-image stats
     # Try to adapt the provided field names to ES-appropriate names for aggregation
     # If the user provided a dotted field like extra.path, we attempt to use the keyword subfield for grouping
@@ -238,7 +254,10 @@ def build_es_agg_query(time_from: Optional[str], time_to: Optional[str], size: i
     return query
 
 
-def fetch_es_buckets(es_url: str, es_index: str, query: Dict[str, Any], auth: Optional[Tuple[str, str]] = None, group_field: str = "extra.path", duration_field: str = "extra.execution_time", timestamp_field: str = "@timestamp", use_scroll: bool = False, scroll_ttl: str = "2m", scroll_size: int = 500, max_hits: int = 0) -> Dict[str, Dict[str, Any]]:
+def fetch_es_buckets(es_url: str, es_index: str, query: Dict[str, Any], auth: Optional[Tuple[str, str]] = None,
+                     group_field: str = "extra.path", duration_field: str = "extra.execution_time",
+                     timestamp_field: str = "@timestamp", use_scroll: bool = False, scroll_ttl: str = "2m",
+                     scroll_size: int = 500, max_hits: int = 0) -> Dict[str, Dict[str, Any]]:
     """Execute ES search (aggregation or hits) and return a mapping group_key->stats.
     Supports both aggregation responses (aggregations.by_group.buckets) and hits[].fields format as produced by Kibana queries.
     """
@@ -264,7 +283,8 @@ def fetch_es_buckets(es_url: str, es_index: str, query: Dict[str, Any], auth: Op
         for b in buckets:
             key = b.get("key")
             result[key] = {
-                "avg_processing_time_s": b.get("avg_duration", {}).get("value") if isinstance(b.get("avg_duration"), dict) else None,
+                "avg_processing_time_s": b.get("avg_duration", {}).get("value") if isinstance(b.get("avg_duration"),
+                                                                                              dict) else None,
                 "n_events": b.get("doc_count"),
                 "first_ts": b.get("min_ts", {}).get("value_as_string") if b.get("min_ts") else None,
                 "last_ts": b.get("max_ts", {}).get("value_as_string") if b.get("max_ts") else None,
@@ -438,7 +458,9 @@ def fetch_es_buckets(es_url: str, es_index: str, query: Dict[str, Any], auth: Op
                 except Exception:
                     group_key = str(prefer_key)
 
-        st = stats.setdefault(group_key, {"sum_dur": 0.0, "count": 0, "first_ts": None, "last_ts": None, "n_sources": None, "header": {}})
+        st = stats.setdefault(group_key,
+                              {"sum_dur": 0.0, "count": 0, "first_ts": None, "last_ts": None, "n_sources": None,
+                               "header": {}})
         if dur_val is not None:
             st["sum_dur"] += dur_val
             st["count"] += 1
@@ -452,7 +474,7 @@ def fetch_es_buckets(es_url: str, es_index: str, query: Dict[str, Any], auth: Op
         # merge header_vals
         if header_vals:
             st_header = st.setdefault('header', {})
-            for kkk,vvv in header_vals.items():
+            for kkk, vvv in header_vals.items():
                 if kkk not in st_header:
                     st_header[kkk] = vvv
 
@@ -471,7 +493,8 @@ def fetch_es_buckets(es_url: str, es_index: str, query: Dict[str, Any], auth: Op
     return out
 
 
-def fetch_db_counts(db_url: str, keys: Optional[list] = None, date_from: Optional[str] = None, date_to: Optional[str] = None) -> Dict[str, int]:
+def fetch_db_counts(db_url: str, keys: Optional[list] = None, date_from: Optional[str] = None,
+                    date_to: Optional[str] = None) -> Dict[str, int]:
     """Query Postgres for counts per OBID by joining imaphot_v31 -> imastats_v31.
 
     Returns a mapping obid_str -> num_sources (int). If DATABASE_URL is not provided or
@@ -495,23 +518,22 @@ def fetch_db_counts(db_url: str, keys: Optional[list] = None, date_from: Optiona
     # a safer version that first obtains imageid lists per key and then
     # aggregates counts in imaphot_v31 per-imageid arrays to avoid a large join.
     sql = """
-    WITH key_images AS (
-        SELECT COALESCE(m.header->'OBLINEID', m.header->'OBID') AS key,
-               array_agg(m.imageid) AS imageids
-        FROM imastats_v31 m
-        WHERE (m.header ? 'OBLINEID') OR (m.header ? 'OBID')
-        GROUP BY key
-    )
-    SELECT ki.key,
-           COALESCE(p.cnt,0) AS num_sources,
-           COALESCE(p.trans,0) AS num_transients
-    FROM key_images ki
-    LEFT JOIN LATERAL (
-        SELECT COUNT(*) AS cnt, SUM(CASE WHEN trans IS TRUE THEN 1 ELSE 0 END) AS trans
-        FROM imaphot_v31 p
-        WHERE p.imageid = ANY(ki.imageids)
-    ) p ON true
-    """
+          WITH key_images
+                   AS (SELECT COALESCE(m.header - > 'OBLINEID', m.header - > 'OBID') AS key, array_agg(m.imageid) AS imageids
+          FROM imastats_v31 m
+          WHERE (m.header ? 'OBLINEID') OR (m.header ? 'OBID')
+          GROUP BY key
+              )
+          SELECT ki.key,
+                 COALESCE(p.cnt, 0)   AS num_sources,
+                 COALESCE(p.trans, 0) AS num_transients
+          FROM key_images ki
+                   LEFT JOIN LATERAL (
+              SELECT COUNT(*) AS cnt, SUM(CASE WHEN trans IS TRUE THEN 1 ELSE 0 END) AS trans
+              FROM imaphot_v31 p
+              WHERE p.imageid = ANY (ki.imageids)
+                  ) p ON true \
+          """
     conn = None
     try:
         conn = psycopg2.connect(db_url)
@@ -579,9 +601,9 @@ def fetch_db_counts_for_keys(db_url: str, keys: list) -> Dict[str, Dict[str, int
         conn = psycopg2.connect(db_url)
         cur = conn.cursor()
         for i in range(0, len(key_list), batch_size):
-            batch = key_list[i:i+batch_size]
-            LOG.debug('Querying DB for batch %d..%d (keys=%d)', i, i+len(batch)-1, len(batch))
-            
+            batch = key_list[i:i + batch_size]
+            LOG.debug('Querying DB for batch %d..%d (keys=%d)', i, i + len(batch) - 1, len(batch))
+
             # Step 1: Resolve imageids from imastats_v31
             # We use a VALUES clause to pass keys.
             vals = []
@@ -590,7 +612,7 @@ def fetch_db_counts_for_keys(db_url: str, keys: list) -> Dict[str, Dict[str, int
                 vals.append('(%s::text)')
                 params.append(k)
             values_clause = ','.join(vals)
-            
+
             # We filter imastats_v31 by matching OBLINEID to the key.
             # Using hstore operator -> to get value as text.
             sql_step1 = f"""
@@ -603,36 +625,36 @@ def fetch_db_counts_for_keys(db_url: str, keys: list) -> Dict[str, Dict[str, int
             """
             cur.execute(sql_step1, tuple(params))
             rows_step1 = cur.fetchall()
-            
+
             if not rows_step1:
                 continue
 
             # Collect imageids and map them back to keys
             imageids = []
-            imageid_to_keys = {} # imageid -> list of keys (usually one)
+            imageid_to_keys = {}  # imageid -> list of keys (usually one)
             for img_id, k in rows_step1:
                 imageids.append(img_id)
                 if img_id not in imageid_to_keys:
                     imageid_to_keys[img_id] = []
                 imageid_to_keys[img_id].append(k)
-            
+
             # Step 2: Get counts from imaphot_v31 using the resolved imageids
             # This avoids joining the huge tables directly.
             if not imageids:
                 continue
-                
+
             sql_step2 = """
-            SELECT imageid, count(*), sum(case when trans then 1 else 0 end)
-            FROM imaphot_v31
-            WHERE imageid = ANY(%s)
-            GROUP BY imageid
-            """
+                        SELECT imageid, count(*), sum(case when trans then 1 else 0 end)
+                        FROM imaphot_v31
+                        WHERE imageid = ANY (%s)
+                        GROUP BY imageid \
+                        """
             cur.execute(sql_step2, (list(set(imageids)),))
             rows_step2 = cur.fetchall()
-            
+
             # Step 3: Aggregate results back to keys
             counts_map = {r[0]: {'total': r[1], 'trans': r[2]} for r in rows_step2}
-            
+
             # Iterate over the resolved mappings from Step 1
             for img_id, k in rows_step1:
                 c = counts_map.get(img_id, {'total': 0, 'trans': 0})
@@ -641,14 +663,14 @@ def fetch_db_counts_for_keys(db_url: str, keys: list) -> Dict[str, Dict[str, int
                     ks = str(int(ks))
                 except Exception:
                     ks = ks
-                
+
                 if ks not in result:
                     result[ks] = {'total': 0, 'transients': 0}
-                
+
                 # Sum up counts (in case multiple images map to the same key, though unlikely for OBLINEID)
                 result[ks]['total'] += c['total']
                 result[ks]['transients'] += (c['trans'] if c['trans'] else 0)
-                
+
         LOG.info('fetch_db_counts_for_keys: Finished processing all batches. Found results for %d keys.', len(result))
         return result
     except Exception as e:
@@ -665,15 +687,16 @@ def fetch_db_counts_for_keys(db_url: str, keys: list) -> Dict[str, Dict[str, int
 def write_per_hit_csv(rows: list, db_map: Dict[str, Dict[str, int]], out_csv: str):
     """Write a CSV with per-hit rows enriched with DB counts and parsed header fields."""
     os.makedirs(os.path.dirname(out_csv) or '.', exist_ok=True)
-    header_fields = ['instrume','inmodel','camera','naxis1','naxis2','obid','orid','dateproc','inserial','telescop','filter','dateobs','exptime','object']
+    header_fields = ['instrume', 'inmodel', 'camera', 'naxis1', 'naxis2', 'obid', 'orid', 'dateproc', 'inserial',
+                     'telescop', 'filter', 'dateobs', 'exptime', 'object']
     # System info fields to extract
     sys_fields = [
         'gpu_name', 'gpu_driver', 'gpu_id', 'gpu_load', 'gpu_mem_free', 'gpu_mem_total', 'gpu_mem_used', 'gpu_temp',
         'arch', 'cupy_ver', 'kernel', 'os', 'os_ver', 'processor', 'python_ver'
     ]
     columns = [
-        'group_key', 'execution_time', 'timestamp', 'n_sources_detected', 'db_total', 'db_transients'
-    ] + header_fields + sys_fields
+                  'group_key', 'execution_time', 'timestamp', 'n_sources_detected', 'db_total', 'db_transients'
+              ] + header_fields + sys_fields
     with open(out_csv, 'w', newline='') as fh:
         writer = csv.writer(fh)
         writer.writerow(columns)
@@ -705,17 +728,18 @@ def merge_and_write(es_map: Dict[str, Dict[str, Any]], db_map: Dict[str, int], o
     keys = set(es_map.keys()) | set(db_map.keys())
     os.makedirs(os.path.dirname(out_csv) or ".", exist_ok=True)
     # Header fields we parsed from extra.return_value (normalized names)
-    header_fields = ['instrume','inmodel','camera','naxis1','naxis2','obid','orid','dateproc','inserial','telescop','filter','dateobs','exptime','object']
+    header_fields = ['instrume', 'inmodel', 'camera', 'naxis1', 'naxis2', 'obid', 'orid', 'dateproc', 'inserial',
+                     'telescop', 'filter', 'dateobs', 'exptime', 'object']
     columns = [
-        "group_key",
-        "avg_processing_time_s",
-        "n_events",
-        "n_sources_detected",
-        "num_sources_db_total",
-        "num_sources_db_transients",
-        "first_ts",
-        "last_ts",
-    ] + header_fields
+                  "group_key",
+                  "avg_processing_time_s",
+                  "n_events",
+                  "n_sources_detected",
+                  "num_sources_db_total",
+                  "num_sources_db_transients",
+                  "first_ts",
+                  "last_ts",
+              ] + header_fields
     with open(out_csv, "w", newline="") as fh:
         writer = csv.writer(fh)
         writer.writerow(columns)
@@ -784,7 +808,8 @@ def verify_index_exists(es_url: str, es_index: str, auth: Optional[Tuple[str, st
     return []
 
 
-def estimate_total_hits(es_url: str, es_index: str, query: Dict[str, Any], auth: Optional[Tuple[str, str]] = None) -> Optional[int]:
+def estimate_total_hits(es_url: str, es_index: str, query: Dict[str, Any], auth: Optional[Tuple[str, str]] = None) -> \
+Optional[int]:
     """Run a lightweight search (size=0) to estimate total matching hits for the provided query.
     Returns the total count or None on error.
     """
@@ -847,7 +872,8 @@ def main():
     # they must pass it explicitly via --db-url.
     if not args.db_url:
         if os.environ.get('DATABASE_URL') is not None:
-            LOG.info("Environment variable DATABASE_URL detected but will be ignored (use --db-url to override). Using IMA_STATS_* defaults instead.")
+            LOG.info(
+                "Environment variable DATABASE_URL detected but will be ignored (use --db-url to override). Using IMA_STATS_* defaults instead.")
 
         # Provide defaults so the user doesn't need to export env vars each time.
         ima_host = os.environ.get('IMA_STATS_HOST', '10.0.210.30')
@@ -919,9 +945,12 @@ def main():
             ],
             "query": {
                 "bool": {
+                    "must_not": [
+                        {"wildcard": {"extra.environment": "*development*"}}
+                    ],
                     "filter": [
                         # {"match_phrase": {"extra.environment": "profiler"}},
-                        {"wildcard": {"extra.environment": "*profiler*"}},
+                        # {"wildcard": {"extra.environment": "*profiler*"}},
                         # {"match_phrase": {"extra.environment": "nvtx"}},
                         {"match_phrase": {"extra.application": "gpuphot"}},
                         {"match_phrase": {"extra.function_name": "process_image"}},
@@ -991,7 +1020,8 @@ def main():
     LOG.info("Verifying index existence in Elasticsearch %s (index pattern=%s)", args.es_url, args.es_index)
     index_matches = verify_index_exists(args.es_url, args.es_index, auth=auth)
     if not index_matches:
-        LOG.warning("No matching indices found for pattern '%s'. Available indices (sample): %s", args.es_index, ", ".join(index_matches))
+        LOG.warning("No matching indices found for pattern '%s'. Available indices (sample): %s", args.es_index,
+                    ", ".join(index_matches))
         LOG.warning("Exiting due to missing index.")
         sys.exit(1)
 
@@ -1018,10 +1048,15 @@ def main():
         if total_est is not None:
             LOG.info("Estimated total matching documents in ES: %d", total_est)
             if total_est > 10000 and not args.max_hits:
-                LOG.warning("Large result set estimated (%d). Consider using --max-hits or --time-from/--time-to to limit the query.", total_est)
+                LOG.warning(
+                    "Large result set estimated (%d). Consider using --max-hits or --time-from/--time-to to limit the query.",
+                    total_est)
     except Exception:
         LOG.debug("Could not estimate total hits")
-    hits_rows = fetch_hits_raw(args.es_url, es_index_to_use, query_payload, auth=auth, group_field=args.es_group_field, duration_field=args.es_duration_field, timestamp_field=args.es_timestamp_field, use_scroll=args.use_scroll, scroll_ttl=args.scroll_ttl, scroll_size=args.scroll_size, max_hits=args.max_hits)
+    hits_rows = fetch_hits_raw(args.es_url, es_index_to_use, query_payload, auth=auth, group_field=args.es_group_field,
+                               duration_field=args.es_duration_field, timestamp_field=args.es_timestamp_field,
+                               use_scroll=args.use_scroll, scroll_ttl=args.scroll_ttl, scroll_size=args.scroll_size,
+                               max_hits=args.max_hits)
     # Optionally dump raw extra.return_value samples for inspection
     if args.dump_samples and args.dump_samples > 0:
         samples_out = args.samples_out or f"{args.out_csv}.samples.jsonl"
@@ -1082,7 +1117,12 @@ def main():
         write_per_hit_csv(hits_rows, db_counts_enriched, out_per_hit_csv)
     except Exception as e:
         LOG.warning('Error during per-hit DB count enrichment or CSV writing: %s', e)
-def fetch_hits_raw(es_url: str, es_index: str, query: Dict[str, Any], auth: Optional[Tuple[str, str]] = None, group_field: str = "extra.path", duration_field: str = "extra.execution_time", timestamp_field: str = "@timestamp", use_scroll: bool = False, scroll_ttl: str = "2m", scroll_size: int = 500, max_hits: int = 0):
+
+
+def fetch_hits_raw(es_url: str, es_index: str, query: Dict[str, Any], auth: Optional[Tuple[str, str]] = None,
+                   group_field: str = "extra.path", duration_field: str = "extra.execution_time",
+                   timestamp_field: str = "@timestamp", use_scroll: bool = False, scroll_ttl: str = "2m",
+                   scroll_size: int = 500, max_hits: int = 0):
     """Fetch raw hits (paginated with scroll if requested) and return list of rows (dicts).
     Each row contains: group_key, execution_time, timestamp, n_sources, header dict
     """
@@ -1258,6 +1298,7 @@ def fetch_hits_raw(es_url: str, es_index: str, query: Dict[str, Any], auth: Opti
         rows.append(row)
 
     return rows
+
 
 if __name__ == '__main__':
     try:

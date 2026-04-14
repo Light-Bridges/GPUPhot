@@ -71,6 +71,10 @@ cuML is available for x86_64 with CUDA 11.x/12.x. It is **not available** on ARM
 pip install cuml-cu12 pylibraft-cu12 --extra-index-url=https://pypi.nvidia.com
 ```
 
+After installing cuML, run the calibration tool once to find the optimal source-count
+window for your GPU and set `GPUPHOT_CUML_MIN_SOURCES` / `GPUPHOT_CUML_MAX_SOURCES`
+in your `.env`.  See [CUML_CALIBRATION.md](CUML_CALIBRATION.md) for the full procedure.
+
 ### Step 4 (optional): Install development tools
 
 For running tests and building documentation:

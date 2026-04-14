@@ -67,6 +67,29 @@ ASTROMETRY_CACHE_PATH=./astrometry_cache
 
 *\*Note: When running code inside Jupyter/Docker, paths are relative to `/data/images`.*
 
+## GPU Crossmatch Calibration (optional)
+
+If you have installed cuML (x86_64 only), you can enable GPU-accelerated catalog
+cross-matching.  Because GPU efficiency depends on the number of sources, GPUPhot
+needs GPU-specific thresholds to decide when to use GPU vs. CPU:
+
+```bash
+# .env
+GPUPHOT_USE_CUML_CROSSMATCH=0     # 0 = adaptive (recommended)
+GPUPHOT_CUML_MIN_SOURCES=3258     # set by the calibration tool
+GPUPHOT_CUML_MAX_SOURCES=13549    # set by the calibration tool
+```
+
+Run the calibration tool once to find the right values for your GPU:
+
+```bash
+docker exec gpuphotfinal-profiler-1 \
+    python3 /app/benchmarks/benchmark_cuml_crossover.py \
+    --logspace 25 100 200000 --auto-refine
+```
+
+See [CUML_CALIBRATION.md](CUML_CALIBRATION.md) for the full guide.
+
 ## Docker Compose
 
 The recommended way to deploy GPUPhot is using Docker Compose.  This provides a self-contained environment with all the necessary services.

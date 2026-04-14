@@ -291,40 +291,47 @@ en GPU 0.
 
 ### 4.3 Benchmark cuML crossover (usuario final)
 
+> **Ver guía completa de usuario: [CUML_CALIBRATION.md](../CUML_CALIBRATION.md)**
+
 `benchmarks/benchmark_cuml_crossover.py` — Mide el punto de cruce entre
 cKDTree (CPU, O(N log N)) y cuML NearestNeighbors (GPU, O(N²)) para 2D
-crossmatch. Permite al usuario calibrar los umbrales `GPUPHOT_CUML_MIN_SOURCES`
-y `GPUPHOT_CUML_MAX_SOURCES` para su GPU específica.
+crossmatch. Usa medición adaptativa (loop hasta convergencia de CV) en lugar
+de un número fijo de repeticiones, lo que hace las medidas más robustas ante
+variaciones de estado térmico y de allocator CUDA.
 
-**Uso recomendado** (dentro del container py3.12):
+**Uso rápido** (dentro del container py3.12):
 
 ```bash
-# Barrido log-espaciado con refinamiento automático alrededor del cruce:
-docker exec gpuphot-profiler-1 python3 /app/benchmarks/benchmark_cuml_crossover.py \
-    --logspace 25 100 200000 --auto-refine --repeats 10 \
+# Calibración estándar con refinamiento adaptativo:
+docker exec gpuphotfinal-profiler-1 \
+    python3 /app/benchmarks/benchmark_cuml_crossover.py \
+    --logspace 25 100 200000 --auto-refine \
     > cuml_crossover_$(hostname)_$(date +%Y%m%d).csv
 
-# Barrido rápido (20 puntos, 5 reps):
-docker exec gpuphot-profiler-1 python3 /app/benchmarks/benchmark_cuml_crossover.py
-
-# Rango explícito con pasos finos:
-docker exec gpuphot-profiler-1 python3 /app/benchmarks/benchmark_cuml_crossover.py \
-    --sizes 500 1000 1500 2000 3000 5000 7500 10000 15000 20000 50000
+# Diagnóstico sin guardar datos (ver logs en tiempo real, comprobar consistencia):
+docker exec gpuphotfinal-profiler-1 \
+    python3 /app/benchmarks/benchmark_cuml_crossover.py \
+    --logspace 25 100 200000 --auto-refine --validate 2>&1 | grep -v "^[0-9]"
 ```
 
 **Opciones clave:**
 
-| Opción | Descripción |
-|--------|-------------|
-| `--logspace N MIN MAX` | N puntos log-espaciados de MIN a MAX (recomendado) |
-| `--sizes N1 N2 ...` | Valores explícitos a medir |
-| `--auto-refine` | Añade puntos extra entre N donde cambia el ganador |
-| `--refine-points K` | Número de puntos extra por zona de cruce (default: 5) |
-| `--repeats R` | Repeticiones por N (default: 5; usar 10 para publicación) |
+| Opción | Default | Descripción |
+|--------|---------|-------------|
+| `--logspace N MIN MAX` | `25 100 200000` | N puntos log-espaciados |
+| `--sizes N1 N2 ...` | — | Valores explícitos |
+| `--auto-refine` | off | Añade puntos extra alrededor del cruce |
+| `--target-cv CV` | `0.08` | Umbral de convergencia (CV ventana) |
+| `--max-samples N` | `20` | Máximo de iteraciones por punto |
+| `--min-speedup X` | `1.15` | Speedup mínimo para zona robusta |
+| `--validate` | off | Re-mide puntos frontera de Phase 1 para detectar drift |
 
-**Resultado:** CSV a stdout con columnas `N,cpu_ms,gpu_ms,speedup_e2e,winner`.
-Al final imprime la recomendación concreta de `GPUPHOT_CUML_MIN_SOURCES` y
-`GPUPHOT_CUML_MAX_SOURCES` para la GPU medida.
+**Resultado:** CSV a stdout con columnas
+`N,cpu_ms,gpu_ms,speedup_e2e,winner,cpu_q25,cpu_q75,gpu_q25,gpu_q75,n_samples,converged`.
+Al final imprime **dos recomendaciones** a stderr:
+
+- `GPU win zone (all)`: zona completa donde GPU > CPU
+- `GPU win zone (robust)`: zona donde speedup ≥ `--min-speedup` (usar esta para `.env`)
 
 **Importante:** El cruce sintético (una sola llamada) no se traduce directamente
 al pipeline real (múltiples crossmatches por imagen + overhead de init cuML).
