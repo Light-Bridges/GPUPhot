@@ -661,7 +661,7 @@ def gen_stage_breakdown():
         ('Zero-point (CPU)',       'Zero-point calibration',        'CPU'),
         # I/O / CPU stages
         ('Astrometry (solver)',    r'Astrometry.net solver',        'CPU'),
-        ('Astrometry (CPU)',       'WCS fitting \& header update',  'CPU'),
+        ('Astrometry (CPU)',       r'WCS fitting \& header update',  'CPU'),
         ('Catalog query (I/O)',    'Catalog query (network I/O)',   'I/O'),
     ]
 
