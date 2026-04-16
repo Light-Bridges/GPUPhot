@@ -1,3 +1,17 @@
+# Internal/exploratory scripts — keep locally, not needed in repo
+aggregate_crossover_runs.py
+analyze_cuml_crossover.py
+analyze_profiling.py
+analyze_times.py
+analyze_times_v2.py
+analyze_times_v2_back.py
+analyze_times_v2_profiler.py
+collect_and_merge_all.py
+collect_times_from_elastic.py
+extract_nvtx_final.py
+find_benchmark_candidates.py
+benchmark_candidates.sh
+
 # Raw benchmark data — keep locally, not needed in repo
 # Only the aggregated CSVs used by generate_manuscript_*.py are tracked
 
