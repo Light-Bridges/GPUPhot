@@ -5,10 +5,12 @@ This guide explains how to use GPUPhot for astronomical image processing, coveri
 ## Table of Contents
 
 *   [1. Instrument Configuration](#1-instrument-configuration)
-    *   [1.1  Configuration File Structure](#11-configuration-file-structure)
-    *   [1.2.  Creating and Modifying Configurations](#12-creating-and-modifying-configurations)
-    *   [1.3.  Loading a Configuration](#13-loading-a-configuration)
+    *   [1.1 Configuration File Structure](#11-configuration-file-structure)
+    *   [1.2 Creating and Modifying Configurations](#12-creating-and-modifying-configurations)
+    *   [1.3 Loading a Configuration](#13-loading-a-configuration)
 *   [2. Astrometry Setup](#2-astrometry-setup)
+    *   [2.1 Solver strategy & timeouts](#21-solver-strategy--timeouts)
+    *   [2.2 Handling astrometry failures](#22-handling-astrometry-failures)
 *   [3. Basic Usage](#3-basic-usage)
     *   [3.1. Processing a Single Image](#31-processing-a-single-image)
     *   [3.2. Understanding the Output](#32-understanding-the-output)
@@ -19,10 +21,10 @@ This guide explains how to use GPUPhot for astronomical image processing, coveri
     *   [4.4. Retrieving Results](#44-retrieving-results)
 *   [5. Docker Compose Environment](#5-docker-compose-environment)
 *   [6. Advanced Usage](#6-advanced-usage)
-     *  [6.1. Image Reduction](#61-image-reduction)
-     *  [6.2 Custom processing parameters](#62-custom-processing-parameters)
-     *  [6.3 Using a Custom Catalog Source](#63-using-a-custom-catalog-source)
-     *  [6.4 GPU Crossmatch Calibration (cuML)](#64-gpu-crossmatch-calibration-cuml)
+    *   [6.1. Image Reduction](#61-image-reduction)
+    *   [6.2. Custom processing parameters](#62-custom-processing-parameters)
+    *   [6.3. Using a Custom Catalog Source](#63-using-a-custom-catalog-source)
+    *   [6.4. GPU Crossmatch Calibration (cuML)](#64-gpu-crossmatch-calibration-cuml)
 *   [7. Error Handling](#7-error-handling)
 
 ## 1. Instrument Configuration
@@ -114,6 +116,55 @@ Any key listed in `forced_values` will always be used, regardless of what the
 FITS header says.  Leave the block empty (`{}`) for instruments whose headers
 are reliable.
 
+#### Supported filters & filter mapping
+
+GPUPhot maps the filter name found in the FITS header to one of its internal
+canonical codes, which are used to select the correct photometric catalog
+and calibration reference.
+
+**Valid internal codes:**
+
+| Code | Description |
+|---|---|
+| `Lum` | Luminance / white light |
+| `Open` | No filter / open |
+| `SDSSu` | SDSS *u* band |
+| `SDSSg` | SDSS *g* band |
+| `SDSSr` | SDSS *r* band |
+| `SDSSi` | SDSS *i* band |
+| `SDSSzs` | SDSS *z* band |
+| `SDSSy` | SDSS *y* band |
+
+The `default.json` config already maps the most common header values:
+
+| Header value(s) | Internal code |
+|---|---|
+| `Lum`, `L`, `LUM`, `w` | `Lum` |
+| `Open`, `Clear`, `C` | `Open` |
+| `u`, `u'` | `SDSSu` |
+| `g`, `g'`, `B`, `V` | `SDSSg` |
+| `r`, `r'`, `R`, `Ha`, `Halpha` | `SDSSr` |
+| `i`, `i'`, `I` | `SDSSi` |
+| `z`, `z'` | `SDSSzs` |
+| `y` | `SDSSy` |
+
+To add a custom filter name used by your instrument, add an entry to the
+`filter_map` block in your instrument JSON:
+
+```json
+{
+  "filter_map": {
+    "H-alpha": "SDSSr",
+    "OIII": "SDSSg",
+    "MyCustomFilter": "Lum"
+  }
+}
+```
+
+Any header value not present in `filter_map` will be passed through unchanged.
+If the resulting code is not one of the eight valid internal codes, the image
+will be processed but catalog cross-matching may be skipped.
+
 ### 1.3. Loading a Configuration
 
 To use a specific configuration, you need to provide the `instrument_name` when creating an `ImageProcessor`:
@@ -150,6 +201,55 @@ get_solver()
 
 *   This will download the files to the directory specified by the `ASTROMETRY_CACHE_PATH` environment variable.  Make sure this directory exists and has enough free space.
 * This can take a *long time*, depending on your internet connection. This is normal.
+
+> **Important:** Always run `get_solver()` once *outside* any Celery worker before
+> starting distributed processing.  Worker tasks have strict time limits, and triggering
+> an index file download inside a worker will cause a timeout.
+
+### 2.1 Solver strategy & timeouts
+
+The astrometry pipeline tries three strategies in order, stopping as soon as one succeeds:
+
+1. **Local solver with position hint** — uses the `RA`/`DEC` from the FITS header to narrow the search field.
+2. **Local solver without hint** — blind solve over the full index; slower but works when the header coordinates are absent or wrong.
+3. **Online fallback** — submits source coordinates to the [Astrometry.net](https://nova.astrometry.net) web API.
+
+Each attempt has an independent timeout controlled by environment variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `GPUPHOT_ASTROMETRY_TIMEOUT` | `60` | Seconds allowed for each local solver attempt |
+| `GPUPHOT_ASTROMETRY_ONLINE_TIMEOUT` | `70` | Seconds allowed for the online Astrometry.net attempt |
+| `ASTROMETRY_API_KEY` | *(none)* | API key for nova.astrometry.net (online fallback only) |
+
+If all three attempts fail, `AstrometrizationTimeoutError` is raised.
+If the solver runs to completion but finds no plate solution, `UnableToAstrometrizeError` is raised.
+
+### 2.2 Handling astrometry failures
+
+```python
+from gpuphot.exceptions import AstrometrizationTimeoutError, UnableToAstrometrizeError
+
+try:
+    result = processor.process_image('image.fits')
+except AstrometrizationTimeoutError:
+    # All attempts timed out — increase GPUPHOT_ASTROMETRY_TIMEOUT or
+    # check that index files are present in ASTROMETRY_CACHE_PATH
+    print("Astrometry timed out")
+except UnableToAstrometrizeError:
+    # Solver ran but found no solution — field may be outside index coverage
+    # or the image contains too few / too many sources
+    print("No plate solution found")
+```
+
+Common causes and fixes:
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Timeout on first image only | Index files being downloaded inside the worker | Run `get_solver()` once before starting workers |
+| Consistent timeout on all images | `GPUPHOT_ASTROMETRY_TIMEOUT` too short for your hardware | Increase timeout in `.env` |
+| No solution, local solver | Field outside scale/coverage of downloaded index series | Check `ASTROMETRY_CACHE_PATH` contains the correct series (4100 + 5200) |
+| No solution, online fallback | `ASTROMETRY_API_KEY` not set or field not in Astrometry.net | Set the API key in `.env` |
 
 ## 3. Basic Usage
 
@@ -244,10 +344,61 @@ Flower provides a web-based interface for monitoring Celery tasks.
 3.  You can click on a task ID to see more details, including the traceback if the task failed.
 
 ### 4.4. Retrieving Results
-* Using the `task.get()` method.
+
 ```python
-result = task.get() #This will wait until the task is completed
+result = task.get()  # blocks until the task completes
 print(result)
+```
+
+`task.get()` raises `celery.exceptions.TimeoutError` if you pass a `timeout`
+argument and the task does not finish in time.
+
+#### Result storage & TTL
+
+GPUPhot uses two independent result stores:
+
+| Store | TTL | Contents |
+|---|---|---|
+| **Redis** (Celery result backend) | **24 hours** | `task.get()` return value (JSON) |
+| **PostgreSQL** (`imaphot` / `imastats`) | Permanent | Full photometry output |
+
+The Redis TTL is set to 24 hours (`result_expires = 86400` in `celeryconfig.py`).
+After that window, `task.get()` raises `celery.exceptions.TimeoutError` even
+if the task completed successfully — but the data is still in PostgreSQL.
+
+For long-running pipelines, query results from the database rather than
+relying on `task.get()` for anything beyond same-session use:
+
+```python
+from gpuphot_worker.database_search_utils import search_by_filename
+
+# Retrieve results any time — not subject to Redis TTL
+df = search_by_filename('my_image.fits')
+```
+
+#### Worker crashes & task reliability
+
+`worker_max_tasks_per_child = 1` means each worker process handles exactly
+one task and then restarts.  This prevents VRAM leaks accumulating across
+images.
+
+By default, Celery acknowledges a task when it is *received* (not after it
+completes).  If a worker crashes mid-task:
+
+- The task is **not** re-queued automatically.
+- Any data already written to PostgreSQL (e.g. `imastats` row) remains.
+- The `imaphot` rows for that image may be absent or partial.
+
+To detect incomplete results, check whether an image's `id` has rows in
+`imaphot` — if `imastats` has the row but `imaphot` does not, the photometry
+step did not complete:
+
+```python
+from gpuphot_worker.database_search_utils import search_by_filename
+
+df = search_by_filename('my_image.fits')
+if df.empty:
+    print("No photometry results — task may have crashed")
 ```
 
 ## 5. Docker Compose Environment
