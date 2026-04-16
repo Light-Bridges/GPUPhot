@@ -11623,40 +11623,176 @@ hp3,NVIDIA L40S,"3.8.10 (default, Mar 18 2025, 20:04:55)
 [GCC 9.4.0]",py38_baseline,profiler_py38_v2,QHY411-3_Lum_131k,151.2,158.45238,137628.0,2026-04-13T19:18:32.203Z,14200.0,10650.0,Lum,C2025N1,46068.0,430.0,42.0
 lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.8.10 (default, Mar 18 2025, 20:04:55) 
 [GCC 9.4.0]",py38_baseline,profiler_py38_v2,QHY411-3_Lum_131k,151.2,184.05893,131397.0,2026-04-13T19:21:05.297Z,14200.0,10650.0,Lum,C2025N1,81920.0,424.0,33.0
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,249.05564260482788,412.0,2026-04-10T12:25:15.469Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,41.59421491622925,412.0,2026-04-10T12:26:15.219Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,29.271769762039185,412.0,2026-04-10T12:26:54.926Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.851215600967407,412.0,2026-04-10T12:27:31.848Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.837537050247192,412.0,2026-04-10T12:28:10.668Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.82684850692749,412.0,2026-04-10T12:28:47.165Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.88100814819336,412.0,2026-04-10T12:29:23.815Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.93778109550476,412.0,2026-04-10T12:30:00.138Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.8665132522583,412.0,2026-04-10T12:30:36.833Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.957343339920044,412.0,2026-04-10T12:31:13.750Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.936002254486084,412.0,2026-04-10T12:31:51.789Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.911337852478027,412.0,2026-04-10T12:32:29.993Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,90.3998246192932,112.0,2026-04-10T13:01:22.053Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,79.34322667121887,112.0,2026-04-10T13:03:07.961Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,64.24016308784485,112.0,2026-04-10T13:04:36.288Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,79.59384179115295,112.0,2026-04-10T13:06:21.034Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,77.53535747528076,112.0,2026-04-10T13:08:06.374Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,73.2886610031128,112.0,2026-04-10T13:09:43.865Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,70.71696615219116,112.0,2026-04-10T13:11:19.579Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,69.00948786735535,112.0,2026-04-10T13:12:53.610Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,69.25247979164124,112.0,2026-04-10T13:14:25.103Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,72.40188598632812,112.0,2026-04-10T13:16:02.082Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,72.81480741500854,112.0,2026-04-10T13:17:38.509Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,70.68632411956787,112.0,2026-04-10T13:19:12.037Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,190.90259218215945,296.0,2026-04-10T14:18:49.447Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,125.30630612373352,296.0,2026-04-10T14:21:14.448Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,119.10456466674805,296.0,2026-04-10T14:23:33.733Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,77.08723545074463,296.0,2026-04-10T14:25:07.418Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,45.34754514694214,296.0,2026-04-10T14:26:11.436Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,36.21913146972656,296.0,2026-04-10T14:26:59.455Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,35.97201752662659,296.0,2026-04-10T14:27:43.411Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,35.87851977348328,296.0,2026-04-10T14:28:27.046Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,35.90439033508301,296.0,2026-04-10T14:29:11.084Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,35.91783094406128,296.0,2026-04-10T14:29:54.854Z,2048.0,2048.0,Lum,C2025A6,,,
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,6.2362366,318,2026-04-16T11:53:55.110Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,6.1982975,318,2026-04-16T11:53:43.107Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,6.2384067,412,2026-04-16T11:38:32.576Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,41.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,21.319805,10532,2026-04-16T11:38:42.562Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,5.735745,412,2026-04-16T11:38:55.524Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,41.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,5.5608006,412,2026-04-16T11:38:43.990Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,41.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,19.419277,10532,2026-04-16T11:38:14.705Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,5.0534415,412,2026-04-16T11:38:20.518Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,40.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,4.5292845,412,2026-04-16T11:38:09.730Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,40.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,5.274988,412,2026-04-16T11:39:06.836Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,42.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,5.995879,412,2026-04-16T11:39:29.717Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,42.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,5.520815,412,2026-04-16T11:39:18.178Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,41.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,20.474926,10532,2026-04-16T11:39:09.611Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,4.8710318,412,2026-04-16T11:39:52.040Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,42.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,20.160906,10532,2026-04-16T11:39:39.118Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,5.842816,412,2026-04-16T11:39:41.256Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,42.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,7.757289,218,2026-04-16T11:48:08.106Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,45.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,8.512176,218,2026-04-16T11:48:22.221Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,45.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,7.958213,218,2026-04-16T11:47:54.435Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,45.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,8.35118,218,2026-04-16T11:48:36.821Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,45.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,7.6318073,218,2026-04-16T11:48:50.214Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,45.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,7.6572,218,2026-04-16T11:49:03.958Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,45.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,5.0382915,296,2026-04-16T11:43:12.531Z,2048,2048,Lum,C2025A6,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,4.9085946,296,2026-04-16T11:43:23.245Z,2048,2048,Lum,C2025A6,81559.0,458.0,42.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,19.432634,10532,2026-04-16T11:43:14.723Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,7.92105,218,2026-04-16T11:49:31.418Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,7.867301,218,2026-04-16T11:49:45.145Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,7.799095,218,2026-04-16T11:49:17.954Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,8.034296,218,2026-04-16T11:49:58.956Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,7.6004047,218,2026-04-16T11:50:12.677Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,7.742468,218,2026-04-16T11:50:26.312Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,8.093188,318,2026-04-16T11:50:40.230Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,6.172255,318,2026-04-16T11:50:52.157Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,4.7433434,412,2026-04-16T11:37:59.340Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,40.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,4.8593683,112,2026-04-16T11:45:50.580Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,4.494952,112,2026-04-16T11:46:00.712Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,18.23525,10532,2026-04-16T11:45:50.398Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,5.0271063,112,2026-04-16T11:45:39.948Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,17.182846,10532,2026-04-16T11:46:14.233Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,4.256777,112,2026-04-16T11:46:20.778Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,4.31896,112,2026-04-16T11:46:10.840Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,4.406558,112,2026-04-16T11:46:30.883Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,6.113543,318,2026-04-16T11:51:17.167Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,6.619796,318,2026-04-16T11:51:29.713Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,7.1350393,318,2026-04-16T11:51:05.049Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,6.4229565,318,2026-04-16T11:51:41.908Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,6.4878597,318,2026-04-16T11:51:54.297Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,6.461822,318,2026-04-16T11:52:18.867Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,6.2743692,318,2026-04-16T11:52:42.899Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,6.0253334,318,2026-04-16T11:52:30.851Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,7.800632,218,2026-04-16T11:47:13.218Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,45.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,18.198357,10532,2026-04-16T11:46:38.229Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,7.733292,218,2026-04-16T11:47:26.725Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,45.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,7.806037,218,2026-04-16T11:46:59.484Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,44.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,7.714051,218,2026-04-16T11:47:40.398Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,45.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSg,15.3,8.860021,218,2026-04-16T11:46:45.804Z,4787,3193,SDSSg,WASP-43-b,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,5.9875183,318,2026-04-16T11:52:06.155Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,12.63891,412,2026-04-16T11:37:14.547Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,36.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,21.027874,10532,2026-04-16T11:37:23.231Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,4.6625323,412,2026-04-16T11:37:26.127Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,38.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,18.66791,10532,2026-04-16T11:37:48.408Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,4.675282,412,2026-04-16T11:37:37.196Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,39.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,4.6344614,412,2026-04-16T11:37:48.467Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,39.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,5.991976,318,2026-04-16T11:53:06.447Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,6.072741,318,2026-04-16T11:52:54.698Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,6.267686,318,2026-04-16T11:53:18.449Z,4787,3193,Ha,NGC2903,81559.0,458.0,46.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_Ha,15.3,6.25389,318,2026-04-16T11:53:30.927Z,4787,3193,Ha,NGC2903,81559.0,458.0,45.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,5.3176136,296,2026-04-16T11:43:34.706Z,2048,2048,Lum,C2025A6,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,4.5534506,112,2026-04-16T11:43:45.470Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,19.901632,10532,2026-04-16T11:43:41.604Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,4.54564,112,2026-04-16T11:43:55.724Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,5.4934196,112,2026-04-16T11:44:27.263Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,20.887196,10532,2026-04-16T11:44:34.821Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,4.1830034,112,2026-04-16T11:44:47.028Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,4.6438446,112,2026-04-16T11:44:37.464Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,4.287077,112,2026-04-16T11:44:05.752Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,4.590721,112,2026-04-16T11:44:16.112Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,18.773602,10532,2026-04-16T11:44:07.143Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,4.3545175,112,2026-04-16T11:44:56.935Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,5.1373215,112,2026-04-16T11:45:07.738Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,18.732327,10532,2026-04-16T11:45:00.694Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,5.0534286,112,2026-04-16T11:45:19.022Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,18.824915,10532,2026-04-16T11:45:25.994Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-3_Lum,6.8,4.303602,112,2026-04-16T11:45:29.024Z,3191,2129,Lum,C2025R2,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,9.345394,296,2026-04-16T11:40:31.362Z,2048,2048,Lum,C2025A6,81559.0,458.0,42.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,20.060686,10532,2026-04-16T11:40:33.073Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,6.5167985,296,2026-04-16T11:40:43.634Z,2048,2048,Lum,C2025A6,81559.0,458.0,42.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,20.239244,10532,2026-04-16T11:40:06.285Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,6.0556,412,2026-04-16T11:40:15.548Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,42.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_SDSSg,4.2,5.6189203,412,2026-04-16T11:40:03.487Z,2048,2048,SDSSg,QSO0957+561,81559.0,458.0,42.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,4.8560243,296,2026-04-16T11:41:06.549Z,2048,2048,Lum,C2025A6,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,6.0093756,296,2026-04-16T11:40:55.898Z,2048,2048,Lum,C2025A6,81559.0,458.0,43.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,19.791456,10532,2026-04-16T11:41:00.233Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,5.4342713,296,2026-04-16T11:41:17.875Z,2048,2048,Lum,C2025A6,81559.0,458.0,43.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,19.444832,10532,2026-04-16T11:41:25.921Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,6.1228333,296,2026-04-16T11:41:29.766Z,2048,2048,Lum,C2025A6,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,5.6964684,296,2026-04-16T11:41:41.225Z,2048,2048,Lum,C2025A6,81559.0,458.0,43.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,21.989311,10532,2026-04-16T11:41:54.606Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,5.164382,296,2026-04-16T11:41:52.190Z,2048,2048,Lum,C2025A6,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,6.0997744,296,2026-04-16T11:42:04.201Z,2048,2048,Lum,C2025A6,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,5.9512186,296,2026-04-16T11:42:39.368Z,2048,2048,Lum,C2025A6,81559.0,458.0,42.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,19.956377,10532,2026-04-16T11:42:22.668Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,5.2420287,296,2026-04-16T11:42:26.187Z,2048,2048,Lum,C2025A6,81559.0,458.0,42.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,5.009838,296,2026-04-16T11:42:15.007Z,2048,2048,Lum,C2025A6,81559.0,458.0,43.0
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,QHY600-4_SDSSi_10k,15.3,19.383717,10532,2026-04-16T11:42:48.776Z,4787,3193,SDSSi,MAXIJ1820+070,81920.0,6406.0,33.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,5.0059214,296,2026-04-16T11:42:50.189Z,2048,2048,Lum,C2025A6,81559.0,458.0,43.0
+azken,NVIDIA H100 PCIe,"3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",py312_cuml_adaptive,profiler_cuml_adaptive_v2,iKon936_Lum,4.2,5.145497,296,2026-04-16T11:43:01.066Z,2048,2048,Lum,C2025A6,81559.0,458.0,43.0
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,249.05564260482788,412,2026-04-10T12:25:15.469Z,2048,2048,SDSSg,QSO0957+561,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,41.59421491622925,412,2026-04-10T12:26:15.219Z,2048,2048,SDSSg,QSO0957+561,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,29.271769762039185,412,2026-04-10T12:26:54.926Z,2048,2048,SDSSg,QSO0957+561,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.851215600967407,412,2026-04-10T12:27:31.848Z,2048,2048,SDSSg,QSO0957+561,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.837537050247192,412,2026-04-10T12:28:10.668Z,2048,2048,SDSSg,QSO0957+561,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.82684850692749,412,2026-04-10T12:28:47.165Z,2048,2048,SDSSg,QSO0957+561,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.88100814819336,412,2026-04-10T12:29:23.815Z,2048,2048,SDSSg,QSO0957+561,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.93778109550476,412,2026-04-10T12:30:00.138Z,2048,2048,SDSSg,QSO0957+561,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.8665132522583,412,2026-04-10T12:30:36.833Z,2048,2048,SDSSg,QSO0957+561,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.957343339920044,412,2026-04-10T12:31:13.750Z,2048,2048,SDSSg,QSO0957+561,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.936002254486084,412,2026-04-10T12:31:51.789Z,2048,2048,SDSSg,QSO0957+561,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_SDSSg,4.2,28.911337852478027,412,2026-04-10T12:32:29.993Z,2048,2048,SDSSg,QSO0957+561,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,90.39982461929321,112,2026-04-10T13:01:22.053Z,3191,2129,Lum,C2025R2,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,79.34322667121887,112,2026-04-10T13:03:07.961Z,3191,2129,Lum,C2025R2,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,64.24016308784485,112,2026-04-10T13:04:36.288Z,3191,2129,Lum,C2025R2,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,79.59384179115295,112,2026-04-10T13:06:21.034Z,3191,2129,Lum,C2025R2,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,77.53535747528076,112,2026-04-10T13:08:06.374Z,3191,2129,Lum,C2025R2,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,73.2886610031128,112,2026-04-10T13:09:43.865Z,3191,2129,Lum,C2025R2,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,70.71696615219116,112,2026-04-10T13:11:19.579Z,3191,2129,Lum,C2025R2,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,69.00948786735535,112,2026-04-10T13:12:53.610Z,3191,2129,Lum,C2025R2,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,69.25247979164124,112,2026-04-10T13:14:25.103Z,3191,2129,Lum,C2025R2,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,72.40188598632812,112,2026-04-10T13:16:02.082Z,3191,2129,Lum,C2025R2,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,72.81480741500854,112,2026-04-10T13:17:38.509Z,3191,2129,Lum,C2025R2,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,QHY600-3_Lum,6.8,70.68632411956787,112,2026-04-10T13:19:12.037Z,3191,2129,Lum,C2025R2,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,190.90259218215942,296,2026-04-10T14:18:49.447Z,2048,2048,Lum,C2025A6,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,125.30630612373352,296,2026-04-10T14:21:14.448Z,2048,2048,Lum,C2025A6,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,119.10456466674805,296,2026-04-10T14:23:33.733Z,2048,2048,Lum,C2025A6,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,77.08723545074463,296,2026-04-10T14:25:07.418Z,2048,2048,Lum,C2025A6,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,45.34754514694214,296,2026-04-10T14:26:11.436Z,2048,2048,Lum,C2025A6,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,36.21913146972656,296,2026-04-10T14:26:59.455Z,2048,2048,Lum,C2025A6,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,35.97201752662659,296,2026-04-10T14:27:43.411Z,2048,2048,Lum,C2025A6,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,35.878519773483276,296,2026-04-10T14:28:27.046Z,2048,2048,Lum,C2025A6,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,35.90439033508301,296,2026-04-10T14:29:11.084Z,2048,2048,Lum,C2025A6,,,
+jetson_orin,Orin NX 8GB (nvgpu),3.8,py38_baseline,nvtx,iKon936_Lum,4.2,35.91783094406128,296,2026-04-10T14:29:54.854Z,2048,2048,Lum,C2025A6,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,158.818,412,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,149.410,412,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,150.077,412,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,149.032,412,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,149.463,412,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,149.296,412,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,149.191,412,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,156.741,412,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,151.618,412,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,149.745,412,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,154.646,296,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,149.113,296,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,150.013,296,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,150.318,296,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,149.878,296,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,149.623,296,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,149.668,296,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,150.353,296,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,150.308,296,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,149.887,296,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,160.853,112,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,157.686,112,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,153.307,112,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,154.180,112,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,153.983,112,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,153.933,112,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,153.749,112,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,153.762,112,,,,,,,,
+jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,153.379,112,,,,,,,,
 jetson_local,Orin Super 8GB (nvgpu),3.10,py310_baseline,jetson_jetson_local,iKon936_SDSSg,4.2,,,,,,,,,,
 jetson_local,Orin Super 8GB (nvgpu),3.10,py310_baseline,jetson_jetson_local,iKon936_SDSSg,4.2,,,,,,,,,,
 jetson_local,Orin Super 8GB (nvgpu),3.10,py310_baseline,jetson_jetson_local,iKon936_SDSSg,4.2,,,,,,,,,,
@@ -11727,67 +11863,3 @@ jetson_local,Orin Super 8GB (nvgpu),3.10,py310_baseline,jetson_jetson_local,QHY4
 jetson_local,Orin Super 8GB (nvgpu),3.10,py310_baseline,jetson_jetson_local,QHY411-1_SDSSi_bin2,37.8,,,,,,,,,,
 jetson_local,Orin Super 8GB (nvgpu),3.10,py310_baseline,jetson_jetson_local,QHY411-1_SDSSi_bin2,37.8,,,,,,,,,,
 jetson_local,Orin Super 8GB (nvgpu),3.10,py310_baseline,jetson_jetson_local,QHY411-1_SDSSi_bin2,37.8,,,,,,,,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.083724975585938,412.0,2026-04-10T19:52:17.069Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.08262610435486,412.0,2026-04-10T19:51:50.736Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.301787614822388,412.0,2026-04-10T19:52:43.567Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.197201013565063,412.0,2026-04-10T19:53:09.855Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.43037414550781,296.0,2026-04-10T19:58:33.156Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.438421487808228,296.0,2026-04-10T20:04:52.527Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,30.23465609550476,112.0,2026-04-10T20:06:53.048Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,30.216235399246216,112.0,2026-04-10T20:07:29.085Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,36.8486487865448,296.0,2026-04-10T19:56:58.347Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.403398513793945,296.0,2026-04-10T19:57:29.956Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.360759735107425,296.0,2026-04-10T20:01:42.839Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.42767906188965,296.0,2026-04-10T20:01:11.279Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.341006755828857,296.0,2026-04-10T20:02:46.038Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,30.15609288215637,112.0,2026-04-10T20:08:05.207Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,31.175654649734497,112.0,2026-04-10T20:14:46.182Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,30.17417907714844,112.0,2026-04-10T20:14:09.741Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.59964394569397,412.0,2026-04-10T19:54:56.005Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.307023763656616,412.0,2026-04-10T19:50:32.043Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.653526067733765,412.0,2026-04-10T19:55:22.739Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.345659971237183,296.0,2026-04-10T19:58:01.517Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.6982421875,412.0,2026-04-10T19:55:49.579Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.65801501274109,412.0,2026-04-10T19:56:16.380Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,28.269933938980103,412.0,2026-04-10T19:49:39.051Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.397257566452023,412.0,2026-04-10T19:50:05.663Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.54761004447937,412.0,2026-04-10T19:54:02.849Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.383607625961304,412.0,2026-04-10T19:54:29.303Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.10321354866028,412.0,2026-04-10T19:50:58.301Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.090986967086792,412.0,2026-04-10T19:51:24.477Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.275673627853397,412.0,2026-04-10T19:53:36.226Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.494354009628296,296.0,2026-04-10T20:00:08.015Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.343953132629395,296.0,2026-04-10T19:59:36.357Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.437501430511475,296.0,2026-04-10T19:59:04.793Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.442928075790405,296.0,2026-04-10T20:00:39.645Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,40.128334522247314,412.0,2026-04-10T19:29:38.021Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.453351497650143,296.0,2026-04-10T20:02:14.515Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,31.90882134437561,112.0,2026-04-10T20:06:16.679Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,32.393535137176514,112.0,2026-04-10T20:11:42.149Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.502330780029297,296.0,2026-04-10T20:03:17.718Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,30.16336703300476,112.0,2026-04-10T20:08:40.956Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,30.430805206298828,112.0,2026-04-10T20:10:28.576Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,30.27255868911743,112.0,2026-04-10T20:11:04.362Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.331634759902958,296.0,2026-04-10T20:03:49.263Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,37.58816742897034,112.0,2026-04-10T20:05:35.330Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,30.872740745544437,112.0,2026-04-10T20:12:19.103Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,31.675474643707275,112.0,2026-04-10T20:12:57.100Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,30.09476900100708,112.0,2026-04-10T20:09:17.062Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,30.231465578079224,112.0,2026-04-10T20:09:52.755Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,QHY600-3_Lum,6.8,30.145527362823486,112.0,2026-04-10T20:13:34.324Z,3191.0,2129.0,Lum,C2025R2,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_Lum,4.2,26.438879251480103,296.0,2026-04-10T20:04:20.886Z,2048.0,2048.0,Lum,C2025A6,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,20.358497619628903,412.0,2026-04-10T19:30:54.854Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,20.41629433631897,412.0,2026-04-10T19:31:19.866Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,20.308786392211918,412.0,2026-04-10T19:34:14.679Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,20.333587169647217,412.0,2026-04-10T19:34:39.580Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,20.40887451171875,412.0,2026-04-10T19:35:04.778Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,20.4128839969635,412.0,2026-04-10T19:35:29.745Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,21.35489296913147,412.0,2026-04-10T19:30:04.826Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,20.32401180267334,412.0,2026-04-10T19:31:44.829Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,20.476333141326904,412.0,2026-04-10T19:30:29.868Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,20.33882451057434,412.0,2026-04-10T19:32:09.727Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,20.346641063690186,412.0,2026-04-10T19:35:54.651Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,20.42752480506897,412.0,2026-04-10T19:32:34.783Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,20.32290267944336,412.0,2026-04-10T19:32:59.694Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,20.368545055389404,412.0,2026-04-10T19:33:24.680Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
-jetson_local,Orin Super 8GB (nvgpu),3.12,py312_cuml_adaptive,jetson_jetson_local,iKon936_SDSSg,4.2,20.46353435516357,412.0,2026-04-10T19:33:49.753Z,2048.0,2048.0,SDSSg,QSO0957+561,,,
