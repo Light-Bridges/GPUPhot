@@ -128,11 +128,26 @@ docker compose up -d --force-recreate worker
 
 ### Verify in Python
 
+Check the active configuration by reading the environment variables that
+`gpuphot.utils.catalog` reads at import time:
+
 ```python
-import gpuphot
-print(gpuphot.crossmatch.backend_for(n_sources=5000))  # should print 'cuml'
-print(gpuphot.crossmatch.backend_for(n_sources=500))   # should print 'ckdtree'
+import os
+
+mode = os.environ.get('GPUPHOT_USE_CUML_CROSSMATCH', '0')
+min_s = os.environ.get('GPUPHOT_CUML_MIN_SOURCES', '0')
+max_s = os.environ.get('GPUPHOT_CUML_MAX_SOURCES', '0')
+
+if mode == '1':
+    print("cuML crossmatch: FORCED for all source counts")
+elif int(min_s) > 0 and int(max_s) > int(min_s):
+    print(f"cuML crossmatch: ADAPTIVE — active for {min_s}–{max_s} sources")
+else:
+    print("cuML crossmatch: DISABLED — cKDTree used for all crossmatches")
 ```
+
+GPUPhot also logs the active mode at startup (INFO level), so you can confirm
+it in the application logs without running additional code.
 
 ---
 

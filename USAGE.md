@@ -102,13 +102,13 @@ from gpuphot.image_processor import create_processor
 processor = create_processor('default')
 
 # Using a custom configuration
-processor = create_processor('my_instrument', '/path/to/your/instrument_configs') #INSTRUMENT_CONFIG_BASE_PATH
+processor = create_processor('my_instrument', '/path/to/your/instrument_configs')
 
 # Using the default instrument
 processor = create_processor('default')
 
 ```
-The `config_dir` argument in `create_processor` is optional. By default, it uses the value defined by `INSTRUMENT_CONFIG_BASE_PATH`.
+The `config_dir` argument in `create_processor` is optional. By default, it uses the built-in `instrument_configs/` directory inside the package.
 
 ## 2. Astrometry Setup
 
