@@ -25,6 +25,7 @@ This guide explains how to use GPUPhot for astronomical image processing, coveri
     *   [6.2. Custom processing parameters](#62-custom-processing-parameters)
     *   [6.3. Using a Custom Catalog Source](#63-using-a-custom-catalog-source)
     *   [6.4. GPU Crossmatch Calibration (cuML)](#64-gpu-crossmatch-calibration-cuml)
+    *   [6.5. Pipeline Logs — Understanding What GPUPhot Reports](#65-pipeline-logs--understanding-what-gpuphot-reports)
 *   [7. Error Handling](#7-error-handling)
 
 ## 1. Instrument Configuration
@@ -541,6 +542,81 @@ GPUPHOT_CUML_MAX_SOURCES=<MAX>       # from the "robust" recommendation
 
 For the full procedure, convergence options, and a reference table of known GPUs, see
 **[CUML_CALIBRATION.md](CUML_CALIBRATION.md)**.
+
+### 6.5. Pipeline Logs — Understanding What GPUPhot Reports
+
+As GPUPhot processes each image it prints a structured log to the console.
+Knowing what to look for helps you quickly assess whether a night's run went
+well or which images need attention.
+
+#### What a normal run looks like
+
+```
+INFO  gpuphot — Processing: M42_SDSSr_300s.fits
+INFO  gpuphot — Astrometry: solution found (local solver, 4.2 s)
+INFO  gpuphot — Sources detected: 412
+INFO  gpuphot — PSF FWHM: 2.34 arcsec
+INFO  gpuphot — Limiting magnitude: 19.8 (5σ)
+INFO  gpuphot — Photometry complete — results written to database
+```
+
+#### Messages that signal a problem
+
+| Log message | What it means | What to do |
+|---|---|---|
+| `Not enough isolated stars` | Fewer than 5 usable stars found — image may be overexposed, out of focus, or the field is very sparse | Check the raw image; adjust detection thresholds in `processing_params` |
+| `Astrometry timed out` | The plate-solving step exceeded its time limit | Increase `GPUPHOT_ASTROMETRY_TIMEOUT` in `.env`; verify index files are present |
+| `No plate solution found` | Solver ran but found no match | Check `RA`/`DEC` in the FITS header; ensure the correct index series is installed |
+| `PSF fit failed` | Stars are trailed, saturated, or the image is too noisy | Inspect the raw image for tracking errors or clouds |
+| `cuML crossmatch DISABLED` | GPU cross-matching is off (normal for most setups) | No action needed unless you have calibrated cuML thresholds |
+
+#### Getting more detail
+
+By default GPUPhot prints only `INFO`-level messages.  To see every processing
+step (useful for diagnosing a single problematic image):
+
+```bash
+# In your .env file or shell before launching:
+GPUPHOT_LOG_LEVEL=DEBUG
+```
+
+To suppress everything except errors (useful for production overnight runs):
+
+```bash
+GPUPHOT_LOG_LEVEL=ERROR
+```
+
+#### Saving logs to a file
+
+When running with Docker Compose, redirect worker output to a file:
+
+```bash
+docker compose logs -f worker > /path/to/run_2025-03-15.log 2>&1
+```
+
+Or add a log rotation volume to `docker-compose.yml` to keep logs persistent
+across container restarts.
+
+#### Forwarding logs to an observatory monitoring system
+
+If your observatory uses a centralised log aggregation system (e.g. Logstash /
+Elasticsearch, Grafana Loki, or a custom dashboard), GPUPhot can stream
+structured log events directly to it:
+
+```bash
+# In your .env file:
+LOGSTASH_LOGGING=true
+LOGSTASH_HOST=your-logstash-server
+LOGSTASH_PORT=5000
+GPUPHOT_ENVIRONMENT=production   # label that appears in every log entry
+```
+
+Each log entry sent to Logstash includes: timestamp, severity, message, GPU
+info (model, VRAM, driver), Python version, OS, and the Git commit hash of
+the running code — giving full traceability for a science archive.
+
+If `LOGSTASH_LOGGING` is not set (the default), this feature is completely
+inactive and has no performance impact.
 
 ---
 
