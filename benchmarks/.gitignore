@@ -57,6 +57,9 @@ results_collected/nvtx_stage_breakdown_rtx3050ti.csv
 results_collected/nvtx_stage_breakdown_rtx3090.csv
 results_collected/cuml_ablation_local_*.csv
 
+# Internal infrastructure scripts (private server paths, not useful externally)
+fetch_benchmark_images.sh
+
 # Intermediate ES data files
 es_times_*.csv
 benchmark_clean_*.txt
