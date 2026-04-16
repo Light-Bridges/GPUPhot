@@ -176,7 +176,30 @@ On NVIDIA Jetson platforms, use `cupy-cuda11x` (JetPack 5.x) or `cupy-cuda12x` (
 ## Troubleshooting
 
 *   **CuPy import fails:** Verify your NVIDIA driver and CUDA toolkit versions match the CuPy package. Run `nvidia-smi` to check the driver version.
-*   **CUDA out of memory:** GPUPhot manages GPU memory with CuPy pools. For large images (>100 MP), 16 GB of VRAM or more is recommended.
+*   **CUDA out of memory:** GPUPhot manages GPU memory with CuPy memory pools.
+    Peak VRAM per image (full pipeline, 4.2 MP reference image, ~300–400 sources):
+    ~2.0 GB (py3.8 / CuPy 12) and ~1.7 GB (py3.12 / CuPy 14).
+    Larger images scale roughly linearly with pixel count.
+
+    Theoretical concurrent images per GPU at 95 % VRAM utilisation:
+
+    | GPU              | VRAM  | py3.8 | py3.12 |
+    |------------------|-------|------:|-------:|
+    | H100 PCIe        | 80 GB |    38 |     44 |
+    | A100-SXM4        | 80 GB |    38 |     44 |
+    | L40S             | 48 GB |    22 |     26 |
+    | RTX 3090         | 24 GB |    11 |     13 |
+    | RTX 3060         | 12 GB |     5 |      6 |
+    | RTX 3050 Ti      |  4 GB |     1 |      2 |
+
+    Images up to 15 MP have been tested successfully on all GPUs listed above
+    except the RTX 3050 Ti (4 GB), which runs out of memory beyond ~6.8 MP.
+
+    To release the CuPy memory pool between batches without restarting the process:
+    ```python
+    from gpuphot.utils.gpu import reset_cupy_allocators
+    reset_cupy_allocators()
+    ```
 *   **ImportError for gpuphot:** Make sure your virtual environment is activated and that `pip install gpuphot` completed without errors.
 *   **Docker errors:** Verify Docker and the NVIDIA Container Toolkit are installed correctly.
 

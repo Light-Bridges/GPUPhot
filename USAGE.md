@@ -22,6 +22,8 @@ This guide explains how to use GPUPhot for astronomical image processing, coveri
      *  [6.1. Image Reduction](#61-image-reduction)
      *  [6.2 Custom processing parameters](#62-custom-processing-parameters)
      *  [6.3 Using a Custom Catalog Source](#63-using-a-custom-catalog-source)
+     *  [6.4 GPU Crossmatch Calibration (cuML)](#64-gpu-crossmatch-calibration-cuml)
+*   [7. Error Handling](#7-error-handling)
 
 ## 1. Instrument Configuration
 
@@ -90,6 +92,27 @@ Configuration files have three main sections:
 4.  **Set default `camera_specs` (optional):** If you know the values of certain camera parameters and they are *not* reliably present in your FITS headers, you can set them here.
 5.  **Adjust `processing_params` (optional):** Experiment with these parameters to optimize the processing for your specific images.
 6. **Save** the changes.
+
+#### Overriding incorrect FITS headers with `forced_values`
+
+Some instruments write incorrect values to FITS headers (e.g. a gain reported
+as `1.0` when the actual gain is `0.33 e⁻/ADU`).  `camera_specs` provides a
+*fallback* used only when a keyword is absent, but it cannot override a value
+that is already present in the header.  Use `forced_values` instead — it
+takes priority over both the FITS header and `camera_specs`:
+
+```json
+{
+  "forced_values": {
+    "gain": 0.33,
+    "read_noise": 3.5
+  }
+}
+```
+
+Any key listed in `forced_values` will always be used, regardless of what the
+FITS header says.  Leave the block empty (`{}`) for instruments whose headers
+are reliable.
 
 ### 1.3. Loading a Configuration
 
@@ -367,3 +390,60 @@ GPUPHOT_CUML_MAX_SOURCES=<MAX>       # from the "robust" recommendation
 
 For the full procedure, convergence options, and a reference table of known GPUs, see
 **[CUML_CALIBRATION.md](CUML_CALIBRATION.md)**.
+
+---
+
+## 7. Error Handling
+
+All GPUPhot-specific exceptions inherit from `GPUPhotError`, so you can catch
+the whole hierarchy with a single handler or handle individual cases precisely.
+
+```python
+from gpuphot.exceptions import (
+    GPUPhotError,
+    InsufficientStarsError,
+    MoffatFitError,
+    ImageQualityError,
+    UnableToAstrometrizeError,
+    AstrometrizationTimeoutError,
+    DataValidationError,
+)
+
+try:
+    result = processor.process_image('image.fits')
+except InsufficientStarsError as e:
+    # Fewer than 5 isolated stars found — image too sparse for PSF fitting
+    print(f"Not enough stars: {e.num_stars} detected")
+except MoffatFitError:
+    # PSF model could not be fitted (e.g. saturated or trailed stars)
+    print("PSF fit failed — check image quality")
+except ImageQualityError:
+    # Image too crowded or too noisy for reliable photometry
+    print("Image quality insufficient")
+except AstrometrizationTimeoutError:
+    # astrometry.net solver exceeded its time limit
+    print("Astrometry timed out — check index files and solver settings")
+except UnableToAstrometrizeError:
+    # Solver ran to completion but could not find a solution
+    print("Astrometry failed — field may be outside index coverage")
+except GPUPhotError as e:
+    # Catch-all for any other GPUPhot error
+    print(f"Pipeline error: {e}")
+```
+
+### Exception reference
+
+| Exception | Raised when |
+|---|---|
+| `GPUPhotError` | Base class — catch-all for all GPUPhot errors |
+| `InsufficientStarsError` | Fewer than 5 isolated stars detected in the image |
+| `MoffatFitError` | Moffat PSF model cannot be fitted to the reference stars |
+| `ImageQualityError` | Image is too crowded or too noisy for reliable photometry |
+| `UnableToAstrometrizeError` | astrometry.net solver failed to find a plate solution |
+| `AstrometrizationTimeoutError` | astrometry.net solver exceeded its time limit |
+| `DataValidationError` | Input data is missing required fields or is malformed |
+| `InvalidGroupSizeError` | Star grouping parameters produced an invalid configuration |
+
+CUDA runtime errors (GPU memory exhaustion, illegal address) are handled
+internally by the `capture_cuda_exception` decorator and will be retried once
+before being re-raised as standard `CUDARuntimeError` exceptions from CuPy.
