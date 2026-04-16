@@ -188,15 +188,9 @@ dev/
 # Generated figures
 figures_profiler/
 
-# Internal profiling scripts (runners, data extractors) — keep locally only
-# run_profiling.sh and profile_image_processing.py ARE tracked (needed by Dockerfile)
-profiling_scripts/benchmarks/
-profiling_scripts/extract_benchmark_csv.py
-profiling_scripts/profile_process_image.py
-profiling_scripts/run_all_benchmarks.sh
-profiling_scripts/run_benchmark_autonomous.sh
-profiling_scripts/run_benchmark_profiling.sh
-profiling_scripts/run_benchmark_suite.py
+# Internal profiling scripts live in dev/ — run_profiling.sh and
+# profile_image_processing.py are tracked (needed by Dockerfile profiler stage)
+profiling_scripts/dev/
 
 # Internal/generated files
 .env-copy

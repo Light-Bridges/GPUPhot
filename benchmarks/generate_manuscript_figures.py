@@ -58,15 +58,14 @@ MARKERS = ['o', 's', '^', 'D', 'v', 'P', 'X', '*']
 # ── Paths ─────────────────────────────────────────────────────────────────────
 BASE = os.path.dirname(os.path.abspath(__file__))
 PROJECT = os.path.dirname(BASE)
-DATA_DIR = os.path.join(BASE, 'results_collected')
+DATA_DIR = os.path.join(BASE, 'data')
 OUT_DIR = os.path.join(PROJECT, 'figures_profiler')
 MANUSCRIPT_FIGURES_DIR = os.path.join(PROJECT, 'GPUPHOT_manuscript', 'figures')
 os.makedirs(OUT_DIR, exist_ok=True)
 
-BENCHMARK_CSV = os.path.join(DATA_DIR, 'benchmark_all_cuml_v2.csv')
-MEMORY_CSV    = os.path.join(DATA_DIR, 'profiler_nsys_memory_summary_20260411.csv')
-# Update this to use the new cleaned aggregated file
-CUML_CSV      = os.path.join(DATA_DIR, 'cuml_crossover_synthetic_all_gpus_cleaned.csv')
+BENCHMARK_CSV = os.path.join(DATA_DIR, 'benchmark_latency.csv')
+MEMORY_CSV    = os.path.join(DATA_DIR, 'profiler_memory_summary.csv')
+CUML_CSV      = os.path.join(DATA_DIR, 'cuml_crossover_synthetic.csv')
 
 # ── GPU label normalisation ───────────────────────────────────────────────────
 GPU_LABEL_MAP = {

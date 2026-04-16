@@ -21,12 +21,12 @@ Tables generated (tabular body: \\begin{tabular}...\\end{tabular}):
   body_stage_breakdown.tex — tab:stage_breakdown full per-stage timing (4.2 MP & 151.2 MP)
 
 Data sources (relative paths from this file):
-  results_collected/benchmark_all_cuml_v2.csv          → latency tables, cpu_baseline
-  results_collected/profiler_nsys_memory_20260411.csv  → VRAM tables
-  results_collected/cuml_ablation_a100_20260329.csv    → body_cuml_ablation
-  results_collected/nvtx_detection_vs_sep_a100.csv     → body_nvtx_detection
-  results_collected/nvtx_stage_breakdown_a100.csv      → body_stage_breakdown
-  cpu_baseline_results.csv                             → body_cpu_baseline (sep/Photutils)
+  data/benchmark_latency.csv        → latency tables, cpu_baseline
+  data/profiler_memory_raw.csv      → VRAM tables
+  data/cuml_ablation.csv            → body_cuml_ablation
+  data/nvtx_detection_stages.csv    → body_nvtx_detection
+  data/nvtx_stage_breakdown.csv     → body_stage_breakdown
+  data/cpu_baseline.csv             → body_cpu_baseline (sep/Photutils)
 
 Usage:
   cd benchmarks/
@@ -44,17 +44,17 @@ import pandas as pd
 # ── Paths ──────────────────────────────────────────────────────────────────────
 BASE     = os.path.dirname(os.path.abspath(__file__))
 PROJECT  = os.path.dirname(BASE)
-DATA_DIR = os.path.join(BASE, 'results_collected')
+DATA_DIR = os.path.join(BASE, 'data')
 OUT_DIR  = os.path.join(PROJECT, 'GPUPHOT_manuscript', 'tables_generated')
 os.makedirs(OUT_DIR, exist_ok=True)
 
 # ── Source CSVs ────────────────────────────────────────────────────────────────
-BENCHMARK_CSV      = os.path.join(DATA_DIR, 'benchmark_all_cuml_v2.csv')
-MEMORY_CSV         = os.path.join(DATA_DIR, 'profiler_nsys_memory_20260411.csv')
-CUML_ABLATION_CSV  = os.path.join(DATA_DIR, 'cuml_ablation_a100_20260329.csv')
-NVTX_DETECTION_CSV = os.path.join(DATA_DIR, 'nvtx_detection_vs_sep_a100.csv')
-NVTX_STAGE_CSV     = os.path.join(DATA_DIR, 'nvtx_stage_breakdown_a100.csv')
-CPU_BASELINE_CSV   = os.path.join(BASE, 'cpu_baseline_results.csv')
+BENCHMARK_CSV      = os.path.join(DATA_DIR, 'benchmark_latency.csv')
+MEMORY_CSV         = os.path.join(DATA_DIR, 'profiler_memory_raw.csv')
+CUML_ABLATION_CSV  = os.path.join(DATA_DIR, 'cuml_ablation.csv')
+NVTX_DETECTION_CSV = os.path.join(DATA_DIR, 'nvtx_detection_stages.csv')
+NVTX_STAGE_CSV     = os.path.join(DATA_DIR, 'nvtx_stage_breakdown.csv')
+CPU_BASELINE_CSV   = os.path.join(DATA_DIR, 'cpu_baseline.csv')
 
 # ── GPU label normalisation ────────────────────────────────────────────────────
 GPU_LABEL_MAP = {
