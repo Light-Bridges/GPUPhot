@@ -188,3 +188,17 @@ dev/
 # Generated figures and internal profiling scripts
 figures_profiler/
 profiling_scripts/
+
+# Internal/generated files
+.env-copy
+GpuFitsCrypt_manuscript/
+figures/
+tables/
+PUBLICATION_SOFTWARE_PROMPT.md
+listar_proyecto.py
+testing.py
+notebooks/images
+notebooks/.notebooks_generated
+gpuphot/utils/smartgpudecoratorclass.py
+help.txt
+.github/
