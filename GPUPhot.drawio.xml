@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net">
   <diagram name="GPUPhot Architecture" id="Qrdhp-7nZn6GJ2WvbMXV">
-    <mxGraphModel dx="2357" dy="1318" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="226" dy="127" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#ffffff" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -24,25 +24,25 @@
         <mxCell id="edge_gpu_cpu" edge="1" parent="docker" source="gpu" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;" target="cpu">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="ann_gpu_affinity" parent="docker" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontColor=#7F7F7F;fontStyle=2;fontSize=10;" value="GPU Affinity:&#xa;${GPU_ID}" vertex="1">
+        <mxCell id="ann_gpu_affinity" parent="docker" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontColor=light-dark(#000000,#D7D7D7);fontStyle=2;fontSize=10;" value="GPU Affinity:&#xa;${GPU_ID}" vertex="1">
           <mxGeometry height="34" width="170" x="-40" y="463" as="geometry" />
         </mxCell>
-        <mxCell id="ann_workers" parent="docker" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontColor=#7F7F7F;fontStyle=2;fontSize=10;" value="N workers&#xa;(1 per GPU)" vertex="1">
+        <mxCell id="ann_workers" parent="docker" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontColor=light-dark(#7F7F7F,#D7D7D7);fontStyle=2;fontSize=10;" value="N workers&#xa;(1 per GPU)" vertex="1">
           <mxGeometry height="30" width="112" x="307" y="3.5" as="geometry" />
         </mxCell>
-        <mxCell id="shadow1" parent="docker" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;dashPattern=1 4;strokeColor=#5599cc;strokeWidth=1;fillColor=white;opacity=60;" value="" vertex="1">
-          <mxGeometry height="27" width="59" x="307" y="6" as="geometry" />
-        </mxCell>
-        <mxCell id="ann_vram" parent="docker" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontColor=#7F7F7F;fontStyle=2;fontSize=10;" value="VRAM Monitor&#xa;75% / 85% thresholds" vertex="1">
+        <mxCell id="ann_vram" parent="docker" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontColor=light-dark(#000000,#D7D7D7);fontStyle=2;fontSize=10;" value="VRAM Monitor&#xa;75% / 85% thresholds" vertex="1">
           <mxGeometry height="40" width="158" x="120" y="460" as="geometry" />
         </mxCell>
-        <mxCell id="ann_oom" parent="docker" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontColor=#7F7F7F;fontStyle=2;fontSize=10;" value="OOM Fallback:&#xa;retry with binned image" vertex="1">
+        <mxCell id="ann_oom" parent="docker" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontColor=light-dark(#000000,#D7D7D7);fontStyle=2;fontSize=10;" value="OOM Fallback:&#xa;retry with binned image" vertex="1">
           <mxGeometry height="40" width="158" x="251" y="460" as="geometry" />
         </mxCell>
-        <mxCell id="ann_crossmatch" parent="docker" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontColor=#7F7F7F;fontStyle=2;fontSize=9;" value="*cuML: GPU-based (adaptive,&#xa;optional; x86-64 only)" vertex="1">
+        <mxCell id="ann_crossmatch" parent="docker" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontColor=light-dark(#000000,#D7D7D7);fontStyle=2;fontSize=9;" value="*cuML: GPU-based (adaptive,&#xa;optional; x86-64 only)" vertex="1">
           <mxGeometry height="34" width="162" x="200" y="411" as="geometry" />
         </mxCell>
-        <mxCell id="ann_cleanup" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontColor=#7F7F7F;fontStyle=2;fontSize=10;" value="GPU context reset between tasks" vertex="1">
+        <mxCell id="shadow1" parent="docker" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;dashPattern=1 4;strokeColor=#5599cc;strokeWidth=1;fillColor=white;opacity=60;fontColor=light-dark(#D7D7D7,#D7D7D7);" value="" vertex="1">
+          <mxGeometry height="27" width="59" x="306" y="6.5" as="geometry" />
+        </mxCell>
+        <mxCell id="ann_cleanup" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];strokeColor=none;fillColor=none;fontColor=light-dark(#000000,#D7D7D7);fontStyle=2;fontSize=10;" value="GPU context reset between tasks" vertex="1">
           <mxGeometry height="22" width="290" y="700" as="geometry" />
         </mxCell>
         <mxCell id="outputs" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Outputs&#xa;Catalog (FITS) | PostgreSQL+Q3C | Alerts" vertex="1">
