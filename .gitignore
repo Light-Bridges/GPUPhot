@@ -184,3 +184,7 @@ callgraph/
 
 # Local development scripts (machine-specific infrastructure)
 dev/
+
+# Generated figures and internal profiling scripts
+figures_profiler/
+profiling_scripts/
