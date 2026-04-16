@@ -206,3 +206,9 @@ help.txt
 # Manuscript repos — cloned locally for context only, not part of GPUPhot
 GPUPHOT_manuscript/
 GpuFitsCrypt_manuscript/
+
+# Internal research/manuscript workflow docs — not for public library users
+MANUSCRIPT_CONTEXT.md
+benchmarks/BENCHMARK_MASTER.md
+benchmarks/README.md
+benchmarks/results_collected/README_benchmark_data.md

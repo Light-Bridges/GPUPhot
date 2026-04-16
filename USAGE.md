@@ -69,7 +69,7 @@ Configuration files have three main sections:
   }
 }
 ```
-[View default.json](https://github.com/Light-Bridges/GPUPHOt/blob/main/gpuphot/instrument_configs/default.json)
+[View default.json](https://github.com/Light-Bridges/GPUPhot/blob/main/gpuphot/instrument_configs/default.json)
 
 
 **Explanation:**

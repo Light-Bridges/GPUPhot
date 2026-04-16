@@ -128,7 +128,7 @@ FLOWER_PORT=5555
 # ===================================================================
 
 # SSH port for connecting to the profiling container.
-PROFILER_SSSH_PORT=2222
+PROFILER_SSH_PORT=2222
 
 # Root password for the SSH session in the profiling container.
 ROOT_PASSWORD=gpuphot_profiler
@@ -227,7 +227,7 @@ The `docker-compose.yml` includes special `profiler` services for detailed perfo
 
 Once running, you can connect to the container via SSH to run profiling tools:
 ```bash
-ssh root@localhost -p ${PROFILER_SSSH_PORT:-2222}
+ssh root@localhost -p ${PROFILER_SSH_PORT:-2222}
 # The password is the one defined by ROOT_PASSWORD in your .env file
 ```
 
@@ -237,7 +237,7 @@ ssh root@localhost -p ${PROFILER_SSSH_PORT:-2222}
     *   *Your work files will be saved in the host directory specified by `NOTEBOOKS_PATH`.*
 *   **Flower (Celery Monitor):** `http://localhost:${FLOWER_PORT:-5555}`
 *   **RabbitMQ Management:** `http://localhost:${RABBITMQ_MANAGEMENT_PORT:-15672}` (user: `gpuphot`, pass: `gpuphot`)
-*   **Profiler SSH:** Connect via SSH to port `${PROFILER_SSSH_PORT:-2222}` (see previous section).
+*   **Profiler SSH:** Connect via SSH to port `${PROFILER_SSH_PORT:-2222}` (see previous section).
 
 ## 5. Initializing the Environment (First-Time Setup)
 
