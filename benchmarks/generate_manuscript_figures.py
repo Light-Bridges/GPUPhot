@@ -11,10 +11,10 @@ Figures:
   7  - py3.8 vs py3.12+adaptive: % overhead per image (real pipeline)
   8  - cuML always vs adaptive: % improvement per image
 
-Data sources:
-  benchmark_all_cuml_v2.csv              → figs 2, 4, 7, 8
-  profiler_nsys_memory_summary_*.csv     → fig 3
-  cuml_crossover_synthetic_*.csv         → fig 5
+Data sources (all in benchmarks/data/):
+  benchmark_latency.csv          → figs 2, 4, 7, 8
+  profiler_memory_summary.csv    → fig 3
+  cuml_crossover_synthetic.csv   → fig 5
 
 Outputs saved to: GPUPhotFinal/figures_profiler/  (PDF + PNG)
 Then copied to:   GPUPhotFinal/GPUPHOT_manuscript/figures/
@@ -166,7 +166,7 @@ def save(fig, name):
 
 
 def load_benchmark(profiler_labels=None):
-    """Load benchmark_all_cuml_v2.csv, normalise GPU names, drop warmup rows."""
+    """Load data/benchmark_latency.csv, normalise GPU names, drop warmup rows."""
     df = pd.read_csv(BENCHMARK_CSV)
     df['execution_time'] = pd.to_numeric(df['execution_time'], errors='coerce')
     df['mp'] = pd.to_numeric(df['mp'], errors='coerce')

@@ -232,7 +232,7 @@ def _mad_filter(grp: pd.DataFrame, col: str = 'execution_time',
 
 
 def load_benchmark(profiler_labels):
-    """Load benchmark_all_cuml_v2.csv, remove warmup reps and outliers, return DataFrame.
+    """Load data/benchmark_latency.csv, remove warmup reps and outliers, return DataFrame.
 
     Pipeline per (machine, profiler_label, image_label) group:
       1. Sort by timestamp.
@@ -318,7 +318,7 @@ def vram_median(python_ver, gpu_cols):
 def gen_latency_py312():
     """
     tab:latency_py312 — Median latency (s), py3.12 + adaptive cuML.
-    Source: benchmark_all_cuml_v2.csv (profiler_label=py312_cuml_adaptive)
+    Source: data/benchmark_latency.csv (profiler_label=py312_cuml_adaptive)
     GPUs: H100, A100, L40S, RTX 3090, RTX 3060, RTX 3050 Ti, Orin Super
     Orin Super runs py3.12 on ARM without cuML (unavailable on aarch64);
     its data is stored under profiler_label=py312_cuml_adaptive in the CSV.
@@ -353,7 +353,7 @@ def gen_latency_py312():
 def gen_latency_py38():
     """
     tab:latency_py38 — Median latency (s), py3.8 baseline.
-    Source: benchmark_all_cuml_v2.csv (profiler_label=py38_baseline)
+    Source: data/benchmark_latency.csv (profiler_label=py38_baseline)
     GPUs: H100, A100, L40S, RTX 3090, RTX 3060, RTX 3050 Ti, Orin NX
     """
     print('Generating body_latency_py38.tex ...')
@@ -387,7 +387,7 @@ def gen_vram_merged():
     data for all 10 benchmark images and is the most broadly deployed 80 GB card).
     Cross-GPU variation for the same image is <0.3% (see Figure fig:memory_comparison).
     Replaces the former tab:vram_py312, tab:vram_py38, and tab:vram_savings.
-    Source: profiler_nsys_memory_20260411.csv
+    Source: data/profiler_memory_raw.csv
     """
     print('Generating body_vram_merged.tex ...')
     rep_gpu = 'A100 (80 GB)'
@@ -443,7 +443,7 @@ def _gen_vram_all_gpus(python_ver, filename):
 def gen_concurrency():
     """
     tab:concurrency — Max concurrent 4.2 MP images per GPU.
-    Source: profiler_nsys_memory_20260411.csv (4.2 MP median peak VRAM per py ver)
+    Source: data/profiler_memory_raw.csv (4.2 MP median peak VRAM per py ver)
     Formula: floor(GPU_VRAM_total / peak_VRAM_per_image)
     GPU_VRAM_total is read from the gpu_total_MB column of the memory CSV
     (e.g. RTX 3050 Ti Laptop GPU reports 3964 MB, not the nominal 4096 MB).
@@ -507,7 +507,7 @@ def gen_concurrency():
 def gen_cuml_ablation():
     """
     tab:cuml_ablation — cuML vs cKDTree end-to-end latency ablation on A100.
-    Source: results_collected/cuml_ablation_a100_20260329.csv
+    Source: data/cuml_ablation.csv
     Rows ordered by ablation file map (MP ascending, then source count).
     """
     print('Generating body_cuml_ablation.tex ...')
@@ -553,8 +553,8 @@ def gen_cuml_ablation():
 def gen_cpu_baseline():
     """
     tab:cpu_baseline — sep / Photutils / GPUPhot (A100 py3.12) latency comparison.
-    sep and Photutils times: cpu_baseline_results.csv
-    GPUPhot times: benchmark_all_cuml_v2.csv (A100, py312_cuml_adaptive, median)
+    sep and Photutils times: data/cpu_baseline.csv
+    GPUPhot times: data/benchmark_latency.csv (A100, py312_cuml_adaptive, median)
     """
     print('Generating body_cpu_baseline.tex ...')
 
@@ -576,7 +576,7 @@ def gen_cpu_baseline():
     )
     rows = []
     for keyword, mp, src, img_label in CPU_BASELINE_FILE_MAP:
-        # sep / Photutils: match by filename keyword in cpu_baseline_results.csv
+        # sep / Photutils: match by filename keyword in data/cpu_baseline.csv
         match = cpu[cpu['filename'].str.contains(keyword, na=False)]
         sep_t       = match.iloc[0]['sep_median_s']        if not match.empty else float('nan')
         photutils_t = match.iloc[0]['photutils_median_s']  if not match.empty else float('nan')
@@ -597,7 +597,7 @@ def gen_cpu_baseline():
 def gen_nvtx_detection():
     """
     tab:nvtx_detection — GPU source detection (A100 py3.12) vs sep, scope-equivalent.
-    Source: results_collected/nvtx_detection_vs_sep_a100.csv
+    Source: data/nvtx_detection_stages.csv
     """
     print('Generating body_nvtx_detection.tex ...')
     df = pd.read_csv(NVTX_DETECTION_CSV)
@@ -634,7 +634,7 @@ def gen_stage_breakdown():
     tab:stage_breakdown — Full per-stage timing breakdown (A100, py3.12).
     Shows each pipeline stage for iKon936 (4.2 MP) and QHY411-3 (151.2 MP),
     with GPU/CPU/I-O classification and % of total wall-clock time.
-    Source: results_collected/nvtx_stage_breakdown_a100.csv
+    Source: data/nvtx_stage_breakdown.csv
     """
     print('Generating body_stage_breakdown.tex ...')
     df = pd.read_csv(NVTX_STAGE_CSV)
