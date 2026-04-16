@@ -286,66 +286,15 @@ This will stop and remove the containers, networks, and volumes.
 | `profiler_jetson_orin_super` | Jetson Orin Super (JetPack 6.x, Python 3.12).                  | `2226`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
 | `profiler_jetson_orin_super_38` | Jetson Orin Super (JetPack 6.x, Python 3.10).               | `2228`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
 
-## Result Persistence & Database Schema
+## Result Persistence
 
-GPUPhot writes two types of results to the PostgreSQL database automatically
-after each image is processed.
+GPUPhot automatically writes all results to the PostgreSQL database after each
+image is processed.  Two tables are populated: `imastats` (one row per image)
+and `imaphot` (one row per detected source).  Both are spatially indexed with
+**Q3C** for fast coordinate-based queries.
 
-### Tables
-
-**`imastats`** — one row per processed image (image-level metadata):
-
-| Column | Type | Description |
-|---|---|---|
-| `id` | text | Unique image identifier (`GPUPHOTI` FITS keyword) |
-| `file_path` | text | Path of the FITS file on the worker host |
-| `naxis1` / `naxis2` | int | Image dimensions (pixels) |
-| `telescop` | text | Telescope name (`TELESCOP` keyword) |
-| `instrume` | text | Instrument name |
-| `camera` | text | Camera model |
-| `filter` | text | Filter used |
-| `date_obs` | timestamp | Observation date/time |
-| `exptime` | float | Exposure time (seconds) |
-| `object` | text | Target object name |
-| `ra` / `dec` | float | Field centre coordinates (degrees) |
-| `fwhm` | float | Measured PSF FWHM (arcsec) |
-| `maglim` | float | 5σ limiting magnitude |
-| `header` | hstore | Full FITS header as key-value store |
-
-**`imaphot`** — one row per detected source per image (photometry results):
-
-| Column | Type | Description |
-|---|---|---|
-| `id` | text | Image identifier (foreign key → `imastats`) |
-| `ra` / `dec` | float | Source coordinates (degrees) |
-| `flux` | float | Calibrated flux |
-| `dflux` | float | Flux uncertainty |
-| `trans` | bool | `true` if source flagged as transient candidate |
-
-Both tables are spatially indexed with **Q3C** (`q3c_radial_query`) for fast
-cone searches.
-
-### Querying results
-
-```python
-from gpuphot_worker.database_search_utils import (
-    search_by_radec,
-    search_by_date_range,
-    search_transients,
-)
-
-# Cone search — all detections within 0.5° of a position
-df = search_by_radec(ra=83.82, dec=-5.39, radius=0.5, table='imaphot')
-
-# All images processed in a date range
-df = search_by_date_range('2025-01-01', '2025-12-31')
-
-# Transient candidates detected after a given date
-df = search_transients(date_after='2025-06-01')
-```
-
-All search functions return a `pandas.DataFrame`.  The database connection
-is configured via the `POSTGRES_*` environment variables in your `.env` file.
+For the full schema, column descriptions, query examples, and data lifecycle
+documentation see **[DATABASE.md](DATABASE.md)**.
 
 ---
 
