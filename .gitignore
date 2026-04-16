@@ -202,3 +202,7 @@ notebooks/.notebooks_generated
 gpuphot/utils/smartgpudecoratorclass.py
 help.txt
 .github/
+
+# Manuscript repos — cloned locally for context only, not part of GPUPhot
+GPUPHOT_manuscript/
+GpuFitsCrypt_manuscript/
