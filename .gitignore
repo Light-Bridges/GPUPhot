@@ -178,3 +178,6 @@ profiling_results/
 # But keep the .gitkeep files
 !.gitkeep
 /tools/
+
+# Internal development documentation
+callgraph/
