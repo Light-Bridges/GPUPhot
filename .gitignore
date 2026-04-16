@@ -208,6 +208,7 @@ GPUPHOT_manuscript/
 GpuFitsCrypt_manuscript/
 
 # Internal research/manuscript workflow docs — not for public library users
+TODO_DOC.md
 MANUSCRIPT_CONTEXT.md
 benchmarks/BENCHMARK_MASTER.md
 benchmarks/README.md
