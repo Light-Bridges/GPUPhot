@@ -185,9 +185,18 @@ callgraph/
 # Local development scripts (machine-specific infrastructure)
 dev/
 
-# Generated figures and internal profiling scripts
+# Generated figures
 figures_profiler/
-profiling_scripts/
+
+# Internal profiling scripts (runners, data extractors) — keep locally only
+# run_profiling.sh and profile_image_processing.py ARE tracked (needed by Dockerfile)
+profiling_scripts/benchmarks/
+profiling_scripts/extract_benchmark_csv.py
+profiling_scripts/profile_process_image.py
+profiling_scripts/run_all_benchmarks.sh
+profiling_scripts/run_benchmark_autonomous.sh
+profiling_scripts/run_benchmark_profiling.sh
+profiling_scripts/run_benchmark_suite.py
 
 # Internal/generated files
 .env-copy
