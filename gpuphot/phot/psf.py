@@ -401,7 +401,7 @@ def _group_star_dataset_cpu_impl(coords: np.ndarray, avg_group_size: int = 10, m
     return final_labels_contiguous
 
 
-# --- Implementación GPU ---
+# --- GPU implementation ---
 @nvtx.annotate('_group_star_dataset_gpu_impl', category='phot.psf_gpu')
 def _group_star_dataset_gpu_impl(coords: cp.ndarray, avg_group_size: int = 10, min_group_size: int = 5) -> cp.ndarray:
     """GPU implementation using CuPy/cuML."""
@@ -576,9 +576,9 @@ def get_eigen_psfs(normed_star_dataset: cp.array, n_components: int = 5) -> cp.a
     pca = PCA(n_components=n_components)
     # Flatten each star (N, H, W) -> (N, H*W). Transfer to CPU for PCA.fit.
     starset_flattened = normed_star_dataset.reshape(normed_star_dataset.shape[0], -1).get()
-    # Ajustar PCA directamente en GPU
+    # Fit PCA on the flattened star patches
     pca.fit(starset_flattened)
-    # Obtener los eigen PSFs reestructurando los componentes principales al tamaño original de la imagen
+    # Reshape principal components back to original star patch dimensions
     eigen_psfs = pca.components_.reshape(-1, normed_star_dataset.shape[1], normed_star_dataset.shape[2])
     return eigen_psfs
 

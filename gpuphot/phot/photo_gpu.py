@@ -771,7 +771,6 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 
     # BLOQUE 1: Select central stars
     block1_range = nvtx.start_range('center_stars_selection', category='phot.photo_gpu', color='yellow')
-    # ... (Sin cambios respecto a la versión anterior) ...
     center_factor = min(center_factor, 1.0)
     h, w = img_ori.shape[-2:]
     xmin = int(w * 0.5 * (1 - center_factor))
@@ -784,7 +783,6 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 
     # BLOQUE 2: Obtain convolutional SNR
     block2_range = nvtx.start_range('snr_source_validation_gpu', category='phot.photo_gpu', color='orange')
-    # ... (Cálculo de conv_snr y filtrado inicial igual que antes) ...
     conv_snr = conv_ima_sigma[
         cp.round(source_coord[:, 0]).astype(cp.int32), cp.round(source_coord[:, 1]).astype(cp.int32)]
     pos_conv_snr_mask = conv_snr > 0
@@ -813,7 +811,6 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
     nvtx.end_range(cm_range)
     # --- End GPU Crossmatch ---
 
-    # ... (Resto del Bloque 2: validación de isolated stars, etc. sin cambios) ...
     conv_snr_isol = conv_ima_sigma[
         cp.round(isolated_coord[:, 0]).astype(cp.int32), cp.round(isolated_coord[:, 1]).astype(cp.int32)]
     conv_snr_mask = conv_snr_isol > min_conv_snr
@@ -834,9 +831,8 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 
     nvtx.end_range(block2_range)
 
-    # BLOQUE 3: Configuración radios (Sin cambios)
+    # BLOQUE 3: Aperture radii setup
     block3_range = nvtx.start_range('aperture_radii_setup', category='phot.photo_gpu', color='yellow')
-    # ... (igual que antes) ...
     max_radii = float(np.ceil(7 * fwhm) + 1)
     min_radii = float(np.ceil(0.75 * fwhm))
     radii = cp.arange(int(min_radii), int(max_radii) + 1, 1, dtype=cp.float64)
@@ -910,37 +906,32 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
     # BLOQUE 8: Find optimal aperture radius
     block8_range = nvtx.start_range('optimal_radii_calculation', category='phot.photo_gpu', color='orange')
 
-    # Determinar el módulo (numpy o cupy) basado en una de las entradas principales
+    # Select array module (NumPy or CuPy) based on input type
     xp = cp.get_array_module(center_isolated_snr)
 
-    # Calcular índices de radios óptimos usando xp.nanargmax
+    # Compute optimal radius indices
     opt_radii_idx = xp.nanargmax(center_isolated_snr, axis=0)
 
-    # Obtener los radios óptimos usando indexación (funciona en np y cp)
-    # Renombrado de opt_radii_gpu -> opt_radii
+    # Retrieve optimal radii (works for both np and cp arrays)
     opt_radii = radii[opt_radii_idx]
     del opt_radii_idx, center_isolated_snr
     if len(center_conv_snr) == 0 or len(opt_radii) == 0:
         raise DataValidationError("center_conv_snr or opt_radii is empty. Ensure valid data is provided.")
 
-    # Calcular polyfit usando xp.log10 y xp.polyfit
-    # La etiqueta NVTX ahora refleja si es CPU o GPU
+    # Fit polynomial: log10(SNR) vs log10(optimal radius)
+    # NVTX label reflects whether computation runs on CPU or GPU
     polyfit_category = 'gpu_ops' if xp == cp else 'cpu_ops'
     polyfit_color = 'green' if xp == cp else 'blue'
     polyfit_label = 'polyfit_gpu' if xp == cp else 'polyfit_cpu'
     polyfit_range = nvtx.start_range(polyfit_label, category=polyfit_category, color=polyfit_color)
     try:
-        # Calcular polyfit usando xp
-        # pov será un array np o cp dependiendo de xp
+        # pov is a np or cp array depending on xp
         pov = xp.polyfit(xp.log10(center_conv_snr), xp.log10(opt_radii), 1, cov=False)
         del opt_radii, center_conv_snr
     except Exception as e:
         nvtx.end_range(polyfit_range)
         nvtx.end_range(block8_range)
-        # Asumiendo que overall_range existe fuera de este snippet
-        # nvtx.end_range(overall_range)
-        # Considera loggear el error aquí si tienes un logger
-        raise DataValidationError(f"Polyfit failed: {e}")  # Asume DataValidationError está definida
+        raise DataValidationError(f"Polyfit failed: {e}")
 
     nvtx.end_range(polyfit_range)
     nvtx.end_range(block8_range)
@@ -992,7 +983,6 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 
     # BLOQUE 10: Obtain aditional information for header purposes
     block10_range = nvtx.start_range('extra_info_generation', category='phot.metadata', color='yellow')
-    # ... (igual que antes, usa cp.argmin, .item()) ...
     extra_info = {}
     ref_snr_values = [10, 100, 250, 1000]
     opt_final_snr = cp.divide(opt_signal, opt_total_noise)

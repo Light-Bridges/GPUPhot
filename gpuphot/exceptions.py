@@ -155,7 +155,7 @@ def capture_cuda_exception(func):
                 if not is_init_error:
                     try:
                         from .utils.gpu import free_gpu_mem
-                        free_gpu_mem()  # Liberar memoria GPU antes de manejar el error
+                        free_gpu_mem()  # Release GPU memory before handling the error
                     except Exception:
                         pass
 

@@ -17,6 +17,21 @@ CRITICAL_FUNCTIONS = ['array', 'zeros', 'empty', 'zeros_like', 'empty_like']
 
 
 def apply_float64_patch():
+    """
+    Patch CuPy array creation functions to use ``float64`` as the default dtype.
+
+    Wraps :data:`CRITICAL_FUNCTIONS` (``array``, ``zeros``, ``empty``,
+    ``zeros_like``, ``empty_like``) so that calls without an explicit ``dtype``
+    argument produce ``cp.float64`` arrays instead of CuPy's default
+    ``float32``.  The original functions are stored and can be restored.
+
+    This patch is optional and is applied on import where required. Note that
+    using float64 throughout increases GPU memory consumption.
+
+    :return: Dictionary mapping function names to their original (unpatched)
+        CuPy callables, allowing the patch to be reversed if needed.
+    :rtype: dict
+    """
     _originals = {}
 
     def wrap_array_creator(original):

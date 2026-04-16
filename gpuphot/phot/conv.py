@@ -280,7 +280,7 @@ def batch_aper_kernel(radius, **kwargs):
 
         # Broadcasting to create masks for all radii at once
         mask = (x - center) ** 2 + (y - center) ** 2 <= radius.reshape(-1, 1,
-                                                                       1) ** 2  # radius[:, None, None] también es valido
+                                                                       1) ** 2  # radius[:, None, None] is also valid
 
         # The entire mask array serves as the kernel (no need for cp.zeros)
         kernel = mask.astype(cp.float64)  # Convert boolean mask to float64

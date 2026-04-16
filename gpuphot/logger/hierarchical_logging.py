@@ -267,6 +267,18 @@ class SystemInfo:
 
 
 def hierarchical_debug(logger_name):
+    """
+    Decorator factory that instruments a function with structured entry/exit logs.
+
+    Wraps the decorated function so that every call emits a DEBUG log on entry
+    (with a summary of arguments) and on exit (with elapsed time). Exceptions
+    are logged automatically before being re-raised.
+
+    :param logger_name: Logger name passed to :func:`setup_logger`.
+    :type logger_name: str
+    :return: Decorator that wraps a function with hierarchical debug logging.
+    :rtype: callable
+    """
     logger = SingletonLogger.get_logger(logger_name)
     system_info_instance = SystemInfo.get_instance()
     pid = os.getpid()
@@ -461,6 +473,18 @@ class SingletonLogger:
 
 
 def setup_logger(name):
+    """
+    Return the package-wide singleton logger instance for the given module name.
+
+    This is the main entry point for obtaining a logger in GPUPhot. All
+    returned loggers share the same underlying ``gpuphot`` logger with
+    indented console formatting and optional Logstash output.
+
+    :param name: Module name, typically ``__name__``.
+    :type name: str
+    :return: Configured logger instance.
+    :rtype: logging.Logger
+    """
     return SingletonLogger.get_logger(name)
 
 

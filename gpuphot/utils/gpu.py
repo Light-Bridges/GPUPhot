@@ -33,6 +33,14 @@ DEFAULT_THRESHOLDS = {'warning': 0.75, 'critical': 0.85}
 
 @nvtx.annotate('human_readable_size', category='utils.gpu')
 def human_readable_size(bytes_size):
+    """
+    Convert a byte count to a human-readable string (e.g. ``1.5 GiB``).
+
+    :param bytes_size: Size in bytes.
+    :type bytes_size: int or float
+    :return: Human-readable size string.
+    :rtype: str
+    """
     for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
         if abs(bytes_size) < 1024.0:
             return f"{bytes_size:.1f}{unit}B"
@@ -217,14 +225,14 @@ def adaptive_memory_management(
     uses the worst-case ratio to decide whether to log a warning or force a
     cleanup.
 
-    Args:
-        mempool: CuPy memory pool to inspect.
-        thresholds: Optional custom thresholds for 'warning' and 'critical'.
-        force_free: If True, always attempt to free memory.
-
-    Returns:
-        An integer indicating the memory pressure level:
-        - SAFE_LEVEL (0), WARNING_LEVEL (1), CRITICAL_LEVEL (2).
+    :param mempool: CuPy memory pool to inspect.
+    :type mempool: cp.cuda.MemoryPool
+    :param thresholds: Optional custom thresholds for ``'warning'`` and ``'critical'`` keys.
+    :type thresholds: dict, optional
+    :param force_free: If ``True``, always attempt to free memory regardless of usage.
+    :type force_free: bool
+    :return: Memory pressure level — ``0`` (safe), ``1`` (warning), ``2`` (critical).
+    :rtype: int
     """
     effective_thresholds = DEFAULT_THRESHOLDS.copy()
     if thresholds is not None:
@@ -292,12 +300,12 @@ def check_memory_availability(required_bytes: int, safety_margin: float = 0.10) 
     """
     Check if enough free device memory exists for a requested allocation.
 
-    Args:
-        required_bytes: Number of bytes required.
-        safety_margin: Fractional safety margin to reserve (e.g., 0.10 = 10%).
-
-    Returns:
-        True if allocation likely fits, False otherwise.
+    :param required_bytes: Number of bytes required for the allocation.
+    :type required_bytes: int
+    :param safety_margin: Fractional safety margin to keep free (e.g. ``0.10`` = 10 %).
+    :type safety_margin: float
+    :return: ``True`` if the allocation is likely to fit, ``False`` otherwise.
+    :rtype: bool
     """
     try:
         free_mem, total_mem = cp.cuda.Device().mem_info

@@ -72,7 +72,7 @@ def center(im: Union[cp.ndarray, np.ndarray], size: int) -> Union[cp.ndarray, np
     array_like
         Cropped image centered to `size` (or original image if smaller).
     """
-    h, w = im.shape[0], im.shape[1]  # Funciona para np y cp
+    h, w = im.shape[0], im.shape[1]  # Works for both np and cp arrays
 
     if h > size:
         c0_start = (h - size) // 2

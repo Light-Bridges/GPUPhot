@@ -482,7 +482,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         catalog = 'II/379'  # SkyMapper Southern Sky Survey. DR4 : II/379
         ref_filter = 'gPSF'
         final_ref_filter = get_filter(filter)
-        expected_columns = ['SMSS', 'RAICRS', 'DEICRS', 'gPSF', 'rPSF', final_ref_filter]  # Columnas para SkyMapper
+        expected_columns = ['SMSS', 'RAICRS', 'DEICRS', 'gPSF', 'rPSF', final_ref_filter]  # SkyMapper columns
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
 
@@ -500,7 +500,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         catalog = 'I/355/gaiadr3'  # Gaia DR3 Part 1. Main source : I/355
         ref_filter = 'BPmag'
         expected_columns = ['Source', 'RAJ2000', 'DEJ2000', 'BP-RP', f'F{ref_filter[:2]}',
-                            f'e_F{ref_filter[:2]}', ref_filter]  # Columnas para Gaia DR3
+                            f'e_F{ref_filter[:2]}', ref_filter]  # Gaia DR3 columns
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
         # solar_index = 0.01760 - 0.003226 + (0.3833 + 0.00686) * vizier_results['BP-RP'] + (-0.1345 + 0.1732) * \
@@ -519,7 +519,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     elif filter == 'SDSSu':
         catalog = 'I/353/gsc242'
         ref_filter = 'umag'
-        expected_columns = ['GSC2', 'RA_ICRS', 'DE_ICRS', ref_filter]  # Columnas para GSC2
+        expected_columns = ['GSC2', 'RA_ICRS', 'DE_ICRS', ref_filter]  # GSC2 columns
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
         result = pd.DataFrame({'ID': vizier_results['GSC2'],
@@ -534,7 +534,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         catalog = 'II/349/ps1'  # The Pan-STARRS release 1 (PS1) Survey - DR1 : II/349
         ref_filter = 'gmag'
         expected_columns = ['objID', 'RAJ2000', 'DEJ2000', 'gmag', 'rmag', 'e_gmag',
-                            'e_rmag']  # Columnas para Pan-STARRS
+                            'e_rmag']  # Pan-STARRS columns
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
 
@@ -570,7 +570,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         ref_filter = 'gmag'
         final_ref_filter = get_filter(filter)
         expected_columns = ['objID', 'RAJ2000', 'DEJ2000', 'gmag', 'rmag', final_ref_filter,
-                            f'e_{final_ref_filter}']  # Columnas por defecto para Pan-STARRS
+                            f'e_{final_ref_filter}']  # Pan-STARRS default columns
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
 
