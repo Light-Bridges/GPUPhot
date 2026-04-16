@@ -181,3 +181,6 @@ profiling_results/
 
 # Internal development documentation
 callgraph/
+
+# Local development scripts (machine-specific infrastructure)
+dev/
