@@ -38,7 +38,7 @@ Testing recommendations
 -----------------------
 - Add unit tests for each utility (conv, utils) using small synthetic arrays.
 - For `photo_gpu.py` and `psf.py`, add integration tests that exercise both
-  GPU and CPU paths (mock GPUtil or run in CI with and without CUDA).
+  GPU and CPU paths (mock nvidia-smi or run in CI with and without CUDA).
 
 Examples
 --------

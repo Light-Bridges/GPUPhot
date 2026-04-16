@@ -156,7 +156,7 @@ class SystemInfo:
     """Singleton collecting system metadata to include in structured logs.
 
     The instance caches values such as the Cupy version, OS, Python version,
-    GPU information obtained via GPUtil and an attempt to read the local Git
+    GPU information obtained via nvidia-smi and an attempt to read the local Git
     commit id for traceability.
     """
     _instance = None
