@@ -487,8 +487,10 @@ def figure7():
     pct_pivot = med.pivot(index='image_label', columns='gpu_label', values='pct')
     pct_pivot = pct_pivot.reindex([img for img in IMAGE_ORDER if img in pct_pivot.index])
 
-    # QHY411-1_Lum_full is an outlier (250-300%) unrelated to cuML — pipeline overhead
-    # for 151.2 MP sparse field. Cap y-axis at 100% and annotate separately.
+    # QHY411-1_Lum_full is an outlier (51% H100, 321% A100) unrelated to cuML —
+    # CuPy 14 buffer-management overhead on large arrays (aperture photometry dominates;
+    # NVTX profiling confirms +702% batch_aperture_photometry, +1.5% crossmatch/cKDTree).
+    # Cap y-axis at 100% and annotate separately.
     CAP = 100.0
     outlier_img = 'QHY411-1_Lum_full'
 
