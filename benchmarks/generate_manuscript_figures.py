@@ -30,7 +30,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import LinearSegmentedColormap, LogNorm
+from matplotlib.patches import Patch
 
 # ── Global style ──────────────────────────────────────────────────────────────
 plt.rcParams.update({
@@ -40,6 +41,8 @@ plt.rcParams.update({
     'font.family': 'serif',
     'axes.linewidth': 0.8,
     'lines.linewidth': 1.2,
+    'axes.spines.top': False,
+    'axes.spines.right': False,
 })
 
 # Colorblind-safe palette (Wong 2011, Nature Methods)
@@ -54,6 +57,18 @@ CB_COLORS = [
     '#000000',  # black
 ]
 MARKERS = ['o', 's', '^', 'D', 'v', 'P', 'X', '*']
+
+# Hatch and edge-color maps for per-GPU identification in bar charts (Figs 7 & 8)
+HATCH_MAP = {
+    'H100 (80 GB)':  '',
+    'A100 (80 GB)':  '///',
+    'L40S (48 GB)':  'xxx',
+}
+EDGE_MAP = {
+    'H100 (80 GB)':  '#000000',
+    'A100 (80 GB)':  '#555555',
+    'L40S (48 GB)':  '#AAAAAA',
+}
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -216,21 +231,22 @@ def figure2():
         # Need ≥2 points to draw a line; otherwise scatter only
         if len(subset) >= 2:
             ax.plot(subset['mp'], subset['execution_time'],
-                    color=color, marker=marker, markersize=5,
+                    color=color, marker=marker, markersize=6,
+                    markeredgecolor='white', markeredgewidth=0.5,
                     label=gpu_label, zorder=3)
         else:
             ax.scatter(subset['mp'], subset['execution_time'],
-                       color=color, marker=marker, s=40,
+                       color=color, marker=marker, s=50,
+                       edgecolors='white', linewidths=0.5,
                        label=gpu_label, zorder=3)
 
     ax.set_xscale('log')
     ax.set_yscale('log')
     ax.set_xlabel('Image size (megapixels)')
     ax.set_ylabel('Median end-to-end latency (s)')
-    ax.set_title('GPUPhot latency vs image size — py3.12 + adaptive cuML')
     ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{x:g}'))
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{x:g}'))
-    ax.legend(fontsize=7.5, loc='upper left', framealpha=0.9, ncol=2)
+    ax.legend(fontsize=8.5, loc='upper left', framealpha=0.9, ncol=1)
     ax.grid(True, which='both', ls=':', alpha=0.4)
     ax.text(0.99, 0.02,
             'Jetson Orin (ARM) not shown — ~150 s for 4.2 MP (no RAPIDS)',
@@ -266,9 +282,9 @@ def figure3():
     py312_vals = np.array(py312_vals)
 
     ax.bar(x - width/2, py38_vals,  width, label='py3.8 (CuPy 12)',
-           color='#2c3e50', edgecolor='white', linewidth=0.5)
+           color=CB_COLORS[0], edgecolor='white', linewidth=0.5, hatch='///')
     ax.bar(x + width/2, py312_vals, width, label='py3.12 (CuPy 14)',
-           color='#85c1e9', edgecolor='white', linewidth=0.5)
+           color=CB_COLORS[5], edgecolor='white', linewidth=0.5)
 
     for i in range(len(mp_values)):
         if py38_vals[i] > 0 and py312_vals[i] > 0:
@@ -280,8 +296,8 @@ def figure3():
                         color='#0072B2')
 
     ax.set_xlabel('Image')
-    ax.set_ylabel('Peak VRAM (MB)')
-    ax.set_title('Peak GPU memory: py3.8 vs py3.12 (A100-SXM4-80GB)')
+    ax.set_ylabel('Peak VRAM (GB)')
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{x/1000:.0f}'))
     ax.set_xticks(x)
     ax.set_xticklabels([cam_map.get(mp, f'{mp} MP') for mp in mp_values], fontsize=9)
     ax.legend(fontsize=9)
@@ -317,14 +333,13 @@ def figure4():
     col_labels = [GPU_SHORT.get(g, g) for g in HEATMAP_GPU_ORDER]
 
     fig, ax = plt.subplots(figsize=(9, 5.5))
-    cmap = LinearSegmentedColormap.from_list(
-        'latency', ['#FFFFB2', '#FED976', '#FEB24C', '#FD8D3C',
-                    '#FC4E2A', '#E31A1C', '#B10026'])
+    cmap = plt.cm.viridis.reversed()   # dark = high latency, bright = fast
     cmap.set_bad(color='#CCCCCC')
 
-    vmin = np.nanmin(matrix)
-    vmax = np.nanmax(matrix)
-    im = ax.imshow(matrix, cmap=cmap, aspect='auto', vmin=vmin, vmax=vmax)
+    vmin = max(float(np.nanmin(matrix)), 0.5)
+    vmax = float(np.nanmax(matrix))
+    norm = LogNorm(vmin=vmin, vmax=vmax)
+    im = ax.imshow(matrix, cmap=cmap, aspect='auto', norm=norm)
 
     for i in range(n_imgs):
         for j in range(n_gpus):
@@ -333,8 +348,8 @@ def figure4():
                 ax.text(j, i, 'OOM', ha='center', va='center',
                         fontsize=7.5, fontweight='bold', color='#666666')
             else:
-                normed = (val - vmin) / (vmax - vmin) if vmax > vmin else 0
-                tc = 'white' if normed > 0.65 else 'black'
+                log_normed = (np.log10(val) - np.log10(vmin)) / (np.log10(vmax) - np.log10(vmin)) if val > 0 else 0
+                tc = 'white' if log_normed > 0.6 else 'black'
                 ax.text(j, i, f'{val:.1f}s', ha='center', va='center',
                         fontsize=7.5, fontweight='bold', color=tc)
 
@@ -342,8 +357,6 @@ def figure4():
     ax.set_xticklabels(col_labels, fontsize=8.5, rotation=30, ha='right')
     ax.set_yticks(range(n_imgs))
     ax.set_yticklabels(row_labels, fontsize=7.5)
-    ax.set_title('End-to-end latency (s) — py3.12 + adaptive cuML', fontsize=10)
-
     cbar = fig.colorbar(im, ax=ax, shrink=0.8, pad=0.02)
     cbar.set_label('Latency (s)', fontsize=9)
     fig.tight_layout()
@@ -370,13 +383,13 @@ def figure5():
     }
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
-    ax.axhspan(0, 1.0, alpha=0.10, color='#E31A1C', zorder=0)
+    ax.axhspan(0, 1.0, alpha=0.08, color='#D55E00', zorder=0)
     ax.axhline(y=1.0, color='#555555', linestyle='--', linewidth=1.0, zorder=2)
     ax.text(120, 1.05, 'break-even', fontsize=8, color='#555555', va='bottom')
-    ax.text(80000, 0.15, 'cKDTree faster', fontsize=8, color='#B10026',
-            ha='center', fontstyle='italic', alpha=0.7)
-    ax.text(80000, 4.5, 'cuML faster', fontsize=8, color='#009E73',
-            ha='center', fontstyle='italic', alpha=0.7)
+    ax.text(80000, 0.15, 'cKDTree faster', fontsize=8, color='#D55E00',
+            ha='center', fontstyle='italic', alpha=0.85)
+    ax.text(80000, 4.5, 'cuML faster', fontsize=8, color='#0072B2',
+            ha='center', fontstyle='italic', alpha=0.85)
 
     for idx, gpu in enumerate(gpu_order):
         subset = df[df['gpu_name'] == gpu].sort_values('N')
@@ -403,7 +416,6 @@ def figure5():
     ax.set_xscale('log')
     ax.set_xlabel('Number of sources (N)')
     ax.set_ylabel('Speedup (cKDTree time / cuML time)')
-    ax.set_title('cuML vs cKDTree crossmatch: synthetic benchmark')
     ax.xaxis.set_major_formatter(ticker.FuncFormatter(
         lambda x, _: f'{int(x):,}' if x >= 1000 else f'{int(x)}'))
     ax.legend(fontsize=8, loc='upper left', framealpha=0.9)
@@ -421,8 +433,13 @@ def figure6():
         'H100': 80*1024, 'A100': 80*1024, 'L40S': 48*1024,
         'RTX 3090': 24*1024, 'RTX 3060': 12*1024, 'RTX 3050 Ti': 4*1024,
     }
-    peak_38  = 2018   # MB, py3.8  (iKon936, A100 nsys data)
-    peak_312 = 1718   # MB, py3.12 (iKon936, A100 nsys data)
+    # Read peak VRAM for 4.2 MP (iKon936) from the profiler CSV (A100-SXM4-80GB)
+    _mem = pd.read_csv(MEMORY_CSV)
+    _a100_42 = _mem[(_mem['gpu_name'] == 'A100-SXM4-80GB') & (_mem['megapixels'] == 4.2)]
+    _r38  = _a100_42[_a100_42['python_ver'].astype(str) == '3.8']
+    _r312 = _a100_42[_a100_42['python_ver'].astype(str) == '3.12']
+    peak_38  = int(_r38['median_peak_MB'].values[0])  if len(_r38)  > 0 else 2018
+    peak_312 = int(_r312['median_peak_MB'].values[0]) if len(_r312) > 0 else 1718
     gpu_order = ['H100', 'A100', 'L40S', 'RTX 3090', 'RTX 3060', 'RTX 3050 Ti']
 
     conc_38  = np.array([math.floor(vram_total[g]*0.95/peak_38)  for g in gpu_order])
@@ -433,9 +450,9 @@ def figure6():
     width = 0.35
 
     bars38  = ax.bar(x - width/2, conc_38,  width, label='py3.8 (CuPy 12)',
-                     color='#2c3e50', edgecolor='white', linewidth=0.5)
+                     color=CB_COLORS[0], edgecolor='white', linewidth=0.5, hatch='///')
     bars312 = ax.bar(x + width/2, conc_312, width, label='py3.12 (CuPy 14)',
-                     color='#85c1e9', edgecolor='white', linewidth=0.5)
+                     color=CB_COLORS[5], edgecolor='white', linewidth=0.5)
 
     for i, g in enumerate(gpu_order):
         if conc_38[i] > 0:
@@ -457,7 +474,6 @@ def figure6():
 
     ax.set_xlabel('GPU')
     ax.set_ylabel('Concurrent 4.2 MP images')
-    ax.set_title('Theoretical concurrent images per GPU (4.2 MP, 95% VRAM)')
     ax.set_xticks(x)
     ax.set_xticklabels(gpu_order, fontsize=9, rotation=15, ha='right')
     ax.legend(fontsize=9)
@@ -502,13 +518,15 @@ def figure7():
     for i, gpu in enumerate(datacenter_gpus):
         if gpu not in pct_pivot.columns:
             continue
-        raw_vals = pct_pivot[gpu].values
-        capped    = np.clip(raw_vals, -CAP, CAP)
-        colors    = ['#D55E00' if v > 0 else '#009E73' for v in raw_vals]
-        offset    = (i - 1) * width
+        raw_vals    = pct_pivot[gpu].values
+        capped      = np.clip(raw_vals, -CAP, CAP)
+        fill_colors = ['#D55E00' if v > 0 else '#009E73' for v in raw_vals]
+        offset      = (i - 1) * width
         ax.bar(x + offset, capped, width,
-               label=GPU_SHORT[gpu], color=colors,
-               edgecolor='white', linewidth=0.4, alpha=0.85)
+               label=GPU_SHORT[gpu], color=fill_colors,
+               edgecolor=EDGE_MAP.get(gpu, '#555555'),
+               hatch=HATCH_MAP.get(gpu, ''),
+               linewidth=0.7, alpha=0.85)
 
         # Annotate bars that were clipped
         for j, (raw, cap) in enumerate(zip(raw_vals, capped)):
@@ -521,12 +539,15 @@ def figure7():
     ax.set_ylim(-15, CAP + 20)
     ax.set_xticks(x)
     xlabels = [_img_display(img) for img in pct_pivot.index]
-    ax.set_xticklabels(xlabels, fontsize=7, rotation=0, ha='center')
+    ax.set_xticklabels(xlabels, fontsize=8, rotation=0, ha='center')
     ax.set_ylabel('Overhead vs py3.8 (%)\n(positive = py3.12 slower)')
-    ax.set_title('End-to-end latency: py3.12 + adaptive cuML vs py3.8 baseline\n'
-                 'Datacenter GPUs — orange = py3.12 slower, green = py3.12 faster  '
-                 '(values above axis capped; real value annotated)')
-    ax.legend(fontsize=9, loc='upper left')
+    _fig7_handles = [
+        Patch(facecolor='#BBBBBB', hatch=HATCH_MAP.get(gpu, ''),
+              edgecolor=EDGE_MAP.get(gpu, '#555555'), linewidth=0.7,
+              label=GPU_SHORT[gpu])
+        for gpu in datacenter_gpus if gpu in pct_pivot.columns
+    ]
+    ax.legend(handles=_fig7_handles, fontsize=9, loc='upper left')
     ax.grid(axis='y', ls=':', alpha=0.4)
 
     # MP group separators and labels (placed after ylim is set)
@@ -577,22 +598,42 @@ def figure8():
     for i, gpu in enumerate(datacenter_gpus):
         if gpu not in pct_pivot.columns:
             continue
-        vals = pct_pivot[gpu].values
-        colors = ['#009E73' if v > 0 else '#D55E00' for v in vals]
-        offset = (i - 1) * width
+        vals        = pct_pivot[gpu].values
+        fill_colors = ['#009E73' if v > 0 else '#D55E00' for v in vals]
+        offset      = (i - 1) * width
         ax.bar(x + offset, vals, width,
-               label=GPU_SHORT[gpu], color=colors,
-               edgecolor='white', linewidth=0.4, alpha=0.85)
+               label=GPU_SHORT[gpu], color=fill_colors,
+               edgecolor=EDGE_MAP.get(gpu, '#555555'),
+               hatch=HATCH_MAP.get(gpu, ''),
+               linewidth=0.7, alpha=0.85)
 
     ax.axhline(0, color='black', linewidth=0.8, zorder=5)
     ax.set_xticks(x)
     xlabels = [_img_display(img) for img in pct_pivot.index]
-    ax.set_xticklabels(xlabels, fontsize=7, rotation=0, ha='center')
+    ax.set_xticklabels(xlabels, fontsize=8, rotation=0, ha='center')
     ax.set_ylabel('Improvement of adaptive vs always (%)\n(positive = adaptive faster)')
-    ax.set_title('Adaptive cuML vs always-on cuML\n'
-                 'Datacenter GPUs — green = adaptive faster, orange = adaptive slower')
-    ax.legend(fontsize=9, loc='upper right')
+    _fig8_handles = [
+        Patch(facecolor='#BBBBBB', hatch=HATCH_MAP.get(gpu, ''),
+              edgecolor=EDGE_MAP.get(gpu, '#555555'), linewidth=0.7,
+              label=GPU_SHORT[gpu])
+        for gpu in datacenter_gpus if gpu in pct_pivot.columns
+    ]
+    ax.legend(handles=_fig8_handles, fontsize=9, loc='upper right')
     ax.grid(axis='y', ls=':', alpha=0.4)
+
+    # MP group separators and labels
+    mp_groups_8 = [
+        (-0.5, 1.5, '4.2 MP'), (1.5, 3.5, '6.8 MP'),
+        (3.5, 8.5, '15.3 MP'), (8.5, 12.5, '37.8 MP'), (12.5, 18.5, '151.2 MP'),
+    ]
+    ymax8 = ax.get_ylim()[1]
+    for xstart, xend, label in mp_groups_8:
+        if xend < len(pct_pivot) - 0.5:
+            ax.axvline(xend, color='#AAAAAA', linewidth=0.6, ls='--', zorder=1)
+        mid = (xstart + xend) / 2
+        ax.text(mid, ymax8 * 0.97, label,
+                fontsize=7, color='#555555', ha='center', va='top')
+
     fig.tight_layout()
     save(fig, 'fig8_always_vs_adaptive')
 
