@@ -48,7 +48,7 @@
         <mxCell id="redis" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Redis&#xa;Result Backend" vertex="1">
           <mxGeometry height="50" width="180" x="1085" y="375" as="geometry" />
         </mxCell>
-        <mxCell id="elastic" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Elasticsearch&#xa;Logging &amp; Monitoring" vertex="1">
+        <mxCell id="elastic" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Logstash&#xa;Log Aggregation" vertex="1">
           <mxGeometry height="55" width="175" x="537.5" y="480" as="geometry" />
         </mxCell>
         <mxCell id="edge1" edge="1" parent="1" source="fits" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;" target="rabbit">
