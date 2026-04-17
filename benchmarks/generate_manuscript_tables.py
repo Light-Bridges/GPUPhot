@@ -52,7 +52,8 @@ os.makedirs(OUT_DIR, exist_ok=True)
 BENCHMARK_CSV      = os.path.join(DATA_DIR, 'benchmark_latency.csv')
 MEMORY_CSV         = os.path.join(DATA_DIR, 'profiler_memory_raw.csv')
 CUML_ABLATION_CSV  = os.path.join(DATA_DIR, 'cuml_ablation.csv')
-NVTX_DETECTION_CSV = os.path.join(DATA_DIR, 'nvtx_detection_stages.csv')
+NVTX_DETECTION_CSV         = os.path.join(DATA_DIR, 'nvtx_detection_stages.csv')
+NVTX_DETECTION_PERIMG_CSV  = os.path.join(DATA_DIR, 'nvtx_detection_per_image.csv')
 NVTX_STAGE_CSV     = os.path.join(DATA_DIR, 'nvtx_stage_breakdown.csv')
 CPU_BASELINE_CSV   = os.path.join(DATA_DIR, 'cpu_baseline.csv')
 
@@ -448,7 +449,7 @@ def gen_concurrency():
     Source: data/profiler_memory_raw.csv (4.2 MP median peak VRAM per py ver)
     Formula: floor(GPU_VRAM_total / peak_VRAM_per_image)
     GPU_VRAM_total is read from the gpu_total_MB column of the memory CSV
-    (e.g. RTX 3050 Ti Laptop GPU reports 3964 MB, not the nominal 4096 MB).
+    (e.g. RTX 3050 Ti Laptop GPU reports 3780.8 MB, not the nominal 4096 MB).
     """
     print('Generating body_concurrency.tex ...')
     gpu_cols = [
@@ -484,7 +485,7 @@ def gen_concurrency():
         # Use the SMALLER of nominal spec and measured value.
         # Server GPUs (H100, A100) occasionally report >80 GB in NVML due to
         # unified memory reporting; capping at nominal avoids inflated concurrency.
-        # Laptop GPUs (3050 Ti) report slightly less than nominal (3964 vs 4096 MB)
+        # Laptop GPUs (3050 Ti) report slightly less than nominal (3780.8 vs 4096 MB)
         # and the measured value is used so the +100% gain shows correctly.
         vram_total_mb = min(actual_vram_mb.get(gpu, GPU_VRAM_MB[gpu]), GPU_VRAM_MB[gpu])
         vram_gb       = GPU_VRAM_GB[gpu]
@@ -609,33 +610,72 @@ def gen_cpu_baseline():
 def gen_nvtx_detection():
     """
     tab:nvtx_detection — GPU source detection (A100 py3.12) vs sep, scope-equivalent.
-    Source: data/nvtx_detection_stages.csv
+
+    Preferred source: data/nvtx_detection_per_image.csv (per-image, 1:1 correspondence).
+    Expected columns: image_label, camera, MP, sep_sources,
+                      gpuphot_detection_s, sep_s, photutils_s, gpu_speedup_vs_sep
+    Machine: A100 (lenovo_tttserver) for both GPU and CPU sep measurements.
+
+    Fallback: data/nvtx_detection_stages.csv (legacy per-camera aggregated).
+    WARNING — fallback mixes sep medians from TTT machines (cpu_baseline.csv)
+    with GPU times from A100; per-image CSV must be generated to resolve this.
+    See runbook in TODO.md §F6 for generation commands.
     """
     print('Generating body_nvtx_detection.tex ...')
-    df = pd.read_csv(NVTX_DETECTION_CSV)
-    df['gpuphot_detection_s'] = pd.to_numeric(df['gpuphot_detection_s'], errors='coerce')
-    df['sep_median_s']         = pd.to_numeric(df['sep_median_s'],        errors='coerce')
-    df['gpu_speedup_vs_sep']   = pd.to_numeric(df['gpu_speedup_vs_sep'],  errors='coerce')
-    df['MP']                   = pd.to_numeric(df['MP'],                  errors='coerce')
-    df = df.sort_values('MP')
 
-    col_spec = r'{rrrrr}'
-    header = (
-        r'\textbf{MP} & \textbf{Sources} & \textbf{GPU det.\ (s)} & '
-        r'\textbf{sep (s)} & \textbf{GPU speedup} \\'
-    )
-    rows = []
-    for _, row in df.iterrows():
-        speedup = row['gpu_speedup_vs_sep']
-        sp_str  = f'{speedup:.1f}$\\times$' if not _is_missing(speedup) else OOM
-        mp = row['MP']
-        src = NVTX_SRC.get(mp, 0)
-        rows.append(
-            rf'{_mp_str(mp):5s} & {fmt_src(src):>8s} & '
-            rf'{fmt_time(row["gpuphot_detection_s"], 3)} & '
-            rf'{fmt_time(row["sep_median_s"], 3)} & '
-            rf'{sp_str} \\'
+    if os.path.exists(NVTX_DETECTION_PERIMG_CSV):
+        df = pd.read_csv(NVTX_DETECTION_PERIMG_CSV)
+        df['gpuphot_detection_s'] = pd.to_numeric(df['gpuphot_detection_s'], errors='coerce')
+        df['sep_s']               = pd.to_numeric(df['sep_s'],               errors='coerce')
+        df['gpu_speedup_vs_sep']  = pd.to_numeric(df['gpu_speedup_vs_sep'],  errors='coerce')
+        df['MP']                  = pd.to_numeric(df['MP'],                  errors='coerce')
+        df['sep_sources']         = pd.to_numeric(df['sep_sources'],         errors='coerce')
+        df = df.sort_values(['MP', 'image_label'])
+
+        col_spec = r'{lrrrrr}'
+        header = (
+            r'\textbf{Image} & \textbf{MP} & \textbf{Sources} & '
+            r'\textbf{GPU det.\ (s)} & \textbf{sep (s)} & \textbf{Speedup} \\'
         )
+        rows = []
+        for _, row in df.iterrows():
+            speedup = row['gpu_speedup_vs_sep']
+            sp_str  = f'{speedup:.1f}$\\times$' if not _is_missing(speedup) else OOM
+            src = int(row['sep_sources']) if not _is_missing(row['sep_sources']) else 0
+            rows.append(
+                rf'{row["image_label"]} & {_mp_str(row["MP"]):5s} & {fmt_src(src):>8s} & '
+                rf'{fmt_time(row["gpuphot_detection_s"], 3)} & '
+                rf'{fmt_time(row["sep_s"], 3)} & '
+                rf'{sp_str} \\'
+            )
+    else:
+        print('  WARNING: nvtx_detection_per_image.csv not found — '
+              'using legacy per-camera aggregation (sep times from TTT hosts, '
+              'not A100). Run the F6 runbook to generate the correct CSV.')
+        df = pd.read_csv(NVTX_DETECTION_CSV)
+        df['gpuphot_detection_s'] = pd.to_numeric(df['gpuphot_detection_s'], errors='coerce')
+        df['sep_median_s']         = pd.to_numeric(df['sep_median_s'],        errors='coerce')
+        df['gpu_speedup_vs_sep']   = pd.to_numeric(df['gpu_speedup_vs_sep'],  errors='coerce')
+        df['MP']                   = pd.to_numeric(df['MP'],                  errors='coerce')
+        df = df.sort_values('MP')
+
+        col_spec = r'{rrrrr}'
+        header = (
+            r'\textbf{MP} & \textbf{Sources} & \textbf{GPU det.\ (s)} & '
+            r'\textbf{sep (s)} & \textbf{GPU speedup} \\'
+        )
+        rows = []
+        for _, row in df.iterrows():
+            speedup = row['gpu_speedup_vs_sep']
+            sp_str  = f'{speedup:.1f}$\\times$' if not _is_missing(speedup) else OOM
+            mp = row['MP']
+            src = NVTX_SRC.get(mp, 0)
+            rows.append(
+                rf'{_mp_str(mp):5s} & {fmt_src(src):>8s} & '
+                rf'{fmt_time(row["gpuphot_detection_s"], 3)} & '
+                rf'{fmt_time(row["sep_median_s"], 3)} & '
+                rf'{sp_str} \\'
+            )
 
     body = _tabular(col_spec, header, rows)
     save_tex('body_nvtx_detection.tex', body)
