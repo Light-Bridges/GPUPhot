@@ -23,6 +23,7 @@ Then copied to:   GPUPhotFinal/GPUPHOT_manuscript/figures/
 import os
 import math
 import shutil
+import subprocess
 import numpy as np
 import pandas as pd
 
@@ -74,6 +75,7 @@ EDGE_MAP = {
 BASE = os.path.dirname(os.path.abspath(__file__))
 PROJECT = os.path.dirname(BASE)
 DATA_DIR = os.path.join(BASE, 'data')
+DRAWIO_XML = os.path.join(PROJECT, 'GPUPhot.drawio.xml')
 OUT_DIR = os.path.join(PROJECT, 'figures_profiler')
 MANUSCRIPT_FIGURES_DIR = os.path.join(PROJECT, 'GPUPHOT_manuscript', 'figures')
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -203,6 +205,40 @@ def load_benchmark(profiler_labels=None):
             grp = grp.sort_values('timestamp')
         parts.append(grp.iloc[2:])
     return pd.concat(parts, ignore_index=True) if parts else df
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# FIGURE 1 — Architecture diagram (generated from GPUPhot.drawio.xml via drawio CLI)
+# ═════════════════════════════════════════════════════════════════════════════
+def figure1():
+    """Render fig1_architecture.{pdf,png} from GPUPhot.drawio.xml using drawio CLI.
+
+    Requires the drawio desktop app to be installed and available in PATH.
+    Install: https://github.com/jgraph/drawio-desktop/releases
+      - Linux (snap):  snap install drawio
+      - macOS:         brew install --cask drawio
+      - Windows:       winget install JGraph.drawio
+    If drawio is not available, fig1 is skipped with a warning (other figures unaffected).
+    """
+    print('Figure 1: Architecture diagram (drawio) ...')
+    if shutil.which('drawio') is None:
+        print('  WARNING: drawio not found in PATH — skipping fig1_architecture.')
+        print('           Install drawio (snap install drawio) to regenerate this figure.')
+        return
+    if not os.path.exists(DRAWIO_XML):
+        print(f'  WARNING: {DRAWIO_XML} not found — skipping fig1')
+        return
+    for fmt in ('pdf', 'png'):
+        out = os.path.join(OUT_DIR, f'fig1_architecture.{fmt}')
+        cmd = ['drawio', '-x', '-f', fmt, '--crop', '-b', '10', '-o', out, DRAWIO_XML]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f'  Saved {out}')
+            else:
+                print(f'  ERROR generating {fmt}: {result.stderr.strip()}')
+        except Exception as exc:
+            print(f'  WARNING: drawio execution failed ({exc}) — skipping fig1 {fmt}')
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -660,6 +696,8 @@ def copy_to_manuscript():
 if __name__ == '__main__':
     print(f'Output directory : {OUT_DIR}')
     print(f'Manuscript target: {MANUSCRIPT_FIGURES_DIR}')
+    print()
+    figure1()
     print()
     figure2()
     print()
