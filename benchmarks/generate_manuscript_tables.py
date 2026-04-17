@@ -406,7 +406,9 @@ def gen_vram_merged():
         if _is_missing(v38) or _is_missing(v312):
             saving_str = OOM
         else:
-            saving_str = f'{100.0 * (v38 - v312) / v38:.1f}'
+            # Recalculate from the same rounded-integer values displayed in the
+            # table so the reader can verify the percentage from the MB columns.
+            saving_str = f'{100.0 * (round(v38) - round(v312)) / round(v38):.1f}'
         rows.append(
             rf'{mp:5.1f} & {fmt_mb(v38)} & {fmt_mb(v312)} & {saving_str} \\'
         )
@@ -488,6 +490,12 @@ def gen_concurrency():
         vram_gb       = GPU_VRAM_GB[gpu]
         peak38  = data38.get(MP_4K,  {}).get(gpu, float('nan'))
         peak312 = data312.get(MP_4K, {}).get(gpu, float('nan'))
+        # Fallback to A100 proxy if GPU-specific VRAM data is missing.
+        # Justified by the <0.3% inter-GPU variation documented in §perf:vram.
+        if _is_missing(peak38):
+            peak38 = data38.get(MP_4K, {}).get('A100 (80 GB)', float('nan'))
+        if _is_missing(peak312):
+            peak312 = data312.get(MP_4K, {}).get('A100 (80 GB)', float('nan'))
         if _is_missing(peak38) or _is_missing(peak312):
             rows.append(rf'{gpu_short[gpu]:<14s} & {vram_gb} & {OOM} & {OOM} & {OOM} \\')
             continue
@@ -536,7 +544,11 @@ def gen_cuml_ablation():
         t_no  = med.loc[img_key, 'no']  if 'no'  in med.columns else float('nan')
         nsrc  = src_map.loc[img_key] if img_key in src_map.index else float('nan')
         if not _is_missing(t_yes) and not _is_missing(t_no) and t_no > 0:
-            penalty = (t_yes - t_no) / t_no * 100.0
+            # Use the same rounded values shown in the table so the reader can
+            # verify the Penalty column from the With/Without columns directly.
+            t_yes_r = round(t_yes, 1)
+            t_no_r  = round(t_no,  1)
+            penalty = (t_yes_r - t_no_r) / t_no_r * 100.0 if t_no_r > 0 else float('nan')
             pen_str = f'$+{penalty:.0f}$'
         else:
             pen_str = OOM

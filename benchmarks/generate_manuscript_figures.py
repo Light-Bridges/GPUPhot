@@ -478,8 +478,29 @@ def figure6():
     peak_312 = int(_r312['median_peak_MB'].values[0]) if len(_r312) > 0 else 1718
     gpu_order = ['H100', 'A100', 'L40S', 'RTX 3090', 'RTX 3060', 'RTX 3050 Ti']
 
-    conc_38  = np.array([math.floor(vram_total[g]*0.95/peak_38)  for g in gpu_order])
-    conc_312 = np.array([math.floor(vram_total[g]*0.95/peak_312) for g in gpu_order])
+    # Read actual measured GPU total VRAM from the memory CSV, capping at the
+    # nominal spec to avoid NVML inflation on server GPUs (H100/A100).
+    # This matches the formula used in gen_concurrency() in generate_manuscript_tables.py.
+    _short_to_label = {
+        'H100': 'H100 (80 GB)', 'A100': 'A100 (80 GB)', 'L40S': 'L40S (48 GB)',
+        'RTX 3090': 'RTX 3090 (24 GB)', 'RTX 3060': 'RTX 3060 (12 GB)',
+        'RTX 3050 Ti': 'RTX 3050 Ti (4 GB)',
+    }
+    _nom_mb = {
+        'H100': 80*1024, 'A100': 80*1024, 'L40S': 48*1024,
+        'RTX 3090': 24*1024, 'RTX 3060': 12*1024, 'RTX 3050 Ti': 4*1024,
+    }
+    _mem_gl = _mem['gpu_name'].str.replace('NVIDIA ', '', regex=False).map(GPU_LABEL_MAP)
+    _actual_total = _mem.assign(gl=_mem_gl).groupby('gl')['gpu_total_MB'].median().to_dict()
+    vram_total = {
+        g: int(min(_actual_total.get(_short_to_label[g], _nom_mb[g]), _nom_mb[g]))
+        for g in gpu_order
+    }
+
+    # Formula: floor(vram_total / peak_vram) — no safety-margin factor.
+    # Matches the canonical formula used in tab:concurrency (gen_concurrency()).
+    conc_38  = np.array([math.floor(vram_total[g]/peak_38)  for g in gpu_order])
+    conc_312 = np.array([math.floor(vram_total[g]/peak_312) for g in gpu_order])
 
     fig, ax = plt.subplots(figsize=(7, 4))
     x = np.arange(len(gpu_order))
