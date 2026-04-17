@@ -6,12 +6,33 @@ x-celery-env: &celery-env
 
 x-worker-env: &worker-env
   <<: *celery-env
+  # ── Instrument / data paths ───────────────────────────────────────────────
   INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
+  INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
+  IMAGE_BASE_PATH: /data/images
+  # ── PostgreSQL ────────────────────────────────────────────────────────────
   POSTGRES_DB: GPUPhotDB
   POSTGRES_USER: admin
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
-  INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
-  IMAGE_BASE_PATH: /data/images
+  POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+  POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+  # ── Runtime / logging ─────────────────────────────────────────────────────
+  GPUPHOT_ENVIRONMENT: ${GPUPHOT_ENVIRONMENT:-production}
+  GPUPHOT_DEBUG: ${GPUPHOT_DEBUG:-False}
+  GPUPHOT_LOG_LEVEL: ${GPUPHOT_LOG_LEVEL:-INFO}
+  # ── Logstash log shipping (opt-in; set LOGSTASH_LOGGING=True to enable) ──
+  LOGSTASH_LOGGING: ${LOGSTASH_LOGGING:-False}
+  LOGSTASH_HOST: ${LOGSTASH_HOST:-logstash}
+  LOGSTASH_PORT: ${LOGSTASH_PORT:-5000}
+  # ── Astrometry timeouts ───────────────────────────────────────────────────
+  GPUPHOT_ASTROMETRY_TIMEOUT: ${GPUPHOT_ASTROMETRY_TIMEOUT:-60}
+  GPUPHOT_ASTROMETRY_ONLINE_TIMEOUT: ${GPUPHOT_ASTROMETRY_ONLINE_TIMEOUT:-70}
+  # ── cuML crossmatch backend selection ─────────────────────────────────────
+  # Adaptive mode: set both MIN and MAX (MAX > MIN > 0) to enable range-based
+  # cuML activation. Set GPUPHOT_USE_CUML_CROSSMATCH=1 to force cuML always.
+  GPUPHOT_USE_CUML_CROSSMATCH: ${GPUPHOT_USE_CUML_CROSSMATCH:-0}
+  GPUPHOT_CUML_MIN_SOURCES: ${GPUPHOT_CUML_MIN_SOURCES:-0}
+  GPUPHOT_CUML_MAX_SOURCES: ${GPUPHOT_CUML_MAX_SOURCES:-0}
 
 x-gpu-env: &gpu-env
   GPU_ID: ${GPU_ID:-0}
@@ -86,16 +107,15 @@ x-common-profiler: &common-profiler
     NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-all,compute,utility,graphics}
     NSYS_PROFILING: 1
     NSYS_CUDA_TRACE: 1
+    # ── Profiler overrides (differ from worker-env defaults) ─────────────────
+    # Logging: enabled and verbose in profiling runs; host defaults to the
+    # compose logstash service (override via LOGSTASH_HOST in .env).
     LOGSTASH_LOGGING: ${LOGSTASH_LOGGING:-True}
-    LOGSTASH_HOST: ${LOGSTASH_HOST:-10.0.210.30}
-    LOGSTASH_PORT: ${LOGSTASH_PORT:-5000}
+    LOGSTASH_HOST: ${LOGSTASH_HOST:-logstash}
     GPUPHOT_ENVIRONMENT: ${GPUPHOT_ENVIRONMENT:-profiler}
     GPUPHOT_DEBUG: ${GPUPHOT_DEBUG:-True}
     GPUPHOT_LOG_LEVEL: ${GPUPHOT_LOG_LEVEL:-DEBUG}
-    GPUPHOT_ASTROMETRY_TIMEOUT: ${GPUPHOT_ASTROMETRY_TIMEOUT:-60}
-    GPUPHOT_USE_CUML_CROSSMATCH: ${GPUPHOT_USE_CUML_CROSSMATCH:-0}
-    GPUPHOT_CUML_MIN_SOURCES: ${GPUPHOT_CUML_MIN_SOURCES:-0}
-    GPUPHOT_CUML_MAX_SOURCES: ${GPUPHOT_CUML_MAX_SOURCES:-0}
+    # No DB persistence during profiling runs by default.
     POSTGRES_HOST: ${POSTGRES_HOST:-nostore}
   cap_add:
     - SYS_ADMIN
@@ -125,6 +145,18 @@ services:
     image: redis:6-alpine
     ports:
       - "${REDIS_PORT:-6379}:6379"
+    restart: unless-stopped
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.13.0
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+      # Disable X-Pack monitoring to avoid Elasticsearch requirement in dev
+      XPACK_MONITORING_ENABLED: "false"
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+    ports:
+      - "${LOGSTASH_PORT:-5000}:5000/tcp"
     restart: unless-stopped
 
   beat:
