@@ -522,3 +522,36 @@ git show HEAD~N:benchmarks/data/cuml_ablation.csv | head  # buscar en git log el
 | `benchmarks/dev/run_cuml_ablation_old10_a100.sh` | Nuevo — script 10 imágenes re-run |
 | `benchmarks/dev/integrate_cuml_ablation.py` | Nuevo — script de integración |
 | `benchmarks/dev/extract_stage_breakdown_qhy411_151mp.py` | Nuevo — extracción NVTX QHY411-1 |
+
+---
+
+## Fase 3 — Addendum: Decisión R1 Aplicada (2026-04-18)
+
+**Decisión tomada:** Opción R1 — texto del manuscrito actualizado para reflejar los datos actuales (cuML crossmatch-only, 0–12% overhead).
+
+### Cambios realizados en el manuscrito
+
+Todos los ficheros editados están en `GPUPHOT_manuscript/` (directorio gitignored; regenerar desde rama `documentation` o ver diff de la sesión):
+
+| Fichero | Qué cambió |
+|---------|-----------|
+| `abstract.tex` L25–27 | "73--256\% slower" → "at most 12\% overhead; cuML faster only above ~2,000–5,000 sources" |
+| `introduction.tex` L33 | "negative result: 73--256\% slower" → "at most 12\% overhead across 15 images; adaptive strategy applies cuML only when beneficial" |
+| `conclusion.tex` L22–24 | "73--256\% slower" → "at most 12\% overhead; crossover above ~2,000–5,000 src" |
+| `discussion.tex` L38–39 | "avoids the 73--256\% overhead" → "applies cuML only within the beneficial source-count window" |
+| `discussion.tex` L75–79 | "73--256\% slower" → "at most 12\% end-to-end; cuML activated adaptively for dense fields" |
+| `performance.tex` L237–243 | "73--256\% per-image overhead" → "at most 12\% overhead, confirming crossmatch is small fraction of pipeline" |
+| `performance.tex` caption L350–359 | "+660\%" y "73--256\%" eliminados → rango correcto "-3\% to +12\%, most within ±3\%" |
+| `performance.tex` comment L361 | Updated data source comment to cuml_ablation.csv 2026-04-18 |
+| `performance.tex` Analysis L366–395 | Párrafo completo reescrito: datos actuales, "at most 12\%", crossmatch = fracción pequeña, crossover sintético explicado |
+
+### Verificación
+```bash
+grep -rn "73--256\|73--660\|660\\\\\%" GPUPHOT_manuscript/*.tex
+# → resultado vacío: ninguna referencia restante
+```
+
+### Narrativa final del manuscrito sobre cuML
+El argumento ahora es: "cuML crossmatch-only añade ≤12% overhead end-to-end (tabla ablación) pero los benchmarks sintéticos aislados muestran que cuML es más rápido que cKDTree solo por encima de ~2,000–5,000 fuentes. La estrategia adaptativa activa cuML solo en ese rango."
+
+La distinción entre overhead end-to-end (pequeño, porque crossmatch = fracción pequeña) y speedup de crossmatch aislado (favorable para campos densos) queda clara en el texto.
