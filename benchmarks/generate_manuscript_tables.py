@@ -663,9 +663,9 @@ def gen_nvtx_detection():
         df['sep_sources']         = pd.to_numeric(df['sep_sources'],         errors='coerce')
         df = df.sort_values(['MP', 'image_label'])
 
-        col_spec = r'{lrrrrr}'
+        col_spec = r'{rrrrr}'
         header = (
-            r'\textbf{Image} & \textbf{MP} & \textbf{sep Sources} & '
+            r'\textbf{MP} & \textbf{Sources} & '
             r'\textbf{GPU det.\ (s)} & \textbf{sep (s)} & \textbf{Speedup} \\'
         )
         rows = []
@@ -674,7 +674,7 @@ def gen_nvtx_detection():
             sp_str  = f'{speedup:.1f}$\\times$' if not _is_missing(speedup) else OOM
             src = int(row['sep_sources']) if not _is_missing(row['sep_sources']) else 0
             rows.append(
-                rf'{row["image_label"]} & {_mp_str(row["MP"]):5s} & {fmt_src(src):>8s} & '
+                rf'{_mp_str(row["MP"]):5s} & {fmt_src(src):>8s} & '
                 rf'{fmt_time(row["gpuphot_detection_s"], 3)} & '
                 rf'{fmt_time(row["sep_s"], 3)} & '
                 rf'{sp_str} \\'
