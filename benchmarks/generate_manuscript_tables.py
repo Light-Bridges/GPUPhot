@@ -542,8 +542,10 @@ def gen_cuml_ablation():
 
     col_spec = r'{rrrrr}'
     header = (
-        r'\textbf{MP} & \textbf{Sources} & \textbf{With cuML (s)} & '
-        r'\textbf{Without cuML (s)} & \textbf{Penalty (\%)} \\'
+        r'\textbf{MP} & \textbf{Sources} & '
+        r'\textbf{\shortstack{With\\cuML (s)}} & '
+        r'\textbf{\shortstack{Without\\cuML (s)}} & '
+        r'\textbf{Penalty (\%)} \\'
     )
     rows = []
     for keyword, mp, _ in ABLATION_FILE_MAP:
