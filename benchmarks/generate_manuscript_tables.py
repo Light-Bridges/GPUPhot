@@ -55,7 +55,8 @@ CUML_ABLATION_CSV  = os.path.join(DATA_DIR, 'cuml_ablation.csv')
 NVTX_DETECTION_CSV         = os.path.join(DATA_DIR, 'nvtx_detection_stages.csv')
 NVTX_DETECTION_PERIMG_CSV  = os.path.join(DATA_DIR, 'nvtx_detection_per_image.csv')
 NVTX_STAGE_CSV     = os.path.join(DATA_DIR, 'nvtx_stage_breakdown.csv')
-CPU_BASELINE_CSV   = os.path.join(DATA_DIR, 'cpu_baseline.csv')
+CPU_BASELINE_CSV      = os.path.join(DATA_DIR, 'cpu_baseline.csv')
+CPU_BASELINE_A100_CSV = os.path.join(DATA_DIR, 'cpu_baseline_a100.csv')
 
 # ── GPU label normalisation ────────────────────────────────────────────────────
 GPU_LABEL_MAP = {
@@ -131,8 +132,12 @@ def _img_label(mp, src):
     return _mp_str(mp), fmt_src(src)
 
 # cuml_ablation: map image filename keyword → (MP, n_sources)
-# NOTE: QHY411-1 Lum full (151.2 MP, 428 src) excluded — its cuML penalty
-# (+664%) is pathological (sparse field on large frame) and distorts the table.
+# Fifteen images ordered by MP ascending, then source count ascending.
+# The 151.2 MP / 428-source case (+664% penalty) is intentionally included:
+# it illustrates the degenerate condition (sparse field + large frame + cuML
+# init overhead) that makes the adaptive mode necessary.
+# New dense-field entries (37.8 MP Eugenia/V445Pup and 151.2 MP M106/NGC2683/C2025N1)
+# complete coverage from 112 to 131,397 sources.
 ABLATION_FILE_MAP = [
     ('QSO0957',    4.2,   412),
     ('C2025A6',    4.2,   296),
@@ -141,8 +146,14 @@ ABLATION_FILE_MAP = [
     ('NGC2903',   15.3,   318),
     ('2012QD8',   37.8,   154),
     ('GaiaDR3',   37.8,   247),
+    ('Eugenia',   37.8,  1998),   # QHY411-1_SDSSg_2k — dense field, below A100 cuML threshold
+    ('V445Pup',   37.8,  6932),   # QHY411-1_SDSSr_7k — near A100 cuML threshold
+    ('2025PR1',  151.2,   428),   # +664% — sparse field; adaptive mode selects cKDTree
+    ('M106',     151.2, 10005),   # QHY411-3_SDSSg_10k — above A100 cuML min threshold
     ('M81',      151.2, 14241),
     ('24P_Lum',  151.2, 18888),
+    ('NGC2683',  151.2, 19565),   # QHY411-3_SDSSr_19k
+    ('C2025N1',  151.2, 131397),  # QHY411-3_Lum_131k — above A100 cuML max threshold
 ]
 
 # cpu_baseline: map filename keyword → (MP, sources, benchmark image_label)
@@ -386,7 +397,7 @@ def gen_vram_merged():
     tab:vram_merged — Peak GPU memory (MB) and py3.8→py3.12 saving per image size.
     Uses A100-SXM4-80GB as the representative GPU (chosen because it has complete
     data for all 10 benchmark images and is the most broadly deployed 80 GB card).
-    Cross-GPU variation for the same image is <0.3% (see Figure fig:memory_comparison).
+    Cross-GPU variation among datacenter GPUs for the same image is <0.9% (see Figure fig:memory_comparison).
     Replaces the former tab:vram_py312, tab:vram_py38, and tab:vram_savings.
     Source: data/profiler_memory_raw.csv
     """
@@ -550,7 +561,8 @@ def gen_cuml_ablation():
             t_yes_r = round(t_yes, 1)
             t_no_r  = round(t_no,  1)
             penalty = (t_yes_r - t_no_r) / t_no_r * 100.0 if t_no_r > 0 else float('nan')
-            pen_str = f'$+{penalty:.0f}$'
+            sign = '+' if penalty >= 0 else ''
+            pen_str = f'${sign}{penalty:.0f}$'
         else:
             pen_str = OOM
         nsrc_str = fmt_src(nsrc) if not _is_missing(nsrc) else OOM
@@ -566,15 +578,25 @@ def gen_cuml_ablation():
 def gen_cpu_baseline():
     """
     tab:cpu_baseline — sep / Photutils / GPUPhot (A100 py3.12) latency comparison.
-    sep and Photutils times: data/cpu_baseline.csv
+    sep and Photutils times: data/cpu_baseline_a100.csv (primary, same-machine as GPU)
+                             data/cpu_baseline.csv (fallback for images not in A100 CSV)
     GPUPhot times: data/benchmark_latency.csv (A100, py312_cuml_adaptive, median)
+
+    Using the A100-host measurements for sep/Photutils ensures the comparison is on
+    identical hardware — the TTT server CPUs are 1.4–3.5× slower than the A100 host.
     """
     print('Generating body_cpu_baseline.tex ...')
 
-    # Load CPU baselines
-    cpu = pd.read_csv(CPU_BASELINE_CSV)
-    cpu['sep_median_s']      = pd.to_numeric(cpu['sep_median_s'],      errors='coerce')
-    cpu['photutils_median_s']= pd.to_numeric(cpu['photutils_median_s'],errors='coerce')
+    # Primary: CPU timings measured on the A100 host (same machine as GPUPhot)
+    cpu_a100 = pd.read_csv(CPU_BASELINE_A100_CSV) if os.path.exists(CPU_BASELINE_A100_CSV) else pd.DataFrame()
+    if not cpu_a100.empty:
+        cpu_a100['sep_median_s']       = pd.to_numeric(cpu_a100['sep_median_s'],       errors='coerce')
+        cpu_a100['photutils_median_s'] = pd.to_numeric(cpu_a100['photutils_median_s'], errors='coerce')
+
+    # Fallback: TTT-server CPU timings (different hardware — kept for images missing from A100 CSV)
+    cpu_ttt = pd.read_csv(CPU_BASELINE_CSV)
+    cpu_ttt['sep_median_s']       = pd.to_numeric(cpu_ttt['sep_median_s'],       errors='coerce')
+    cpu_ttt['photutils_median_s'] = pd.to_numeric(cpu_ttt['photutils_median_s'], errors='coerce')
 
     # Load GPUPhot A100 py3.12 adaptive times
     df = load_benchmark('py312_cuml_adaptive')
@@ -589,10 +611,19 @@ def gen_cpu_baseline():
     )
     rows = []
     for keyword, mp, src, img_label in CPU_BASELINE_FILE_MAP:
-        # sep / Photutils: match by filename keyword in data/cpu_baseline.csv
-        match = cpu[cpu['filename'].str.contains(keyword, na=False)]
-        sep_t       = match.iloc[0]['sep_median_s']        if not match.empty else float('nan')
-        photutils_t = match.iloc[0]['photutils_median_s']  if not match.empty else float('nan')
+        # Try A100 CSV first (same-machine comparison); fall back to TTT CSV
+        sep_t       = float('nan')
+        photutils_t = float('nan')
+        if not cpu_a100.empty:
+            match_a100 = cpu_a100[cpu_a100['filename'].str.contains(keyword, na=False)]
+            if not match_a100.empty:
+                sep_t       = match_a100.iloc[0]['sep_median_s']
+                photutils_t = match_a100.iloc[0]['photutils_median_s']
+        if _is_missing(sep_t):  # fallback to TTT if not in A100 CSV
+            match_ttt = cpu_ttt[cpu_ttt['filename'].str.contains(keyword, na=False)]
+            if not match_ttt.empty:
+                sep_t       = match_ttt.iloc[0]['sep_median_s']
+                photutils_t = match_ttt.iloc[0]['photutils_median_s']
 
         # GPUPhot: direct lookup by image_label in the benchmark CSV
         gpu_t = gpuphot_med.get(img_label, float('nan'))
@@ -634,7 +665,7 @@ def gen_nvtx_detection():
 
         col_spec = r'{lrrrrr}'
         header = (
-            r'\textbf{Image} & \textbf{MP} & \textbf{Sources} & '
+            r'\textbf{Image} & \textbf{MP} & \textbf{sep Sources} & '
             r'\textbf{GPU det.\ (s)} & \textbf{sep (s)} & \textbf{Speedup} \\'
         )
         rows = []
@@ -684,8 +715,9 @@ def gen_nvtx_detection():
 def gen_stage_breakdown():
     """
     tab:stage_breakdown — Full per-stage timing breakdown (A100, py3.12).
-    Shows each pipeline stage for iKon936 (4.2 MP) and QHY411-3 (151.2 MP),
-    with GPU/CPU/I-O classification and % of total wall-clock time.
+    Shows each pipeline stage for iKon936 (4.2 MP), QHY411-1_Lum_full (151.2 MP sparse,
+    428 src, pending NVTX collection), and QHY411-3 (151.2 MP dense, 10k–19k src).
+    Columns with no data (total=0) are automatically omitted from the output table.
     Source: data/nvtx_stage_breakdown.csv
     """
     print('Generating body_stage_breakdown.tex ...')
@@ -717,41 +749,64 @@ def gen_stage_breakdown():
         ('Catalog query (I/O)',    'Catalog query (network I/O)',   'I/O'),
     ]
 
-    cameras = {
-        'iKon936-1':  4.2,
-        'QHY411-3':   151.2,
-    }
+    # (camera name in CSV, mp_filter or None, column display label)
+    # mp_filter disambiguates when the same camera appears at multiple MP sizes
+    # (e.g. QHY411-1 has data at both 37.8 MP and, once collected, 151.2 MP).
+    # Columns with total=0 (no data) are silently omitted from the output table.
+    CAMERAS_BREAKDOWN = [
+        ('iKon936-1', None,  r'\textbf{4.2\,MP sparse (iKon-L)}'),
+        ('QHY411-1', 151.2, r'\textbf{151.2\,MP sparse (QHY411-1)}'),  # pending NVTX
+        ('QHY411-3', 151.2, r'\textbf{151.2\,MP dense (QHY411-3)}'),
+    ]
 
     # Build per-camera dicts: stage -> median_s
     cam_data = {}
-    for cam, mp in cameras.items():
-        sub = df[df['camera'] == cam].set_index('stage')['median_s']
+    for cam_key, mp_filter, col_label in CAMERAS_BREAKDOWN:
+        sub_df = df[df['camera'] == cam_key]
+        if mp_filter is not None and 'MP' in df.columns:
+            sub_df = sub_df[sub_df['MP'].round(1) == round(mp_filter, 1)]
+        sub = sub_df.set_index('stage')['median_s']
         total = sub.sum()
-        cam_data[cam] = (sub, total)
+        cam_data[cam_key + (f'_{mp_filter}' if mp_filter else '')] = (sub, total, col_label)
 
-    col_spec = r'{llrrrrr}'
+    # Only include cameras with data
+    active_cams = [(k, v) for k, v in cam_data.items() if v[1] > 0]
+    n_active = len(active_cams)
+
+    # Build col_spec and header dynamically based on how many cameras have data
+    # Each camera contributes 2 columns (Time + %)
+    col_spec = r'{llr' + 'rr' * n_active + r'}'
+
+    cmidrule_parts = []
+    col_headers = []
+    start_col = 4
+    for cam_key, (sub, total, col_label) in active_cams:
+        end_col = start_col + 1
+        cmidrule_parts.append(rf'\cmidrule(lr){{{start_col}-{end_col}}}')
+        col_headers.append(rf'\multicolumn{{2}}{{c}}{{{col_label}}}')
+        start_col = end_col + 1
+
     header = (
         r'\multicolumn{3}{l}{\textbf{Stage}} & '
-        r'\multicolumn{2}{c}{\textbf{4.2 MP (iKon-L)}} & '
-        r'\multicolumn{2}{c}{\textbf{151.2 MP (QHY411-3)}} \\'
-        '\n'
-        r'\cmidrule(lr){4-5}\cmidrule(lr){6-7}'
-        '\n'
-        r'& & \textbf{Type} & \textbf{Time (s)} & \textbf{\%} & '
-        r'\textbf{Time (s)} & \textbf{\%} \\'
+        + ' & '.join(col_headers) + r' \\'
+        + '\n'
+        + ''.join(cmidrule_parts)
+        + '\n'
+        + r'& & \textbf{Type}'
+        + r' & \textbf{Time (s)} & \textbf{\%}' * n_active
+        + r' \\'
     )
 
     rows = []
     last_type = None
     for stage_key, stage_label, stage_type in STAGE_ORDER:
-        # Collect values for all cameras
+        # Collect values for all active cameras
         vals = {}
-        for cam, mp in cameras.items():
-            sub, total = cam_data[cam]
+        for cam_key, (sub, total, col_label) in active_cams:
             val = sub.get(stage_key, float('nan'))
-            vals[cam] = val
+            vals[cam_key] = val
 
-        # Skip rows where no camera has data
+        # Skip rows where no active camera has data
         if all(pd.isna(v) for v in vals.values()):
             continue
 
@@ -761,9 +816,8 @@ def gen_stage_breakdown():
         last_type = stage_type
 
         row_parts = [f' & {stage_label} & {stage_type}']
-        for cam, mp in cameras.items():
-            _, total = cam_data[cam]
-            val = vals[cam]
+        for cam_key, (sub, total, col_label) in active_cams:
+            val = vals[cam_key]
             if pd.isna(val) or total == 0:
                 row_parts.append(r' & --- & ---')
             else:
@@ -775,8 +829,7 @@ def gen_stage_breakdown():
     # Totals row
     rows.append(r'\midrule')
     total_parts = [r'\multicolumn{2}{l}{\textbf{Total}} & ']
-    for cam, mp in cameras.items():
-        _, total = cam_data[cam]
+    for cam_key, (sub, total, col_label) in active_cams:
         total_parts.append(f'& \\textbf{{{total:.2f}}} & \\textbf{{100.0}} ')
     rows.append(''.join(total_parts) + r'\\')
 
