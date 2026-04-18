@@ -77,7 +77,7 @@ GPU_TEX_HEADER = {
     'RTX 3060 (12 GB)':   r'\textbf{3060}',
     'RTX 3050 Ti (4 GB)': r'\textbf{3050\,Ti}',
     'Orin Super (8 GB)':  r'\textbf{Orin S.}$^*$',
-    'Orin NX (8 GB)':     r'\textbf{Orin NX}',
+    'Orin NX (8 GB)':     r'\textbf{Orin NX}$^\dagger$',
 }
 
 # Total VRAM in MB for concurrency calculation
@@ -478,7 +478,7 @@ def gen_concurrency():
     col_spec = r'{lrrrr}'
     header = (
         r'\textbf{GPU} & \textbf{VRAM (GB)} & '
-        r'\textbf{py3.8} & \textbf{py3.12} & \textbf{Gain} \\'
+        r'\textbf{py3.8} & \textbf{py3.12} & \textbf{Gain (\%)} \\'
     )
     rows = []
     for gpu in gpu_cols:
