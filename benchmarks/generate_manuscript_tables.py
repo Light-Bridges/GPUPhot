@@ -139,21 +139,30 @@ def _img_label(mp, src):
 # New dense-field entries (37.8 MP Eugenia/V445Pup and 151.2 MP M106/NGC2683/C2025N1)
 # complete coverage from 112 to 131,397 sources.
 ABLATION_FILE_MAP = [
+    # 4.2 MP
     ('QSO0957',    4.2,   412),
     ('C2025A6',    4.2,   296),
+    # 6.8 MP
     ('C2025R2',    6.8,   112),
+    ('Atira',      6.8,  2060),   # QHY600-3_SDSSi_2k
+    # 15.3 MP
     ('WASP-43-b', 15.3,   218),
     ('NGC2903',   15.3,   318),
+    ('1620',      15.3,  1993),   # QHY600-4_Lum_2k
+    ('hermione',  15.3,  4361),   # QHY600-4_SDSSg_4k
+    ('MAXIJ1820', 15.3, 10532),   # QHY600-4_SDSSi_10k
+    # 37.8 MP
     ('2012QD8',   37.8,   154),
     ('GaiaDR3',   37.8,   247),
-    ('Eugenia',   37.8,  1998),   # QHY411-1_SDSSg_2k — dense field, below A100 cuML threshold
-    ('V445Pup',   37.8,  6932),   # QHY411-1_SDSSr_7k — near A100 cuML threshold
-    ('2025PR1',  151.2,   428),   # +664% — sparse field; adaptive mode selects cKDTree
-    ('M106',     151.2, 10005),   # QHY411-3_SDSSg_10k — above A100 cuML min threshold
+    ('Eugenia',   37.8,  2391),   # QHY411-1_SDSSg_2k
+    ('V445Pup',   37.8,  6932),   # QHY411-1_SDSSr_7k
+    # 151.2 MP
+    ('2025PR1',  151.2,   428),
+    ('M106',     151.2, 10005),   # QHY411-3_SDSSg_10k
     ('M81',      151.2, 14241),
     ('24P_Lum',  151.2, 18888),
     ('NGC2683',  151.2, 19565),   # QHY411-3_SDSSr_19k
-    ('C2025N1',  151.2, 131397),  # QHY411-3_Lum_131k — above A100 cuML max threshold
+    ('C2025N1',  151.2, 131397),  # QHY411-3_Lum_131k
 ]
 
 # cpu_baseline: map filename keyword → (MP, sources, benchmark image_label)
