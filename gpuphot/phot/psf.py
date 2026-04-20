@@ -27,20 +27,25 @@ try:
     from cuml import AgglomerativeClustering
 except ImportError:
     from sklearn.cluster import AgglomerativeClustering
+except Exception:
+    from sklearn.cluster import AgglomerativeClustering
 
 try:
     from cuml.decomposition import PCA
 except ImportError:
     from sklearn.decomposition import PCA
+except Exception:
+    from sklearn.decomposition import PCA
+
 try:
     import cuml
     from cuml.cluster import AgglomerativeClustering as cuAgglomerativeClustering
     from cuml.metrics import pairwise_distances as cu_pairwise_distances
 
     CUML_CLUSTERING_AVAILABLE = True
-    # logger.debug("RAPIDS cuML Clustering & Metrics found.")
 except ImportError:
-    # logger.warning("Warning: RAPIDS cuML Clustering/Metrics not found. Grouping will use CPU (sklearn/scipy).")
+    CUML_CLUSTERING_AVAILABLE = False
+except Exception:
     CUML_CLUSTERING_AVAILABLE = False
 
 # Import CPU libraries unconditionally for fallback

@@ -134,8 +134,8 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     ports:
-      - "${RABBITMQ_MANAGEMENT_PORT:-5672}:5672"
-      - "${RABBITMQ_AMQP_PORT:-15672}:15672"
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
     environment:
       RABBITMQ_DEFAULT_USER: gpuphot
       RABBITMQ_DEFAULT_PASS: gpuphot
@@ -247,7 +247,7 @@ services:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
     volumes:
-      - ${POSTGRES_DATA_PATH:-./gpuphot_database}:/var/lib/postgresql/data
+      - ${POSTGRES_DATA_PATH:-../gpuphot_database}:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     restart: unless-stopped
 

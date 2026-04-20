@@ -83,7 +83,10 @@ IMAGE_PATH=/path/on/your/host/to/images
 NOTEBOOKS_PATH=/path/on/your/host/to/jupyter_projects
 
 # Path on the *host* where PostgreSQL database files will be stored.
-POSTGRES_DATA_PATH=/path/on/your/host/to/postgres_data
+# IMPORTANT: use an absolute path OUTSIDE the repository directory.
+# PostgreSQL sets 700 permissions on this folder; if it lives inside the repo
+# Docker build context scanning fails with "permission denied".
+POSTGRES_DATA_PATH=/home/$USER/gpuphot_database
 
 # ===================================================================
 #  Celery Worker Settings
@@ -311,4 +314,5 @@ documentation see **[DATABASE.md](DATABASE.md)**.
     *   Verify that `nvidia-smi` works on the host machine.
     *   Check that the `BASE_IMAGE` variable in your `.env` is compatible with your system's architecture (x86_64 vs. aarch64/jetson).
 *   **Volume Permission Errors**: Make sure the paths defined in your `.env` file (`ASTROMETRY_CACHE_PATH`, `IMAGE_PATH`, etc.) exist on your host machine and that the user running Docker has read/write permissions for them.
+*   **`permission denied` when building images (`gpuphot_database`)**: PostgreSQL sets `700` permissions (owned by the postgres process user) on its data directory.  If that directory ends up inside the repository tree, Docker's build-context sender cannot traverse it — even though `.dockerignore` excludes it — and the build fails.  **Always set `POSTGRES_DATA_PATH` to an absolute path outside the repository**, e.g. `/home/$USER/gpuphot_database`.  The compose default (`../gpuphot_database`) already places it one level above the project root to avoid this.
 *   **Port Conflicts**: If a port is already in use, you can easily change it by modifying the corresponding variable in your `.env` file (e.g., `JUPYTER_PORT=8889`).

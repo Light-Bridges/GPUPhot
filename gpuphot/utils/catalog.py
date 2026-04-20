@@ -15,10 +15,16 @@ from __future__ import annotations
 import os
 import time
 
-import cupy as cp
+try:
+    import cupy as cp
+    CUPY_AVAILABLE = True
+except Exception:
+    import numpy as cp
+    CUPY_AVAILABLE = False
+
 try:
     import cupynumeric as np
-except ImportError:
+except Exception:
     import numpy as np
 
 import nvtx
@@ -41,6 +47,14 @@ try:
     logger.debug("RAPIDS cuML found.")
 except ImportError:
     logger.warning("RAPIDS cuML not found. Falling back to CPU crossmatch (cKDTree).")
+    CUML_AVAILABLE = False
+except Exception as e:
+    logger.warning(
+        "RAPIDS cuML could not initialize (%s: %s). "
+        "This typically means GPU is unavailable in this container. "
+        "Falling back to CPU crossmatch (cKDTree).",
+        type(e).__name__, e,
+    )
     CUML_AVAILABLE = False
 
 # cuML crossmatch control via environment variables.
