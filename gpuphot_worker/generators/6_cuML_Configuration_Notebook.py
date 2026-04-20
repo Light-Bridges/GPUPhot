@@ -36,7 +36,13 @@ nb['cells'].append(nbf.v4.new_markdown_cell(
     "> **Background:** cuML uses brute-force O(N²) search, which beats "
     "cKDTree O(N log N) only within a specific source-count range that depends "
     "on your GPU.  Outside that range cKDTree is faster.  The adaptive mode "
-    "activates cuML only when it helps."
+    "activates cuML only when it helps.\n\n"
+    "> **Important — benchmark conditions matter:** Run the benchmark while "
+    "the system is in the same state it will be during normal pipeline operation "
+    "(other containers running, typical CPU/GPU load).  "
+    "If the system is idle or thermally throttled, CPU timings may be "
+    "artificially fast or slow, shifting the apparent crossover point.  "
+    "Results from a loaded system may not match a cold or idle system."
 ))
 
 # ---------------------------------------------------------------------------
@@ -100,7 +106,9 @@ nb['cells'].append(nbf.v4.new_markdown_cell(
     "wins at each size, giving you a rough idea of the crossover point in "
     "~1–2 minutes.\n\n"
     "For a production-quality measurement with statistical convergence and "
-    "auto-refinement, see Section 3."
+    "auto-refinement, see Section 3.\n\n"
+    "> Run this with the rest of the stack already up (`gpuphot_worker`, "
+    "`postgres`, etc.) so CPU and GPU load reflects real operating conditions."
 ))
 
 nb['cells'].append(nbf.v4.new_code_cell(
@@ -187,8 +195,10 @@ nb['cells'].append(nbf.v4.new_markdown_cell(
     "If you prefer not to open a terminal, the cell below runs the full "
     "benchmark from the lab container and streams its output into the "
     "notebook.  This takes **5–20 minutes** depending on your GPU.\n\n"
-    "> The lab container shares the same GPU as the worker, so results are "
-    "representative."
+    "> The lab container shares the same GPU as the worker.  "
+    "For representative results, keep the full stack running while the "
+    "benchmark executes — idle or thermally throttled conditions can shift "
+    "the crossover point."
 ))
 
 nb['cells'].append(nbf.v4.new_code_cell(
