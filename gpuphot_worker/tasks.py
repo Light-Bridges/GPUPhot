@@ -24,6 +24,8 @@ try:
     import cupynumeric as np
 except ImportError:
     import numpy as np
+except Exception:
+    import numpy as np
 
 import pytz
 from celery import shared_task

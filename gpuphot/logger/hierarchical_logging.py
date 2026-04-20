@@ -15,6 +15,8 @@ try:
     import cupynumeric as np
 except ImportError:
     import numpy as np
+except Exception:
+    import numpy as np
 
 from astropy.io.fits import Header
 from dotenv import load_dotenv

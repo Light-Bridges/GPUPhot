@@ -18,6 +18,8 @@ try:
     import cupynumeric as np
 except ImportError:
     import numpy as np
+except Exception:
+    import numpy as np
 
 from astropy.io import fits
 # from astropy.nddata import block_reduce

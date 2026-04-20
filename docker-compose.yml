@@ -36,6 +36,10 @@ x-worker-env: &worker-env
 
 x-gpu-env: &gpu-env
   GPU_ID: ${GPU_ID:-0}
+  NVIDIA_VISIBLE_DEVICES: ${GPU_ID:-0}
+  NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-all}
+  NVIDIA_PERSISTENCE_MODE: "on"
+  CUDA_VISIBLE_DEVICES: ${GPU_ID:-0}
   # -----------------------------------------------------------------------------------------
   # LEGATE / CUPYNUMERIC MEMORY CONFIGURATION
   # -----------------------------------------------------------------------------------------
@@ -80,6 +84,7 @@ x-common-worker-backend: &common-worker-backend
     - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
     - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
     - /run/docker.sock:/run/docker.sock
+    - ${NVIDIA_PERSISTENCED_SOCKET:-/var/run/nvidia-persistenced/socket}:/var/run/nvidia-persistenced/socket
   depends_on:
     - rabbitmq
     - redis
@@ -169,16 +174,10 @@ services:
 
   gpuphot_worker:
     <<: *common-worker-backend
+    runtime: nvidia
     environment:
       <<: [*worker-env, *gpu-env]
     command: [ "celery", "-A", "gpuphot_worker.worker_app", "worker", "--pool=gevent", "-c", "${CELERY_CONCURRENCY:-1}", "-n", "gpuphot-worker-${GPU_ID:-0}", "--soft-time-limit", "240", "--time-limit", "300" ]
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: [ "${GPU_ID:-0}" ]
-              capabilities: [ gpu ]
 
   lab:
     build:
@@ -191,6 +190,7 @@ services:
     #    env_file:
     #      - path: ./.env
     #        required: false
+    runtime: nvidia
     ports:
       - "${JUPYTER_PORT:-8888}:8888"
     environment:
@@ -205,13 +205,7 @@ services:
       - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
       - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
       - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [ gpu ]
+      - ${NVIDIA_PERSISTENCED_SOCKET:-/var/run/nvidia-persistenced/socket}:/var/run/nvidia-persistenced/socket
     restart: unless-stopped
 
   flower:

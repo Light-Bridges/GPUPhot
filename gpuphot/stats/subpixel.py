@@ -9,6 +9,8 @@ try:
     import cupynumeric as np
 except ImportError:
     import numpy as np
+except Exception:
+    import numpy as np
 
 from cupy.fft import fftn, ifftn, fftfreq
 import nvtx
