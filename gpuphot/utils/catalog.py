@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 import time
+import numpy as _numpy
 
 try:
     import cupy as cp
@@ -137,7 +138,7 @@ def _crossmatch_sources_cpu_impl(source_coords: np.ndarray, ref_coords: np.ndarr
     """
     nvtx_range = nvtx.start_range('_crossmatch_sources_cpu_impl', category='utils.catalog_cpu', color='blue')
 
-    if not isinstance(source_coords, np.ndarray) or not isinstance(ref_coords, np.ndarray):
+    if not isinstance(source_coords, _numpy.ndarray) or not isinstance(ref_coords, _numpy.ndarray):
         nvtx.end_range(nvtx_range)
         raise TypeError("Inputs must be NumPy arrays for CPU impl.")
     if source_coords.ndim != 2 or ref_coords.ndim != 2:
