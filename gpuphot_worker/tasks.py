@@ -95,6 +95,33 @@ def task_error_handler(task, e, image_path):
 
 
 @shared_task
+def probe_cuml():
+    """Return a human-readable string describing cuML availability and cuML config."""
+    import os
+    lines = []
+    try:
+        import cuml
+        import cupy as cp
+        n_gpus = cp.cuda.runtime.getDeviceCount()
+        lines.append(f"cuML {cuml.__version__} available — {n_gpus} GPU(s) detected.")
+    except ImportError:
+        lines.append("cuML not installed.")
+    except Exception as e:
+        lines.append(f"cuML installed but could not initialise: {type(e).__name__}: {e}")
+
+    use_cuml = os.getenv("GPUPHOT_USE_CUML_CROSSMATCH", "0")
+    min_src  = os.getenv("GPUPHOT_CUML_MIN_SOURCES", "0")
+    max_src  = os.getenv("GPUPHOT_CUML_MAX_SOURCES", "0")
+    if use_cuml == "1":
+        lines.append("Mode: cuML ALWAYS ON (GPUPHOT_USE_CUML_CROSSMATCH=1)")
+    elif min_src != "0" and max_src != "0":
+        lines.append(f"Mode: ADAPTIVE — cuML active for {min_src}–{max_src} sources")
+    else:
+        lines.append("Mode: DISABLED — cKDTree used for all crossmatches")
+    return "\n".join(lines)
+
+
+@shared_task
 def process_directory_task(path=None, filename=None, instrument_name=None, exclude_pattern=None, reprocess=False):
     """
     Orchestrator task that scans a directory and queues image processing tasks.
