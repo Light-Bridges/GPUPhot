@@ -184,7 +184,6 @@ profiling_scripts/dev/
 .env-copy
 figures/
 tables/
-PUBLICATION_SOFTWARE_PROMPT.md
 listar_proyecto.py
 testing.py
 notebooks/images
@@ -198,8 +197,4 @@ GPUPHOT_manuscript/
 GpuFitsCrypt_manuscript/
 
 # Internal research/manuscript workflow docs — not for public library users
-TODO_DOC.md
 MANUSCRIPT_CONTEXT.md
-benchmarks/BENCHMARK_MASTER.md
-benchmarks/README.md
-benchmarks/results_collected/README_benchmark_data.md
