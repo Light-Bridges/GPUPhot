@@ -7,3 +7,4 @@ SQLAlchemy
 psycopg2-binary
 celery-redbeat
 gevent
+nvtx

@@ -1,3 +1,13 @@
+# SPDX-License-Identifier: MIT
+"""
+Top-level gpuphot package initializer.
+
+This module performs minor runtime patches (a safe rmtree for TemporaryDirectory)
+and exposes commonly used subpackages. It intentionally avoids heavy runtime
+initialization (like forcing a specific GPU) to keep import-time side-effects
+minimal.
+"""
+
 import os
 import subprocess
 import tempfile
@@ -12,61 +22,53 @@ def _super_safe_rmtree(cls, name, ignore_errors=False, onerror=None):
        using 'rm -rf' instead as a fallback due to potential shutil.rmtree bugs/issues.
     """
 
-    # Definimos el onerror interno por si acaso lo necesitáramos (aunque ahora no lo usamos directamente)
-    # No necesitamos un onerror complejo si vamos a usar 'rm -rf' para directorios
+    # Internal onerror handler (kept simple because we prefer an explicit rm -rf fallback)
     def _internal_onerror(func, path, exc_info):
 
-        # Si el usuario proveyó un onerror, lo llamamos
+        # If the caller provided a custom onerror, call it
         if onerror:
             onerror(func, path, exc_info)
-        # Si no debemos ignorar errores, relanzamos
+        # If we should not ignore errors, re-raise
         elif not ignore_errors:
             exc_type, exc_value, tb = exc_info
             raise exc_value.with_traceback(tb)
 
-    # --- Lógica Principal de _super_safe_rmtree ---
+    # --- Main logic of _super_safe_rmtree ---
     try:
-        # Primero, comprobar si existe usando lexists (no sigue enlaces)
+        # First, check existence using lexists (do not follow symlinks)
         if not os.path.lexists(name):
-            return  # No existe, no hacemos nada
+            return
 
-        # Comprobar si es un enlace
+        # If it's a symlink, unlink it
         if os.path.islink(name):
             os.unlink(name)
 
-        # Comprobar si es un directorio (y NO un enlace, ya comprobado arriba)
+        # If it's a directory (and not a symlink), fall back to a shell rm -rf
         elif os.path.isdir(name):
-            # Usar subprocess.run es más seguro que os.system
             cmd = ['rm', '-rf', name]
-            # Usamos check=False porque queremos manejar errores nosotros mismos si ignore_errors es True
-            # Capturamos stdout/stderr para depuración
             result = subprocess.run(cmd, check=False, capture_output=True, text=True)
             if result.returncode != 0:
-                # Si no debemos ignorar errores, lanzamos una excepción
                 if not ignore_errors:
-                    # Podríamos crear una OSError más específica
                     raise OSError(f"'rm -rf' failed for {name}: {result.stderr}")
 
-
-        # Comprobar si es cualquier otra cosa (un archivo normal)
-        elif os.path.exists(name):  # Si no es link ni dir, pero existe, debe ser un archivo
+        # Otherwise, if it exists, treat it as a regular file and remove
+        elif os.path.exists(name):
             os.remove(name)
 
     except Exception as e:
         if not ignore_errors:
-            # If errors are not ignored at the top level either, re-raise
             raise
-        # If ignore_errors is True, suppress the exception at this level too
+        # If ignore_errors is True, suppress the exception here
 
 
-# Apply the super enhanced patch
+# Apply the super enhanced patch to TemporaryDirectory if available
 if hasattr(tempfile.TemporaryDirectory, '_rmtree'):
     tempfile.TemporaryDirectory._rmtree = MethodType(_super_safe_rmtree, tempfile.TemporaryDirectory)
 
-# Use this if you want to use cupy float64 patch
+# Optional: cupy float64 patch is provided in gpuphot.patch_cupy
 # from . import patch_cupy
 
-# Resto de imports y configuración
+# Import commonly used subpackages (deferred heavy initialization)
 from . import image_processor
 from . import instrument_config_parser
 from . import logger
@@ -74,7 +76,7 @@ from . import phot
 from . import stats
 from . import utils
 
-# Configuración de GPU (descomenta si es necesario)
+# GPU configuration hints are intentionally commented out to avoid import-time side-effects
 # gpu_id = os.environ.get('GPUPHOT_GPU_ID', '0')
 # try:
 #     from .logger.hierarchical_logging import setup_logger
@@ -84,5 +86,7 @@ from . import utils
 # except Exception as e:
 #     logger.error(f"Could not set the GPU {gpu_id}. Using GPU 0 by default.")
 #     cp.cuda.Device(0).use()
+
+__version__ = '0.1.0'
 
 __all__ = ['logger', 'phot', 'stats', 'utils', 'instrument_config_parser', 'image_processor']

@@ -1,6 +1,16 @@
+# SPDX-License-Identifier: MIT
+"""
+PSF and star detection utilities for gpuphot.phot.
+
+Provides functions for PSF extraction, star detection, centroiding and
+grouping. The implementation favors GPU (CuPy/RAPIDS) where available and
+falls back to CPU-based libraries when necessary.
+"""
+
 from __future__ import annotations
 
 import cupy as cp
+import numpy as _numpy
 try:
     import cupynumeric as np
 except ImportError:
@@ -18,20 +28,25 @@ try:
     from cuml import AgglomerativeClustering
 except ImportError:
     from sklearn.cluster import AgglomerativeClustering
+except Exception:
+    from sklearn.cluster import AgglomerativeClustering
 
 try:
     from cuml.decomposition import PCA
 except ImportError:
     from sklearn.decomposition import PCA
+except Exception:
+    from sklearn.decomposition import PCA
+
 try:
     import cuml
     from cuml.cluster import AgglomerativeClustering as cuAgglomerativeClustering
     from cuml.metrics import pairwise_distances as cu_pairwise_distances
 
     CUML_CLUSTERING_AVAILABLE = True
-    # logger.debug("RAPIDS cuML Clustering & Metrics found.")
 except ImportError:
-    # logger.warning("Warning: RAPIDS cuML Clustering/Metrics not found. Grouping will use CPU (sklearn/scipy).")
+    CUML_CLUSTERING_AVAILABLE = False
+except Exception:
     CUML_CLUSTERING_AVAILABLE = False
 
 # Import CPU libraries unconditionally for fallback
@@ -145,12 +160,12 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
 
     adaptive_memory_management(mempool)
 
-    # Usar un contexto para conv_ima y conv_sigma
-    with cp.cuda.Stream():  # Asegura la ejecución asíncrona y la liberación de recursos
+    # Use a context to ensure asynchronous execution and resource release
+    with cp.cuda.Stream():  # Ensures asynchronous execution and release of resources
         # conv_ima = convolve_fft(img, kernel, **kwargs)
         # conv_sigma = conv_ima / rms / cp.sqrt(kernel.shape[0] * kernel.shape[1])
-        # del kernel, conv_ima  # Liberar kernel y conv_ima tan pronto como sea posible
-        # mempool.free_all_blocks()  # Asegurar liberación
+        # del kernel, conv_ima  # Release kernel and conv_ima as soon as possible
+        # mempool.free_all_blocks()  # Ensure memory pool is freed
 
         # conv_sigma[:border, :] = 0
         # conv_sigma[-border:, :] = 0
@@ -163,10 +178,22 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
             coor_f[:, 1] < img.shape[1] - border)]).astype(cp.int32)
         del kernel
 
+        # NOTE (2026-03-11): The GPU→CPU transfer here (.get()) is intentional and
+        # benchmarked.  A pure-GPU O(N²) pairwise-distance alternative was tested
+        # against scipy.spatial.KDTree over N = 64…1024 (see dev/kdtree_gpu.py).
+        # KDTree (O(N log N)) was faster at every size tested:
+        #
+        #   N=64   → KDTree 0.38 ms, GPU compute-only 0.77 ms  (speedup 0.49×)
+        #   N=256  → KDTree 0.70 ms, GPU compute-only 0.87 ms  (speedup 0.81×)
+        #   N=1024 → KDTree 2.22 ms, GPU compute-only 7.57 ms  (speedup 0.29×)
+        #
+        # The GPU implementation scales empirically as O(N^1.2–1.6) while KDTree
+        # stays near O(N^0.7–0.9), so the gap grows with N.  Do NOT replace this
+        # with a GPU version without re-running the benchmark first.
         dist = get_centroids_distance_kdtree(coor_f.get())
         dist_mask = dist > dist_px
         coor_f = coor_f[dist_mask]
-        dist = dist[dist_mask]  # Actualizar dist después del filtrado
+        dist = dist[dist_mask]  # Update distances after filtering
         snr = conv_sigma[coor_f[:, 0], coor_f[:, 1]]
         peak = img[coor_f[:, 0], coor_f[:, 1]]
         m = (snr > min_snr) & (peak < sat_lim)
@@ -179,16 +206,17 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
         coor_f = cp.asarray(coor_f)[m]
         # coor_f = find_local_centroid(conv_sigma, coor_f, int(3 / pxscale))
 
-        del conv_sigma  # Liberar antes del sort
+        del conv_sigma  # Release before sorting
 
         if sort:
-            # Calcular sort_metric en la GPU si es posible
-            sort_metric = snr[m].get() + dist[m.get()]  # Ahora dist ya ha sido filtrado.
-            idx = cp.argsort(np.max(
-                sort_metric) - sort_metric)  # Se calcula con numpy ya que la cantidad de datos a ordenar es pequeña
+            # sort_metric mixes SNR (GPU) and nearest-neighbour distance (already CPU
+            # numpy array from KDTree above).  Keeping it in NumPy avoids an extra
+            # round-trip; the array is tiny (~50–200 elements) so CPU sort is fine.
+            sort_metric = snr[m].get() + dist[m.get()]
+            idx = cp.argsort(np.max(sort_metric) - sort_metric)
             coor_f = coor_f[idx]
 
-        # Liberación de memoria
+        # Memory release
         del snr, peak, m, dist, dist_mask, sort_metric, idx
 
     del img, rms
@@ -379,7 +407,7 @@ def _group_star_dataset_cpu_impl(coords: np.ndarray, avg_group_size: int = 10, m
     return final_labels_contiguous
 
 
-# --- Implementación GPU ---
+# --- GPU implementation ---
 @nvtx.annotate('_group_star_dataset_gpu_impl', category='phot.psf_gpu')
 def _group_star_dataset_gpu_impl(coords: cp.ndarray, avg_group_size: int = 10, min_group_size: int = 5) -> cp.ndarray:
     """GPU implementation using CuPy/cuML."""
@@ -551,15 +579,12 @@ def get_eigen_psfs(normed_star_dataset: cp.array, n_components: int = 5) -> cp.a
     # eigen_psfs = pca.components_.reshape(-1, normed_star_dataset.shape[1], normed_star_dataset.shape[2])
     # return eigen_psfs
 
-    # Instanciar PCA con el número de componentes deseado
     pca = PCA(n_components=n_components)
-    # Aplanar cada estrella (manteniendo datos en GPU; no se usa .get())
-    # (N, H, W) a (N, H*W). Usar -1 en reshape
-    # deja que Cupy calcule H*W sin suponer que W == H.
+    # Flatten each star (N, H, W) -> (N, H*W). Transfer to CPU for PCA.fit.
     starset_flattened = normed_star_dataset.reshape(normed_star_dataset.shape[0], -1).get()
-    # Ajustar PCA directamente en GPU
+    # Fit PCA on the flattened star patches
     pca.fit(starset_flattened)
-    # Obtener los eigen PSFs reestructurando los componentes principales al tamaño original de la imagen
+    # Reshape principal components back to original star patch dimensions
     eigen_psfs = pca.components_.reshape(-1, normed_star_dataset.shape[1], normed_star_dataset.shape[2])
     return eigen_psfs
 
@@ -845,7 +870,7 @@ def fit_moffat(star_data: np.ndarray | cp.ndarray) -> tuple:
         r = cp.asnumpy(r)
         Z = cp.asnumpy(Z)
         peak = cp.asnumpy(peak)  # Convert peak (potentially 0-d array) to scalar float
-        if isinstance(peak, np.ndarray):
+        if isinstance(peak, _numpy.ndarray):
             peak = peak.item()
     # else:
     #     r_cpu = r

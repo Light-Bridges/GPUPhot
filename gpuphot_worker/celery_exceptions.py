@@ -1,3 +1,17 @@
+# SPDX-License-Identifier: MIT
+"""
+Custom Celery exceptions and task base classes used by gpuphot_worker.
+
+This module provides:
+- SerializableTaskError: an exception type that can be converted to a dict
+  for storing structured error metadata in Celery task states.
+- BaseTaskWithFailureHandling: a Celery Task base class that intercepts
+  failures and stores serialized error metadata when SerializableTaskError
+  is raised.
+
+All docstrings are written in English and follow NumPy-style where useful.
+"""
+
 from celery import Task
 from celery.exceptions import TaskError
 
@@ -9,10 +23,12 @@ class SerializableTaskError(TaskError):
     This class extends TaskError to provide a serializable format for task errors,
     including the exception type and message.
 
-    :param message: The error message.
-    :type message: str
-    :param exc_type: The exception type, defaults to the class name if not provided.
-    :type exc_type: str, optional
+    Parameters
+    ----------
+    message : str
+        The error message.
+    exc_type : str, optional
+        The exception type, defaults to the class name if not provided.
     """
 
     def __init__(self, message, exc_type=None):
@@ -21,19 +37,23 @@ class SerializableTaskError(TaskError):
 
     def as_dict(self):
         """
-        Convert the exception to a dictionary format.
+        Convert the exception to a dictionary format suitable for Celery metadata.
 
-        :return: A dictionary containing the exception type and message.
-        :rtype: dict
+        Returns
+        -------
+        dict
+            A dictionary containing the exception type and message.
         """
         return {"exc_type": self.exc_type, "message": str(self)}
 
     def __str__(self):
         """
-        Return a string representation of the exception.
+        Return a short string representation of the exception.
 
-        :return: A string in the format "exception_type: message".
-        :rtype: str
+        Returns
+        -------
+        str
+            A string in the format "exception_type: message".
         """
         return f"{self.exc_type}: {super().__str__()}"
 
@@ -42,27 +62,31 @@ class BaseTaskWithFailureHandling(Task):
     """
     A base Celery task class with custom failure handling.
 
-    This class extends the Celery Task class to provide custom handling for
-    SerializableTaskError exceptions.
+    This class extends the Celery :class:`Task` class to provide custom handling for
+    :class:`SerializableTaskError` exceptions. When such an exception is raised the
+    task state is updated with serialized error metadata to make debugging easier
+    for asynchronous workers and remote callers.
     """
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         """
-        Handle task failure, with special treatment for SerializableTaskError.
+        Handle task failure, with special treatment for :class:`SerializableTaskError`.
 
-        This method updates the task state to "FAILURE" and includes the serialized
-        error information for SerializableTaskError exceptions.
+        This method updates the task state to ``FAILURE`` and includes the serialized
+        error information for :class:`SerializableTaskError` exceptions.
 
-        :param exc: The exception that caused the task failure.
-        :type exc: Exception
-        :param task_id: The ID of the failed task.
-        :type task_id: str
-        :param args: Positional arguments passed to the task.
-        :type args: tuple
-        :param kwargs: Keyword arguments passed to the task.
-        :type kwargs: dict
-        :param einfo: Extended information about the exception.
-        :type einfo: ExceptionInfo
+        Parameters
+        ----------
+        exc : Exception
+            The exception that caused the task failure.
+        task_id : str
+            The ID of the failed task.
+        args : tuple
+            Positional arguments passed to the task.
+        kwargs : dict
+            Keyword arguments passed to the task.
+        einfo : ExceptionInfo
+            Extended information about the exception (traceback, etc.).
         """
         if isinstance(exc, SerializableTaskError):
             self.update_state(

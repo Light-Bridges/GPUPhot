@@ -5,10 +5,12 @@ This guide explains how to use GPUPhot for astronomical image processing, coveri
 ## Table of Contents
 
 *   [1. Instrument Configuration](#1-instrument-configuration)
-    *   [1.1  Configuration File Structure](#11-configuration-file-structure)
-    *   [1.2.  Creating and Modifying Configurations](#12-creating-and-modifying-configurations)
-    *   [1.3.  Loading a Configuration](#13-loading-a-configuration)
+    *   [1.1 Configuration File Structure](#11-configuration-file-structure)
+    *   [1.2 Creating and Modifying Configurations](#12-creating-and-modifying-configurations)
+    *   [1.3 Loading a Configuration](#13-loading-a-configuration)
 *   [2. Astrometry Setup](#2-astrometry-setup)
+    *   [2.1 Solver strategy & timeouts](#21-solver-strategy--timeouts)
+    *   [2.2 Handling astrometry failures](#22-handling-astrometry-failures)
 *   [3. Basic Usage](#3-basic-usage)
     *   [3.1. Processing a Single Image](#31-processing-a-single-image)
     *   [3.2. Understanding the Output](#32-understanding-the-output)
@@ -19,8 +21,12 @@ This guide explains how to use GPUPhot for astronomical image processing, coveri
     *   [4.4. Retrieving Results](#44-retrieving-results)
 *   [5. Docker Compose Environment](#5-docker-compose-environment)
 *   [6. Advanced Usage](#6-advanced-usage)
-     *  [6.1. Image Reduction](#61-image-reduction)
-     *  [6.2 Custom processing parameters](#62-custom-processing-parameters)
+    *   [6.1. Image Reduction](#61-image-reduction)
+    *   [6.2. Custom processing parameters](#62-custom-processing-parameters)
+    *   [6.3. Using a Custom Catalog Source](#63-using-a-custom-catalog-source)
+    *   [6.4. GPU Crossmatch Calibration (cuML)](#64-gpu-crossmatch-calibration-cuml)
+    *   [6.5. Pipeline Logs — Understanding What GPUPhot Reports](#65-pipeline-logs--understanding-what-gpuphot-reports)
+*   [7. Error Handling](#7-error-handling)
 
 ## 1. Instrument Configuration
 
@@ -68,7 +74,7 @@ Configuration files have three main sections:
   }
 }
 ```
-[View default.json](https://github.com/Light-Bridges/GPUPHOt/blob/main/gpuphot/instrument_configs/default.json)
+[View default.json](https://github.com/Light-Bridges/GPUPhot/blob/main/gpuphot/instrument_configs/default.json)
 
 
 **Explanation:**
@@ -90,6 +96,76 @@ Configuration files have three main sections:
 5.  **Adjust `processing_params` (optional):** Experiment with these parameters to optimize the processing for your specific images.
 6. **Save** the changes.
 
+#### Overriding incorrect FITS headers with `forced_values`
+
+Some instruments write incorrect values to FITS headers (e.g. a gain reported
+as `1.0` when the actual gain is `0.33 e⁻/ADU`).  `camera_specs` provides a
+*fallback* used only when a keyword is absent, but it cannot override a value
+that is already present in the header.  Use `forced_values` instead — it
+takes priority over both the FITS header and `camera_specs`:
+
+```json
+{
+  "forced_values": {
+    "gain": 0.33,
+    "read_noise": 3.5
+  }
+}
+```
+
+Any key listed in `forced_values` will always be used, regardless of what the
+FITS header says.  Leave the block empty (`{}`) for instruments whose headers
+are reliable.
+
+#### Supported filters & filter mapping
+
+GPUPhot maps the filter name found in the FITS header to one of its internal
+canonical codes, which are used to select the correct photometric catalog
+and calibration reference.
+
+**Valid internal codes:**
+
+| Code | Description |
+|---|---|
+| `Lum` | Luminance / white light |
+| `Open` | No filter / open |
+| `SDSSu` | SDSS *u* band |
+| `SDSSg` | SDSS *g* band |
+| `SDSSr` | SDSS *r* band |
+| `SDSSi` | SDSS *i* band |
+| `SDSSzs` | SDSS *z* band |
+| `SDSSy` | SDSS *y* band |
+
+The `default.json` config already maps the most common header values:
+
+| Header value(s) | Internal code |
+|---|---|
+| `Lum`, `L`, `LUM`, `w` | `Lum` |
+| `Open`, `Clear`, `C` | `Open` |
+| `u`, `u'` | `SDSSu` |
+| `g`, `g'`, `B`, `V` | `SDSSg` |
+| `r`, `r'`, `R`, `Ha`, `Halpha` | `SDSSr` |
+| `i`, `i'`, `I` | `SDSSi` |
+| `z`, `z'` | `SDSSzs` |
+| `y` | `SDSSy` |
+
+To add a custom filter name used by your instrument, add an entry to the
+`filter_map` block in your instrument JSON:
+
+```json
+{
+  "filter_map": {
+    "H-alpha": "SDSSr",
+    "OIII": "SDSSg",
+    "MyCustomFilter": "Lum"
+  }
+}
+```
+
+Any header value not present in `filter_map` will be passed through unchanged.
+If the resulting code is not one of the eight valid internal codes, the image
+will be processed but catalog cross-matching may be skipped.
+
 ### 1.3. Loading a Configuration
 
 To use a specific configuration, you need to provide the `instrument_name` when creating an `ImageProcessor`:
@@ -101,13 +177,13 @@ from gpuphot.image_processor import create_processor
 processor = create_processor('default')
 
 # Using a custom configuration
-processor = create_processor('my_instrument', '/path/to/your/instrument_configs') #INSTRUMENT_CONFIG_BASE_PATH
+processor = create_processor('my_instrument', '/path/to/your/instrument_configs')
 
-#Using the instrument name defined in the .env
-processor = create_processor()
+# Using the default instrument
+processor = create_processor('default')
 
 ```
-The `config_dir` argument in `create_processor` is optional. By default, uses the value defined by `INSTRUMENT_CONFIG_BASE_PATH`.
+The `config_dir` argument in `create_processor` is optional. By default, it uses the built-in `instrument_configs/` directory inside the package.
 
 ## 2. Astrometry Setup
 
@@ -125,16 +201,65 @@ get_solver()
 ```
 
 *   This will download the files to the directory specified by the `ASTROMETRY_CACHE_PATH` environment variable.  Make sure this directory exists and has enough free space.
-* This can take a *long time*, depending on your internet connection. It is normal.
+* This can take a *long time*, depending on your internet connection. This is normal.
+
+> **Important:** Always run `get_solver()` once *outside* any Celery worker before
+> starting distributed processing.  Worker tasks have strict time limits, and triggering
+> an index file download inside a worker will cause a timeout.
+
+### 2.1 Solver strategy & timeouts
+
+The astrometry pipeline tries three strategies in order, stopping as soon as one succeeds:
+
+1. **Local solver with position hint** — uses the `RA`/`DEC` from the FITS header to narrow the search field.
+2. **Local solver without hint** — blind solve over the full index; slower but works when the header coordinates are absent or wrong.
+3. **Online fallback** — submits source coordinates to the [Astrometry.net](https://nova.astrometry.net) web API.
+
+Each attempt has an independent timeout controlled by environment variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `GPUPHOT_ASTROMETRY_TIMEOUT` | `60` | Seconds allowed for each local solver attempt |
+| `GPUPHOT_ASTROMETRY_ONLINE_TIMEOUT` | `70` | Seconds allowed for the online Astrometry.net attempt |
+| `ASTROMETRY_API_KEY` | *(none)* | API key for nova.astrometry.net (online fallback only) |
+
+If all three attempts fail, `AstrometrizationTimeoutError` is raised.
+If the solver runs to completion but finds no plate solution, `UnableToAstrometrizeError` is raised.
+
+### 2.2 Handling astrometry failures
+
+```python
+from gpuphot.exceptions import AstrometrizationTimeoutError, UnableToAstrometrizeError
+
+try:
+    result = processor.process_image('image.fits')
+except AstrometrizationTimeoutError:
+    # All attempts timed out — increase GPUPHOT_ASTROMETRY_TIMEOUT or
+    # check that index files are present in ASTROMETRY_CACHE_PATH
+    print("Astrometry timed out")
+except UnableToAstrometrizeError:
+    # Solver ran but found no solution — field may be outside index coverage
+    # or the image contains too few / too many sources
+    print("No plate solution found")
+```
+
+Common causes and fixes:
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Timeout on first image only | Index files being downloaded inside the worker | Run `get_solver()` once before starting workers |
+| Consistent timeout on all images | `GPUPHOT_ASTROMETRY_TIMEOUT` too short for your hardware | Increase timeout in `.env` |
+| No solution, local solver | Field outside scale/coverage of downloaded index series | Check `ASTROMETRY_CACHE_PATH` contains the correct series (4100 + 5200) |
+| No solution, online fallback | `ASTROMETRY_API_KEY` not set or field not in Astrometry.net | Set the API key in `.env` |
 
 ## 3. Basic Usage
 
 ```python
-import gpuphot
+from gpuphot.image_processor import create_processor
 from gpuphot_worker.utils import open_image_file
 
 # 1. Create an ImageProcessor (using the default configuration)
-processor = gpuphot.get_processor()
+processor = create_processor('default')
 
 # 2. Load an image
 imdata, imheader = open_image_file('path/to/your/image.fits')  # Replace with your image path
@@ -155,7 +280,7 @@ The `process_image` function performs the photometry. It takes two main argument
 ### 3.2. Understanding the Output
 The `process_image` function returns a tuple containing:
 * `phot_df`: A Pandas DataFrame with the photometry results.
-* `hwcs`: The image fits header, updated.
+* `hwcs`: The image FITS header, updated.
 
 **`phot_df` Columns:**
 
@@ -220,35 +345,86 @@ Flower provides a web-based interface for monitoring Celery tasks.
 3.  You can click on a task ID to see more details, including the traceback if the task failed.
 
 ### 4.4. Retrieving Results
-* Using the `task.get()` method.
+
 ```python
-result = task.get() #This will wait the task is completed
+result = task.get()  # blocks until the task completes
 print(result)
+```
+
+`task.get()` raises `celery.exceptions.TimeoutError` if you pass a `timeout`
+argument and the task does not finish in time.
+
+#### Result storage & TTL
+
+GPUPhot uses two independent result stores:
+
+| Store | TTL | Contents |
+|---|---|---|
+| **Redis** (Celery result backend) | **24 hours** | `task.get()` return value (JSON) |
+| **PostgreSQL** (`imaphot` / `imastats`) | Permanent | Full photometry output |
+
+The Redis TTL is set to 24 hours (`result_expires = 86400` in `celeryconfig.py`).
+After that window, `task.get()` raises `celery.exceptions.TimeoutError` even
+if the task completed successfully — but the data is still in PostgreSQL.
+
+For long-running pipelines, query results from the database rather than
+relying on `task.get()` for anything beyond same-session use:
+
+```python
+from gpuphot_worker.database_search_utils import search_by_filename
+
+# Retrieve results any time — not subject to Redis TTL
+df = search_by_filename('my_image.fits')
+```
+
+#### Worker crashes & task reliability
+
+`worker_max_tasks_per_child = 1` means each worker process handles exactly
+one task and then restarts.  This prevents VRAM leaks accumulating across
+images.
+
+By default, Celery acknowledges a task when it is *received* (not after it
+completes).  If a worker crashes mid-task:
+
+- The task is **not** re-queued automatically.
+- Any data already written to PostgreSQL (e.g. `imastats` row) remains.
+- The `imaphot` rows for that image may be absent or partial.
+
+To detect incomplete results, check whether an image's `id` has rows in
+`imaphot` — if `imastats` has the row but `imaphot` does not, the photometry
+step did not complete:
+
+```python
+from gpuphot_worker.database_search_utils import search_by_filename
+
+df = search_by_filename('my_image.fits')
+if df.empty:
+    print("No photometry results — task may have crashed")
 ```
 
 ## 5. Docker Compose Environment
 
 When using the provided Docker Compose setup, keep in mind:
 
-1.  **Image Location:** Place your FITS images in the directory you mapped to `/data/images` inside the container (this is controlled by the `IMAGE_BASE_PATH` environment variable in your `.env` file).
+1.  **Image Location:** Place your FITS images in the directory you mapped to `/data/images` inside the container (this is controlled by the `IMAGE_PATH` environment variable in your `.env` file).
 2.  **JupyterLab:** Access JupyterLab at `http://localhost:8888` to interact with GPUPhot interactively, run notebooks, and analyze results.
 3.  **Flower:** Monitor Celery tasks at `http://localhost:5555`.
-4. **RabbitMQ**: You can acces using `http://localhost:15672` with the credentials `gpuphot:gpuphot`
+4. **RabbitMQ**: You can access it using `http://localhost:15672` with the credentials `gpuphot:gpuphot`.
 
 ## 6. Advanced Usage
 ### 6.1. Image Reduction
 
-GPUPhot supports basic image reduction as binning or/and cropping before photometric and astrometric analisys. This is specially usefull when the system doesn't have enough resources to process the image, and it is needed to reduce the image size. You can configure the image reduction using the `image_reduction` parameter inside your instrument configuration file. The posible setings are:
+GPUPhot supports basic image reduction, such as binning and/or cropping, before photometric and astrometric analysis. This is especially useful when the system lacks sufficient resources to process the full image and its size needs to be reduced. You can configure image reduction using the `image_reduction` parameter in your instrument configuration file. The possible settings are:
 
-* **apply_reduction**: It can be set as `always`, `never` or `on_failure`.
-* **binning**: Here you can define the binning factor, and the method.
+* **apply_reduction**: Can be set to `always`, `never`, or `on_failure`.
+* **binning**: Here you can define the binning factor and method.
     - **factor**: The binning factor.
-    - **method**: sum or median.
-* **center:** If the image has to be cropped, the center, in pixels, of the cropped image.
-* **crop_size:** If the image has to be cropped, the size of the cropped area.
+    - **method**: `sum` or `median`.
+* **center:** If the image is to be cropped, the center of the cropped image in pixels.
+* **crop_size:** If the image is to be cropped, the size of the cropped area.
 
 Example:
-```
+```json
 "image_reduction": {
         "apply_reduction": "on_failure",
         "binning": {
@@ -261,18 +437,17 @@ Example:
 ```
 
 ### 6.2 Custom processing parameters
-As well as image reduction configuration, some other parameters of the processing chain can be configured using the `processing_params` entry of the instrument configuration file. For example:
+In addition to image reduction, other parameters of the processing chain can be configured using the `processing_params` entry of the instrument configuration file. For example:
 
 *   **tile_section**: Size of the tiles.
-*   **center_factor**: Fraction of the center of the image that will be used to get the reference stars to model the PSF.
-*   **SP_filt**: Apply a filter to remove salt and pepper noise.
+*   **center_factor**: Fraction of the image center used to get reference stars for PSF modeling.
+*   **SP_filt**: Apply a filter to remove salt-and-pepper noise.
 *   **pca_method**: Use the PCA method.
 *    **CR_filt**: Apply a filter for cosmic rays.
 *    **border**: Set a border where no sources will be searched.
-*   **tile_section_psf**: Size of the tiles used to model the variations of the PSF across the image.
-*   **lum_gmag_coeff**: The coefficient to weight the g magnitude in the calculation of the luminosity, when the filter is `Lum`.
-*    **lum_rmag_coeff**: The coefficient to weight the r magnitude in the calculation of the luminosity, when the filter is `Lum`.
-```
+*   **tile_section_psf**: Size of the tiles used to model PSF variations across the image.
+*   **lum_gmag_coeff**: The coefficient to weight the g magnitude in the luminosity calculation when the filter is `Lum`.
+*    **lum_rmag_coeff**: The coefficient to weight the r magnitude in the luminosity calculation when the filter is `Lum`.
 
 ```json
 "processing_params": {
@@ -284,5 +459,218 @@ As well as image reduction configuration, some other parameters of the processin
     "lum_gmag_coeff": 0.5,
     "lum_rmag_coeff": 0.5
   }
+```
+
+### 6.3 Using a Custom Catalog Source
+
+GPUPhot allows you to replace the default Vizier client with a custom function to query local or private astronomical catalogs. This is a powerful feature for integrating `GPUPhot` with your own data infrastructure, such as a PostgreSQL database or a private API.
+
+To enable this, you pass your custom function and its related parameters to `process_image` by grouping them in a dictionary.
+
+#### Example: Using a Custom Search Function
+
+Here is how you would call `process_image` with your custom catalog function. This method makes it clear that these parameters are part of an advanced, self-contained configuration.
+
+```python
+from gpuphot.image_processor import create_processor
+from gpuphot_worker.utils import open_image_file
+from my_project.catalog_search import my_custom_search_function # Your implementation
+
+# 1. Create a processor
+processor = create_processor('my_instrument')
+
+# 2. Load image data and header
+imdata, imheader = open_image_file('path/to/your/image.fits')
+
+# 3. Define the custom catalog parameters in a dictionary
+custom_catalog_kwargs = {
+    'custom_vizier_search_func': my_custom_search_function,
+    'custom_vizier_timeout': 120  # Optional: 2-minute timeout
+}
+
+# 4. Process the image, unpacking the dictionary as keyword arguments
+phot_df, hwcs = processor.process_image(
+    imdata,
+    imheader,
+    **custom_catalog_kwargs
+)
+
+# 5. Continue with your analysis
+if phot_df is not None:
+    print(f"Successfully processed image, found {len(phot_df)} sources.")
+else:
+    print("Image processing failed or returned no data.")
 
 ```
+
+#### Implementing the Custom Function
+
+Your custom function is the core of the integration. It must be carefully designed to meet `GPUPhot`'s expectations to ensure seamless operation.
+
+For a complete guide on how to:
+-   Correctly define the function signature.
+-   Handle parameters like `radius`, `mag_limit`, and `ref_filter`.
+-   Connect to a database (e.g., PostgreSQL) safely using connection pools.
+-   Map your database columns to `GPUPhot`'s canonical names.
+-   Manage errors and timeouts gracefully.
+
+Please refer to the detailed developer documentation:
+
+**[>> Guide for Custom Catalog Integration (CUSTOM_CATALOG.md)](CUSTOM_CATALOG.md)**
+
+### 6.4. GPU Crossmatch Calibration (cuML)
+
+On x86_64 systems with cuML installed, GPUPhot can use GPU-accelerated catalog
+cross-matching.  The GPU is only faster for a specific source-count window that
+depends on your hardware, so you need to calibrate it once per GPU model.
+
+Run the calibration tool inside the profiler container:
+
+```bash
+docker exec gpuphotfinal-profiler-1 \
+    python3 /app/benchmarks/benchmark_cuml_crossover.py \
+    --logspace 25 100 200000 --auto-refine
+```
+
+The tool prints the recommended thresholds at the end.  Copy them to your `.env`:
+
+```bash
+GPUPHOT_USE_CUML_CROSSMATCH=0        # 0 = adaptive (use GPU only within the window)
+GPUPHOT_CUML_MIN_SOURCES=<MIN>       # from the "robust" recommendation
+GPUPHOT_CUML_MAX_SOURCES=<MAX>       # from the "robust" recommendation
+```
+
+For the full procedure, convergence options, and a reference table of known GPUs, see
+**[CUML_CALIBRATION.md](CUML_CALIBRATION.md)**.
+
+### 6.5. Pipeline Logs — Understanding What GPUPhot Reports
+
+As GPUPhot processes each image it prints a structured log to the console.
+Knowing what to look for helps you quickly assess whether a night's run went
+well or which images need attention.
+
+#### What a normal run looks like
+
+```
+INFO  gpuphot — Processing: M42_SDSSr_300s.fits
+INFO  gpuphot — Astrometry: solution found (local solver, 4.2 s)
+INFO  gpuphot — Sources detected: 412
+INFO  gpuphot — PSF FWHM: 2.34 arcsec
+INFO  gpuphot — Limiting magnitude: 19.8 (5σ)
+INFO  gpuphot — Photometry complete — results written to database
+```
+
+#### Messages that signal a problem
+
+| Log message | What it means | What to do |
+|---|---|---|
+| `Not enough isolated stars` | Fewer than 5 usable stars found — image may be overexposed, out of focus, or the field is very sparse | Check the raw image; adjust detection thresholds in `processing_params` |
+| `Astrometry timed out` | The plate-solving step exceeded its time limit | Increase `GPUPHOT_ASTROMETRY_TIMEOUT` in `.env`; verify index files are present |
+| `No plate solution found` | Solver ran but found no match | Check `RA`/`DEC` in the FITS header; ensure the correct index series is installed |
+| `PSF fit failed` | Stars are trailed, saturated, or the image is too noisy | Inspect the raw image for tracking errors or clouds |
+| `cuML crossmatch DISABLED` | GPU cross-matching is off (normal for most setups) | No action needed unless you have calibrated cuML thresholds |
+
+#### Getting more detail
+
+By default GPUPhot prints only `INFO`-level messages.  To see every processing
+step (useful for diagnosing a single problematic image):
+
+```bash
+# In your .env file or shell before launching:
+GPUPHOT_LOG_LEVEL=DEBUG
+```
+
+To suppress everything except errors (useful for production overnight runs):
+
+```bash
+GPUPHOT_LOG_LEVEL=ERROR
+```
+
+#### Saving logs to a file
+
+When running with Docker Compose, redirect worker output to a file:
+
+```bash
+docker compose logs -f worker > /path/to/run_2025-03-15.log 2>&1
+```
+
+Or add a log rotation volume to `docker-compose.yml` to keep logs persistent
+across container restarts.
+
+#### Forwarding logs to an observatory monitoring system
+
+If your observatory uses a centralised log aggregation system (e.g. Logstash /
+Elasticsearch, Grafana Loki, or a custom dashboard), GPUPhot can stream
+structured log events directly to it:
+
+```bash
+# In your .env file:
+LOGSTASH_LOGGING=true
+LOGSTASH_HOST=your-logstash-server
+LOGSTASH_PORT=5000
+GPUPHOT_ENVIRONMENT=production   # label that appears in every log entry
+```
+
+Each log entry sent to Logstash includes: timestamp, severity, message, GPU
+info (model, VRAM, driver), Python version, OS, and the Git commit hash of
+the running code — giving full traceability for a science archive.
+
+If `LOGSTASH_LOGGING` is not set (the default), this feature is completely
+inactive and has no performance impact.
+
+---
+
+## 7. Error Handling
+
+All GPUPhot-specific exceptions inherit from `GPUPhotError`, so you can catch
+the whole hierarchy with a single handler or handle individual cases precisely.
+
+```python
+from gpuphot.exceptions import (
+    GPUPhotError,
+    InsufficientStarsError,
+    MoffatFitError,
+    ImageQualityError,
+    UnableToAstrometrizeError,
+    AstrometrizationTimeoutError,
+    DataValidationError,
+)
+
+try:
+    result = processor.process_image('image.fits')
+except InsufficientStarsError as e:
+    # Fewer than 5 isolated stars found — image too sparse for PSF fitting
+    print(f"Not enough stars: {e.num_stars} detected")
+except MoffatFitError:
+    # PSF model could not be fitted (e.g. saturated or trailed stars)
+    print("PSF fit failed — check image quality")
+except ImageQualityError:
+    # Image too crowded or too noisy for reliable photometry
+    print("Image quality insufficient")
+except AstrometrizationTimeoutError:
+    # astrometry.net solver exceeded its time limit
+    print("Astrometry timed out — check index files and solver settings")
+except UnableToAstrometrizeError:
+    # Solver ran to completion but could not find a solution
+    print("Astrometry failed — field may be outside index coverage")
+except GPUPhotError as e:
+    # Catch-all for any other GPUPhot error
+    print(f"Pipeline error: {e}")
+```
+
+### Exception reference
+
+| Exception | Raised when |
+|---|---|
+| `GPUPhotError` | Base class — catch-all for all GPUPhot errors |
+| `InsufficientStarsError` | Fewer than 5 isolated stars detected in the image |
+| `MoffatFitError` | Moffat PSF model cannot be fitted to the reference stars |
+| `ImageQualityError` | Image is too crowded or too noisy for reliable photometry |
+| `UnableToAstrometrizeError` | astrometry.net solver failed to find a plate solution |
+| `AstrometrizationTimeoutError` | astrometry.net solver exceeded its time limit |
+| `DataValidationError` | Input data is missing required fields or is malformed |
+| `InvalidGroupSizeError` | Star grouping parameters produced an invalid configuration |
+
+CUDA runtime errors (GPU memory exhaustion, illegal address) are handled
+internally by the `capture_cuda_exception` decorator and will be retried once
+before being re-raised as standard `CUDARuntimeError` exceptions from CuPy.

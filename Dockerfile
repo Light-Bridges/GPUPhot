@@ -22,8 +22,33 @@ RUN apt-get update && apt-get upgrade -y && \
         pkg-config \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Python and pip
-RUN \
+# Optional: force a specific Python version instead of auto-detecting.
+# When set (e.g., FORCE_PYTHON_VERSION=3.8), the auto-detection is skipped
+# and only that version is installed via deadsnakes PPA.
+ARG FORCE_PYTHON_VERSION=""
+
+# If FORCE_PYTHON_VERSION is set, install it and create the venv immediately,
+# skipping the entire auto-detection block below.
+RUN if [ -n "${FORCE_PYTHON_VERSION}" ]; then \
+        apt-get update && \
+        apt-get install -y --no-install-recommends software-properties-common gpg-agent && \
+        add-apt-repository ppa:deadsnakes/ppa -y && \
+        apt-get update && \
+        PKGS="python${FORCE_PYTHON_VERSION} python${FORCE_PYTHON_VERSION}-dev python${FORCE_PYTHON_VERSION}-venv" && \
+        if apt-cache show "python${FORCE_PYTHON_VERSION}-distutils" >/dev/null 2>&1; then \
+            PKGS="$PKGS python${FORCE_PYTHON_VERSION}-distutils" ; \
+        fi && \
+        apt-get install -y --no-install-recommends $PKGS && \
+        update-alternatives --install /usr/bin/python3 python3 "/usr/bin/python${FORCE_PYTHON_VERSION}" 200 && \
+        update-alternatives --install /usr/bin/python  python  "/usr/bin/python${FORCE_PYTHON_VERSION}" 200 && \
+        python3 -m venv "$VIRTUAL_ENV" && \
+        apt-get clean && rm -rf /var/lib/apt/lists/* && \
+        echo "Forced Python ${FORCE_PYTHON_VERSION} installed and venv created." ; \
+    fi
+
+# Install Python via auto-detection (only runs if FORCE_PYTHON_VERSION is empty)
+RUN if [ -n "${FORCE_PYTHON_VERSION}" ]; then echo "Skipping auto-detection (forced=${FORCE_PYTHON_VERSION})." ; exit 0 ; fi && \
+    \
     # --- Configuration ---
     PYTHON_VERSIONS_TO_TRY="3.12 3.11 3.10" && \
     MIN_PYTHON_VERSION="3.10" && \
@@ -135,11 +160,11 @@ RUN \
         # Clean apt cache after the fallback attempt
         apt-get clean && rm -rf /var/lib/apt/lists/* ; \
     fi && \
+    \
     # --- Final Check ---
-    # This check runs regardless of INSTALL_NEEDED. It ensures we have *some* target version.
+    # This check runs regardless of method. It ensures we have *some* target version.
     if [ -z "$TARGET_PYTHON_VERSION" ]; then \
-        # This can only happen now if INSTALL_NEEDED was true, the preferred loop failed, AND the fallback failed.
-        echo "CRITICAL ERROR: Failed to install any required Python version (${PYTHON_VERSIONS_TO_TRY} or fallback ${FALLBACK_PYTHON_VERSION}). Base version ($current_py_version) is lower than minimum ($MIN_PYTHON_VERSION)." >&2 ; \
+        echo "CRITICAL ERROR: Failed to install any required Python version." >&2 ; \
         exit 1 ; \
     fi && \
     # --- Final Verification and Venv Creation ---
@@ -167,7 +192,6 @@ RUN \
     python3 -m venv "$VIRTUAL_ENV" && \
     echo "Virtual environment created successfully."
 
-
 # Set working directory
 WORKDIR /app
 
@@ -179,6 +203,10 @@ RUN pip install --upgrade pip setuptools wheel pipenv
 
 # Copy requirements
 COPY requirements-worker.txt ./
+# Pre-install gevent binary wheel on aarch64 (avoids Cython compilation failure)
+RUN if [ "$(uname -m)" = "aarch64" ]; then \
+        pip install --no-cache-dir gevent==21.12.0; \
+    fi
 RUN pip install --no-cache-dir -r requirements-worker.txt
 
 # Copy requirements
@@ -262,7 +290,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && mkdir -p /var/run/sshd \
     && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
     && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config \
-    && sed -i 's/#PermitUserEnvironment no/PermitUserEnvironment yes/' /etc/ssh/sshd_config
+    && sed -i 's/#PermitUserEnvironment no/PermitUserEnvironment yes/' /etc/ssh/sshd_config \
+    && sed -i 's/#MaxAuthTries 6/MaxAuthTries 20/' /etc/ssh/sshd_config
 
 # Install rsyslog for SSH logs
 RUN apt-get update && apt-get install -y rsyslog

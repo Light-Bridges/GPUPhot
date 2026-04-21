@@ -1,3 +1,13 @@
+# SPDX-License-Identifier: MIT
+"""
+Utility helpers for gpuphot.phot.
+
+This module provides small utilities for tiling images, computing tile-based
+statistics (percentiles, nan-mean, sigma-clipped stats) and recomposing an
+image from tile statistics. Implementations use CuPy for GPU-accelerated
+array operations.
+"""
+
 import cupy as cp
 import nvtx
 from ..logger.hierarchical_logging import setup_logger, hierarchical_debug

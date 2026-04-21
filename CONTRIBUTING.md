@@ -48,7 +48,7 @@ your help in making GPUPhot better.
 2. **Add/Update Tests:**
     * Write unit tests for any new code you add.
     * Update existing tests if your changes affect existing functionality.
-    * Tests are located in the `gpuphot/tests` directory.
+    * Tests are located in the `tests/` directory at the project root.
     * We use `pytest` for testing.
 
 3. **Run Tests:**  Make sure *all* tests pass before submitting your changes:
@@ -56,9 +56,9 @@ your help in making GPUPhot better.
    ```bash
    pytest
    ```
-   Or, if you have installed with the `[dev]` option:
+   Or run a specific test file:
    ```bash
-    make test
+   pytest tests/test_photo_gpu.py -v
    ```
 
 4. **Update Documentation:**
@@ -66,7 +66,7 @@ your help in making GPUPhot better.
       documentation files).
     * We use Sphinx to generate documentation. To build the documentation locally, you usually run `make html` from
       inside the `docs` directory. (You'll need to have Sphinx and the required extensions installed:
-      `pip install -r requirements-docs.txt`).
+      `pip install -r requirements_docs.txt`).
     * Follow the Google style guide for docstrings. All public functions and classes should have docstrings.
     * Add type hints.
 
@@ -76,19 +76,11 @@ your help in making GPUPhot better.
    ```bash
    black .
    ```
-   You can also use:
-   ```
-   make format
-   ```
 
 6. **Lint Code:** We use `flake8` to check for style issues and potential errors. Run `flake8`:
 
    ```bash
    flake8
-   ```
-   Or:
-   ```
-    make lint
    ```
    Fix any issues reported by `flake8`.
 

@@ -1,13 +1,32 @@
+# SPDX-License-Identifier: MIT
+"""
+Notebook generator: System Overview
+
+This small script programmatically creates a Jupyter notebook that provides an
+overview of the GPUPhot system architecture and services. It is intended to be
+used by the `initialize_notebooks.sh` initializer to populate the Jupyter
+work directory with example notebooks.
+
+Usage
+-----
+Run the script with an optional ``--output-dir`` parameter. By default the
+notebook is written to the repository `notebooks/` directory.
+
+Example
+-------
+python 0_System_Overview_Notebook.py --output-dir /home/jovyan/work
+"""
+
 import argparse
 import os
 from pathlib import Path
 
 import nbformat as nbf
 
-# Crear un nuevo notebook
+# Create a new notebook
 nb_system = nbf.v4.new_notebook()
 
-# Título y descripción del notebook
+# Title and description of the notebook
 nb_system['cells'].append(nbf.v4.new_markdown_cell(
     "# System Overview\n"
     "This notebook provides an overview of the system architecture and services available in the GPUPhot Docker Compose setup.\n\n"
@@ -28,7 +47,7 @@ nb_system['cells'].append(nbf.v4.new_markdown_cell(
     "   - Port: `5432`.\n\n"
 ))
 
-# Sección final: Link to the setup notebook
+# Final section: Link to the setup notebook
 nb_system['cells'].append(nbf.v4.new_markdown_cell(
     "## Next Steps\n"
     "Before using the system, ensure you have completed the initial setup:\n"
@@ -37,13 +56,9 @@ nb_system['cells'].append(nbf.v4.new_markdown_cell(
     "- [2. Instrument Configuration](./2_Instrument_Configuration_Notebook.ipynb): Learn how to configure instruments and explore configuration files.\n"
     "- [3. Task Execution](./3_Task_Execution_Notebook.ipynb): Learn how to process images using Celery tasks.\n"
 ))
-# Guardar el notebook de overview
 
-
+# Command-line interface
 parser = argparse.ArgumentParser(description="Generate a Jupyter Notebook.")
-
-# Añadir un argumento opcional '--output-dir'
-# Si no se proporciona, se usará el valor 'default'.
 parser.add_argument(
     '--output-dir',
     type=str,

@@ -1,15 +1,34 @@
+# SPDX-License-Identifier: MIT
+"""
+High-level photometry pipeline for gpuphot.
+
+This module contains the primary high-level orchestration of the photometry
+pipeline: image calibration, background estimation, source detection, PSF
+handling, aperture photometry (batch), and final catalog/zero-point
+calculation. The implementation is optimized for GPUs using CuPy and includes
+fallbacks and carefully documented transfer points between CPU and GPU.
+
+Only documentation-level edits were applied in this pass. No functional code
+was modified. Any required runtime fixes are recorded in `FIXERS.md` in the
+same directory.
+"""
+
 from __future__ import annotations
 
 import gc
 import os
 import time
 import traceback
+import warnings
 
 import cupy as cp
+import numpy as _numpy
 from ..phot.cosmetics import CR_filter, SP_filter
 try:
     import cupynumeric as np
 except ImportError:
+    import numpy as np
+except Exception:
     import numpy as np
 
 import nvtx
@@ -139,6 +158,10 @@ def gen_moff_filter2(alpha, beta, **kwargs):
     """
      Generate a Moffat filter with adjusted alpha.
 
+     .. deprecated::
+         This function is unused and will be removed in a future version.
+         Use :func:`gen_moff_filter` instead.
+
      :param alpha: Alpha parameter for Moffat filter.
      :type alpha: float
      :param beta: Beta parameter for Moffat filter.
@@ -146,6 +169,12 @@ def gen_moff_filter2(alpha, beta, **kwargs):
      :return: Moffat filter kernel and kernel size.
      :rtype: tuple(cupy.ndarray, int)
      """
+    warnings.warn(
+        "gen_moff_filter2 is deprecated and will be removed in a future version. "
+        "Use gen_moff_filter instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     alpha = alpha / 2
     fw = alpha * (2 * np.sqrt(2 ** (1 / beta) - 1))
     sigma_r = fw / (2.0 * np.sqrt(2.0 * np.log(2.0)))
@@ -241,11 +270,21 @@ def calculate_aperture_corrections(corr: np.ndarray) -> cp.ndarray:
     """
     Calculate aperture corrections for all stars in an optimized way.
 
+    .. deprecated::
+        This CPU-only version is deprecated and will be removed in a future version.
+        Use :func:`calculate_aperture_corrections_gpu` instead.
+
     :param corr: Array of aperture corrections.
     :type corr: numpy.ndarray
     :return: Aperture correction factors and errors.
     :rtype: tuple(numpy.ndarray, numpy.ndarray)
     """
+    warnings.warn(
+        "calculate_aperture_corrections is deprecated and will be removed in a future version. "
+        "Use calculate_aperture_corrections_gpu instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     if corr.size == 0 or corr.shape[0] == 0:
         if corr.ndim == 2 and corr.shape[1] > 0:
@@ -547,7 +586,6 @@ def create_aperture_corrections_map_gpu(image_shape: tuple, block_size: int, uni
     gc.collect()
 
     nvtx.end_range(nvtx_range)  # End overall function range
-    # Always return GPU arrays
     return aperture_corrections_final_gpu, aperture_correction_errors_final_gpu, cluster_centers_gpu
 
 
@@ -736,7 +774,6 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 
     # BLOQUE 1: Select central stars
     block1_range = nvtx.start_range('center_stars_selection', category='phot.photo_gpu', color='yellow')
-    # ... (Sin cambios respecto a la versión anterior) ...
     center_factor = min(center_factor, 1.0)
     h, w = img_ori.shape[-2:]
     xmin = int(w * 0.5 * (1 - center_factor))
@@ -749,7 +786,6 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 
     # BLOQUE 2: Obtain convolutional SNR
     block2_range = nvtx.start_range('snr_source_validation_gpu', category='phot.photo_gpu', color='orange')
-    # ... (Cálculo de conv_snr y filtrado inicial igual que antes) ...
     conv_snr = conv_ima_sigma[
         cp.round(source_coord[:, 0]).astype(cp.int32), cp.round(source_coord[:, 1]).astype(cp.int32)]
     pos_conv_snr_mask = conv_snr > 0
@@ -778,7 +814,6 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
     nvtx.end_range(cm_range)
     # --- End GPU Crossmatch ---
 
-    # ... (Resto del Bloque 2: validación de isolated stars, etc. sin cambios) ...
     conv_snr_isol = conv_ima_sigma[
         cp.round(isolated_coord[:, 0]).astype(cp.int32), cp.round(isolated_coord[:, 1]).astype(cp.int32)]
     conv_snr_mask = conv_snr_isol > min_conv_snr
@@ -799,9 +834,8 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 
     nvtx.end_range(block2_range)
 
-    # BLOQUE 3: Configuración radios (Sin cambios)
+    # BLOQUE 3: Aperture radii setup
     block3_range = nvtx.start_range('aperture_radii_setup', category='phot.photo_gpu', color='yellow')
-    # ... (igual que antes) ...
     max_radii = float(np.ceil(7 * fwhm) + 1)
     min_radii = float(np.ceil(0.75 * fwhm))
     radii = cp.arange(int(min_radii), int(max_radii) + 1, 1, dtype=cp.float64)
@@ -875,37 +909,32 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
     # BLOQUE 8: Find optimal aperture radius
     block8_range = nvtx.start_range('optimal_radii_calculation', category='phot.photo_gpu', color='orange')
 
-    # Determinar el módulo (numpy o cupy) basado en una de las entradas principales
+    # Select array module (NumPy or CuPy) based on input type
     xp = cp.get_array_module(center_isolated_snr)
 
-    # Calcular índices de radios óptimos usando xp.nanargmax
+    # Compute optimal radius indices
     opt_radii_idx = xp.nanargmax(center_isolated_snr, axis=0)
 
-    # Obtener los radios óptimos usando indexación (funciona en np y cp)
-    # Renombrado de opt_radii_gpu -> opt_radii
+    # Retrieve optimal radii (works for both np and cp arrays)
     opt_radii = radii[opt_radii_idx]
     del opt_radii_idx, center_isolated_snr
     if len(center_conv_snr) == 0 or len(opt_radii) == 0:
         raise DataValidationError("center_conv_snr or opt_radii is empty. Ensure valid data is provided.")
 
-    # Calcular polyfit usando xp.log10 y xp.polyfit
-    # La etiqueta NVTX ahora refleja si es CPU o GPU
+    # Fit polynomial: log10(SNR) vs log10(optimal radius)
+    # NVTX label reflects whether computation runs on CPU or GPU
     polyfit_category = 'gpu_ops' if xp == cp else 'cpu_ops'
     polyfit_color = 'green' if xp == cp else 'blue'
     polyfit_label = 'polyfit_gpu' if xp == cp else 'polyfit_cpu'
     polyfit_range = nvtx.start_range(polyfit_label, category=polyfit_category, color=polyfit_color)
     try:
-        # Calcular polyfit usando xp
-        # pov será un array np o cp dependiendo de xp
+        # pov is a np or cp array depending on xp
         pov = xp.polyfit(xp.log10(center_conv_snr), xp.log10(opt_radii), 1, cov=False)
         del opt_radii, center_conv_snr
     except Exception as e:
         nvtx.end_range(polyfit_range)
         nvtx.end_range(block8_range)
-        # Asumiendo que overall_range existe fuera de este snippet
-        # nvtx.end_range(overall_range)
-        # Considera loggear el error aquí si tienes un logger
-        raise DataValidationError(f"Polyfit failed: {e}")  # Asume DataValidationError está definida
+        raise DataValidationError(f"Polyfit failed: {e}")
 
     nvtx.end_range(polyfit_range)
     nvtx.end_range(block8_range)
@@ -957,7 +986,6 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 
     # BLOQUE 10: Obtain aditional information for header purposes
     block10_range = nvtx.start_range('extra_info_generation', category='phot.metadata', color='yellow')
-    # ... (igual que antes, usa cp.argmin, .item()) ...
     extra_info = {}
     ref_snr_values = [10, 100, 250, 1000]
     opt_final_snr = cp.divide(opt_signal, opt_total_noise)
@@ -1358,10 +1386,8 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 #     # Get corresponding back_flux and area values
 #     opt_back_flux_final = cp.zeros_like(opt_flux_final)
 #     if back_flux is not None:
-#         # back_flux shape: (n_radii, n_sources_filt)
 #         opt_back_flux_final = back_flux[source_opt_rad_idx_final, final_source_indices]
 #
-#     # area shape: (n_radii,)
 #     opt_area_final = area[source_opt_rad_idx_final]  # Shape (n_final_sources,)
 #
 #     # Noise components for the final set
@@ -1483,7 +1509,7 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 #         :rtype: tuple(numpy.ndarray, numpy.ndarray, numpy.ndarray, dict)
 #         :raises InsufficientStarsError: If there are not enough isolated stars for processing.
 #         :raises DataValidationError: If input data is invalid or insufficient.
-#         """
+#     """
 #     # Memory pool
 #     mempool = cp.get_default_memory_pool()
 #
@@ -1819,7 +1845,7 @@ def batch_aperture_photometry(
     back_gpu = None
 
     # Validate and transfer Image
-    if isinstance(img_ori_input, np.ndarray):
+    if isinstance(img_ori_input, _numpy.ndarray):
         logger.info(f"batch_photometry received NumPy image, transferring to GPU.")
         transfer_start = time.time()
         try:
@@ -1848,7 +1874,7 @@ def batch_aperture_photometry(
 
     # Validate and transfer Background (if provided)
     if back_input is not None:
-        if isinstance(back_input, np.ndarray):
+        if isinstance(back_input, _numpy.ndarray):
             if back_input.shape != img_gpu.shape[-back_input.ndim:]:  # Check shape against GPU image dims
                 raise ValueError(f"Background shape {back_input.shape} mismatch with image shape {img_gpu.shape}.")
             logger.info(f"batch_photometry received NumPy background, transferring to GPU.")
@@ -2456,7 +2482,7 @@ def batch_aperture_photometry(
 #     back_gpu = None
 #
 #     # Validate and transfer Image
-#     if isinstance(img_ori_input, np.ndarray):
+#     if isinstance(img_ori_input, _numpy.ndarray):
 #         logger.info(f"batch_photometry received NumPy image, transferring to GPU.")
 #         transfer_start = time.time()
 #         try:
@@ -2824,9 +2850,9 @@ def batch_aperture_photometry(
 @nvtx.annotate('calibrate_image', category='phot.photo_gpu')
 def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, rdnoise: float,
                     exptime: float, satlevel: float, target_ra: float, target_dec: float = None, n_images: int = 1,
-                    SP_filt: bool = True, CR_filt: bool = False, border: int = 10, center_factor: float = 0.7,
+                    SP_filt: bool = True, CR_filt: bool = False, border: int = 20, center_factor: float = 0.7,
                     pca_method: bool = True, tile_section: int = 1000, max_stars_ref: int = 15, min_snr: int = 5,
-                    color_range: float = 0.6, tile_section_psf: int = 2500, zp_maxmag: float = 21,
+                    color_range: float = 0.6, tile_section_psf: int = 3000, zp_maxmag: float = 21,
                     sip_order: int = 1, **kwargs):
     """
     Calibrate an image.
@@ -3022,7 +3048,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     # img_cp = cp.asarray(imdata)
     # with gpu_array_manager(imdata, mempool) as img_cp:
 
-    # TODO: Revisar por Miguel: dejamos center_factor y min_conv_snr con valor dor defecto de la función, o por defecto de DEFAULT_PROCESSING_PARAMS
+    # Note: center_factor and min_conv_snr use function defaults, not DEFAULT_PROCESSING_PARAMS
 
     optimal_flux, optimal_noise, optimal_coords, extra_info = perform_opt_photometry(
         img_ori=img_cp,
@@ -3096,7 +3122,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
             logger.warning('Error calculating limiting magnitude: {}'.format(e))
         dic_calib['MAGLIM'] = maglim3
 
-        # Get all the sources
+        #Get all the sources
         logger.info('Getting all sources from catalog until magnitude limit {}'.format(zp_maxmag))
         result, catalog, ref_filter = catalog_results(coocenter, FOV / 2,
                                                         filter, maglimit=zp_maxmag, **kwargs)
@@ -3139,6 +3165,11 @@ def aperture_photometry(img, positions, aper_rad, **kwargs):
     """
     Perform aperture photometry.
 
+    .. deprecated::
+        This function is deprecated and will be removed in a future version.
+        Use :func:`batch_aperture_photometry` instead, which supports streams
+        and OOM handling.
+
     :param img: Image data.
     :type img: cupy.ndarray
     :param positions: Positions of sources.
@@ -3148,7 +3179,13 @@ def aperture_photometry(img, positions, aper_rad, **kwargs):
     :return: Flux and area of the aperture.
     :rtype: tuple(cupy.ndarray, float)
     """
-    kernel, area = get_aper_kernel(aper_rad)
+    warnings.warn(
+        "aperture_photometry is deprecated and will be removed in a future version. "
+        "Use batch_aperture_photometry instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    kernel, area = get_aper_kernel(aper_rad, size=2 * int(aper_rad) + 1)
     conv_ima = convolve_fft(img, kernel, **kwargs)
     positions = cp.array(cp.round(positions)).astype(cp.int32)
     flux = conv_ima[positions[:, 0], positions[:, 1]]

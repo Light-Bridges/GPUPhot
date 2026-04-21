@@ -1,13 +1,22 @@
+# SPDX-License-Identifier: MIT
+"""
+Notebook generator: Database Query
+
+Creates a Jupyter notebook that demonstrates how to query the project's
+PostgreSQL database for photometric results, light curves and image
+statistics. Intended to be executed by the workspace initializer.
+"""
+
 import argparse
 import os
 from pathlib import Path
 
 import nbformat as nbf
 
-# Crear un nuevo notebook
+# Create a new notebook
 nb_db = nbf.v4.new_notebook()
 
-# Título y descripción del notebook
+# Title and description of the notebook
 nb_db['cells'].append(nbf.v4.new_markdown_cell(
     "# Database Query\n"
     "This notebook demonstrates how to query the PostgreSQL database to extract photometric data, light curves, and image statistics.\n\n"
@@ -37,9 +46,9 @@ nb_db['cells'].append(nbf.v4.new_markdown_cell(
 
 nb_db['cells'].append(nbf.v4.new_code_cell(
     "from gpuphot_worker.database_search_utils import get_tables_and_columns\n\n"
-    "# Obtener las tablas y columnas de la base de datos\n"
+    "# Get tables and columns from the database\n"
     "tables_and_columns = get_tables_and_columns()\n\n"
-    "# Mostrar las columnas de cada tabla\n"
+    "# Print columns for each table\n"
     "for table, columns in tables_and_columns.items():\n"
     "    print(f'\\nTable: {table}')\n"
     "    print('Columnas:')\n"
@@ -55,15 +64,15 @@ nb_db['cells'].append(nbf.v4.new_markdown_cell(
 nb_db['cells'].append(nbf.v4.new_code_cell(
     "from gpuphot_worker import database_search_utils\n"
     "import inspect\n\n"
-    "# Obtener todas las funciones del módulo database_search_utils\n"
+    "# Get all functions from the database_search_utils module\n"
     "functions = inspect.getmembers(database_search_utils, inspect.isfunction)\n\n"
-    "# Mostrar las funciones disponibles\n"
+    "# Print available functions\n"
     "print('Funciones disponibles en gpuphot_worker.database_search_utils:')\n"
     "for name, _ in functions:\n"
     "    print(f'  - {name}')"
 ))
 
-# Sección 1: Query by Coordinates
+# Section 1: Query by Coordinates
 nb_db['cells'].append(nbf.v4.new_markdown_cell(
     "## 1. Query by Coordinates\n"
     "Search for objects or images within a specific region of the sky using Right Ascension (RA) and Declination (Dec)."
@@ -83,7 +92,7 @@ nb_db['cells'].append(nbf.v4.new_code_cell(
     "display(df_images.head())"
 ))
 
-# Sección 2: Query by Date Range
+# Section 2: Query by Date Range
 nb_db['cells'].append(nbf.v4.new_markdown_cell(
     "## 2. Query by Date Range\n"
     "Search for images or objects observed within a specific date range."
@@ -98,7 +107,7 @@ nb_db['cells'].append(nbf.v4.new_code_cell(
     "df_date_results.head()"
 ))
 
-# Sección 3: Query by Filename
+# Section 3: Query by Filename
 nb_db['cells'].append(nbf.v4.new_markdown_cell(
     "## 3. Query by Filename\n"
     "Search for images or objects by filename or partial filename."
@@ -113,7 +122,7 @@ nb_db['cells'].append(nbf.v4.new_code_cell(
     "df_file_results.head()"
 ))
 
-# Sección 4: Query Transients
+# Section 4: Query Transients
 nb_db['cells'].append(nbf.v4.new_markdown_cell(
     "## 4. Query Transients\n"
     "Search for transient objects observed after a specific date."
@@ -128,7 +137,7 @@ nb_db['cells'].append(nbf.v4.new_code_cell(
     "df_transients.head()"
 ))
 
-# Sección 5: Generate Light Curves
+# Section 5: Generate Light Curves
 nb_db['cells'].append(nbf.v4.new_markdown_cell(
     "## 5. Generate Light Curves\n"
     "Generate light curves for objects detected in multiple images."
@@ -140,11 +149,11 @@ nb_db['cells'].append(nbf.v4.new_code_cell(
     "# Example: Generate a light curve for a specific object\n"
     "object_id = df_objects['id'].iloc[0]  # Use the first object found in the previous query\n"
     "df_light_curve = df_date_results[df_date_results['id'] == object_id]\n\n"
-    "# Convertir 'date_obs' a datetime si no lo está\n"
+    "# Convert 'date_obs' to datetime if necessary\n"
     "df_light_curve['date_obs'] = pd.to_datetime(df_light_curve['date_obs'])\n\n"
-    "# Redondear las fechas a segundos (opcional: cambiar 'S' a 'T' para redondear a minutos)\n"
+    "# Round dates to seconds (optional: change 'S' to 'T' for minutes)\n"
     "df_light_curve['date_obs'] = df_light_curve['date_obs'].dt.round('S')\n\n"
-    "# Agrupar por fecha y calcular el promedio de 'flux' y 'dflux'\n"
+    "# Group by date and compute mean flux and dflux\n"
     "df_grouped = df_light_curve.groupby('date_obs').agg({'flux': 'mean', 'dflux': 'mean'}).reset_index()\n\n"
     "# Plot the light curve\n"
     "plt.figure(figsize=(10, 5))\n"
@@ -153,12 +162,12 @@ nb_db['cells'].append(nbf.v4.new_code_cell(
     "plt.xlabel('Date')\n"
     "plt.ylabel('Flux')\n"
     "plt.grid(True)\n\n"
-    "# Ajustar el eje X para mostrar solo el rango de fechas con datos\n"
+    "# Adjust X axis to show only the data range\n"
     "plt.xlim(df_grouped['date_obs'].min(), df_grouped['date_obs'].max())\n"
     "plt.show()"
 ))
 
-# Sección 6: Explore Image Statistics
+# Section 6: Explore Image Statistics
 nb_db['cells'].append(nbf.v4.new_markdown_cell(
     "## 6. Explore Image Statistics\n"
     "Explore statistics for images, such as FWHM, magnitude limit, and exposure time."
@@ -175,7 +184,7 @@ nb_db['cells'].append(nbf.v4.new_code_cell(
     "plt.show()"
 ))
 
-# Sección 7: Connect to Database
+# Section 7: Connect to Database
 nb_db['cells'].append(nbf.v4.new_markdown_cell(
     "## 7. Connect to Database\n"
     "Establish a connection to the PostgreSQL database."
@@ -188,7 +197,7 @@ nb_db['cells'].append(nbf.v4.new_code_cell(
     "print('Connection established successfully!')"
 ))
 
-# Sección 8: Query by Multiple Filenames
+# Section 8: Query by Multiple Filenames
 nb_db['cells'].append(nbf.v4.new_markdown_cell(
     "## 8. Query by Multiple Filenames\n"
     "Search for images or objects by multiple filenames."
@@ -203,7 +212,7 @@ nb_db['cells'].append(nbf.v4.new_code_cell(
     "df_multiple_files.head()"
 ))
 
-# Sección 9: Search Transient Images
+# Section 9: Search Transient Images
 nb_db['cells'].append(nbf.v4.new_markdown_cell(
     "## 9. Search Transient Images\n"
     "Search for images containing transient objects."
@@ -212,7 +221,7 @@ nb_db['cells'].append(nbf.v4.new_markdown_cell(
 nb_db['cells'].append(nbf.v4.new_code_cell(
     "from gpuphot_worker.database_search_utils import search_transient_images\n"
     "from datetime import datetime, timedelta\n\n"
-    "# Obtener la fecha actual y restar una semana\n"
+    "# Get current date and subtract a week\n"
     "date_after = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')\n\n"
     "# Example: Search for images containing transients observed in the last week\n"
     "df_transient_images = search_transient_images(date_after)\n\n"
@@ -220,7 +229,7 @@ nb_db['cells'].append(nbf.v4.new_code_cell(
     "df_transient_images.head()"
 ))
 
-# Sección final: Link to the next notebook
+# Final section: Link to the next notebook
 nb_db['cells'].append(nbf.v4.new_markdown_cell(
     "## Next Steps\n"
     "If you need to revisit or modify instrument configurations, go back to the previous notebook:\n"
@@ -229,12 +238,8 @@ nb_db['cells'].append(nbf.v4.new_markdown_cell(
     "- [3. Task Execution](./3_Task_Execution_Notebook.ipynb)"
 ))
 
-# Guardar el notebook de consultas
-
+# Save the notebook
 parser = argparse.ArgumentParser(description="Generate a Jupyter Notebook.")
-
-# Añadir un argumento opcional '--output-dir'
-# Si no se proporciona, se usará el valor 'default'.
 parser.add_argument(
     '--output-dir',
     type=str,

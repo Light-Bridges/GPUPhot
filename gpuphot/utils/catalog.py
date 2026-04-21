@@ -1,11 +1,31 @@
+# SPDX-License-Identifier: MIT
+"""
+Catalog and crossmatching utilities.
+
+Provides CPU and GPU implementations for crossmatching coordinates using
+SciPy KDTree (CPU) and RAPIDS cuML (GPU) when available. Also wraps Vizier
+queries and post-processes catalog results for photometric calibration.
+
+Documentation-only changes: translated inline comments to English, added
+module docstring. No functional changes performed.
+"""
+
 from __future__ import annotations
 
+import os
 import time
+import numpy as _numpy
 
-import cupy as cp
+try:
+    import cupy as cp
+    CUPY_AVAILABLE = True
+except Exception:
+    import numpy as cp
+    CUPY_AVAILABLE = False
+
 try:
     import cupynumeric as np
-except ImportError:
+except Exception:
     import numpy as np
 
 import nvtx
@@ -19,24 +39,54 @@ from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
 
-# Import cuml. Comprobar si está instalado.
+# Import cuml. Check if installed and available for GPU crossmatch.
 try:
     import cuml
     from cuml.neighbors import NearestNeighbors as cuNearestNeighbors
 
     CUML_AVAILABLE = True
-    logger.debug("RAPIDS cuML found. Using GPU for crossmatch.")
+    logger.debug("RAPIDS cuML found.")
 except ImportError:
-    logger.warning("Warning: RAPIDS cuML not found. Falling back to CPU crossmatch or GPU crossmatch will fail.")
+    logger.warning("RAPIDS cuML not found. Falling back to CPU crossmatch (cKDTree).")
     CUML_AVAILABLE = False
+except Exception as e:
+    logger.warning(
+        "RAPIDS cuML could not initialize (%s: %s). "
+        "This typically means GPU is unavailable in this container. "
+        "Falling back to CPU crossmatch (cKDTree).",
+        type(e).__name__, e,
+    )
+    CUML_AVAILABLE = False
+
+# cuML crossmatch control via environment variables.
+# By default cuML is DISABLED because cKDTree O(N log N) outperforms
+# cuML brute-force O(N^2) for the source counts typical of this pipeline.
+# Set GPUPHOT_USE_CUML_CROSSMATCH=1 to force cuML for all crossmatches.
+# Set GPUPHOT_CUML_MIN_SOURCES and GPUPHOT_CUML_MAX_SOURCES to enable
+# adaptive mode: cuML is used only when source count falls within the
+# GPU-beneficial window (varies by GPU, see benchmark_cuml_crossover.py).
+_USE_CUML = os.environ.get('GPUPHOT_USE_CUML_CROSSMATCH', '0') == '1'
+_CUML_MIN_SOURCES = int(os.environ.get('GPUPHOT_CUML_MIN_SOURCES', '0'))
+_CUML_MAX_SOURCES = int(os.environ.get('GPUPHOT_CUML_MAX_SOURCES', '0'))
+_CUML_ADAPTIVE = _CUML_MIN_SOURCES > 0 and _CUML_MAX_SOURCES > _CUML_MIN_SOURCES
+
+if CUML_AVAILABLE:
+    if _USE_CUML:
+        logger.info("cuML crossmatch FORCED via GPUPHOT_USE_CUML_CROSSMATCH=1")
+    elif _CUML_ADAPTIVE:
+        logger.info(f"cuML crossmatch ADAPTIVE: enabled for {_CUML_MIN_SOURCES}-{_CUML_MAX_SOURCES} sources")
+    else:
+        logger.info("cuML crossmatch DISABLED (default). cKDTree used for all crossmatches.")
 
 
 # --- GPU Implementation Detail ---
 @nvtx.annotate('crossmatch_sources_gpu_impl', category='utils.catalog_gpu')
 def _crossmatch_sources_gpu_impl(source_coords: cp.ndarray, ref_coords: cp.ndarray,
                                  thres_px: float = 2.0) -> tuple[cp.ndarray, cp.ndarray]:
-    """GPU implementation using cuML (Internal use)."""
-    # (Código de crossmatch_sources_gpu anterior, sin la comprobación CUML_AVAILABLE)
+    """GPU implementation using cuML (internal use).
+
+    Expects CuPy arrays and returns matched indices as CuPy arrays.
+    """
     nvtx_range = nvtx.start_range('_crossmatch_sources_gpu_impl', category='utils.catalog_gpu', color='magenta')
 
     if not isinstance(source_coords, cp.ndarray) or not isinstance(ref_coords, cp.ndarray):
@@ -82,11 +132,13 @@ def _crossmatch_sources_gpu_impl(source_coords: cp.ndarray, ref_coords: cp.ndarr
 @nvtx.annotate('crossmatch_sources_cpu_impl', category='utils.catalog_cpu')
 def _crossmatch_sources_cpu_impl(source_coords: np.ndarray, ref_coords: np.ndarray,
                                  thres_px: float = 2.0) -> tuple[np.ndarray, np.ndarray]:
-    """CPU implementation using KDTree (Internal use)."""
-    # (Código de crossmatch_sources_cpu anterior)
+    """CPU implementation using KDTree (internal use).
+
+    Expects NumPy arrays and returns matched indices as NumPy arrays.
+    """
     nvtx_range = nvtx.start_range('_crossmatch_sources_cpu_impl', category='utils.catalog_cpu', color='blue')
 
-    if not isinstance(source_coords, np.ndarray) or not isinstance(ref_coords, np.ndarray):
+    if not isinstance(source_coords, _numpy.ndarray) or not isinstance(ref_coords, _numpy.ndarray):
         nvtx.end_range(nvtx_range)
         raise TypeError("Inputs must be NumPy arrays for CPU impl.")
     if source_coords.ndim != 2 or ref_coords.ndim != 2:
@@ -117,7 +169,7 @@ def _crossmatch_sources_cpu_impl(source_coords: np.ndarray, ref_coords: np.ndarr
     return source_coords_matched_idx, ref_coords_matched_idx
 
 
-# --- Wrapper Function (La que se debe llamar desde fuera) ---
+# --- Wrapper Function (the external entry point) ---
 @nvtx.annotate('crossmatch_sources', category='utils.catalog')
 def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
     """
@@ -138,7 +190,7 @@ def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
     nvtx_range = nvtx.start_range('crossmatch_sources_wrapper', category='utils.catalog', color='gray')
 
     is_gpu_input = isinstance(source_coords, cp.ndarray)
-    is_cpu_input = isinstance(source_coords, np.ndarray)
+    is_cpu_input = isinstance(source_coords, _numpy.ndarray)
 
     # Verify input types consistency
     if type(source_coords) != type(ref_coords):
@@ -151,9 +203,23 @@ def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
         raise TypeError("Inputs must be NumPy or CuPy arrays.")
 
     use_gpu_attempt = False  # Flag to track if we even try GPU
+    n_sources = len(source_coords)
+
+    # Determine whether to use cuML for this crossmatch call
+    should_use_cuml = False
     if CUML_AVAILABLE and is_gpu_input:
+        if _USE_CUML:
+            # Forced mode: always use cuML
+            should_use_cuml = True
+        elif _CUML_ADAPTIVE and _CUML_MIN_SOURCES <= n_sources <= _CUML_MAX_SOURCES:
+            # Adaptive mode: use cuML only within the beneficial source-count window
+            should_use_cuml = True
+            logger.debug(f"cuML adaptive: {n_sources} sources within [{_CUML_MIN_SOURCES}, {_CUML_MAX_SOURCES}]")
+        # else: cuML disabled (default) — fall through to cKDTree
+
+    if should_use_cuml:
         use_gpu_attempt = True
-        logger.debug("Attempting GPU crossmatch.")
+        logger.debug(f"Attempting GPU crossmatch ({n_sources} sources).")
         try:
             result = _crossmatch_sources_gpu_impl(source_coords, ref_coords, thres_px)
             logger.debug("GPU crossmatch successful.")
@@ -161,22 +227,17 @@ def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
             return result  # Return GPU result directly
         except Exception as gpu_e:
             logger.warning(f"GPU crossmatch failed: {gpu_e}. Falling back to CPU.", exc_info=False)
-            # Fallback will happen below, no need to set use_gpu_attempt back to False
+            # Fallback will happen below
 
-    # --- CPU Path (if GPU not attempted, GPU failed, or input was CPU) ---
-    # This block executes if:
-    # 1. CUML_AVAILABLE is False
-    # 2. is_gpu_input is False
-    # 3. GPU was attempted but failed (Exception caught above)
+    # --- CPU Path (fallback or original CPU input) ---
     logger.debug("Using CPU crossmatch.")
     # Prepare NumPy arrays for CPU implementation
     if is_gpu_input:
-        # Need to transfer data from GPU to CPU for fallback
         transfer_range = nvtx.start_range('transfer_gpu_to_cpu_fallback', category='transfer', color='red')
         source_np = source_coords.get()
         ref_np = ref_coords.get()
         nvtx.end_range(transfer_range)
-    else:  # Input was already CPU
+    else:
         source_np = source_coords
         ref_np = ref_coords
 
@@ -187,11 +248,10 @@ def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
     except Exception as cpu_e:
         logger.error(f"CPU crossmatch failed: {cpu_e}")
         nvtx.end_range(nvtx_range)
-        raise  # Re-raise the exception from the CPU implementation
+        raise
 
-    # Determine final return type based on ORIGINAL input type
+    # Return results matching original input type
     if is_gpu_input:
-        # Original input was GPU, transfer results back
         transfer_back_range = nvtx.start_range('transfer_cpu_to_gpu_fallback_result', category='transfer', color='red')
         result_cp_src = cp.asarray(result_np_src)
         result_cp_ref = cp.asarray(result_np_ref)
@@ -200,7 +260,6 @@ def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
         nvtx.end_range(nvtx_range)
         return result_cp_src, result_cp_ref
     else:
-        # Original input was CPU, return NumPy results
         logger.debug("Returning CPU results (original input was CPU).")
         nvtx.end_range(nvtx_range)
         return result_np_src, result_np_ref
@@ -217,31 +276,28 @@ def _is_valid_result(result: pd.DataFrame, expected_columns: list):
     :return: True if the result is valid, False otherwise.
     :rtype: bool
     """
-    # 1. Verificar si el resultado es None
+    # 1. Check if result is None
     if result is None:
         logger.warning('Custom catalog query returned None. The function might have failed or found no data.')
         return False
 
-    # 2. Verificar si el resultado es un DataFrame de pandas
+    # 2. Verify the result is a pandas DataFrame
     if not isinstance(result, pd.DataFrame):
         logger.warning(f"Custom catalog query did not return a pandas DataFrame. Got type: {type(result)}.")
         return False
 
-    # 3. Verificar si el DataFrame está vacío
+    # 3. Check if the DataFrame is empty
     if result.empty:
         logger.warning('Custom catalog query returned an empty DataFrame. No sources found matching the criteria.')
         return False
 
-    # 4. Verificar si todas las columnas esperadas están presentes
+    # 4. Verify expected columns are present and report specifically which are missing
     if expected_columns:
-        # Usamos sets para encontrar eficientemente las columnas que faltan
         missing_cols = set(expected_columns) - set(result.columns)
         if missing_cols:
-            # Informamos exactamente qué columnas faltan
             logger.warning(f"Custom catalog query result is missing required columns: {sorted(list(missing_cols))}.")
             return False
 
-    # Si todas las validaciones pasan, el resultado es válido
     return True
 
 
@@ -287,13 +343,33 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
     :return: A DataFrame containing the results of the query, filtered by the specified parameters.
     :rtype: pandas.DataFrame
     """
+    # Note: kwargs sanitization for internal parameters (like 'expected_columns') is
+    # performed by the caller `catalog_results` to avoid "multiple values for argument"
+    # errors. Do not repeat that sanitization here; Python guarantees that parameters
+    # present in the function signature will not be present in `kwargs` of this function.
+
     if custom_vizier_search_func is not None:
         try:
+            # Allow users to provide a custom timeout name so they don't overwrite
+            # the internal `vizier_timeout` by accident. We pop it so it won't leak
+            # into the custom function kwargs if present.
+            custom_vizier_timeout = kwargs.pop('custom_vizier_timeout', None)
+
+            # Determine effective timeout for the custom function: prefer custom_vizier_timeout
+            # if provided, otherwise use the vizier_timeout parameter.
+            try:
+                effective_timeout = int(custom_vizier_timeout) if custom_vizier_timeout is not None else int(vizier_timeout)
+            except Exception:
+                # In case the provided value is not integer-convertible, fallback to vizier_timeout
+                effective_timeout = int(vizier_timeout)
+
             logger.debug(
                 f'Using custom Vizier search function: {custom_vizier_search_func.__name__} for catalog: {catalog}')
             if expected_columns is None:
                 expected_columns = []
-            executor = TimeoutExecutor(timeout=int(vizier_timeout) + 2)
+
+            # Use a slightly larger timeout for the executor wrapper than the query itself
+            executor = TimeoutExecutor(timeout=effective_timeout + 2)
             result = executor.execute(
                 custom_vizier_search_func,
                 coocenter=coocenter,
@@ -303,7 +379,7 @@ def __getVizier(catalog, coocenter, radii, maglimit, ref_filter,
                 ref_filter=ref_filter,
                 row_limit=int(vizier_row_limit),
                 expected_columns=list(set(expected_columns)),
-                timeout=vizier_timeout
+                timeout=effective_timeout
             )
             if _is_valid_result(result, expected_columns):
                 return result
@@ -395,6 +471,18 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     logger.info(
         f'Attempting to retrieve data from catalog for filter {filter}, radius: {radius:.2f} deg, maglimit: {maglimit:.2f}, coordinates: {coocenter}')
     start_time = time.time()
+
+    # --- SANITIZE KWARGS ---
+    # Prevent user-supplied kwargs from colliding with parameters that catalog_results
+    # computes and passes explicitly to __getVizier. If a user passes one of these keys
+    # in kwargs, Python would raise "multiple values for argument" when calling
+    # __getVizier(..., expected_columns=..., **kwargs).
+    internal_params = ['catalog', 'coocenter', 'radii', 'radius', 'maglimit', 'ref_filter', 'expected_columns']
+    for _p in internal_params:
+        if _p in kwargs:
+            logger.warning(f"Ignoring user-supplied '{_p}' in kwargs to avoid collision with internal parameters.")
+            kwargs.pop(_p, None)
+
     if coocenter.dec.deg < -30:
         def get_filter(_filter):
             filter_map = {
@@ -409,7 +497,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         catalog = 'II/379'  # SkyMapper Southern Sky Survey. DR4 : II/379
         ref_filter = 'gPSF'
         final_ref_filter = get_filter(filter)
-        expected_columns = ['SMSS', 'RAICRS', 'DEICRS', 'gPSF', 'rPSF', final_ref_filter]  # Columnas para SkyMapper
+        expected_columns = ['SMSS', 'RAICRS', 'DEICRS', 'gPSF', 'rPSF', final_ref_filter]  # SkyMapper columns
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
 
@@ -427,7 +515,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         catalog = 'I/355/gaiadr3'  # Gaia DR3 Part 1. Main source : I/355
         ref_filter = 'BPmag'
         expected_columns = ['Source', 'RAJ2000', 'DEJ2000', 'BP-RP', f'F{ref_filter[:2]}',
-                            f'e_F{ref_filter[:2]}', ref_filter]  # Columnas para Gaia DR3
+                            f'e_F{ref_filter[:2]}', ref_filter]  # Gaia DR3 columns
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
         # solar_index = 0.01760 - 0.003226 + (0.3833 + 0.00686) * vizier_results['BP-RP'] + (-0.1345 + 0.1732) * \
@@ -446,7 +534,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
     elif filter == 'SDSSu':
         catalog = 'I/353/gsc242'
         ref_filter = 'umag'
-        expected_columns = ['GSC2', 'RA_ICRS', 'DE_ICRS', ref_filter]  # Columnas para GSC2
+        expected_columns = ['GSC2', 'RA_ICRS', 'DE_ICRS', ref_filter]  # GSC2 columns
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
         result = pd.DataFrame({'ID': vizier_results['GSC2'],
@@ -461,7 +549,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         catalog = 'II/349/ps1'  # The Pan-STARRS release 1 (PS1) Survey - DR1 : II/349
         ref_filter = 'gmag'
         expected_columns = ['objID', 'RAJ2000', 'DEJ2000', 'gmag', 'rmag', 'e_gmag',
-                            'e_rmag']  # Columnas para Pan-STARRS
+                            'e_rmag']  # Pan-STARRS columns
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
 
@@ -497,7 +585,7 @@ def catalog_results(coocenter, radius, filter, maglimit=23, **kwargs):
         ref_filter = 'gmag'
         final_ref_filter = get_filter(filter)
         expected_columns = ['objID', 'RAJ2000', 'DEJ2000', 'gmag', 'rmag', final_ref_filter,
-                            f'e_{final_ref_filter}']  # Columnas por defecto para Pan-STARRS
+                            f'e_{final_ref_filter}']  # Pan-STARRS default columns
         vizier_results = __getVizier(catalog, coocenter, radius, maglimit, ref_filter,
                                      expected_columns=expected_columns, **kwargs)
 

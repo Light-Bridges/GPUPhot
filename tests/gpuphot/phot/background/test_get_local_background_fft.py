@@ -1,237 +1,109 @@
-import os
 import unittest
 
-import cupy as cp
-from astropy.io import fits
+import pytest
 
-from .....gpuphot.phot.background import get_local_background_fft
+try:
+    import cupy as cp
+    HAS_CUPY = True
+except ImportError:
+    HAS_CUPY = False
+
+import numpy as np
+
+from ...conftest import NVRTC_WORKS
 
 
+@unittest.skipUnless(HAS_CUPY, "CuPy required")
+@pytest.mark.skipif(not NVRTC_WORKS, reason="CuPy NVRTC compilation broken")
 class TestGetLocalBackgroundFFT(unittest.TestCase):
 
-    @staticmethod
-    def plate_scale_mm(focal):
-        return 206265 / focal
+    def setUp(self):
+        from .....gpuphot.phot.background import get_local_background_fft
+        self.get_local_background_fft = get_local_background_fft
 
-    @staticmethod
-    def plate_scale_px(microns, focal):
-        return TestGetLocalBackgroundFFT.plate_scale_mm(focal) * microns / 1000
+    def _make_image(self, size=512, bg=1000.0, noise_std=10.0, seed=42):
+        """Create a synthetic sky image with Gaussian noise."""
+        rng = np.random.default_rng(seed)
+        return cp.asarray(rng.normal(bg, noise_std, (size, size)).astype(np.float32))
 
-    def _load_fits_image(self, file_path):
-        """
-        Load an image from a FITS file and return as a cupy array.
+    def _make_image_with_stars(self, size=512, bg=1000.0, noise_std=10.0,
+                                n_stars=10, peak=5000.0, seed=42):
+        """Create a synthetic sky image with stars (Gaussian profiles)."""
+        rng = np.random.default_rng(seed)
+        data = rng.normal(bg, noise_std, (size, size)).astype(np.float64)
+        margin = 50
+        for _ in range(n_stars):
+            y = rng.integers(margin, size - margin)
+            x = rng.integers(margin, size - margin)
+            yy, xx = np.meshgrid(
+                np.arange(max(0, y - 15), min(size, y + 16)),
+                np.arange(max(0, x - 15), min(size, x + 16)),
+                indexing='ij'
+            )
+            star = peak * np.exp(-((yy - y) ** 2 + (xx - x) ** 2) / (2 * 3.0 ** 2))
+            data[max(0, y - 15):min(size, y + 16),
+                 max(0, x - 15):min(size, x + 16)] += star
+        return cp.asarray(data.astype(np.float32))
 
-        Parameters
-        ----------
-        file_path : str
-            Path to the FITS file.
+    def test_returns_tuple_of_two(self):
+        image = self._make_image()
+        result = self.get_local_background_fft(image, pxscale=1.0, tile_section=128)
+        self.assertIsInstance(result, tuple)
+        self.assertEqual(len(result), 2)
 
-        Returns
-        -------
-        cupy.ndarray
-            Image data as a cupy array.
-        """
-        return cp.array(fits.getdata(file_path))
+    def test_background_is_cupy_array(self):
+        image = self._make_image()
+        bg, std = self.get_local_background_fft(image, pxscale=1.0, tile_section=128)
+        self.assertIsInstance(bg, cp.ndarray)
 
-    def _load_fits_header(self, file_path):
-        return fits.getheader(file_path)
+    def test_std_is_none_when_get_std_false(self):
+        image = self._make_image()
+        bg, std = self.get_local_background_fft(
+            image, pxscale=1.0, tile_section=128, get_std=False
+        )
+        self.assertIsNone(std)
 
-    def _test_fits_file(self, file_path, expected_result):
-        """
-        Test get_local_background_fft with a given FITS file.
+    def test_std_is_array_when_get_std_true(self):
+        image = self._make_image()
+        bg, std = self.get_local_background_fft(
+            image, pxscale=1.0, tile_section=128, get_std=True
+        )
+        self.assertIsInstance(std, cp.ndarray)
 
-        Parameters
-        ----------
-        file_path : str
-            Path to the FITS file.
-        pxscale : float
-            Pixel scale in arcsec/pixel.
-        expected_result : float
-            Expected result for assertion (dummy in this case).
-        """
-        image = self._load_fits_image(file_path)
-        imheader = self._load_fits_header(file_path)
-        print('PXSIZE:', imheader['PXSIZE'] if 'PXSIZE' in imheader else 'N/A')
-        print('FOCALEN:', imheader['FOCALEN'] if 'FOCALEN' in imheader else 'N/A')
-        print('XBINNING:', imheader['XBINNING'] if 'XBINNING' in imheader else 'N/A')
-        print('KS:', imheader['KS'] if 'KS' in imheader else 'N/A')
-        get_std = False
-        scale = TestGetLocalBackgroundFFT.plate_scale_px(imheader['PXSIZE'], imheader['FOCALEN']) * imheader['XBINNING']
-        ks = int(imheader['KS']) if 'KS' in imheader else 2
-        (img_filled_m, img_filled_2) = get_local_background_fft(image=image, pxscale=scale, ks=ks, get_std=get_std)
-        self.assertIsInstance(img_filled_m, cp.ndarray, 'The returned background should be a cupy array.')
-        if get_std:
-            self.assertIsInstance(img_filled_2, cp.ndarray,
-                                  'The returned standard deviation image should be a cupy array when get_std is True.')
-        else:
-            self.assertIsNone(img_filled_2,
-                              'The returned standard deviation image should be None when get_std is False.')
+    def test_output_shape_matches_input(self):
+        image = self._make_image(size=256)
+        bg, std = self.get_local_background_fft(
+            image, pxscale=1.0, tile_section=64
+        )
+        self.assertEqual(bg.shape, (256, 256))
 
-    #
-    # def test_image_calib_1(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-    #                              'TTT1_iKon936-1_MasterFlat_Ha_Bin11.fits')
-    #     expected_result = 0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_calib_2(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-    #                              'TTT1_iKon936-1_MasterFlat_Lum_Bin11.fits')
-    #     expected_result = 0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_calib_3(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-    #                              'TTT1_iKon936-1_MasterFlat_SDSSg_Bin11.fits')
-    #     expected_result = 0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_calib_4(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-    #                              'TTT1_iKon936-1_MasterFlat_SDSSi_Bin11.fits')
-    #     expected_result = 0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_calib_5(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-    #                              'TTT1_iKon936-1_MasterFlat_SDSSr_Bin11.fits')
-    #     expected_result = 0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_calib_6(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-    #                              'TTT1_iKon936-1_MasterFlat_SDSSu_Bin11.fits')
-    #     expected_result = 0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_calib_7(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-    #                              'TTT1_iKon936-1_MasterFlat_SDSSzs_Bin11.fits')
-    #     expected_result = 0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_calib_8(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-    #                              'TTT2_QHY411-2_MasterFlat_Ha_Bin11.fits')
-    #     expected_result = 0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_calib_9(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-    #                              'TTT2_QHY411-2_MasterFlat_Lum_Bin11.fits')
-    #     expected_result = 0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_calib_10(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-    #                              'TTT2_QHY411-2_MasterFlat_SDSSg_Bin11.fits')
-    #     expected_result = 0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_calib_11(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-    #                              'TTT2_QHY411-2_MasterFlat_SDSSi_Bin11.fits')
-    #     expected_result = 0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_calib_12(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'calib',
-    #                              'TTT2_QHY411-2_MasterFlat_SDSSr_Bin11.fits')
-    #     expected_result = 0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_prered_1(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'prered',
-    #                              'TTT1_iKon936-1_2024-07-11-02-43-55-383463_Chariklo.fits')
-    #     expected_result = -0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_prered_2(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'prered',
-    #                              'TTT1_iKon936-1_2024-07-11-02-46-43-564176_chiron.fits')
-    #     expected_result = -0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_prered_3(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'prered',
-    #                              'TTT2_QHY411-2_2024-07-11-02-57-08-468122_chiron.fits')
-    #     expected_result = -0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_prered_4(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'prered',
-    #                              'TTT2_QHY411-2_2024-07-11-02-57-59-361847_chiron.fits')
-    #     expected_result = -0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_raw_1(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'raw',
-    #                              'TTT1_iKon936-1_2024-07-11-02-41-45-707922_Chariklo.fits')
-    #     expected_result = -0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_raw_2(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'raw',
-    #                              'TTT1_iKon936-1_2024-07-11-02-43-55-383463_Chariklo.fits')
-    #     expected_result = -0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_raw_3(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'raw',
-    #                              'TTT2_QHY411-2_2024-07-11-02-57-08-468122_chiron.fits')
-    #     expected_result = -0.0
-    #     self._test_fits_file(file_path, expected_result)
-    #
-    # def test_image_raw_4(self):
-    #     file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'raw',
-    #                              'TTT2_QHY411-2_2024-07-11-02-57-59-361847_chiron.fits')
-    #     expected_result = 0.0
-    #     self._test_fits_file(file_path, expected_result)
+    def test_uniform_image_background_near_input(self):
+        image = self._make_image(size=512, bg=1000.0, noise_std=5.0)
+        bg, _ = self.get_local_background_fft(
+            image, pxscale=1.0, tile_section=128, get_std=False
+        )
+        bg_mean = float(cp.mean(bg))
+        self.assertAlmostEqual(bg_mean, 1000.0, delta=50.0)
 
-    def test_image_red_1(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'red',
-                                 'TTT1_iKon936-1_2024-07-11-02-41-45-707922_Chariklo.fits')
-        expected_result = -1.6186416591554544
-        self._test_fits_file(file_path, expected_result)
+    def test_star_field_background_excludes_stars(self):
+        """Background of star field should be near the sky level, not pulled up by stars."""
+        image = self._make_image_with_stars(
+            size=512, bg=500.0, noise_std=5.0, n_stars=10, peak=10000.0
+        )
+        bg, _ = self.get_local_background_fft(
+            image, pxscale=1.0, tile_section=128, get_std=False
+        )
+        bg_mean = float(cp.mean(bg))
+        # Background should be near 500, not near 500 + star contribution
+        self.assertLess(bg_mean, 800.0)
 
-    def test_image_red_2(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'red',
-                                 'TTT1_iKon936-1_2024-07-11-02-43-55-383463_Chariklo.fits')
-        expected_result = -1.6227922267716928
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_red_3(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'red',
-                                 'TTT2_QHY411-2_2024-07-11-02-57-08-468122_chiron.fits')
-        expected_result = -174.29739930099691
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_red_4(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'red',
-                                 'TTT2_QHY411-2_2024-07-11-02-57-59-361847_chiron.fits')
-        expected_result = -0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_red_5(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'red',
-                                 'TTT1_iKon936-1_2024-09-09-00-01-45-953640_chiron.fits')
-        expected_result = -0.0
-        self._test_fits_file(file_path, expected_result)
-
-    def test_image_red_6(self):
-        file_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'red',
-                                 'TTT1_iKon936-1_2024-09-08-23-53-00-723983_chiron.fits')
-        expected_result = -174.29739930099691
-        self._test_fits_file(file_path, expected_result)
+    def test_no_nan_in_output(self):
+        image = self._make_image(size=256)
+        bg, _ = self.get_local_background_fft(
+            image, pxscale=1.0, tile_section=64, get_std=False
+        )
+        self.assertEqual(int(cp.sum(cp.isnan(bg))), 0)
 
 
 if __name__ == '__main__':
-    test_loader = unittest.TestLoader()
-    test_names = test_loader.getTestCaseNames(TestGetLocalBackgroundFFT)
-    for test_name in test_names:
-        print(f'Running {test_name}...')
-        suite = unittest.TestSuite()
-        suite.addTest(TestGetLocalBackgroundFFT(test_name))
-        runner = unittest.TextTestRunner()
-        runner.run(suite)
-        suite._tests.clear()
+    unittest.main()

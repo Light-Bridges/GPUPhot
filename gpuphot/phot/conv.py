@@ -1,9 +1,22 @@
+# SPDX-License-Identifier: MIT
+"""
+Convolution utilities for gpuphot.phot.
+
+Contains FFT-based convolution helpers, kernel generators (Gaussian and
+aperture kernels), and small utilities used across the photometry pipeline.
+The functions prefer CuPy arrays for GPU acceleration and fall back to NumPy
+via cupynumeric where necessary.
+"""
+
 from __future__ import annotations
 
 import cupy as cp
+import numpy as _numpy
 try:
     import cupynumeric as np
 except ImportError:
+    import numpy as np
+except Exception:
     import numpy as np
 
 import nvtx
@@ -38,7 +51,7 @@ def convolve_fft(image: cp.ndarray, kernel: cp.ndarray, do_pad: bool = True, **k
         nvtx_range = nvtx.start_range('padding', category='phot.conv', color='yellow')
         image = (
             cp.pad(image, pad_width=padding, mode='reflect')
-        )  # esto está provocando un aumento terrible de memoria
+        )  # NOTE: this padding can cause a large memory increase; monitor memory use when calling with large images
         nvtx.end_range(nvtx_range)
 
     nvtx_range = nvtx.start_range('fft_calculation', category='phot.conv', color='green')
@@ -246,7 +259,7 @@ def batch_aper_kernel(radius, **kwargs):
     :rtype: tuple
     """
     # Ensure radius is a CuPy array for efficient calculations
-    if isinstance(radius, list) or isinstance(radius, np.ndarray):
+    if isinstance(radius, list) or isinstance(radius, _numpy.ndarray):
         radius = cp.array(radius, dtype=cp.float64)  # Convert list/np.ndarray to cp.ndarray
     elif isinstance(radius, int):
         radius = cp.array([radius], dtype=cp.float64)  # Convert to array
@@ -270,7 +283,7 @@ def batch_aper_kernel(radius, **kwargs):
 
         # Broadcasting to create masks for all radii at once
         mask = (x - center) ** 2 + (y - center) ** 2 <= radius.reshape(-1, 1,
-                                                                       1) ** 2  # radius[:, None, None] también es valido
+                                                                       1) ** 2  # radius[:, None, None] is also valid
 
         # The entire mask array serves as the kernel (no need for cp.zeros)
         kernel = mask.astype(cp.float64)  # Convert boolean mask to float64

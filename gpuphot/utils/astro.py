@@ -1,3 +1,15 @@
+# SPDX-License-Identifier: MIT
+"""
+Astronomical utility helpers used by gpuphot.
+
+Contains the SingletonSolver for Astrometry.net index management, coordinate
+conversion helpers, and other astronomy-focused utilities used by the
+photometry pipeline. This file can trigger large downloads when initializing
+astrometry indices; initialization should be done outside short-lived workers.
+
+Only documentation-level edits were applied here.
+"""
+
 import hashlib
 import inspect
 import os
@@ -15,6 +27,8 @@ import matplotlib.pyplot as plt
 try:
     import cupynumeric as np
 except ImportError:
+    import numpy as np
+except Exception:
     import numpy as np
 
 import nvtx

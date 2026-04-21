@@ -1,3 +1,13 @@
+# SPDX-License-Identifier: MIT
+"""
+Custom exception types and helpers for gpuphot.
+
+Defines domain-specific exceptions used across the package and a decorator to
+capture and (optionally) retry CUDA runtime errors with a small number of
+retries. The capture decorator attempts to free GPU memory and optionally
+restart the Docker container when fatal errors occur inside containers.
+"""
+
 import nvtx
 
 from .logger.hierarchical_logging import setup_logger
@@ -138,14 +148,14 @@ def capture_cuda_exception(func):
             except CUDARuntimeError as e:
                 error_str = str(e)
                 nvtx.mark(f"CUDA error in {func.__name__}: {e}", color="red", category="error")
-                
+
                 # Check for critical initialization error to avoid further CUDA calls
                 is_init_error = "cudaErrorInitializationError" in error_str
-                
+
                 if not is_init_error:
                     try:
                         from .utils.gpu import free_gpu_mem
-                        free_gpu_mem()  # Liberar memoria GPU antes de manejar el error
+                        free_gpu_mem()  # Release GPU memory before handling the error
                     except Exception:
                         pass
 
@@ -154,14 +164,11 @@ def capture_cuda_exception(func):
                     if is_running_in_docker():
                         logger.critical("Exiting due to CUDA error in Docker container.")
                         try:
-                            # sys.exit('Exiting due to CUDA error.')
+                            # Attempt to restart the running container via docker API
                             import socket
                             import docker
 
-                            # Obtener hostname (que suele ser el container_id)
                             container_id = socket.gethostname()
-
-                            # Reiniciar el contenedor
                             client = docker.DockerClient(base_url='unix://run/docker.sock')
                             client.containers.get(container_id).restart()
                         except Exception as e:
@@ -169,21 +176,21 @@ def capture_cuda_exception(func):
                         raise
                     else:
                         logger.error("Max retries reached. Exiting due to CUDA error.")
-                        raise  # Permitir que se propague el error para manejarlo más arriba
+                        raise
                 else:
                     if attempt < max_retries - 1:
                         logger.warning(f"CUDA error detected: {e}. Retrying...")
-                        continue  # Intentar nuevamente si hay más reintentos
+                        continue
                     else:
                         logger.error("Max retries reached for non-critical CUDA error. Raising exception.")
-                        raise  # Lanzar excepción si se han agotado los reintentos
+                        raise
 
             except Exception as e:
                 logger.error(f"An unexpected error occurred in {func.__name__}: {e}", exc_info=True)
-                raise  # Permitir que se propague cualquier otro tipo de excepción
+                raise
 
         logger.debug(f"Max retries reached for {func.__name__}.")
-        return None  # Esto puede ser opcional dependiendo de cómo quieras manejar los retornos
+        return None
 
     return wrapper
 

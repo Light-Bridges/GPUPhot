@@ -83,7 +83,10 @@ IMAGE_PATH=/path/on/your/host/to/images
 NOTEBOOKS_PATH=/path/on/your/host/to/jupyter_projects
 
 # Path on the *host* where PostgreSQL database files will be stored.
-POSTGRES_DATA_PATH=/path/on/your/host/to/postgres_data
+# IMPORTANT: use an absolute path OUTSIDE the repository directory.
+# PostgreSQL sets 700 permissions on this folder; if it lives inside the repo
+# Docker build context scanning fails with "permission denied".
+POSTGRES_DATA_PATH=/home/$USER/gpuphot_database
 
 # ===================================================================
 #  Celery Worker Settings
@@ -128,7 +131,7 @@ FLOWER_PORT=5555
 # ===================================================================
 
 # SSH port for connecting to the profiling container.
-PROFILER_SSSH_PORT=2222
+PROFILER_SSH_PORT=2222
 
 # Root password for the SSH session in the profiling container.
 ROOT_PASSWORD=gpuphot_profiler
@@ -185,26 +188,49 @@ The `launch_gpuphot.sh` script is designed to detect and launch one `gpuphot_wor
 
     This script will launch all base services and scale the `gpuphot_worker` service to match the desired number of GPUs.
 
-### 3.C. Launching for Profiling and Debugging
+### 3.C. Distributed Deployment (Multi-Node)
+
+GPUPhot supports horizontal scaling across multiple machines. You can run the core services (Database, RabbitMQ, Redis) on a "Master Node" and launch additional workers on "Worker Nodes".
+
+**On the Worker Node:**
+
+1.  Ensure the machine has NVIDIA GPUs and Docker installed.
+2.  Clone the repository and set up the `.env` file (ensure paths exist).
+3.  Use the `launch_external_worker.sh` script to connect to the Master Node:
+
+```bash
+chmod +x launch_external_worker.sh
+./launch_external_worker.sh <MASTER_IP> [MAX_GPUS]
+```
+
+*   `<MASTER_IP>`: The IP address of the machine running the RabbitMQ/Redis services.
+*   `[MAX_GPUS]`: (Optional) Limit the number of GPUs to use on this worker node.
+
+This script uses `docker-compose.worker.yml` to launch only the worker containers, configured to communicate with the remote master.
+
+### 3.D. Launching for Profiling and Debugging
 
 The `docker-compose.yml` includes special `profiler` services for detailed performance analysis with NVIDIA Nsight Systems. These services are not started by default. To launch them, use the `debug` profile:
 
-1.  **Launch profiling services (x86):**
+1.  **Launch profiling services (x86 — Python 3.12 + 3.8):**
     ```bash
-    docker compose --profile debug up -d profiler
+    docker compose --profile debug up -d profiler profiler_38
     ```
 2.  **Launch profiling services (Jetson):**
     ```bash
-    # For standard Jetson
-    docker compose --profile debug up -d profiler_jetson
-
-    # For Jetson Orin
+    # Jetson Orin — JetPack 5.x (Python 3.8)
     docker compose --profile debug up -d profiler_jetson_orin
+
+    # Jetson Orin Super — JetPack 6.x (Python 3.12 + 3.10)
+    docker compose --profile debug up -d profiler_jetson_orin_super profiler_jetson_orin_super_38
+
+    # Jetson Nano — JetPack 4.x (legacy)
+    docker compose --profile debug up -d profiler_jetson
     ```
 
 Once running, you can connect to the container via SSH to run profiling tools:
 ```bash
-ssh root@localhost -p ${PROFILER_SSSH_PORT:-2222}
+ssh root@localhost -p ${PROFILER_SSH_PORT:-2222}
 # The password is the one defined by ROOT_PASSWORD in your .env file
 ```
 
@@ -214,24 +240,22 @@ ssh root@localhost -p ${PROFILER_SSSH_PORT:-2222}
     *   *Your work files will be saved in the host directory specified by `NOTEBOOKS_PATH`.*
 *   **Flower (Celery Monitor):** `http://localhost:${FLOWER_PORT:-5555}`
 *   **RabbitMQ Management:** `http://localhost:${RABBITMQ_MANAGEMENT_PORT:-15672}` (user: `gpuphot`, pass: `gpuphot`)
-*   **Profiler SSH:** Connect via SSH to port `${PROFILER_SSSH_PORT:-2222}` (see previous section).
+*   **Profiler SSH:** Connect via SSH to port `${PROFILER_SSH_PORT:-2222}` (see previous section).
 
 ## 5. Initializing the Environment (First-Time Setup)
 
-After launching the services for the first time, you should initialize your JupyterLab environment by generating the example notebooks. These notebooks will guide you through the usage of GPUPhot.
+The `lab` service automatically generates example notebooks on first startup
+via its entrypoint script (`initialize_notebooks.sh`). These notebooks will
+guide you through the usage of GPUPhot.
 
-**Run the following command in your terminal:**
+Simply start the service and open JupyterLab in your browser — the example
+notebooks will appear in the file browser. If you need to regenerate them,
+restart the container after deleting the marker file:
 
 ```bash
-docker compose exec lab /usr/local/bin/initialize_notebooks.sh
+docker compose exec lab rm /home/jovyan/work/.notebooks_generated
+docker compose restart lab
 ```
-
-This script will:
-*   Check if the notebooks have already been generated.
-*   If not, it will create a set of example `.ipynb` files inside the directory you specified in `NOTEBOOKS_PATH`.
-*   If you run it again, it will do nothing, preserving any changes you have made.
-
-After running the command, refresh your JupyterLab browser window. The example notebooks should appear in the file browser.
 
 ## 6. Stopping the Services
 
@@ -258,9 +282,24 @@ This will stop and remove the containers, networks, and volumes.
 | `gpuphot_worker`       | Celery worker that processes images on the GPU.                      | -               | -                                | `default`   |
 | `lab`                  | Interactive JupyterLab environment with GPU access.                  | `8888`          | (no token)                       | `default`   |
 | `flower`               | Web interface for monitoring Celery workers and tasks.               | `5555`          | (no auth)                        | `default`   |
-| `profiler`             | Container with Nsight Systems and SSH for profiling on x86.          | `2222`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
-| `profiler_jetson`      | Profiling container for Jetson platforms.                            | `2222`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
-| `profiler_jetson_orin` | Profiling container for Jetson Orin platforms.                       | `2222`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+| `profiler`             | x86 profiler, Python 3.12 with cuML/RAPIDS.                         | `2222`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+| `profiler_38`          | x86 profiler, Python 3.8 (Ubuntu 20.04, no cuML).                   | `2223`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+| `profiler_jetson`      | Jetson Nano (JetPack 4.x, legacy).                                  | `2224`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+| `profiler_jetson_orin` | Jetson Orin (JetPack 5.x, Python 3.8).                              | `2225`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+| `profiler_jetson_orin_super` | Jetson Orin Super (JetPack 6.x, Python 3.12).                  | `2226`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+| `profiler_jetson_orin_super_38` | Jetson Orin Super (JetPack 6.x, Python 3.10).               | `2228`          | `root` / `${ROOT_PASSWORD}`      | `debug`     |
+
+## Result Persistence
+
+GPUPhot automatically writes all results to the PostgreSQL database after each
+image is processed.  Two tables are populated: `imastats` (one row per image)
+and `imaphot` (one row per detected source).  Both are spatially indexed with
+**Q3C** for fast coordinate-based queries.
+
+For the full schema, column descriptions, query examples, and data lifecycle
+documentation see **[DATABASE.md](DATABASE.md)**.
+
+---
 
 ## Customization
 
@@ -275,4 +314,5 @@ This will stop and remove the containers, networks, and volumes.
     *   Verify that `nvidia-smi` works on the host machine.
     *   Check that the `BASE_IMAGE` variable in your `.env` is compatible with your system's architecture (x86_64 vs. aarch64/jetson).
 *   **Volume Permission Errors**: Make sure the paths defined in your `.env` file (`ASTROMETRY_CACHE_PATH`, `IMAGE_PATH`, etc.) exist on your host machine and that the user running Docker has read/write permissions for them.
+*   **`permission denied` when building images (`gpuphot_database`)**: PostgreSQL sets `700` permissions (owned by the postgres process user) on its data directory.  If that directory ends up inside the repository tree, Docker's build-context sender cannot traverse it — even though `.dockerignore` excludes it — and the build fails.  **Always set `POSTGRES_DATA_PATH` to an absolute path outside the repository**, e.g. `/home/$USER/gpuphot_database`.  The compose default (`../gpuphot_database`) already places it one level above the project root to avoid this.
 *   **Port Conflicts**: If a port is already in use, you can easily change it by modifying the corresponding variable in your `.env` file (e.g., `JUPYTER_PORT=8889`).

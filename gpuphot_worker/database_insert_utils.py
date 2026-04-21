@@ -1,3 +1,17 @@
+# SPDX-License-Identifier: MIT
+"""
+Utilities for inserting processed image results into PostgreSQL.
+
+This module contains helper functions used by worker tasks to persist
+photometry results and image statistics into PostgreSQL using SQLAlchemy.
+
+Notes
+-----
+- Environment variables POSTGRES_* are used to build the connection string.
+- The functions intentionally use simple SQL snippets for compatibility with
+  existing database schemas. They focus on clarity and traceable error logging.
+"""
+
 import hashlib
 import hmac
 import os
@@ -14,8 +28,10 @@ def __generate_connection_string():
     """
     Generate a PostgreSQL connection string using environment variables.
 
-    :return: PostgreSQL connection string.
-    :rtype: str
+    Returns
+    -------
+    str
+        PostgreSQL connection string.
     """
 
     # Get database connection parameters from environment variables
@@ -33,14 +49,23 @@ def __generate_connection_string():
 
 def insert_dataframe_to_postgres(df, unique_col='id'):
     """
-    Insert a DataFrame into a PostgreSQL table, replacing existing records.
+    Insert a pandas DataFrame into the `imaphot` PostgreSQL table.
 
-    :param df: DataFrame to insert.
-    :type df: pandas.DataFrame
-    :param unique_col: Name of the column with unique values.
-    :type unique_col: str
-    :return: True if successful, False otherwise.
-    :rtype: bool
+    The function deletes any existing rows with matching values in `unique_col`
+    and then inserts the DataFrame in chunks. Uses SQLAlchemy engine for
+    transactional safety.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame to insert.
+    unique_col : str, optional
+        Name of the column with unique values (default is 'id').
+
+    Returns
+    -------
+    bool
+        True if successful, False otherwise.
     """
     try:
         # Get database connection parameters from environment variables
@@ -77,28 +102,38 @@ def insert_dataframe_to_postgres(df, unique_col='id'):
 
 def queryStrAdd(query: str, toAdd: str) -> str:
     """
-    Add a string value to an SQL query.
+    Add a quoted string value to an SQL query fragment.
 
-    :param query: Existing SQL query.
-    :type query: str
-    :param toAdd: String to add to the query.
-    :type toAdd: str
-    :return: Updated SQL query.
-    :rtype: str
+    Parameters
+    ----------
+    query : str
+        Existing SQL query fragment.
+    toAdd : str
+        String value to add (will be single-quoted).
+
+    Returns
+    -------
+    str
+        Updated SQL query fragment.
     """
     return query + "'" + toAdd + "', "
 
 
 def queryAdd(query: str, toAdd) -> str:
     """
-    Add a non-string value to an SQL query.
+    Add a non-string value to an SQL query fragment.
 
-    :param query: Existing SQL query.
-    :type query: str
-    :param toAdd: Value to add to the query.
-    :type toAdd: Any
-    :return: Updated SQL query.
-    :rtype: str
+    Parameters
+    ----------
+    query : str
+        Existing SQL query fragment.
+    toAdd : Any
+        Value to add; converted to string.
+
+    Returns
+    -------
+    str
+        Updated SQL query fragment.
     """
     return query + str(toAdd) + ", "
 
@@ -107,15 +142,20 @@ def headerToHstore(header):
     """
     Convert a FITS header to a PostgreSQL HStore-compatible string.
 
-    :param header: FITS header.
-    :type header: astropy.io.fits.Header
-    :return: HStore-compatible string.
-    :rtype: str
+    Parameters
+    ----------
+    header : astropy.io.fits.Header
+        FITS header to convert.
+
+    Returns
+    -------
+    str
+        HStore-compatible string fragment (without enclosing braces).
     """
     fragment = ""
     for key, value in header.items():
         if key != "COMMENT" and not isinstance(value, fits.header._HeaderCommentaryCards):
-            # Convertir todo a string y escapar las comillas dobles
+            # Convert everything to string and escape double quotes
             key_str = str(key).replace('"', '\\"')
             value_str = str(value).replace('"', '\\"')
             fragment += f'"{key_str}" => "{value_str}", '
@@ -124,14 +164,19 @@ def headerToHstore(header):
 
 def insert_header(header, file_path):
     """
-    Generate an SQL query to insert or update a FITS header in the database.
+    Generate an SQL query to insert or update a FITS header row in the `imastats` table.
 
-    :param header: FITS header.
-    :type header: astropy.io.fits.Header
-    :param file_path: Path of the FITS file.
-    :type file_path: str
-    :return: SQL query string.
-    :rtype: str
+    Parameters
+    ----------
+    header : astropy.io.fits.Header
+        FITS header.
+    file_path : str
+        Path of the FITS file (stored in the table).
+
+    Returns
+    -------
+    str
+        SQL query string that performs an upsert (ON CONFLICT DO UPDATE).
     """
     query_parts = ["INSERT INTO imastats (id, file_path, "]
 
@@ -171,18 +216,23 @@ def insert_header(header, file_path):
 
 def populate_ima_stats(gpuphotid, file_path, header, delete_prev=True):
     """
-    Insert or update image statistics in the database.
+    Insert or update image statistics in the `imastats` table.
 
-    :param gpuphotid: Unique identifier for the image.
-    :type gpuphotid: str
-    :param file_path: Path of the image file.
-    :type file_path: str
-    :param header: FITS header of the image.
-    :type header: astropy.io.fits.Header
-    :param delete_prev: Whether to delete previous entries for this image.
-    :type delete_prev: bool
-    :return: True if successful, False otherwise.
-    :rtype: bool
+    Parameters
+    ----------
+    gpuphotid : str
+        Unique identifier for the image.
+    file_path : str
+        Path of the image file to store in the table.
+    header : astropy.io.fits.Header
+        FITS header of the image.
+    delete_prev : bool, optional
+        Whether to delete previous entries for this image (default True).
+
+    Returns
+    -------
+    bool
+        True if successful, False otherwise.
     """
 
     try:
@@ -204,12 +254,17 @@ def populate_ima_stats(gpuphotid, file_path, header, delete_prev=True):
 
 def generate_gpuphotid(process_file):
     """
-    Generate a unique identifier for a processed file.
+    Generate a unique identifier for a processed file using HMAC-SHA1.
 
-    :param process_file: Path of the processed file.
-    :type process_file: str
-    :return: Unique identifier.
-    :rtype: str
+    Parameters
+    ----------
+    process_file : str
+        Path or string identifying the processed file.
+
+    Returns
+    -------
+    str
+        Hexadecimal HMAC-SHA1 digest.
     """
     h = hmac.new('GPUPHOT_KEY'.encode(), process_file.encode(), hashlib.sha1)
     return str(h.hexdigest())

@@ -1,13 +1,25 @@
+# SPDX-License-Identifier: MIT
+"""
+Notebook generator: Initial Setup
+
+Creates a Jupyter notebook that guides users through the initial setup steps
+required to use the GPUPhot system (environment variables, downloading
+astrometry indices, and .env template).
+
+This generator is intended to be executed by the initialization script that
+prepares the Jupyter workspace (see `initialize_notebooks.sh`).
+"""
+
 import argparse
 import os
 from pathlib import Path
 
 import nbformat as nbf
 
-# Crear un nuevo notebook
+# Create a new notebook
 nb_setup = nbf.v4.new_notebook()
 
-# Título y descripción del notebook
+# Title and description of the notebook
 nb_setup['cells'].append(nbf.v4.new_markdown_cell(
     "# Initial Setup\n"
     "This notebook guides you through the initial setup steps required to use the GPUPhot system.\n\n"
@@ -16,7 +28,7 @@ nb_setup['cells'].append(nbf.v4.new_markdown_cell(
     "Run the following code to check the current values of the static environment variables:"
 ))
 
-# Celda para verificar las variables de entorno estáticas
+# Cell to verify static environment variables
 nb_setup['cells'].append(nbf.v4.new_code_cell(
     "import os\n\n"
     "# Default values for environment variables\n"
@@ -38,7 +50,7 @@ nb_setup['cells'].append(nbf.v4.new_code_cell(
     "    print('\\nAll required environment variables are defined in the .env file.')"
 ))
 
-# Sección 2: Descargar índices de astrometría
+# Section 2: Download astrometry indices
 nb_setup['cells'].append(nbf.v4.new_markdown_cell(
     "## Step 2: Download Astrometry Index Files\n"
     "Before processing astronomical images, you need to download the astrometry index files. "
@@ -100,11 +112,10 @@ def download_astrometry_files():
 download_astrometry_files()
 """
 
-# Celda para descargar los índices de astrometría
-# Se usa la variable `download_cell_code` definida al inicio
+# Code cell to download astrometry indices
 nb_setup['cells'].append(nbf.v4.new_code_cell(download_cell_code))
 
-# Sección 3: Configuración de variables de entorno
+# Section 3: Environment variable configuration
 nb_setup['cells'].append(nbf.v4.new_markdown_cell(
     "## Step 3: Configure Environment Variables\n"
     "The GPUPhot system relies on several environment variables to function correctly. "
@@ -138,7 +149,7 @@ nb_setup['cells'].append(nbf.v4.new_markdown_cell(
     "**Important:** The paths specified in `ASTROMETRY_CACHE_PATH`, `INSTRUMENT_CONFIG_PATH`, and `IMAGE_PATH` must be paths on the **host machine**, not inside the Docker container. These paths will be mounted into the container at runtime."
 ))
 
-# Sección final: Link to the next notebook
+# Final section: Link to the next notebook
 nb_setup['cells'].append(nbf.v4.new_markdown_cell(
     "## Next Steps\n"
     "Once the setup is complete, you can proceed to the following notebooks:\n"
@@ -147,12 +158,8 @@ nb_setup['cells'].append(nbf.v4.new_markdown_cell(
     "- [4. Database Query](./4_Database_Query_Notebook.ipynb): Explore the database and query photometric data.\n"
 ))
 
-# Guardar el notebook de configuración
-
+# Save the notebook
 parser = argparse.ArgumentParser(description="Generate a Jupyter Notebook.")
-
-# Añadir un argumento opcional '--output-dir'
-# Si no se proporciona, se usará el valor 'default'.
 parser.add_argument(
     '--output-dir',
     type=str,

@@ -1,3 +1,11 @@
+# SPDX-License-Identifier: MIT
+"""
+Small utility helpers for the stats package.
+
+Provides minimal helpers used across gpuphot.stats. Documentation-only changes
+were applied: module header and English docstrings.
+"""
+
 import cupy as cp
 
 from . import common

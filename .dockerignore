@@ -1,3 +1,6 @@
+# Excluir explícitamente directorios con permisos restringidos (debe ir primero)
+gpuphot_database/
+
 # Ignorar todo
 **/*
 

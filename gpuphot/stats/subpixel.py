@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """
 Port of Manuel Guizar's code from:
 https://www.mathworks.com/matlabcentral/fileexchange/18401-efficient-subpixel-image-registration-by-cross-correlation
@@ -7,6 +8,8 @@ import cupy as cp
 try:
     import cupynumeric as np
 except ImportError:
+    import numpy as np
+except Exception:
     import numpy as np
 
 from cupy.fft import fftn, ifftn, fftfreq

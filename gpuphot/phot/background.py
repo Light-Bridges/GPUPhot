@@ -1,3 +1,12 @@
+# SPDX-License-Identifier: MIT
+"""
+Background estimation helpers for gpuphot.phot.
+
+Provides functions to estimate local background and RMS using FFT-based
+convolution and tile-based percentile recomposition. Implementations prefer
+CuPy for GPU acceleration with NumPy fallback where necessary.
+"""
+
 from __future__ import annotations
 
 import cupy as cp
