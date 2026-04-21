@@ -1,5 +1,6 @@
 # Local notes (not for repo)
 TODO.md
+TODO_DATA.md
 
 # Python-related
 __pycache__/
@@ -63,6 +64,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/build/
 
 # PyBuilder
 .pybuilder/
@@ -105,10 +107,6 @@ ipython_config.py
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
 __pypackages__/
 
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
 # SageMath parsed files
 *.sage.py
 
@@ -148,13 +146,6 @@ cython_debug/
 # PyCharm
 .idea/
 
-# Sphinx documentation
-docs/build/
-
-# Celery
-celerybeat-schedule
-celerybeat.pid
-
 # Project-specific
 astrometry_cache/
 gpuphot_database/
@@ -171,9 +162,6 @@ benchmarks/benchmark_results/**/*.fits
 
 # Profiling results
 profiling_results/
-
-# Ignore all .log files
-*.log
 
 # But keep the .gitkeep files
 !.gitkeep
@@ -194,7 +182,6 @@ profiling_scripts/dev/
 
 # Internal/generated files
 .env-copy
-GpuFitsCrypt_manuscript/
 figures/
 tables/
 PUBLICATION_SOFTWARE_PROMPT.md
