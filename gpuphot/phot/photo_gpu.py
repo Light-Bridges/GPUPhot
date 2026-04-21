@@ -22,6 +22,7 @@ import traceback
 import warnings
 
 import cupy as cp
+import numpy as _numpy
 from ..phot.cosmetics import CR_filter, SP_filter
 try:
     import cupynumeric as np
@@ -1844,7 +1845,7 @@ def batch_aperture_photometry(
     back_gpu = None
 
     # Validate and transfer Image
-    if isinstance(img_ori_input, np.ndarray):
+    if isinstance(img_ori_input, _numpy.ndarray):
         logger.info(f"batch_photometry received NumPy image, transferring to GPU.")
         transfer_start = time.time()
         try:
@@ -1873,7 +1874,7 @@ def batch_aperture_photometry(
 
     # Validate and transfer Background (if provided)
     if back_input is not None:
-        if isinstance(back_input, np.ndarray):
+        if isinstance(back_input, _numpy.ndarray):
             if back_input.shape != img_gpu.shape[-back_input.ndim:]:  # Check shape against GPU image dims
                 raise ValueError(f"Background shape {back_input.shape} mismatch with image shape {img_gpu.shape}.")
             logger.info(f"batch_photometry received NumPy background, transferring to GPU.")
@@ -2481,7 +2482,7 @@ def batch_aperture_photometry(
 #     back_gpu = None
 #
 #     # Validate and transfer Image
-#     if isinstance(img_ori_input, np.ndarray):
+#     if isinstance(img_ori_input, _numpy.ndarray):
 #         logger.info(f"batch_photometry received NumPy image, transferring to GPU.")
 #         transfer_start = time.time()
 #         try:

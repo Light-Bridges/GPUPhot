@@ -190,7 +190,7 @@ def crossmatch_sources(source_coords, ref_coords, thres_px: float = 2.0):
     nvtx_range = nvtx.start_range('crossmatch_sources_wrapper', category='utils.catalog', color='gray')
 
     is_gpu_input = isinstance(source_coords, cp.ndarray)
-    is_cpu_input = isinstance(source_coords, np.ndarray)
+    is_cpu_input = isinstance(source_coords, _numpy.ndarray)
 
     # Verify input types consistency
     if type(source_coords) != type(ref_coords):

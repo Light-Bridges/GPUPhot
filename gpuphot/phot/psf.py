@@ -10,6 +10,7 @@ falls back to CPU-based libraries when necessary.
 from __future__ import annotations
 
 import cupy as cp
+import numpy as _numpy
 try:
     import cupynumeric as np
 except ImportError:
@@ -869,7 +870,7 @@ def fit_moffat(star_data: np.ndarray | cp.ndarray) -> tuple:
         r = cp.asnumpy(r)
         Z = cp.asnumpy(Z)
         peak = cp.asnumpy(peak)  # Convert peak (potentially 0-d array) to scalar float
-        if isinstance(peak, np.ndarray):
+        if isinstance(peak, _numpy.ndarray):
             peak = peak.item()
     # else:
     #     r_cpu = r

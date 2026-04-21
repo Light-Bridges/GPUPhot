@@ -11,6 +11,7 @@ via cupynumeric where necessary.
 from __future__ import annotations
 
 import cupy as cp
+import numpy as _numpy
 try:
     import cupynumeric as np
 except ImportError:
@@ -258,7 +259,7 @@ def batch_aper_kernel(radius, **kwargs):
     :rtype: tuple
     """
     # Ensure radius is a CuPy array for efficient calculations
-    if isinstance(radius, list) or isinstance(radius, np.ndarray):
+    if isinstance(radius, list) or isinstance(radius, _numpy.ndarray):
         radius = cp.array(radius, dtype=cp.float64)  # Convert list/np.ndarray to cp.ndarray
     elif isinstance(radius, int):
         radius = cp.array([radius], dtype=cp.float64)  # Convert to array
