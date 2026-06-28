@@ -56,36 +56,6 @@ from ..utils.headers import update_header_with_astrometry, update_header_with_ph
 logger = setup_logger(__name__)
 
 
-# ### # @hierarchical_debug(logger)
-# def get_solver():
-#     """
-#     Get the astrometry solver with index files.
-#
-#     Returns
-#     -------
-#     astrometry.Solver
-#         Configured astrometry solver instance.
-#     """
-#     if os.path.exists('/data'):
-#         cache = '/data/astrometry_cache'
-#     else:
-#         cache = '/mnt/data/astrometry_cache'
-#     solver = astrometry.Solver(astrometry.series_5200.index_files(
-#         cache_directory=cache, scales={0, 1, 2, 3, 4, 5, 6}) + astrometry.
-#                                series_4100.index_files(cache_directory=cache, scales={7, 8, 9, 10,
-#                                                                                       11}))
-#
-#     return solver
-
-
-# def init_gpu():
-#     """ """
-#     logger.debug('Tensorflow version ' + tf.__version__)
-#     gpus = tf.config.list_physical_devices('GPU')
-#     logger.debug('GPUs:', gpus)
-#     tf.config.set_logical_device_configuration(gpus[0], [tf.config.
-#                                                LogicalDeviceConfiguration(memory_limit=1024)])
-
 
 ### # @hierarchical_debug(logger)
 @nvtx.annotate('gen_moff_filter', category='phot.photo_gpu')
@@ -194,70 +164,47 @@ def calculate_aperture_corrections_gpu(corr: cp.ndarray) -> tuple[cp.ndarray, cp
     """
     Calculate aperture corrections using CuPy (GPU).
 
+    Each star's growth curve is normalized by its maximum value, which under the
+    pipeline's default radii (up to ~7·FWHM, well beyond the PSF support) corresponds
+    to the total stamp flux. Outliers are rejected using a 2.5·MAD criterion, robust
+    to non-Gaussian deviations from PSFs that depart significantly from the local mean.
+
     :param corr: Array of aperture curves (n_stars, n_radii), potentially with NaNs.
                  Expected shape (n_stars_in_cluster, n_radii).
     :type corr: cupy.ndarray
     :return: Aperture correction factors and errors for the cluster.
     :rtype: tuple(cupy.ndarray, cupy.ndarray) Both shape (n_radii,)
     """
-    # Ensure input is float for calculations involving NaN/Inf
     if not cp.issubdtype(corr.dtype, cp.floating):
-        corr = corr.astype(cp.float64)  # Use float64 for precision
+        corr = corr.astype(cp.float64)
 
     if corr.size == 0 or corr.shape[0] == 0:
-        # Handle empty input case gracefully
         if corr.ndim == 2 and corr.shape[1] > 0:
             n_radii = corr.shape[1]
-            # Ensure output dtype matches potential input dtype if float
             dtype_out = corr.dtype if cp.issubdtype(corr.dtype, cp.floating) else cp.float64
             return cp.full(n_radii, cp.nan, dtype=dtype_out), cp.full(n_radii, cp.nan, dtype=dtype_out)
         else:
-            # Cannot determine n_radii, return empty
             return cp.array([]), cp.array([])
 
-    # Normalize each curve by its own max
-    max_vals = cp.nanmax(corr, axis=1, keepdims=True)  # Shape (n_stars, 1)
+    # Normalize each curve by its own max (= flux at largest aperture = stamp total)
+    max_vals = cp.nanmax(corr, axis=1, keepdims=True)
+    mask_broadcasted = cp.broadcast_to(max_vals > 0, corr.shape)
+    corr_normalized = cp.where(mask_broadcasted, corr / max_vals, cp.nan)
 
-    # --- FIXED NORMALIZATION APPROACH ---
-    # First broadcast the mask to match output shape
-    mask_broadcasted = cp.broadcast_to(max_vals != 0, corr.shape)
-    # Then use cp.where() function instead of 'where' parameter
-    corr_normalized = cp.where(mask_broadcasted,
-                               corr / max_vals,  # Division with implicit broadcasting
-                               cp.nan)
-    # --- END FIXED NORMALIZATION ---
-
-    # Iterative outlier rejection (using median and std dev)
-    corr_fa = cp.nanmedian(corr_normalized, axis=0)  # Shape (n_radii,)
-    corr_e = cp.nanstd(corr_normalized, axis=0)  # Shape (n_radii,)
-
-    # Add epsilon to std dev if it's zero
+    # Robust outlier rejection: 2.5·MAD
+    corr_med = cp.nanmedian(corr_normalized, axis=0)
+    abs_dev = cp.abs(corr_normalized - corr_med[cp.newaxis, :])
+    mad = 1.4826 * cp.nanmedian(abs_dev, axis=0)
     epsilon = 1e-9
-    # Ensure corr_e is float before comparison if input wasn't
-    if not cp.issubdtype(corr_e.dtype, cp.floating):
-        corr_e = corr_e.astype(cp.float64)
-    corr_e = cp.where(corr_e == 0, epsilon, corr_e)
-
-    # Expand dims for broadcasting comparison against (n_stars, n_radii) array
-    corr_fa_bc = corr_fa[cp.newaxis, :]  # Shape (1, n_radii)
-    corr_e_bc = corr_e[cp.newaxis, :]  # Shape (1, n_radii)
-
-    # Identify outliers (comparison broadcasts correctly)
-    cmask = cp.abs(corr_normalized - corr_fa_bc) > corr_e_bc  # Shape (n_stars, n_radii)
-    # Replace outliers with NaN using cp.where (function, not argument)
+    mad = cp.where(mad == 0, epsilon, mad)
+    cmask = abs_dev > 2.5 * mad[cp.newaxis, :]
     corr_cleaned = cp.where(cmask, cp.nan, corr_normalized)
 
-    # Final correction factor and error
-    corr_fact = cp.nanmean(corr_cleaned, axis=0)  # Shape (n_radii,)
-    corr_err = cp.nanstd(corr_cleaned, axis=0)  # Shape (n_radii,)
+    # Final correction factor and uncertainty
+    corr_fact = cp.nanmean(corr_cleaned, axis=0)
+    corr_err = cp.nanstd(corr_cleaned, axis=0) / cp.sqrt(cp.sum(~cp.isnan(corr_cleaned), axis=0))  # Standard error
 
-    # Handle cases where all values for a radius became NaN
-    # Ensure outputs are float before isnan check
-    if not cp.issubdtype(corr_fact.dtype, cp.floating):
-        corr_fact = corr_fact.astype(cp.float64)
-    if not cp.issubdtype(corr_err.dtype, cp.floating):
-        corr_err = corr_err.astype(cp.float64)
-
+    # Handle radii where all stars became NaN
     corr_fact = cp.where(cp.isnan(corr_fact), 0.0, corr_fact)
     corr_err = cp.where(cp.isnan(corr_err), 0.0, corr_err)
 
@@ -313,7 +260,7 @@ def calculate_aperture_corrections(corr: np.ndarray) -> cp.ndarray:
 
     # Final factor and error
     corr_fact = np.nanmean(corr_cleaned, axis=0)
-    corr_err = np.nanstd(corr_cleaned, axis=0)
+    corr_err = np.nanstd(corr_cleaned, axis=0) / np.sqrt(np.sum(~np.isnan(corr_cleaned), axis=0))  # Standard error
 
     # Replace NaNs in final result (e.g., if all values for a radius were outliers)
     corr_fact = np.nan_to_num(corr_fact, nan=0.0)  # Replace NaN with 0.0
@@ -377,37 +324,6 @@ def find_aperture_corrections_gpu(sources: cp.ndarray, corrections: cp.ndarray, 
     return aperture_corrections, aperture_correction_errors
 
 
-#
-# ### # @hierarchical_debug(logger)
-# @nvtx.annotate('find_aperture_corrections', category='phot.photo_gpu')
-# def find_aperture_corrections(sources: cp.ndarray, corrections: np.ndarray, correction_errors: np.ndarray,
-#                               cluster_centers: np.ndarray,
-#                               opt_rad_idx: np.array = None, **kwargs) -> cp.ndarray:
-#     """
-#     Find the aperture correction for each source.
-#
-#     :param sources: Array of source coordinates.
-#     :type sources: cupy.ndarray
-#     :param corrections: Array of aperture corrections.
-#     :type corrections: numpy.ndarray
-#     :param correction_errors: Array of aperture correction errors.
-#     :type correction_errors: numpy.ndarray
-#     :param cluster_centers: Array of cluster centers.
-#     :type cluster_centers: numpy.ndarray
-#     :param opt_rad_idx: Array of optimal radii indices (optional).
-#     :type opt_rad_idx: numpy.ndarray or None
-#     :return: Array of aperture corrections and errors for each source.
-#     :rtype: tuple(cupy.ndarray, cupy.ndarray)
-#     """
-#     _, tile_idx = crossmatch_sources(sources.get(), cluster_centers, thres_px=int(cp.max(sources)))
-#     if opt_rad_idx is None:
-#         aperture_corrections = corrections[tile_idx, :]
-#         aperture_correction_errors = correction_errors[tile_idx, :]
-#     else:
-#         aperture_corrections = corrections[tile_idx, opt_rad_idx]
-#         aperture_correction_errors = correction_errors[tile_idx, opt_rad_idx]
-#     return aperture_corrections, aperture_correction_errors
-
 
 @nvtx.annotate('create_aperture_corrections_map_gpu', category='phot.photo_gpu')
 def create_aperture_corrections_map_gpu(image_shape: tuple, block_size: int, unit_star_dataset: cp.ndarray,
@@ -448,8 +364,8 @@ def create_aperture_corrections_map_gpu(image_shape: tuple, block_size: int, uni
     # Pass the GPU coordinates directly. The wrapper will decide whether to use GPU or CPU.
     grouping_range = nvtx.start_range('group_star_dataset_dispatch', category='phot.psf')
     avg_group_size = int(
-        max(coords.shape[0], coords.shape[0] / (np.prod(image_shape) / min(max(image_shape), block_size) ** 2)))
-    min_group_size_val = max(1, min(avg_group_size // 2, 5))
+        max(5, coords.shape[0] / (np.prod(image_shape) / min(max(image_shape), block_size) ** 2)))
+    min_group_size_val = max(3, avg_group_size // 2)
 
     # This function NOW can return cp.ndarray or np.ndarray
     labels = group_star_dataset(coords, avg_group_size=avg_group_size,
@@ -589,59 +505,6 @@ def create_aperture_corrections_map_gpu(image_shape: tuple, block_size: int, uni
     return aperture_corrections_final_gpu, aperture_correction_errors_final_gpu, cluster_centers_gpu
 
 
-#
-# ### # @hierarchical_debug(logger)
-# @nvtx.annotate('create_aperture_corrections_map', category='phot.photo_gpu')
-# def create_aperture_corrections_map(image_shape: tuple, block_size: int, unit_star_dataset: cp.ndarray,
-#                                     coords: cp.ndarray, radii: np.ndarray, **kwargs):
-#     """
-#     Calculate aperture corrections for all stars in an optimized way.
-#
-#     :param image_shape: Tuple (height, width) of the image.
-#     :type image_shape: tuple
-#     :param block_size: Size of the tiles.
-#     :type block_size: int
-#     :param unit_star_dataset: Dataset of unit stars.
-#     :type unit_star_dataset: cupy.ndarray
-#     :param coords: Coordinates of stars.
-#     :type coords: cupy.ndarray
-#     :param radii: Radii for aperture photometry.
-#     :type radii: numpy.ndarray
-#     :return: Aperture corrections, errors, and cluster centers.
-#     :rtype: tuple(numpy.ndarray, numpy.ndarray, numpy.ndarray)
-#     """
-#     # calculate aperture photometry curves
-#     positions = cp.array([[unit_star_dataset.shape[1] // 2, unit_star_dataset.shape[2] // 2]])
-#     aperture_curves, _, _ = batch_aperture_photometry(unit_star_dataset, None, positions, radii)
-#     aperture_curves = aperture_curves[:, :, 0].get()
-#
-#     del positions,unit_star_dataset
-#
-#     # cluster stars
-#     avg_group_size = int(
-#         max(len(coords), len(coords) / (np.prod(image_shape) / min(max(image_shape), block_size) ** 2)))
-#     labels = group_star_dataset(coords, avg_group_size=avg_group_size, min_group_size=min(avg_group_size, 5))
-#
-#     unique_labels = np.unique(labels)
-#     cluster_centers = []
-#     aperture_corrections = []
-#     aperture_correction_errors = []
-#     for label in unique_labels:
-#         cluster_points = coords[labels == label]
-#         cluster_aperture_curves = aperture_curves[labels == label]
-#
-#         aper_corr, aperr_corr_err = calculate_aperture_corrections(cluster_aperture_curves)
-#         aperture_corrections.append(aper_corr)
-#         aperture_correction_errors.append(aperr_corr_err)
-#         cluster_centers.append(np.mean(cluster_points, axis=0))
-#
-#     # calculate aperture corrections
-#     aperture_corrections = np.array(aperture_corrections)
-#     aperture_correction_errors = np.array(aperture_correction_errors)
-#     cluster_centers = np.array(cluster_centers)
-#
-#     return aperture_corrections, aperture_correction_errors, cluster_centers
-
 
 @capture_cuda_exception
 @hierarchical_debug(logger)
@@ -682,6 +545,7 @@ def process_image(imdata, imheader, header_descriptions=None, **kwargs):
         site_longitude = imheader[HeaderKey.SITELONG.value]
         date_obs = imheader[HeaderKey.DATE_OBS.value]
         filter = imheader[HeaderKey.FILTER.value]
+        binning = imheader[HeaderKey.XBINNING.value]
 
         # default parameters
         default_params = DefaultConfig.DEFAULT_PROCESSING_PARAMS
@@ -691,7 +555,7 @@ def process_image(imdata, imheader, header_descriptions=None, **kwargs):
 
         # Call calibrate_image with updated parameters
         dfm, h_wcs, dic_calib = calibrate_image(
-            imdata, filter,
+            imdata, filter, binning,
             scale, gain, rdnoise, exptime, satlevel,
             target_ra, target_dec, n_images=n_images,
             # SP_filt=params['SP_filt'],
@@ -836,10 +700,13 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 
     # BLOQUE 3: Aperture radii setup
     block3_range = nvtx.start_range('aperture_radii_setup', category='phot.photo_gpu', color='yellow')
-    max_radii = float(np.ceil(7 * fwhm) + 1)
+    stamp_half = star_dataset.shape[1] // 2  # asume star_dataset shape (N, h, w)
+    max_radii_phot = float(np.ceil(4 * fwhm))
+    max_radii_corr = float(min(stamp_half - 1, np.ceil(5 * fwhm) + 1))
     min_radii = float(np.ceil(0.75 * fwhm))
-    radii = cp.arange(int(min_radii), int(max_radii) + 1, 1, dtype=cp.float64)
-    if radii.size == 0:
+    radii_phot = cp.arange(int(min_radii), int(max_radii_phot) + 1, 1, dtype=cp.float64)
+    radii_corr = cp.arange(int(min_radii), int(max_radii_corr) + 1, 1, dtype=cp.float64)
+    if radii_corr.size == 0 or radii_phot.size == 0:
         nvtx.end_range(block3_range)
         nvtx.end_range(overall_range)
         raise DataValidationError("Input data is invalid or insufficient")
@@ -851,9 +718,11 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
     # create_aperture_corrections_map_gpu still has internal CPU steps for grouping
     corrections, correction_errors, cluster_centers = create_aperture_corrections_map_gpu(
         (h, w), tile_section_psf, star_dataset[conv_snr_mask],
-        isolated_coord[conv_snr_mask], radii
+        isolated_coord[conv_snr_mask], radii_corr
     )
-
+    n_phot = len(radii_phot)
+    corrections = corrections[:, :n_phot]
+    correction_errors = correction_errors[:, :n_phot]
     del conv_snr_mask, star_dataset, isolated_coord
 
     # find_aperture_corrections_gpu now uses GPU crossmatch, no external transfers needed
@@ -868,7 +737,7 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
     block5_range = nvtx.start_range('batch_aperture_photometry', category='phot.photo_gpu', color='green')
     adaptive_memory_management(mempool, force_free=True)
     source_flux, back_flux, area = batch_aperture_photometry(img_ori, back, cp.round(source_coord).astype(cp.int32),
-                                                             radii)
+                                                             radii_phot)
     del img_ori, back
     # if img_ori.ndim == 3:  # Handle averaging if needed
     #     source_flux = cp.mean(source_flux, axis=0)
@@ -884,20 +753,25 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 
     center_isolated_signal = center_isolated_flux / center_isolated_aper_corr
 
-    center_isolated_back_noise_sq = cp.abs(back_flux[:, source_coords_matched_idx]) * gain
-    center_isolated_read_noise_sq = area.reshape(-1, 1) * rdnoise ** 2
+    # Stochastic noise terms (reduced by 1/N from frame averaging)
+    center_isolated_back_noise_sq   = cp.abs(back_flux[:, source_coords_matched_idx]) * gain
+    center_isolated_read_noise_sq   = area.reshape(-1, 1) * rdnoise ** 2
     center_isolated_source_noise_sq = center_isolated_flux * gain / center_isolated_aper_corr ** 2
     center_isolated_corr_noise_sq = (
-                                            center_isolated_flux * gain * center_isolated_aper_corr_err / center_isolated_aper_corr ** 2) ** 2
+        center_isolated_flux * gain * center_isolated_aper_corr_err 
+        / center_isolated_aper_corr ** 2
+    ) ** 2
 
     center_isolated_total_noise = cp.sqrt(
-        center_isolated_source_noise_sq +
-        center_isolated_back_noise_sq +
-        center_isolated_read_noise_sq +
-        center_isolated_corr_noise_sq
-    ) / gain / cp.sqrt(n_images)
+        (center_isolated_source_noise_sq + 
+        center_isolated_back_noise_sq + 
+        center_isolated_read_noise_sq) / n_images
+        + center_isolated_corr_noise_sq          # not divided by N
+    ) / gain
 
-    del center_isolated_source_noise_sq, center_isolated_back_noise_sq, center_isolated_read_noise_sq, center_isolated_corr_noise_sq, center_isolated_flux, center_isolated_aper_corr_err, center_isolated_aper_corr
+    del center_isolated_source_noise_sq, center_isolated_back_noise_sq
+    del center_isolated_read_noise_sq, center_isolated_corr_noise_sq
+    del center_isolated_flux, center_isolated_aper_corr_err, center_isolated_aper_corr
 
     center_isolated_snr = center_isolated_signal / center_isolated_total_noise
     center_conv_snr = conv_snr[source_coords_matched_idx]
@@ -916,7 +790,7 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
     opt_radii_idx = xp.nanargmax(center_isolated_snr, axis=0)
 
     # Retrieve optimal radii (works for both np and cp arrays)
-    opt_radii = radii[opt_radii_idx]
+    opt_radii = radii_phot[opt_radii_idx]
     del opt_radii_idx, center_isolated_snr
     if len(center_conv_snr) == 0 or len(opt_radii) == 0:
         raise DataValidationError("center_conv_snr or opt_radii is empty. Ensure valid data is provided.")
@@ -1023,781 +897,6 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
     return opt_signal.get(), opt_total_noise.get(), opt_coords.get(), extra_info
 
 
-#
-# @nvtx.annotate('perform_opt_photometry_optimized', category='phot.photo_gpu')
-# def perform_opt_photometry_optimized(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp.ndarray,
-#                                      source_coord: cp.ndarray, isolated_coord: cp.ndarray,
-#                                      tile_section_psf: int, star_dataset: cp.ndarray, fwhm: float,
-#                                      gain: float, rdnoise: float, n_images: int = 1, center_factor: float = 1.0,
-#                                      min_conv_snr: float = 300.0) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
-#     """
-#     Optimized aperture photometry process (GPU-focused, Option A for crossmatch).
-#     Minimizes GPU<->CPU transfers by adapting helper functions where possible.
-#     """
-#     overall_range = nvtx.start_range('perform_opt_photometry_optimized', category='phot.photo_gpu', color='cyan')
-#     mempool = cp.get_default_memory_pool()
-#
-#     # BLOQUE 1: Selección de estrellas centrales (No changes needed, CPU ops are minor)
-#     block1_range = nvtx.start_range('center_stars_selection', category='phot.photo_gpu', color='yellow')
-#     center_factor = min(center_factor, 1.0)
-#     h, w = img.shape[-2:]  # Handle both 2D and 3D image input shapes
-#     xmin = int(w * 0.5 * (1 - center_factor))
-#     xmax = int(w * 0.5 * (1 + center_factor))
-#     ymin = int(h * 0.5 * (1 - center_factor))
-#     ymax = int(h * 0.5 * (1 + center_factor))
-#
-#     # Perform mask calculation on GPU
-#     center_mask = (isolated_coord[:, 0] > ymin) & (isolated_coord[:, 0] < ymax) & \
-#                   (isolated_coord[:, 1] > xmin) & (isolated_coord[:, 1] < xmax)
-#     nvtx.end_range(block1_range)
-#
-#     # BLOQUE 2: Procesamiento SNR y validación de fuentes (Includes transfers for crossmatch)
-#     block2_range = nvtx.start_range('snr_source_validation', category='phot.photo_gpu', color='orange')
-#     # Use cp.rint and clip for robust indexing
-#     source_row_idx = cp.clip(cp.round(source_coord[:, 0]), 0, h - 1).astype(cp.int32)
-#     source_col_idx = cp.clip(cp.round(source_coord[:, 1]), 0, w - 1).astype(cp.int32)
-#     conv_snr = conv_ima_sigma[source_row_idx, source_col_idx]
-#
-#     pos_conv_snr_mask = conv_snr > 0
-#     source_coord_filt = source_coord[pos_conv_snr_mask]  # Filtered source coords on GPU
-#     conv_snr_filt = conv_snr[pos_conv_snr_mask]  # Filtered SNR on GPU
-#
-#     # Get isolated stars in center (GPU)
-#     isolated_coord_center = isolated_coord[center_mask]
-#
-#     # --- Transfer Point 1 (Required by crossmatch_sources - Option A) ---
-#     tx1_range = nvtx.start_range('transfer_for_crossmatch_isol', category='transfer', color='red')
-#     isolated_coord_center_np = isolated_coord_center.get()
-#     source_coord_filt_np = source_coord_filt.get()
-#     nvtx.end_range(tx1_range)
-#
-#     # Call CPU crossmatch
-#     cm_range = nvtx.start_range('crossmatch_sources_cpu', category='cpu_ops', color='blue')
-#     # Assuming crossmatch returns (indices_in_source, indices_in_ref)
-#     _, source_coords_matched_idx_np = crossmatch_sources(
-#         isolated_coord_center_np, source_coord_filt_np, thres_px=3  # Match isolated TO filtered sources
-#     )
-#     # source_coords_matched_idx_np now holds indices into source_coord_filt_np
-#     nvtx.end_range(cm_range)
-#
-#     # --- Transfer Point 2 (Transfer matched indices back to GPU) ---
-#     tx2_range = nvtx.start_range('transfer_matched_idx_to_gpu', category='transfer', color='red')
-#     source_coords_matched_idx = cp.asarray(source_coords_matched_idx_np)
-#     nvtx.end_range(tx2_range)
-#     # --- End Transfers for Crossmatch ---
-#
-#     # Check SNR for isolated stars (used for correction map generation)
-#     isolated_row_idx = cp.clip(cp.round(isolated_coord[:, 0]), 0, h - 1).astype(cp.int32)
-#     isolated_col_idx = cp.clip(cp.round(isolated_coord[:, 1]), 0, w - 1).astype(cp.int32)
-#     conv_snr_isol = conv_ima_sigma[isolated_row_idx, isolated_col_idx]
-#
-#     # Mask for isolated stars used in correction map (center AND snr threshold)
-#     conv_snr_mask_isol = conv_snr_isol > min_conv_snr
-#     final_isolated_mask = center_mask & conv_snr_mask_isol  # Combined mask on GPU
-#
-#     num_good_isolated = cp.sum(final_isolated_mask)
-#     if num_good_isolated < 10:
-#         final_isolated_mask = conv_snr_isol > min_conv_snr * 0.5
-#
-#     num_good_isolated = cp.sum(final_isolated_mask)
-#     if num_good_isolated < 3:
-#         nvtx.end_range(block2_range)
-#         nvtx.end_range(overall_range)
-#         raise InsufficientStarsError(num_good_isolated.item())
-#
-#     # Filter coords and dataset for correction map (GPU)
-#     isolated_coord_for_map = isolated_coord[final_isolated_mask]
-#     star_dataset_for_map = star_dataset[final_isolated_mask]  # Assuming star_dataset corresponds to isolated_coord
-#
-#     nvtx.end_range(block2_range)
-#
-#     # BLOQUE 3: Configuración de radios de apertura (GPU)
-#     block3_range = nvtx.start_range('aperture_radii_setup', category='phot.photo_gpu', color='yellow')
-#     max_radii = float(np.ceil(7 * fwhm))  # Use float for potential non-int radii in get_aper_kernel
-#     min_radii = float(np.ceil(0.75 * fwhm))
-#     # Use cp.linspace or cp.arange depending if step=1 is guaranteed/desired
-#     # Let's assume step=1 integer radii based on original np.arange(int, int, 1)
-#     radii = cp.arange(int(min_radii), int(max_radii) + 1, 1, dtype=cp.float64)  # Use float for get_aper_kernel
-#     if radii.size == 0:
-#         nvtx.end_range(block3_range)
-#         nvtx.end_range(overall_range)
-#         raise DataValidationError(
-#             f"Radii array is empty (min_radii={min_radii}, max_radii={max_radii}). Check FWHM value ({fwhm}).")
-#     nvtx.end_range(block3_range)
-#
-#     # BLOQUE 4: Creación de mapa de correcciones (GPU/CPU mix, returns GPU)
-#     block4_range = nvtx.start_range('aperture_corrections_mapping', category='phot.photo_gpu', color='purple')
-#     # Calls create_aperture_corrections_map_gpu (handles internal transfers)
-#     corrections, correction_errors, cluster_centers = create_aperture_corrections_map_gpu(
-#         (h, w), tile_section_psf, star_dataset_for_map,
-#         isolated_coord_for_map, radii
-#     )
-#     # corrections, errors, centers are now CuPy arrays
-#
-#     # Calls find_aperture_corrections_gpu (handles internal transfers for crossmatch)
-#     # Pass filtered source coords; results are CuPy arrays for all sources
-#     aperture_corrections, aperture_correction_errors = find_aperture_corrections_gpu(
-#         source_coord_filt, corrections, correction_errors, cluster_centers
-#     )
-#     # aperture_corrections/_errors shape: (n_sources_filt, n_radii)
-#     nvtx.end_range(block4_range)
-#
-#     # BLOQUE 5: Fotometría por lotes (GPU)
-#     block5_range = nvtx.start_range('batch_aperture_photometry', category='phot.photo_gpu', color='green')
-#     # Ensure coords passed are integers
-#     source_coord_int = cp.round(source_coord_filt).astype(cp.int32)
-#     # Clip again just to be absolutely safe before indexing image
-#     source_coord_int[:, 0] = cp.clip(source_coord_int[:, 0], 0, h - 1)
-#     source_coord_int[:, 1] = cp.clip(source_coord_int[:, 1], 0, w - 1)
-#
-#     # Call adapted batch_aperture_photometry with CuPy radii
-#     source_flux, back_flux, area = batch_aperture_photometry(
-#         img, back, source_coord_int, radii
-#     )
-#     # source_flux/back_flux shape: (n_radii, n_sources_filt) [Assuming 2D image input]
-#     # OR (n_images, n_radii, n_sources_filt) [Assuming 3D image input]
-#     # area shape: (n_radii,)
-#     # Let's assume 2D image input based on original Blk7 logic, adjust if needed
-#     if img.ndim == 3:
-#         # If input is 3D stack, average flux/noise over images? Or handle stack?
-#         # Original code divides noise by sqrt(n_images), suggesting averaging/stacking.
-#         # Let's average the flux here for simplicity, assuming background is similar.
-#         # WARNING: This assumes simple averaging is appropriate.
-#         logger.warning("Warning: Input image is 3D, averaging fluxes over the first dimension.")
-#         source_flux = cp.mean(source_flux, axis=0)
-#         if back_flux is not None:
-#             back_flux = cp.mean(back_flux, axis=0)
-#         # If n_images > 1, noise calculation needs adjustment later? Original code used n_images param.
-#
-#     nvtx.end_range(block5_range)
-#
-#     # BLOQUE 7: Cálculo de señal y ruido (All GPU)
-#     block7_range = nvtx.start_range('photometric_parameters_calc_gpu', category='phot.photo_gpu', color='lime')
-#
-#     # Index the full GPU arrays using the matched indices (GPU array)
-#     # source_coords_matched_idx refers to indices within source_coord_filt space
-#     aperture_corrections_matched = aperture_corrections[source_coords_matched_idx]  # Shape (n_matched, n_radii)
-#     aperture_errors_matched = aperture_correction_errors[source_coords_matched_idx]  # Shape (n_matched, n_radii)
-#     source_flux_matched = source_flux[:, source_coords_matched_idx]  # Shape (n_radii, n_matched)
-#     back_flux_matched = back_flux[:,
-#                         source_coords_matched_idx] if back_flux is not None else None  # Shape (n_radii, n_matched)
-#
-#     # Transpose corrections/errors to match flux shape (n_radii, n_matched)
-#     aperture_corrections_matched_t = aperture_corrections_matched.T
-#     aperture_errors_matched_t = aperture_errors_matched.T
-#
-#     # --- Signal Calculation (GPU) ---
-#     signal_calc_range = nvtx.start_range('signal_calc', category='phot.calc')
-#     # Avoid division by zero
-#     epsilon = 1e-9  # Small number to avoid division by zero
-#     center_isolated_signal = cp.divide(source_flux_matched, aperture_corrections_matched_t + epsilon)
-#     # Handle cases where correction was zero explicitly if needed
-#     # center_isolated_signal = cp.where(aperture_corrections_matched_t != 0, source_flux_matched / aperture_corrections_matched_t, cp.nan)
-#     nvtx.end_range(signal_calc_range)
-#
-#     # --- Noise Calculation (GPU) ---
-#     noise_calc_range = nvtx.start_range('noise_calc', category='phot.calc')
-#     # Ensure area has shape (n_radii, 1) for broadcasting with (n_radii, n_matched)
-#     area_col = area.reshape(-1, 1)
-#
-#     # Background noise (Shot noise from background)
-#     center_isolated_back_noise_sq = cp.zeros_like(source_flux_matched)
-#     if back_flux_matched is not None:
-#         # Use abs() in case background subtraction yielded negative values locally
-#         center_isolated_back_noise_sq = cp.abs(back_flux_matched) * gain
-#
-#     # Read noise squared (constant per pixel, scaled by area)
-#     center_isolated_read_noise_sq = area_col * rdnoise ** 2  # Broadcasts area to match (n_radii, n_matched)
-#
-#     # Source noise (Shot noise from source signal)
-#     # Account for correction factor in variance propagation: Var(S/c) ~ Var(S)/c^2 = (S*gain)/c^2
-#     corr_sq = aperture_corrections_matched_t ** 2
-#     center_isolated_source_noise_sq = cp.divide(source_flux_matched * gain, corr_sq + epsilon)
-#
-#     # Correction uncertainty noise
-#     # Var(S/c) due to c error: (S/c^2)^2 * Var(c) = (S/c^2)^2 * (err_c * c)^2 ? No, usually err_c is std dev.
-#     # Var(f(c)) ~ (df/dc)^2 Var(c) => Var(S/c) ~ (-S/c^2)^2 Var(c) = (S/c^2)^2 * err_c^2
-#     # Check formula: Original was (flux * gain * err / corr^2)**2 -- Let's match that
-#     center_isolated_corr_noise_sq = cp.power(
-#         cp.divide(source_flux_matched * gain * aperture_errors_matched_t, corr_sq + epsilon), 2
-#     )
-#
-#     # Total noise calculation (Combine variances)
-#     # Original code divides sum by n_images for source, back, read noise term.
-#     # Assuming this means std dev scales like 1/sqrt(n_images) for these terms.
-#     # Correction noise usually doesn't scale with n_images unless derived from stack.
-#     total_noise_sq_sum = (center_isolated_source_noise_sq / n_images +
-#                           center_isolated_back_noise_sq / n_images +
-#                           center_isolated_read_noise_sq / n_images +
-#                           center_isolated_corr_noise_sq)  # Correction noise not scaled by n_images
-#
-#     # Ensure non-negative variance before sqrt
-#     total_noise_sq_sum = cp.maximum(total_noise_sq_sum, 0)
-#
-#     # Convert total variance to noise std dev in flux units (divide by gain^2 then sqrt)
-#     center_isolated_total_noise = cp.sqrt(total_noise_sq_sum) / gain
-#     nvtx.end_range(noise_calc_range)
-#
-#     # --- SNR Calculation (GPU) ---
-#     snr_calc_range = nvtx.start_range('snr_calc', category='phot.calc')
-#     center_isolated_snr = cp.divide(center_isolated_signal, center_isolated_total_noise + epsilon)
-#     nvtx.end_range(snr_calc_range)
-#
-#     # Get corresponding conv_snr for the matched isolated stars (GPU)
-#     center_conv_snr = conv_snr_filt[source_coords_matched_idx]
-#
-#     nvtx.end_range(block7_range)
-#
-#     # BLOQUE 8: Optimización de radio de apertura (GPU + CPU transfer for polyfit)
-#     block8_range = nvtx.start_range('optimal_radii_calculation', category='phot.photo_gpu', color='orange')
-#
-#     # Find optimal radius index on GPU (handle NaNs that might arise from noise=0 or signal=0)
-#     opt_radii_idx = cp.nanargmax(center_isolated_snr, axis=0)
-#     opt_radii_gpu = radii[opt_radii_idx]  # Optimal radii on GPU
-#
-#     # --- Transfer Point 3 (Necessary for np.polyfit) ---
-#     tx3_range = nvtx.start_range('transfer_for_polyfit', category='transfer', color='red')
-#     center_conv_snr_np = center_conv_snr.get()
-#     opt_radii_np = opt_radii_gpu.get()
-#     nvtx.end_range(tx3_range)
-#     # --- End Transfer ---
-#
-#     # Filter out potential invalid values (e.g., non-positive) before log10 on CPU
-#     valid_fit_mask_np = (center_conv_snr_np > 0) & (opt_radii_np > 0) & \
-#                         np.isfinite(center_conv_snr_np) & np.isfinite(opt_radii_np)
-#
-#     if np.sum(valid_fit_mask_np) < 2:  # Need at least 2 points for polyfit(1)
-#         nvtx.end_range(block8_range)
-#         nvtx.end_range(overall_range)
-#         raise DataValidationError(
-#             f"Not enough valid points ({np.sum(valid_fit_mask_np)}) for optimal radius fit. Check SNR calculations.")
-#
-#     center_conv_snr_fit = center_conv_snr_np[valid_fit_mask_np]
-#     opt_radii_fit = opt_radii_np[valid_fit_mask_np]
-#
-#     # Perform fit on CPU using filtered NumPy data
-#     polyfit_range = nvtx.start_range('polyfit_cpu', category='cpu_ops', color='blue')
-#     try:
-#         log10_conv_snr_fit = np.log10(center_conv_snr_fit)
-#         log10_opt_radii_fit = np.log10(opt_radii_fit)
-#         pov = np.polyfit(log10_conv_snr_fit, log10_opt_radii_fit, 1, cov=False)
-#     except Exception as e:
-#         nvtx.end_range(polyfit_range)
-#         nvtx.end_range(block8_range)
-#         nvtx.end_range(overall_range)
-#         # Add more context to the error
-#         raise DataValidationError(f"Polyfit failed: {e}. Check input values (SNR, radii).") from e
-#     nvtx.end_range(polyfit_range)
-#     nvtx.end_range(block8_range)
-#
-#     # BLOQUE 9: Cálculo de flujo y ruido óptimos (All GPU)
-#     block9_range = nvtx.start_range('optimal_flux_calculation', category='phot.metadata', color='lime')
-#
-#     # Calculate optimal radius for *all* filtered sources on GPU
-#     # Use the full conv_snr_filt (all sources passing initial SNR cut)
-#     opt_rad_calc_range = nvtx.start_range('calc_all_opt_radii', category='phot.calc')
-#     valid_conv_snr_mask = (conv_snr_filt > 0) & cp.isfinite(conv_snr_filt)
-#     source_opt_rad = cp.full_like(conv_snr_filt, cp.nan)  # Initialize with NaN
-#
-#     if cp.any(valid_conv_snr_mask):  # Proceed only if some valid SNRs exist
-#         log10_conv_snr_valid = cp.log10(conv_snr_filt[valid_conv_snr_mask])
-#         # pov is NumPy array [slope, intercept] - use elements
-#         log10_opt_rad_valid = pov[0] * log10_conv_snr_valid + pov[1]
-#         opt_rad_intermediate_valid = cp.power(10, log10_opt_rad_valid)
-#
-#         # Clip and round on GPU
-#         max_radii_val = radii[-1].item()  # Get max value from radii array (scalar)
-#         min_radii_val = radii[0].item()  # Get min value
-#         source_opt_rad_valid = cp.round(
-#             cp.clip(opt_rad_intermediate_valid, min_radii_val, max_radii_val)
-#         ).astype(radii.dtype)  # Match radii dtype
-#
-#         # Place valid results back into the full array
-#         source_opt_rad[valid_conv_snr_mask] = source_opt_rad_valid
-#
-#     nvtx.end_range(opt_rad_calc_range)
-#
-#     # Find corresponding indices in the 'radii' array on GPU using searchsorted
-#     # Need to handle NaNs in source_opt_rad - searchsorted might behave unexpectedly
-#     # Replace NaNs with a value outside the radii range temporarily? Or process only valid ones?
-#     # Let's process only valid ones.
-#     opt_rad_idx_calc_range = nvtx.start_range('calc_opt_radii_indices', category='phot.calc')
-#     source_opt_rad_idx = cp.full_like(source_opt_rad, -1, dtype=cp.int32)  # Default index -1
-#
-#     valid_opt_rad_mask = ~cp.isnan(source_opt_rad)
-#     if cp.any(valid_opt_rad_mask):
-#         source_opt_rad_for_search = source_opt_rad[valid_opt_rad_mask]
-#         # searchsorted finds where element *would be inserted* to maintain order
-#         # side='left' means index of first element >= value
-#         # side='right' means index of first element > value
-#         # If radii are [1, 2, 3, 4] and we search for 2.1 (rounded to 2),
-#         # side='left' gives 1, side='right' gives 2. We want index 1 (for radius 2).
-#         # So, searchsorted(radii, rounded_rad, side='left') seems correct if radii are integers.
-#         # If radii are floats, direct search might be okay. Let's stick with left for safety.
-#         indices_valid = cp.searchsorted(radii, source_opt_rad_for_search, side='left')
-#         # Clip indices to ensure they are within bounds [0, len(radii)-1]
-#         indices_valid = cp.clip(indices_valid, 0, len(radii) - 1)
-#         source_opt_rad_idx[valid_opt_rad_mask] = indices_valid
-#     nvtx.end_range(opt_rad_idx_calc_range)
-#
-#     # Get optimal values using GPU indexing, only for sources with valid opt rad idx
-#     final_selection_range = nvtx.start_range('select_optimal_values', category='phot.calc')
-#     final_valid_mask = (source_opt_rad_idx != -1)  # Mask for sources where opt radius was calculated
-#
-#     opt_aperture_corrections = cp.full_like(source_opt_rad, cp.nan)
-#     opt_aperture_correction_errors = cp.full_like(source_opt_rad, cp.nan)
-#     opt_flux = cp.full_like(source_opt_rad, cp.nan)
-#
-#     if cp.any(final_valid_mask):
-#         indices_for_final = source_opt_rad_idx[final_valid_mask]  # Indices into radii dimension
-#         source_indices_final = cp.where(final_valid_mask)[0]  # Indices into source dimension
-#
-#         # aperture_corrections shape: (n_sources_filt, n_radii)
-#         opt_aperture_corrections[final_valid_mask] = aperture_corrections[source_indices_final, indices_for_final]
-#         opt_aperture_correction_errors[final_valid_mask] = aperture_correction_errors[
-#             source_indices_final, indices_for_final]
-#
-#         # source_flux shape: (n_radii, n_sources_filt)
-#         opt_flux[final_valid_mask] = source_flux[indices_for_final, source_indices_final]
-#
-#     # Further mask for positive flux
-#     positive_flux_mask = final_valid_mask & (opt_flux > 0)
-#
-#     if cp.sum(positive_flux_mask) == 0:
-#         nvtx.end_range(final_selection_range)
-#         nvtx.end_range(block9_range)
-#         nvtx.end_range(overall_range)
-#         raise DataValidationError("No sources with valid optimal radius and positive flux found.")
-#
-#     # Filter all optimal arrays on GPU using positive_flux_mask
-#     opt_flux_final = opt_flux[positive_flux_mask]
-#     opt_aper_corr_final = opt_aperture_corrections[positive_flux_mask]
-#     opt_corr_err_final = opt_aperture_correction_errors[positive_flux_mask]
-#     source_opt_rad_final = source_opt_rad[positive_flux_mask]  # Keep optimal radii for these sources
-#     source_opt_rad_idx_final = source_opt_rad_idx[positive_flux_mask]  # Keep optimal indices
-#     final_source_indices = cp.where(positive_flux_mask)[0]  # Original indices within source_coord_filt
-#
-#     nvtx.end_range(final_selection_range)
-#
-#     # Calculate final signal and noise on GPU for the final set
-#     final_calc_range = nvtx.start_range('final_signal_noise_calc', category='phot.calc')
-#     opt_signal_final = cp.divide(opt_flux_final, opt_aper_corr_final + epsilon)
-#
-#     # Get corresponding back_flux and area values
-#     opt_back_flux_final = cp.zeros_like(opt_flux_final)
-#     if back_flux is not None:
-#         opt_back_flux_final = back_flux[source_opt_rad_idx_final, final_source_indices]
-#
-#     opt_area_final = area[source_opt_rad_idx_final]  # Shape (n_final_sources,)
-#
-#     # Noise components for the final set
-#     opt_back_noise_sq = cp.abs(opt_back_flux_final) * gain
-#     opt_read_noise_sq = opt_area_final * rdnoise ** 2
-#     opt_corr_sq = opt_aper_corr_final ** 2
-#     opt_source_noise_sq = cp.divide(opt_flux_final * gain, opt_corr_sq + epsilon)
-#     opt_corr_noise_sq = cp.power(
-#         cp.divide(opt_flux_final * gain * opt_corr_err_final, opt_corr_sq + epsilon), 2
-#     )
-#
-#     # Final total noise calculation
-#     opt_total_noise_sq_sum = (opt_source_noise_sq / n_images +
-#                               opt_back_noise_sq / n_images +
-#                               opt_read_noise_sq / n_images +
-#                               opt_corr_noise_sq)
-#     opt_total_noise_sq_sum = cp.maximum(opt_total_noise_sq_sum, 0)
-#     opt_total_noise_final = cp.sqrt(opt_total_noise_sq_sum) / gain
-#
-#     # Filter coordinates for the final set (indices relative to source_coord_filt)
-#     opt_coords_final = source_coord_filt[final_source_indices]
-#     nvtx.end_range(final_calc_range)
-#     nvtx.end_range(block9_range)
-#
-#     # BLOQUE 10: Información adicional para encabezados (GPU + Scalar Transfers)
-#     block10_range = nvtx.start_range('extra_info_generation', category='phot.metadata', color='yellow')
-#     extra_info = {}
-#     ref_snr_values = [10, 100, 250, 1000]
-#
-#     # Calculate final SNR on GPU
-#     opt_final_snr = cp.divide(opt_signal_final, opt_total_noise_final + epsilon)
-#
-#     if opt_final_snr.size > 0:
-#         for snr_ref in ref_snr_values:
-#             # Find index of closest SNR on GPU
-#             diff_snr = cp.abs(opt_final_snr - snr_ref)
-#             ref_idx_cp = cp.argmin(diff_snr)  # Use argmin, nanargmin if NaNs were possible
-#
-#             # --- Transfer Point 4 (Scalar Index and Values) ---
-#             tx4_range = nvtx.start_range(f'transfer_extra_info_snr{snr_ref}', category='transfer_scalar', color='pink')
-#             ref_idx_np = ref_idx_cp.item()  # Transfer index
-#
-#             # Get corresponding radius and correction using scalar index from GPU arrays
-#             try:
-#                 # .item() transfers scalar value efficiently
-#                 rad_val = source_opt_rad_final[ref_idx_np].item()
-#                 corr_val = opt_aper_corr_final[ref_idx_np].item()
-#                 extra_info[f'RAD{snr_ref}'] = int(rad_val)  # Round radius before int
-#                 extra_info[f'CORR{snr_ref}'] = round(corr_val, 3)
-#             except IndexError:
-#                 # Handle case where index might be invalid (shouldn't happen with argmin on non-empty)
-#                 extra_info[f'RAD{snr_ref}'] = -1
-#                 extra_info[f'CORR{snr_ref}'] = -1.0
-#             nvtx.end_range(tx4_range)
-#             # --- End Transfer ---
-#     else:  # Handle case with no valid final sources
-#         for snr_ref in ref_snr_values:
-#             extra_info[f'RAD{snr_ref}'] = -1
-#             extra_info[f'CORR{snr_ref}'] = -1.0
-#
-#     nvtx.end_range(block10_range)
-#
-#     # --- Final Transfer GPU -> CPU for return values ---
-#     final_transfer_range = nvtx.start_range('final_gpu_to_cpu_transfer', category='transfer', color='red')
-#     opt_signal_np = opt_signal_final.get()
-#     opt_total_noise_np = opt_total_noise_final.get()
-#     opt_coords_np = opt_coords_final.get()
-#     nvtx.end_range(final_transfer_range)
-#
-#     # Optional: Aggressive memory cleanup at the very end
-#     del source_flux, back_flux, area, corrections, correction_errors, cluster_centers
-#     del aperture_corrections, aperture_correction_errors, opt_signal_final, opt_total_noise_final
-#     # ... delete other large intermediate CuPy arrays ...
-#     mempool.free_all_blocks()
-#     gc.collect()
-#
-#     nvtx.end_range(overall_range)  # End overall optimized function range
-#
-#     return opt_signal_np, opt_total_noise_np, opt_coords_np, extra_info
-
-
-# ### # @hierarchical_debug(logger)
-# @nvtx.annotate('perform_opt_photometry', category='phot.photo_gpu')
-# def perform_opt_photometry(img: cp.ndarray, back: cp.ndarray, conv_ima_sigma: cp.ndarray,
-#                            source_coord: cp.ndarray, isolated_coord: cp.ndarray,
-#                            tile_section_psf: int, star_dataset: cp.ndarray, fwhm: float,
-#                            gain: float, rdnoise: float, n_images: int = 1, center_factor: float = 1.0,
-#                            min_conv_snr: float = 300.0):
-#     """
-#         Optimize the aperture photometry process to find the best radii for signal-to-noise ratio (SNR) for each star.
-#
-#         :param img: Input image.
-#         :type img: cupy.ndarray
-#         :param back: Background image.
-#         :type back: cupy.ndarray
-#         :param conv_ima_sigma: Convolution sigma map.
-#         :type conv_ima_sigma: cupy.ndarray
-#         :param source_coord: Coordinates of sources.
-#         :type source_coord: cupy.ndarray
-#         :param isolated_coord: Coordinates of isolated stars.
-#         :type isolated_coord: cupy.ndarray
-#         :param tile_section_psf: Size of PSF tiles.
-#         :type tile_section_psf: int
-#         :param star_dataset: Dataset of stars.
-#         :type star_dataset: cupy.ndarray
-#         :param fwhm: Full-width at half-maximum of the PSF.
-#         :type fwhm: float
-#         :param gain: Gain value for flux conversion.
-#         :type gain: float
-#         :param rdnoise: Read noise value of the detector.
-#         :type rdnoise: float
-#         :param n_images: Number of images (default is 1).
-#         :type n_images: int
-#         :param center_factor: Fraction defining the central region for selecting isolated stars (default is 1.0).
-#         :type center_factor: float
-#         :param min_conv_snr: Minimum convolutional SNR for selecting isolated stars (default is 300.0).
-#         :type min_conv_snr: float
-#         :return: Tuple containing the optimized fluxes, noise, coordinates, and extra information.
-#         :rtype: tuple(numpy.ndarray, numpy.ndarray, numpy.ndarray, dict)
-#         :raises InsufficientStarsError: If there are not enough isolated stars for processing.
-#         :raises DataValidationError: If input data is invalid or insufficient.
-#     """
-#     # Memory pool
-#     mempool = cp.get_default_memory_pool()
-#
-#     # BLOQUE 1: Selección de estrellas centrales
-#     # Select central stars
-#     center_stars_range = nvtx.start_range('perform_opt_photometry.center_stars_selection', category='phot.photo_gpu',
-#                                           color='green')
-#     center_factor = np.min((center_factor, 1))
-#     xmin = int(img.shape[1] * 0.5 * (1 - center_factor))
-#     xmax = int(img.shape[1] * 0.5 * (1 + center_factor))
-#     ymin = int(img.shape[0] * 0.5 * (1 - center_factor))
-#     ymax = int(img.shape[0] * 0.5 * (1 + center_factor))
-#
-#     center_mask = (isolated_coord[:, 0] > ymin) & (isolated_coord[:, 0] < ymax) & \
-#                   (isolated_coord[:, 1] > xmin) & (isolated_coord[:, 1] < xmax)
-#     nvtx.end_range(center_stars_range)
-#
-#     # BLOQUE 2: Procesamiento SNR y validación de fuentes
-#     # Obtain convolutional SNR
-#     snr_processing_range = nvtx.start_range('perform_opt_photometry.snr_source_validation', category='phot.photo_gpu',
-#                                             color='green')
-#     conv_snr = conv_ima_sigma[
-#         cp.round(source_coord[:, 0]).astype(cp.int32), cp.round(source_coord[:, 1]).astype(cp.int32)]
-#     pos_conv_snr_mask = conv_snr > 0
-#     source_coord = source_coord[pos_conv_snr_mask]
-#     conv_snr = conv_snr[pos_conv_snr_mask]
-#     _, source_coords_matched_idx = crossmatch_sources(
-#         isolated_coord[center_mask].get(), source_coord.get(), thres_px=3
-#     )
-#     conv_snr_isol = conv_ima_sigma[
-#         cp.round(isolated_coord[:, 0]).astype(cp.int32), cp.round(isolated_coord[:, 1]).astype(cp.int32)]
-#     conv_snr_mask = conv_snr_isol > min_conv_snr
-#     if cp.sum(conv_snr_mask) < 3:
-#         nvtx.end_range(snr_processing_range)
-#         raise InsufficientStarsError(cp.sum(conv_snr_mask))
-#     nvtx.end_range(snr_processing_range)
-#
-#     # BLOQUE 3: Configuración de radios de apertura
-#     # In case PSF is position-invariant
-#     # if coeff_map is None or eigen_psfs is None or len(source_coords_matched_idx) < 10:
-#     #     tile_section_psf = int(1.1 * max(img.shape))
-#     aperture_setup_range = nvtx.start_range('perform_opt_photometry.aperture_radii_setup', category='phot.photo_gpu',
-#                                             color='green')
-#     max_radii = int(np.ceil(7 * fwhm) + 1)
-#     min_radii = int(np.ceil(.75 * fwhm))
-#     radii = np.arange(min_radii, max_radii, 1)
-#     nvtx.end_range(aperture_setup_range)
-#
-#     # BLOQUE 4: Creación de mapa de correcciones de apertura
-#     # Find aperture corrections
-#     aper_corr_range = nvtx.start_range('perform_opt_photometry.aperture_corrections_mapping', category='phot.photo_gpu',
-#                                        color='green')
-#     corrections, correction_errors, cluster_centers = create_aperture_corrections_map(
-#         img.shape, tile_section_psf, star_dataset[conv_snr_mask],
-#         isolated_coord[conv_snr_mask].get(), radii
-#     )
-#     aperture_corrections, aperture_correction_errors = find_aperture_corrections(
-#         source_coord, corrections, correction_errors, cluster_centers
-#     )
-#     nvtx.end_range(aper_corr_range)
-#
-#     # BLOQUE 5: Fotometría por lotes - punto crítico identificado
-#     # Get batch photometry
-#     batch_phot_range = nvtx.start_range('perform_opt_photometry.batch_aperture_photometry', category='phot.photo_gpu',
-#                                         color='green')
-#     source_flux, back_flux, area = batch_aperture_photometry(
-#         img, back, cp.round(source_coord).astype(cp.int32), radii
-#     )
-#     nvtx.end_range(batch_phot_range)
-#
-#     # BLOQUE 6: Transferencia de datos GPU→CPU (potencial cudaMemcpy costoso)
-#     # Calculate photometric parameteres
-#     gpu_to_cpu_range = nvtx.start_range('perform_opt_photometry.gpu_to_cpu_transfer', category='phot.photo_gpu',
-#                                         color='green')
-#     center_isolated_flux = np.array(source_flux[:, source_coords_matched_idx].get())
-#     center_isolated_aper_corr = np.array(aperture_corrections[source_coords_matched_idx].T)
-#     center_isolated_aper_corr_err = np.array(aperture_correction_errors[source_coords_matched_idx].T)
-#     nvtx.end_range(gpu_to_cpu_range)
-#
-#     # BLOQUE 7: Cálculo de señal y ruido
-#     signal_noise_range = nvtx.start_range('perform_opt_photometry.photometric_parameters_calc',
-#                                           category='phot.photo_gpu', color='green')
-#     center_isolated_signal = center_isolated_flux / center_isolated_aper_corr
-#
-#     center_isolated_back_noise_sq = np.abs(back_flux[:, source_coords_matched_idx]).get() * gain
-#     center_isolated_read_noise_sq = area.get().reshape(-1, 1) * rdnoise ** 2
-#     center_isolated_source_noise_sq = center_isolated_flux * gain / center_isolated_aper_corr ** 2
-#     center_isolated_corr_noise_sq = (
-#                                             center_isolated_flux * gain * center_isolated_aper_corr_err / center_isolated_aper_corr ** 2) ** 2
-#
-#     center_isolated_total_noise = np.sqrt(
-#         center_isolated_source_noise_sq + center_isolated_back_noise_sq + center_isolated_read_noise_sq + center_isolated_corr_noise_sq) / gain / np.sqrt(
-#         n_images)
-#
-#     center_isolated_snr = center_isolated_signal / center_isolated_total_noise
-#     center_conv_snr = conv_snr[source_coords_matched_idx].get()
-#     nvtx.end_range(signal_noise_range)
-#
-#     # BLOQUE 8: Optimización de radio de apertura
-#     # Find optimal aperture radius
-#     opt_radius_range = nvtx.start_range('perform_opt_photometry.optimal_radii_calculation', category='phot.photo_gpu',
-#                                         color='green')
-#     opt_radii_idx = np.argmax(center_isolated_snr, axis=0)
-#     opt_radii = radii[opt_radii_idx]
-#
-#     if len(center_conv_snr) == 0 or len(opt_radii) == 0:
-#         nvtx.end_range(opt_radius_range)
-#         raise DataValidationError("center_conv_snr or opt_radii is empty. Ensure valid data is provided.")
-#
-#     pov = np.polyfit(np.log10(center_conv_snr), np.log10(opt_radii), 1, cov=False)
-#     nvtx.end_range(opt_radius_range)
-#
-#     # BLOQUE 9: Cálculo de flujo y ruido óptimos
-#     # Calculate optimal flux and noise
-#     opt_flux_range = nvtx.start_range('perform_opt_photometry.optimal_flux_calculation', category='phot.metadata',
-#                                       color='green')
-#     source_opt_rad = np.round(
-#         np.fmax(np.fmin((10 ** (pov[0] * np.log10(conv_snr.get()) + pov[1])), max_radii), min_radii)).astype(int)
-#     source_opt_rad_idx = np.searchsorted(radii, source_opt_rad, side='right') - 1
-#
-#     opt_aperture_corrections = np.array(aperture_corrections)[np.arange(source_coord.shape[0]), source_opt_rad_idx]
-#     opt_aperture_correction_errors = np.array(aperture_correction_errors)[
-#         np.arange(source_coord.shape[0]), source_opt_rad_idx]
-#     opt_flux = np.array(source_flux[source_opt_rad_idx, np.arange(source_coord.shape[0])].get())
-#
-#     mask = opt_flux > 0
-#     opt_flux = opt_flux[mask]
-#     opt_aper_corr = np.array(opt_aperture_corrections)[mask]
-#     opt_corr_err = np.array(opt_aperture_correction_errors)[mask]
-#
-#     opt_signal = opt_flux / opt_aper_corr
-#
-#     opt_back_noise_sq = np.abs(back_flux[source_opt_rad_idx, np.arange(source_coord.shape[0])]).get()[mask] * gain
-#     opt_read_noise_sq = area[source_opt_rad_idx].get()[mask] * rdnoise ** 2
-#     opt_source_noise_sq = opt_flux * gain / opt_aper_corr ** 2
-#     opt_corr_noise_sq = (opt_flux * gain * opt_corr_err / opt_aper_corr ** 2) ** 2
-#
-#     opt_total_noise = np.sqrt(opt_source_noise_sq / n_images +
-#                               opt_back_noise_sq / n_images +
-#                               opt_read_noise_sq / n_images +
-#                               opt_corr_noise_sq) / gain
-#     opt_coords = source_coord.get()[mask]
-#     nvtx.end_range(opt_flux_range)
-#
-#     # BLOQUE 10: Información adicional para encabezados
-#     # Obtain aditional information for header purposes
-#     header_info_range = nvtx.start_range('perform_opt_photometry.extra_info_generation', category='phot.metadata',
-#                                          color='green')
-#     ref_snr = [10, 100, 250, 1000]
-#     extra_info = {}
-#     for snr in ref_snr:
-#         ref_idx = np.argmin(np.abs(opt_signal / opt_total_noise - snr))
-#         extra_info[f'RAD{snr}'] = int(source_opt_rad[mask][ref_idx])
-#         extra_info[f'CORR{snr}'] = round(opt_aperture_corrections[mask][ref_idx], 3)
-#     nvtx.end_range(header_info_range)
-#
-#     return opt_signal, opt_total_noise, opt_coords, extra_info
-#
-
-### # @hierarchical_debug(logger)
-# @nvtx.annotate('batch_aperture_photometry', category='phot.photo_gpu')
-# def batch_aperture_photometry(img: cp.ndarray, back: cp.ndarray | None,
-#                               positions: cp.ndarray, radii: cp.ndarray, **kwargs) -> tuple[
-#     cp.ndarray, cp.ndarray | None, cp.ndarray]:
-#     """
-#     Perform aperture photometry in batch mode using CuPy FFT.
-#     Accepts radii as CuPy array. Calculates area vectorially.
-#
-#     :param img: Image data (GPU). Can be 2D (h, w) or 3D (n_images, h, w).
-#     :type img: cupy.ndarray
-#     :param back: Background image (GPU, optional). Must match img dimensions if provided.
-#     :type back: cupy.ndarray or None
-#     :param positions: Positions of sources (GPU) (n_sources, 2) -> [[row, col], ...].
-#                       Must be integer type for indexing.
-#     :type positions: cupy.ndarray (int32/64)
-#     :param radii: Aperture radii (GPU).
-#     :type radii: cupy.ndarray
-#     :return: Tuple containing flux, background flux (or None), and aperture area per radius.
-#              Flux/BackFlux shape: (n_images, n_radii, n_sources) or (n_radii, n_sources)
-#              Area shape: (n_radii,)
-#     :rtype: tuple(cupy.ndarray, cupy.ndarray or None, cupy.ndarray)
-#     """
-#     nvtx_range = nvtx.start_range('batch_aperture_photometry', category='phot.photo_gpu', color='green')
-#     mempool = cp.get_default_memory_pool()
-#
-#     if radii.size == 0:
-#         raise ValueError("Radii array cannot be empty.")
-#
-#     # --- Calculate Area vectorially (GPU) ---
-#     # Determine max size needed for kernel based on largest radius
-#     max_radius = cp.max(radii).item()  # Get scalar value
-#     # Kernel size needs to be odd and large enough for largest radius
-#     kernel_size = int(2 * np.ceil(max_radius) + 1)
-#     if kernel_size % 2 == 0: kernel_size += 1  # Ensure odd size
-#
-#     # Calculate area for each radius using the kernel generation function
-#     areas = cp.zeros(len(radii), dtype=cp.float64)
-#     # Small loop here is okay, or could vectorize kernel generation if complex
-#     for i, r in enumerate(radii):
-#         # We only need the area here, kernel is generated inside the main loop
-#         _, areas[i] = get_aper_kernel(r.item(), size=kernel_size)
-#     # --- End Area Calculation ---
-#
-#     image_shape_orig = img.shape
-#     is_3d = img.ndim == 3
-#     n_images = image_shape_orig[0] if is_3d else 1
-#     img_h = image_shape_orig[1] if is_3d else image_shape_orig[0]
-#     img_w = image_shape_orig[2] if is_3d else image_shape_orig[1]
-#
-#     padding = (kernel_size - 1) // 2  # Integer division
-#
-#     # Calculate padded shape for FFT
-#     fft_shape = fill_image((img_h + 2 * padding, img_w + 2 * padding))
-#
-#     # Pre-allocate output arrays
-#     n_radii = len(radii)
-#     n_positions = len(positions)
-#     flux_shape = (n_images, n_radii, n_positions) if is_3d else (n_radii, n_positions)
-#     flux = cp.zeros(flux_shape, dtype=cp.float64)  # Use float64 for precision
-#     back_flux = cp.zeros(flux_shape, dtype=cp.float64) if back is not None else None
-#
-#     # --- FFT and Convolution Loop ---
-#     fft_loop_range = nvtx.start_range('fft_convolution_loop', category='phot.photo_gpu')
-#
-#     # Function to process a single 2D image (or image plane)
-#     def process_plane(plane_idx, img_plane, back_plane):
-#         img_c = cp.fft.rfft2(img_plane, s=fft_shape)
-#         back_c = cp.fft.rfft2(back_plane, s=fft_shape) if back_plane is not None else None
-#         plane_flux = cp.zeros((n_radii, n_positions), dtype=cp.float64)
-#         plane_back_flux = cp.zeros((n_radii, n_positions), dtype=cp.float64) if back_plane is not None else None
-#
-#         for i, r in enumerate(radii):
-#             kernel_range = nvtx.start_range(f'kernel_fft_r={r}', category='phot.conv')
-#             kernel, _ = get_aper_kernel(r.item(), size=kernel_size)  # Generate kernel for this radius
-#             # FFT kernel (conj needed for correlation via convolution theorem)
-#             kernel_c = cp.conj(cp.fft.rfft2(kernel, s=fft_shape))
-#             nvtx.end_range(kernel_range)
-#
-#             conv_range = nvtx.start_range(f'ifft_roll_index_r={r}', category='phot.conv')
-#             # Convolve image
-#             convolved_img = cp.fft.irfft2(img_c * kernel_c, s=fft_shape)
-#             # Shift result to align, crop to original size
-#             convolved_img = cp.roll(convolved_img, shift=[padding, padding], axis=[0, 1])
-#             convolved_img = convolved_img[:img_h, :img_w]
-#             # Index at source positions
-#             plane_flux[i, :] = convolved_img[positions[:, 0], positions[:, 1]]
-#
-#             # Convolve background if exists
-#             if back_c is not None:
-#                 convolved_back = cp.fft.irfft2(back_c * kernel_c, s=fft_shape)
-#                 convolved_back = cp.roll(convolved_back, shift=[padding, padding], axis=[0, 1])
-#                 convolved_back = convolved_back[:img_h, :img_w]
-#                 plane_back_flux[i, :] = convolved_back[positions[:, 0], positions[:, 1]]
-#             nvtx.end_range(conv_range)
-#
-#             # Modest memory cleanup inside loop if kernels are large
-#             del kernel, kernel_c
-#             # mempool.free_all_blocks() # Maybe too frequent, causes overhead
-#
-#         del img_c, back_c  # Cleanup FFTs for the plane
-#         # mempool.free_all_blocks()
-#         # gc.collect()
-#         return plane_flux, plane_back_flux
-#
-#     if is_3d:
-#         for c in range(n_images):
-#             img_plane = img[c]
-#             back_plane = back[c] if back is not None else None
-#             plane_flux, plane_back_flux = process_plane(c, img_plane, back_plane)
-#             flux[c, :, :] = plane_flux
-#             if back_flux is not None:
-#                 back_flux[c, :, :] = plane_back_flux
-#     else:
-#         # Process the single 2D image
-#         plane_flux, plane_back_flux = process_plane(0, img, back)
-#         flux = plane_flux
-#         back_flux = plane_back_flux
-#
-#     nvtx.end_range(fft_loop_range)
-#     # --- End FFT Loop ---
-#
-#     # Final cleanup (optional)
-#     mempool.free_all_blocks()
-#     gc.collect()
-#
-#     nvtx.end_range(nvtx_range)  # End overall batch photometry range
-#     return flux, back_flux, areas  # Return calculated areas
-#
 
 @nvtx.annotate('batch_aperture_photometry', category='phot.photo_gpu', color='blue')
 def batch_aperture_photometry(
@@ -2437,418 +1536,10 @@ def batch_aperture_photometry(
         return final_flux, final_back_flux, areas
 
 
-#
-# @nvtx.annotate('batch_aperture_photometry', category='phot.photo_gpu')
-# def batch_aperture_photometry(
-#         # Accept both types for image and background
-#         img_ori_input: cp.ndarray | np.ndarray,
-#         back_input: cp.ndarray | np.ndarray | None,
-#         # Positions and radii expected on GPU from calling function
-#         positions: cp.ndarray,
-#         radii: cp.ndarray,
-#         **kwargs
-# ) -> tuple[cp.ndarray | None, cp.ndarray | None, cp.ndarray]:
-#     """
-#     Perform aperture photometry with adaptive input handling and internal background subtraction (v4).
-#
-#     Accepts image and background as NumPy or CuPy arrays, transfers to GPU if needed,
-#     performs background subtraction internally, and uses delayed output allocation.
-#
-#     :param img_ori_input: Original image data (GPU or CPU). Background will be subtracted internally.
-#     :type img_ori_input: cupy.ndarray or numpy.ndarray
-#     :param back_input: Background image (GPU or CPU, optional). Must match img dimensions if provided.
-#     :type back_input: cupy.ndarray or numpy.ndarray or None
-#     :param positions: Positions of sources (GPU) (n_sources, 2) -> [[row, col], ...]. Must be integer type.
-#     :type positions: cupy.ndarray (int32/64)
-#     :param radii: Aperture radii (GPU, ideally float32).
-#     :type radii: cupy.ndarray
-#     :param kwargs: Potential memory thresholds: 'mem_safe_ratio', 'mem_warning_ratio', 'mem_critical_ratio'.
-#     :return: Tuple containing flux (background subtracted), background flux (if back provided),
-#              and aperture area per radius (all CuPy arrays).
-#              Flux/BackFlux can be None if an OOM error occurred.
-#     :rtype: tuple(cupy.ndarray | None, cupy.ndarray | None, cupy.ndarray)
-#     :raises ValueError: If radii is empty or input types are incorrect.
-#     :raises TypeError: If input types are inconsistent or not array-like.
-#     """
-#     nvtx_range = nvtx.start_range('batch_aperture_photometry', category='phot.photo_gpu', color='blue')
-#     mempool = cp.get_default_memory_pool()
-#
-#     # Preferred processing dtype (float32 saves memory)
-#     processing_dtype = cp.float64
-#
-#     # --- Input Validation and GPU Transfer ---
-#     transfer_nvtx = nvtx.start_range('input_transfer_check', category='phot.setup', color='orange')
-#     img_gpu = None
-#     back_gpu = None
-#
-#     # Validate and transfer Image
-#     if isinstance(img_ori_input, _numpy.ndarray):
-#         logger.info(f"batch_photometry received NumPy image, transferring to GPU.")
-#         transfer_start = time.time()
-#         try:
-#             img_gpu = cp.asarray(img_ori_input, dtype=processing_dtype)
-#             del img_ori_input  # Free CPU memory
-#         except Exception as e:
-#             logger.error(f"Failed to transfer input image to GPU: {e}", exc_info=True)
-#             nvtx.end_range(transfer_nvtx)
-#             nvtx.end_range(nvtx_range)
-#             raise MemoryError("Failed to allocate image on GPU") from e
-#         transfer_end = time.time()
-#         logger.info(
-#             f"Image transfer took {transfer_end - transfer_start:.2f}s. Mem: {mempool.used_bytes() / 1e9:.2f} GB")
-#     elif isinstance(img_ori_input, cp.ndarray):
-#         img_gpu = img_ori_input.astype(processing_dtype, copy=False)  # Ensure correct dtype
-#     else:
-#         raise TypeError(f"img_ori_input must be NumPy or CuPy array, got {type(img_ori_input)}")
-#
-#     # Validate and transfer Background (if provided)
-#     if back_input is not None:
-#         if isinstance(back_input, np.ndarray):
-#             if back_input.shape != img_gpu.shape:  # Check shape against GPU image
-#                 raise ValueError("Background shape mismatch with image shape.")
-#             logger.info(f"batch_photometry received NumPy background, transferring to GPU.")
-#             transfer_start = time.time()
-#             try:
-#                 back_gpu = cp.asarray(back_input, dtype=processing_dtype)
-#                 del back_input  # Free CPU memory
-#             except Exception as e:
-#                 logger.error(f"Failed to transfer input background to GPU: {e}", exc_info=True)
-#                 del img_gpu  # Clean up already transferred image
-#                 mempool.free_all_blocks()
-#                 gc.collect()
-#                 nvtx.end_range(transfer_nvtx)
-#                 nvtx.end_range(nvtx_range)
-#                 raise MemoryError("Failed to allocate background on GPU") from e
-#             transfer_end = time.time()
-#             logger.info(
-#                 f"Background transfer took {transfer_end - transfer_start:.2f}s. Mem: {mempool.used_bytes() / 1e9:.2f} GB")
-#         elif isinstance(back_input, cp.ndarray):
-#             if back_input.shape != img_gpu.shape:
-#                 raise ValueError("Background shape mismatch with image shape.")
-#             back_gpu = back_input.astype(processing_dtype, copy=False)  # Ensure correct dtype
-#         else:
-#             raise TypeError(f"back_input must be NumPy/CuPy array or None, got {type(back_input)}")
-#     else:
-#         back_gpu = None  # Explicitly None if not provided
-#
-#     # Validate Radii and Positions (expected on GPU)
-#     if not isinstance(positions, cp.ndarray):
-#         raise TypeError("positions must be a CuPy array.")
-#     if not isinstance(radii, cp.ndarray):
-#         raise TypeError("radii must be a CuPy array.")
-#     radii = radii.astype(processing_dtype, copy=False)  # Ensure correct dtype
-#
-#     nvtx.end_range(transfer_nvtx)
-#     logger.debug(f"Inputs transferred/validated. GPU Memory: Used={mempool.used_bytes() / 1e9:.2f} GB")
-#
-#     # --- Validations and Area Calculation ---
-#     if radii.size == 0:
-#         raise ValueError("Radii array cannot be empty.")
-#     # ... (Area calculation logic - same as before, uses 'radii' which is CuPy) ...
-#     area_calc_range = nvtx.start_range('area_kernel_params', category='phot.setup')
-#     areas = cp.zeros(len(radii), dtype=cp.float64)  # Keep area precision high
-#     try:
-#         max_radius = cp.max(radii).item()
-#         kernel_size = int(2 * np.ceil(max_radius) + 1)
-#         if kernel_size % 2 == 0: kernel_size += 1
-#         for i, r in enumerate(radii):
-#             temp_kernel, areas[i] = get_aper_kernel(r.item(), size=kernel_size)
-#             del temp_kernel
-#     except Exception as e:
-#         logger.error(f"Error calculating areas: {e}", exc_info=True)
-#         areas.fill(cp.nan)
-#     nvtx.end_range(area_calc_range)
-#
-#     # Handle empty positions *after* area calculation
-#     if positions.size == 0:
-#         logger.warning("Positions array is empty. Returning empty flux results.")
-#         n_radii_out = len(radii)
-#         n_images_out = img_gpu.shape[0] if img_gpu.ndim == 3 else 1
-#         out_shape = (n_images_out, n_radii_out, 0) if img_gpu.ndim == 3 else (n_radii_out, 0)
-#         nvtx.end_range(nvtx_range)
-#         # Return results matching processing_dtype
-#         return cp.zeros(out_shape, dtype=processing_dtype), \
-#             cp.zeros(out_shape, dtype=processing_dtype) if back_gpu is not None else None, \
-#             areas
-#
-#     # --- FFT Setup ---
-#     image_shape_orig = img_gpu.shape
-#     is_3d = img_gpu.ndim == 3
-#     n_images = image_shape_orig[0] if is_3d else 1
-#     img_h = image_shape_orig[1] if is_3d else image_shape_orig[0]
-#     img_w = image_shape_orig[2] if is_3d else image_shape_orig[1]
-#     n_radii = len(radii)
-#     n_positions = len(positions)
-#
-#     # ... (Kernel size calculation - same as before) ...
-#     try:
-#         max_radius = cp.nanmax(radii).item()
-#         kernel_size = int(2 * np.ceil(max_radius) + 1)
-#         if kernel_size % 2 == 0: kernel_size += 1
-#     except ValueError:
-#         logger.error("Could not determine valid kernel size from radii. Aborting.")
-#         nvtx.end_range(nvtx_range)
-#         return None, None, areas
-#
-#     padding = (kernel_size - 1) // 2
-#     try:
-#         fft_shape = fill_image((img_h + 2 * padding, img_w + 2 * padding))
-#     except Exception as e:
-#         logger.error(f"Error calculating FFT shape: {e}", exc_info=True)
-#         nvtx.end_range(nvtx_range)
-#         return None, None, areas
-#
-#     logger.debug(f"Using FFT shape: {fft_shape} for image {img_h, img_w}, max radius {max_radius}")
-#
-#     # --- DELAYED ALLOCATION ---
-#     all_plane_flux = [] if is_3d else None
-#     all_plane_back_flux = [] if is_3d and back_gpu is not None else None
-#
-#     # --- Function to process a single 2D image plane ---
-#     # Receives background-subtracted image and the original background
-#     def process_plane(plane_idx, img_plane_subtracted_gpu, back_plane_gpu):
-#         # ... (Initialize local variables: plane_nvtx, fft_img_range, etc. to None) ...
-#         plane_nvtx = None
-#         fft_img_range = None
-#         radius_nvtx = None
-#         kernel_range = None
-#         conv_range = None
-#         conv_back_range = None
-#         plane_flux = None
-#         img_c, back_c = None, None
-#         kernel_c = None
-#
-#         try:
-#             plane_nvtx = nvtx.start_range(f'process_plane_{plane_idx}', category='phot.plane')
-#             logger.debug(f"Processing plane {plane_idx}. Mem: {mempool.used_bytes() / 1e9:.2f} GB")
-#
-#             # --- Adaptive Memory Check within Plane ---
-#             mem_level = adaptive_memory_management(mempool)
-#             # if mem_level >= 2:
-#             #     raise MemoryError(f"Insufficient memory before FFTing plane {plane_idx}")
-#
-#             # Perform FFTs (on subtracted image and original background)
-#             fft_img_range = nvtx.start_range(f'fft_plane_{plane_idx}', category='phot.fft')
-#             try:
-#                 # Ensure inputs are float32 for rfft2 if processing_dtype is float32
-#                 img_c = cp.fft.rfft2(img_plane_subtracted_gpu.astype(processing_dtype, copy=False), s=fft_shape)
-#                 if back_plane_gpu is not None:
-#                     back_c = cp.fft.rfft2(back_plane_gpu.astype(processing_dtype, copy=False), s=fft_shape)
-#             finally:
-#                 if fft_img_range: nvtx.end_range(fft_img_range)
-#
-#             # Allocate output for *this plane* (matching processing dtype)
-#             plane_flux = cp.zeros((n_radii, n_positions), dtype=processing_dtype)
-#             plane_back_flux = cp.zeros((n_radii, n_positions),
-#                                        dtype=processing_dtype) if back_plane_gpu is not None else None
-#
-#             # --- Loop over radii ---
-#             for i, r in enumerate(radii):
-#                 # ... (Initialize radius loop variables to None) ...
-#                 kernel = None
-#                 prod_img = None
-#                 convolved_img = None
-#                 convolved_img_rolled = None
-#                 convolved_img_cropped = None
-#                 prod_back = None
-#                 convolved_back = None
-#                 convolved_back_rolled = None
-#                 convolved_back_cropped = None
-#                 radius_nvtx = None
-#                 kernel_range = None
-#                 conv_range = None
-#                 conv_back_range = None
-#                 kernel_c = None
-#
-#                 try:
-#                     radius_nvtx = nvtx.start_range(f'radius_{r.item():.2f}', category='phot.radius_iter')
-#
-#                     # --- Kernel FFT ---
-#                     kernel_range = nvtx.start_range(f'kernel_fft_r={r.item():.2f}', category='phot.conv')
-#                     try:
-#                         kernel, _ = get_aper_kernel(r.item(), size=kernel_size)
-#                         kernel = kernel.astype(processing_dtype)  # Match processing dtype
-#                         kernel_c = cp.conj(cp.fft.rfft2(kernel, s=fft_shape))
-#                         del kernel
-#                         kernel = None
-#                     finally:
-#                         if kernel_range: nvtx.end_range(kernel_range)
-#
-#                     # --- Convolution (Subtracted Image for Flux) ---
-#                     conv_range = nvtx.start_range(f'ifft_roll_index_img_r={r.item():.2f}', category='phot.conv')
-#                     try:
-#                         prod_img = img_c * kernel_c
-#                         # Output of irfft2 matches input FFT precision (float32 if img_c was complex64)
-#                         convolved_img = cp.fft.irfft2(prod_img, s=fft_shape)
-#                         del prod_img
-#                         prod_img = None
-#                         convolved_img_rolled = cp.roll(convolved_img, shift=[padding, padding], axis=[0, 1])
-#                         del convolved_img
-#                         convolved_img = None
-#                         convolved_img_cropped = convolved_img_rolled[:img_h, :img_w]
-#                         del convolved_img_rolled
-#                         convolved_img_rolled = None
-#                         # Perform indexing
-#                         plane_flux[i, :] = convolved_img_cropped[positions[:, 0], positions[:, 1]]
-#                         del convolved_img_cropped
-#                         convolved_img_cropped = None
-#                     finally:
-#                         if conv_range: nvtx.end_range(conv_range)
-#
-#                     # --- Convolution (Original Background for Back Flux) ---
-#                     if back_c is not None and plane_back_flux is not None:  # Check both
-#                         conv_back_range = nvtx.start_range(f'ifft_roll_index_back_r={r.item():.2f}',
-#                                                            category='phot.conv')
-#                         try:
-#                             prod_back = back_c * kernel_c
-#                             convolved_back = cp.fft.irfft2(prod_back, s=fft_shape)
-#                             del prod_back
-#                             prod_back = None
-#                             convolved_back_rolled = cp.roll(convolved_back, shift=[padding, padding], axis=[0, 1])
-#                             del convolved_back
-#                             convolved_back = None
-#                             convolved_back_cropped = convolved_back_rolled[:img_h, :img_w]
-#                             del convolved_back_rolled
-#                             convolved_back_rolled = None
-#                             plane_back_flux[i, :] = convolved_back_cropped[positions[:, 0], positions[:, 1]]
-#                             del convolved_back_cropped
-#                             convolved_back_cropped = None
-#                         finally:
-#                             if conv_back_range: nvtx.end_range(conv_back_range)
-#
-#                     # --- Radius Cleanup ---
-#                     del kernel_c
-#                     kernel_c = None
-#                     # Optional: check memory within loop if many radii and high pressure
-#                     # adaptive_memory_management(mempool, mem_thresholds, f"Plane {plane_idx} Radius {i} Post:")
-#
-#                 except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e_radius:
-#                     logger.error(f"OOM Error during radius r={r.item()} in plane {plane_idx}: {e_radius}",
-#                                  exc_info=True)
-#                     # ... (cleanup local radius variables: kernel_c, prod_img, etc.) ...
-#                     mempool.free_all_blocks()
-#                     gc.collect()
-#                     raise e_radius  # Propagate error
-#                 finally:
-#                     if radius_nvtx: nvtx.end_range(radius_nvtx)
-#             # --- End Radii Loop ---
-#
-#             # --- Successful Plane Cleanup ---
-#             logger.debug(f"Finished radii for plane {plane_idx}. Cleaning up FFT data.")
-#             del img_c, back_c  # Delete FFT transforms for the plane
-#             mempool.free_all_blocks()
-#             gc.collect()  # Free memory after each plane
-#             return plane_flux, plane_back_flux
-#
-#         except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e_plane:
-#             logger.error(f"OOM Error processing plane {plane_idx}: {e_plane}", exc_info=True)
-#             del img_c, back_c, plane_flux, kernel_c  # Ensure cleanup
-#             return None, None  # Signal failure
-#         except Exception as e_gen_plane:
-#             logger.error(f"Unexpected error processing plane {plane_idx}: {e_gen_plane}", exc_info=True)
-#             del img_c, back_c, plane_flux, kernel_c
-#             return None, None  # Signal failure
-#         finally:
-#             if plane_nvtx: nvtx.end_range(plane_nvtx)
-#
-#     # --- End process_plane function ---
-#
-#     # --- Main Processing Loop ---
-#     fft_loop_range = nvtx.start_range('fft_convolution_loop', category='phot.photo_gpu')
-#     final_flux = None
-#     final_back_flux = None
-#     success = True
-#
-#     if is_3d:
-#         for c in range(n_images):
-#             logger.debug(f"Starting processing for image plane {c + 1}/{n_images}")
-#             img_plane_gpu = img_gpu[c]
-#             back_plane_gpu = back_gpu[c] if back_gpu is not None else None
-#             # Perform subtraction for this plane
-#             img_plane_subtracted = img_plane_gpu - back_plane_gpu if back_plane_gpu is not None else img_plane_gpu
-#
-#             plane_flux_res, plane_back_flux_res = process_plane(c, img_plane_subtracted, back_plane_gpu)
-#             del img_plane_subtracted  # Delete the temporary subtracted plane
-#
-#             if plane_flux_res is None:
-#                 logger.critical(f"Processing failed for plane {c}. Aborting loop.")
-#                 success = False
-#                 del all_plane_flux, all_plane_back_flux
-#                 all_plane_flux, all_plane_back_flux = [], []
-#                 break
-#
-#             all_plane_flux.append(plane_flux_res)
-#             if all_plane_back_flux is not None:
-#                 all_plane_back_flux.append(plane_back_flux_res)
-#             # Minimal cleanup inside loop - main plane cleanup happens in process_plane
-#             del plane_flux_res, plane_back_flux_res
-#
-#         # Stack results *after* the loop
-#         if success and all_plane_flux:
-#             stack_range = nvtx.start_range('stack_results', category='phot.postproc')
-#             logger.debug(f"Stacking results from {len(all_plane_flux)} planes...")
-#             try:
-#                 final_flux = cp.stack(all_plane_flux, axis=0)
-#                 if all_plane_back_flux:
-#                     final_back_flux = cp.stack(all_plane_back_flux, axis=0)
-#             except Exception as e_stack:  # Catch MemoryError too
-#                 logger.error(f"Error during final stacking: {e_stack}", exc_info=True)
-#                 success = False
-#                 final_flux, final_back_flux = None, None
-#             finally:
-#                 del all_plane_flux, all_plane_back_flux  # Clear list memory
-#                 mempool.free_all_blocks()
-#                 gc.collect()
-#                 nvtx.end_range(stack_range)
-#         # ... (handle other failure/empty cases) ...
-#
-#     else:  # Case 2D
-#         logger.debug(f"Processing 2D image.")
-#         img_subtracted = img_gpu - back_gpu if back_gpu is not None else img_gpu
-#         final_flux, final_back_flux = process_plane(0, img_subtracted, back_gpu)
-#         del img_subtracted  # Delete temporary subtraction
-#         if final_flux is None:
-#             logger.critical(f"Processing failed for the 2D image.")
-#             success = False
-#
-#     nvtx.end_range(fft_loop_range)
-#     # --- End FFT Loop ---
-#
-#     # Final cleanup of main inputs
-#     del img_gpu, back_gpu  # Delete the guaranteed GPU arrays
-#     final_cleanup_range = nvtx.start_range('final_cleanup', category='phot.cleanup')
-#     mempool.free_all_blocks()
-#     gc.collect()
-#     nvtx.end_range(final_cleanup_range)
-#
-#     nvtx.end_range(nvtx_range)  # End overall function range
-#
-#     if success:
-#         logger.debug(f"Batch aperture photometry completed successfully.")
-#     else:
-#         logger.error(f"Batch aperture photometry failed due to errors.")
-#
-#     return final_flux, final_back_flux, areas
-
-
-# @contextmanager
-# @nvtx.annotate('gpu_array_manager',category='phot.photo_gpu')
-# def gpu_array_manager(data, mempool):
-#     """Context manager para manejo optimizado de arrays temporales"""
-#     arr = cp.asarray(data)
-#     try:
-#         yield arr
-#     finally:
-#         del arr
-#         mempool.free_all_blocks()
-#         cp.cuda.Stream.null.synchronize()
-#
-#
-#
 
 ### # @hierarchical_debug(logger)
 @nvtx.annotate('calibrate_image', category='phot.photo_gpu')
-def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, rdnoise: float,
+def calibrate_image(imdata: np.ndarray, filter: str, binning:int, scale: float, gain: float, rdnoise: float,
                     exptime: float, satlevel: float, target_ra: float, target_dec: float = None, n_images: int = 1,
                     SP_filt: bool = True, CR_filt: bool = False, border: int = 20, center_factor: float = 0.7,
                     pca_method: bool = True, tile_section: int = 1000, max_stars_ref: int = 15, min_snr: int = 5,
@@ -2861,6 +1552,8 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     :type imdata: numpy.ndarray
     :param filter: Filter used for the image.
     :type filter: str
+    :param binning: Binning factor for the image.
+    :type binning: int
     :param scale: Image scale, in arcsec/pixel.
     :type scale: float
     :param gain: Gain value, in e-/ADU.
@@ -2918,7 +1611,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
 
     del _
 
-    rms = cp.sqrt(back * gain + rdnoise ** 2) / gain / cp.sqrt(n_images)
+    rms = cp.sqrt(back * gain / binning**2 + rdnoise**2) / gain / cp.sqrt(n_images)
     xmin = int(imadata_shape[1] * 0.5 * (1 - 0.3))
     xmax = int(imadata_shape[1] * 0.5 * (1 + 0.3))
     ymin = int(imadata_shape[0] * 0.5 * (1 - 0.3))
@@ -2966,16 +1659,16 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     # Find reference psf
     unit_star_dataset = star_dataset.astype(cp.double) / scaling[:, 3][:, None, None]
     center_mask = (coord[:, 1] > xmin) & (coord[:, 1] < xmax) & (coord[:, 0] > ymin) & (coord[:, 0] < ymax)
-    # unit_star_dataset_stds = cp.std(unit_star_dataset, axis=(1, 2))
-    unit_star_dataset_stds = scaling[:, 0] / scaling[:, 3]
-    mask_star_dataset = unit_star_dataset_stds < 0.3
+    # peak_to_total_ratio = cp.std(unit_star_dataset, axis=(1, 2))
+    peak_to_total_ratio = scaling[:, 0] / scaling[:, 3]
+    mask_star_dataset = peak_to_total_ratio < 0.3
     unit_star_dataset = unit_star_dataset[mask_star_dataset]
     coord = coord[mask_star_dataset]
 
     star_dataset_ref = unit_star_dataset[center_mask[mask_star_dataset]]
     star_dataset_ref = star_dataset_ref[cp.argsort(scaling[center_mask & mask_star_dataset, 3])[::-1]]
     star_dataset_ref = star_dataset_ref[:max_stars_ref, :, :]
-    del center_mask, unit_star_dataset_stds, scaling
+    del center_mask, peak_to_total_ratio, scaling
     if star_dataset_ref.shape[0] < 5:
         logger.error('Less than 5 isolated stars detected. Image may be too crowded or too noisy')
         raise InsufficientStarsError(num_stars=star_dataset_ref.shape[0])
@@ -2999,18 +1692,29 @@ def calibrate_image(imdata: np.ndarray, filter: str, scale: float, gain: float, 
     eigen_psfs, coeff_map = None, None
     fwhm = max(fwhm, 2)
 
-    if pca_method:
-        # Create psf deviations dataset
-        unit_star_dataset_dev = unit_star_dataset - psf
-        unit_star_dataset_dev_norm = (unit_star_dataset_dev - cp.mean(unit_star_dataset_dev, axis=(1, 2))[:, None,
-                                                              None]) / cp.std(unit_star_dataset_dev, axis=(1, 2))[:,
-                                                                       None, None]
 
-        # get eigen psfs
+    if pca_method:
+        # Create PSF deviations dataset (each star minus the reference PSF).
+        # Both have unit flux by construction, so sum(d_i) = 0 per stamp.
+        unit_star_dataset_dev = unit_star_dataset - psf
+
+        # Weighted-PCA approximation: normalise each deviation by its own
+        # standard deviation. This down-weights stars with low SNR (whose
+        # deviations are dominated by noise) and lets stars with cleaner
+        # signal contribute more to the principal components.
+        norm_factor = cp.std(unit_star_dataset_dev, axis=(1, 2))[:, None, None]
+        unit_star_dataset_dev_norm = unit_star_dataset_dev / norm_factor
+
+        # PCA on the normalised deviations. sklearn centres per-pixel internally.
         eigen_psfs = get_eigen_psfs(unit_star_dataset_dev_norm, n_components=5)
         eigen_psfs = cp.asarray(eigen_psfs)
-        coefficients = project_all_stars_onto_eigenpsfs(unit_star_dataset_dev, eigen_psfs)
-        coeff_map = create_coeff_map(imadata_shape, coord, coefficients.T, scale, tile_section=tile_section)
+
+        # Projection on the same (normalised) space, then rescale coefficients
+        # to recover their physical magnitude in the original deviation space.
+        coefficients_norm = project_all_stars_onto_eigenpsfs(unit_star_dataset_dev_norm, eigen_psfs)
+        coefficients = coefficients_norm * norm_factor.squeeze()[:, None]
+        coeff_map = create_coeff_map(imadata_shape, coord, coefficients.T, scale, tile_section=tile_section_psf)
+
         del coefficients
         mempool.free_all_blocks()
         gc.collect()
@@ -3246,166 +1950,6 @@ def cov_nan(img, nc=10, **kwargs):
     return img
 
 
-#
-# ### # @hierarchical_debug(logger)
-# def astrometrice2(dfm, head0, im_shape):
-#     """
-#     Perform astrometry on an image.
-#
-#     Parameters
-#     ----------
-#     dfm : pd.DataFrame
-#         Dataframe containing detected sources.
-#     head0 : dict
-#         FITS header.
-#     im_shape : tuple
-#         Shape of the image.
-#
-#     Returns
-#     -------
-#     dict
-#         Updated FITS header.
-#     """
-#     head = head0.copy()
-#     arcsec_per_pixel = plate_scale_px(head[HeaderKey.PXSIZE.value], head[HeaderKey.FOCALEN.value]) * head[
-#         HeaderKey.XBINNING.value]
-#     signal.signal(signal.SIGALRM, handler)
-#     signal.alarm(120)
-#     try:
-#         solution = get_solver().solve(stars_xs=dfm['xcentroid'], stars_ys=
-#         dfm['ycentroid'], size_hint=astrometry.SizeHint(
-#             lower_arcsec_per_pixel=arcsec_per_pixel * 0.8,
-#             upper_arcsec_per_pixel=arcsec_per_pixel * 1.2), position_hint=
-#                                       astrometry.PositionHint(ra_deg=head[HeaderKey.POINTRA.value] * 360 / 24,
-#                                                               dec_deg=head[HeaderKey.POINTDEC.value], radius_deg=0.5),
-#                                       solution_parameters=
-#                                       astrometry.SolutionParameters(logodds_callback=
-#                                                                     logodds_callback_100, sip_order=3))
-#         nmatches = len(solution.matches)
-#         logger.debug(nmatches)
-#         return solution
-#     except:
-#         pass
-#     signal.alarm(0)
-#
-#     return None
-
-#
-# ### # @hierarchical_debug(logger)
-# def get_zeropoint(df_catalog, flux, noise, coord, exptime, solar_filter=0.3,
-#                   dist_thres_px=3, N=50, plot=False):
-#     """Calculate the zeropoint for photometry.
-#
-#     :param df_catalog: Catalog dataframe.
-#     :type df_catalog: pd.DataFrame
-#     :param flux: Flux values.
-#     :type flux: ndarray
-#     :param noise: Noise values.
-#     :type noise: ndarray
-#     :param coord: Coordinates of sources.
-#     :type coord: ndarray
-#     :param exptime: Exposure time.
-#     :type exptime: float
-#     :param solar_filter: Solar filter, by default 0.3.
-#     :type solar_filter: float, optional
-#     :param dist_thres_px: Distance threshold in pixels, by default 3.
-#     :type dist_thres_px: int, optional
-#     :param N: Number of brightest stars to use, by default 50.
-#     :type N: int, optional
-#     :param plot: Whether to plot the results, by default False.
-#     :type plot: bool, optional
-#
-#
-#     """
-#     cat_coords = np.array([df_catalog['Y'], df_catalog['X']]).T
-#     source_coords_matched_idx, ref_coords_matched_idx = crossmatch_sources(
-#         coord, cat_coords, thres_px=dist_thres_px)
-#     solar_cat_filt = np.abs(df_catalog['SOLAR'])[ref_coords_matched_idx
-#                      ] < solar_filter
-#     source_coords_matched_idx = source_coords_matched_idx[solar_cat_filt]
-#     ref_coords_matched_idx = ref_coords_matched_idx[solar_cat_filt]
-#     det_mag = -2.5 * np.log10(flux[source_coords_matched_idx] / exptime)
-#     cat_mag = df_catalog['MAG'][ref_coords_matched_idx].to_numpy()
-#     inf_nan_mask = np.isfinite(cat_mag) & np.isfinite(det_mag) & ~np.isnan(
-#         cat_mag) & ~np.isnan(det_mag)
-#     cat_mag = cat_mag[inf_nan_mask]
-#     det_mag = det_mag[inf_nan_mask]
-#     snrs = (flux / noise)[source_coords_matched_idx][inf_nan_mask]
-#     m = np.argsort(snrs)
-#     brightest = m[-N:]
-#     bright_mask = np.zeros(len(cat_mag), dtype=bool)
-#     bright_mask[brightest] = True
-#     if len(cat_mag) <= 3:
-#         zp, ezp, n, min_mag, max_mag = 0, 0, 0, 0, 0
-#     else:
-#         y = cat_mag[bright_mask] - det_mag[bright_mask]
-#         mask = np.abs(y - np.nanmean(y)) < np.nanstd(y)
-#         if np.sum(mask) > 15:
-#             reg = RANSACRegressor(random_state=42, residual_threshold=0.05
-#                                   ).fit(det_mag[bright_mask].reshape([-1, 1])[mask], cat_mag[
-#                 bright_mask].reshape([-1, 1])[mask])
-#             inlier = reg.inlier_mask_
-#             if np.sum(inlier) > 10 and np.abs(np.mean(y[mask][inlier]) - np
-#                     .mean(y[mask])) < np.std(y[mask]):
-#                 zp = np.mean(y[mask][inlier])
-#                 n = np.sum(inlier)
-#                 ezp = np.std(y[mask][inlier]) / np.sqrt(n)
-#                 min_mag = np.min(cat_mag[bright_mask][mask][inlier])
-#                 max_mag = np.max(cat_mag[bright_mask][mask][inlier])
-#             else:
-#                 zp = np.mean(y[mask])
-#                 n = np.sum(mask)
-#                 ezp = np.std(y[mask]) / np.sqrt(n)
-#                 min_mag = np.min(cat_mag[bright_mask][mask])
-#                 max_mag = np.max(cat_mag[bright_mask][mask])
-#         else:
-#             zp = np.mean(y[mask])
-#             n = np.sum(mask)
-#             ezp = np.std(y[mask]) / np.sqrt(n)
-#             min_mag = np.min(cat_mag[bright_mask][mask])
-#             max_mag = np.max(cat_mag[bright_mask][mask])
-#     if plot:
-#         plt.figure(figsize=(8, 8))
-#         ax = plt.subplot(111)
-#         ax.plot(cat_mag, cat_mag - det_mag - zp, 'k.', alpha=0.6)
-#         if np.sum(mask) > 15:
-#             ax.plot(cat_mag[bright_mask][mask], cat_mag[bright_mask][mask] -
-#                     det_mag[bright_mask][mask] - zp, 'b.', alpha=0.1)
-#             ax.plot(cat_mag[bright_mask][mask][inlier], cat_mag[bright_mask
-#             ][mask][inlier] - det_mag[bright_mask][mask][inlier] - zp,
-#                     'r.', label='zp = {:.3f} +/- {:.3f} (n={})'.format(zp, ezp,
-#                                                                        n), alpha=0.5)
-#         else:
-#             ax.plot(cat_mag[bright_mask][mask], cat_mag[bright_mask][mask] -
-#                     det_mag[bright_mask][mask] - zp, 'r.', label=
-#                     'zp = {:.3f} +/- {:.3f} (n={})'.format(zp, ezp, n), alpha=0.5)
-#         ax.set_xlabel('catalog magnitude')
-#         ax.set_ylabel('error magnitude')
-#         ax.legend(frameon=False)
-#         ax.set_ylim(-0.5, 0.5)
-#         plt.show()
-#
-#     return zp, ezp, n, min_mag, max_mag
-
-
-# ### # @hierarchical_debug(logger)
-# def delete_header_from(header, val):
-#     """Delete a section from the FITS header.
-#
-#     :param header: FITS header.
-#     :type header: dict
-#     :param val: Value to delete.
-#     :type val: str
-#
-#
-#     """
-#     for i, v in enumerate(header.values()):
-#         if val in str(v):
-#             idx = i - 1
-#     for i in range(len(header) - idx):
-#         del header[idx]
-#
-#     return header
 
 
 ### # @hierarchical_debug(logger)
@@ -3466,21 +2010,6 @@ def pred_mof(pred, **kwargs):
     return alpha, beta, nstar, fwhm
 
 
-# ### # @hierarchical_debug(logger)
-# def handler(signum, frame):
-#     """
-#     Timeout handler for astrometry.
-#
-#     Parameters
-#     ----------
-#     signum : int
-#         Signal number.
-#     frame : frame
-#         Stack frame.
-#     """
-#     logger.error('Astrometrization timeout!')
-#
-#     raise Exception('end of time')
 
 
 ### # @hierarchical_debug(logger)
@@ -3627,29 +2156,7 @@ def get_peak_image(img, positions, aper_rad, **kwargs):
     del img_m, positions
 
     return P
-
-
-# ### # @hierarchical_debug(logger)
-# def logodds_callback_100(logodds):
-#     """
-#     Callback function for astrometry.
-#
-#     Parameters
-#     ----------
-#     logodds : float
-#         Log odds value.
-#
-#     Returns
-#     -------
-#     astrometry.Action
-#         Action to take (CONTINUE or STOP).
-#     """
-#     if (logodds[0] > 100.0) | (len(logodds) > 2):
-#
-#         return astrometry.Action.STOP
-#     else:
-#
-#         return astrometry.Action.CONTINUE
+ 
 
 
 if __name__ == '__main__':

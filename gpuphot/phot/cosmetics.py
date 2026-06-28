@@ -32,7 +32,7 @@ def SP_filter(img, filter_size=3, high_threshold_factor=5,
     :type img: cupy.ndarray
     :param filter_size: Size of the median filter (default is 3).
     :type filter_size: int, optional
-    :param high_threshold_factor: Factor to determine the high threshold for noise detection (default is 10).
+    :param high_threshold_factor: Factor to determine the high threshold for noise detection (default is 5).
     :type high_threshold_factor: float, optional
     :param low_threshold_factor: Factor to determine the low threshold for noise detection (default is 5).
     :type low_threshold_factor: float, optional

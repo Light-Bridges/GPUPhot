@@ -25,11 +25,11 @@ from scipy.spatial.distance import cdist
 from ..utils.gpu import adaptive_memory_management
 
 try:
-    from cuml import AgglomerativeClustering
+    from cuml.cluster import KMeans as cuKMeans
 except ImportError:
-    from sklearn.cluster import AgglomerativeClustering
+    from sklearn.cluster import KMeans
 except Exception:
-    from sklearn.cluster import AgglomerativeClustering
+    from sklearn.cluster import KMeans
 
 try:
     from cuml.decomposition import PCA
@@ -128,7 +128,7 @@ def find_local_centroid(image: cp.ndarray, peaks: cp.ndarray, window_size: int =
 ### # @hierarchical_debug(logger)
 @nvtx.annotate('detect_isolated_stars', category='phot.psf')
 def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_lim: int = 50000, min_snr: float = 10,
-                          dist_asec: float = 10, sort: bool = True, **kwargs) -> cp.array:
+                          sigma_G_asec: float = 0.5, dist_asec: float = 10, sort: bool = True, **kwargs) -> cp.array:
     """
     Detect isolated stars in an image using a fft convolution kernel.
     The stars are detected by convolving the image with a Gaussian kernel and filtered by a minimum signal-to-noise ratio.
@@ -143,6 +143,8 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
     :type sat_lim: int
     :param min_snr: Minimum signal-to-noise ratio.
     :type min_snr: float
+    :param sigma_G_asec: Width of the Gaussian kernel in arcsec.
+    :type sigma_G_asec: float
     :param dist_asec: Minimum distance in arcsec.
     :type dist_asec: float
     :param sort: Whether to sort the detected stars by signal-to-noise ratio and distance.
@@ -155,25 +157,16 @@ def detect_isolated_stars(img: cp.ndarray, rms: cp.ndarray, pxscale: float, sat_
     mempool = cp.get_default_memory_pool()
     dist_px = max(dist_asec / pxscale, 20)
     border = 2 * dist_px
-    kernel = gaussian_kernel(int(np.max((5 * 2 + 1, 10 / pxscale))), 2)
+    sigma_G = max(sigma_G_asec / pxscale, 2.0)  # nunca menor que 1 px
+    kernel = gaussian_kernel(int(max(5 * sigma_G + 1, 10 / pxscale)), sigma_G)
     kernel = (kernel - cp.mean(kernel)) / cp.std(kernel)
 
     adaptive_memory_management(mempool)
 
     # Use a context to ensure asynchronous execution and resource release
     with cp.cuda.Stream():  # Ensures asynchronous execution and release of resources
-        # conv_ima = convolve_fft(img, kernel, **kwargs)
-        # conv_sigma = conv_ima / rms / cp.sqrt(kernel.shape[0] * kernel.shape[1])
-        # del kernel, conv_ima  # Release kernel and conv_ima as soon as possible
-        # mempool.free_all_blocks()  # Ensure memory pool is freed
 
-        # conv_sigma[:border, :] = 0
-        # conv_sigma[-border:, :] = 0
-        # conv_sigma[:, :border] = 0
-        # conv_sigma[:, -border:] = 0
-        # coor_f = find_local_max(conv_sigma, min_distance=int(3 / pxscale), threshold_abs=min_snr)
-
-        coor_f, conv_sigma = detect_sources_psf(img, rms, 2, kernel, None, None, min_snr=3, **kwargs)
+        coor_f, conv_sigma = detect_sources_psf(img, rms, 2, kernel, None, None, min_snr=5, **kwargs)
         coor_f = cp.round(coor_f[(coor_f[:, 0] > border) & (coor_f[:, 0] < img.shape[0] - border) & (coor_f[:, 1] > border) & (
             coor_f[:, 1] < img.shape[1] - border)]).astype(cp.int32)
         del kernel
@@ -284,10 +277,10 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
             continue  # Skip this coordinate if cutout goes out of bounds
 
         # Extract the sub-image (cutout)
-        subima_orig = img[y_min:y_max, x_min:x_max]
+        subima = img[y_min:y_max, x_min:x_max]
 
         # All subsequent calculations (peak, stats) use this flipped version.
-        subima = subima_orig[::-1, :]
+        # subima = subima_orig[::-1, :]
         # Ensure subima is C-contiguous if needed by subsequent operations,
         # though CuPy usually handles this. Explicit copy can guarantee it:
         # subima = cp.ascontiguousarray(subima_orig[::-1, :])
@@ -356,7 +349,7 @@ def _group_star_dataset_cpu_impl(coords: np.ndarray, avg_group_size: int = 10, m
     num_clusters = min(num_clusters, n_stars)
 
     # Initial Clustering (Scikit-learn)
-    clustering = skAgglomerativeClustering(n_clusters=num_clusters)
+    clustering = KMeans(n_clusters=num_clusters)
     labels = clustering.fit_predict(coords)
 
     unique_labels_initial, counts = np.unique(labels, return_counts=True)
@@ -406,7 +399,7 @@ def _group_star_dataset_cpu_impl(coords: np.ndarray, avg_group_size: int = 10, m
 
     return final_labels_contiguous
 
-
+# DESPUÉS:
 # --- GPU implementation ---
 @nvtx.annotate('_group_star_dataset_gpu_impl', category='phot.psf_gpu')
 def _group_star_dataset_gpu_impl(coords: cp.ndarray, avg_group_size: int = 10, min_group_size: int = 5) -> cp.ndarray:
@@ -427,7 +420,7 @@ def _group_star_dataset_gpu_impl(coords: cp.ndarray, avg_group_size: int = 10, m
     num_clusters = min(num_clusters, n_stars)
 
     # Initial Clustering (cuML)
-    clustering = cuAgglomerativeClustering(n_clusters=num_clusters)
+    clustering = cuKMeans(n_clusters=num_clusters, random_state=42, n_init=10)
     labels = clustering.fit_predict(coords_f32)
     labels = labels.astype(cp.int32, copy=False)  # Ensure int type
 
@@ -614,7 +607,7 @@ def project_all_stars_onto_eigenpsfs(normed_star_dataset: cp.array, eigen_psfs: 
 ### # @hierarchical_debug(logger)
 @nvtx.annotate('create_coeff_map', category='phot.psf')
 def create_coeff_map(img_shape: tuple, positions: cp.array, coefficients: cp.array, pxscale: float,
-                     tile_section: int = None, env_factor: float = 3) -> cp.ndarray:
+                     tile_section: int = None) -> cp.ndarray:
     """
     Create a coefficient map from a list of positions and coefficients.
 
@@ -628,8 +621,6 @@ def create_coeff_map(img_shape: tuple, positions: cp.array, coefficients: cp.arr
     :type pxscale: float
     :param tile_section: Size of the tile section.
     :type tile_section: int or None
-    :param env_factor: Factor for the environment check for outlier detection.
-    :type env_factor: float
     :return: A coefficient map.
     :rtype: cupy.ndarray
     """
@@ -702,7 +693,7 @@ def detect_sources_psf(img: cp.ndarray, rms: cp.ndarray, fwhm: float, psf: cp.ar
     :type img: cupy.ndarray
     :param rms: Root mean square noise level.
     :type rms: cupy.ndarray
-    :param fwhm: Full width at half maximum.
+    :param fwhm: Full width at half maximum, in px.
     :type fwhm: float
     :param psf: Reference point spread function.
     :type psf: cupy.ndarray
@@ -722,11 +713,16 @@ def detect_sources_psf(img: cp.ndarray, rms: cp.ndarray, fwhm: float, psf: cp.ar
         for e in range(eigen_psfs.shape[0]):
             flipped_psf = cp.flip(eigen_psfs[e], (0, 1))
             conv_ima_pca += convolve_fft(img, flipped_psf, **kwargs) * coeff_map[e, :, :]
-    A = calculate_kernel_area(img.shape, psf, coeff_map, eigen_psfs)
-    conv_ima_sigma = conv_ima_pca / rms / cp.sqrt(A)
+    if coeff_map is not None and eigen_psfs is not None:
+        A = calculate_kernel_area(img.shape, psf, coeff_map, eigen_psfs)
+        sqrt_A = cp.sqrt(A)
+        del A
+    else:
+        sqrt_A = cp.sqrt(cp.sum(psf * psf))  # escalar
+    conv_ima_sigma = conv_ima_pca / rms / sqrt_A
     coor = find_local_max(conv_ima_sigma, min_distance=int(np.ceil(2 * fwhm)), threshold_abs=min_snr)
     coor = find_local_centroid(conv_ima_sigma, coor, np.round(np.max((fwhm, 5))).astype(int))
-    del flipped_psf, conv_ima_pca, A
+    del flipped_psf, conv_ima_pca
     mempool.free_all_blocks()
     return coor, conv_ima_sigma
 
