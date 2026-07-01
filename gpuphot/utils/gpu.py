@@ -18,6 +18,8 @@ from typing import Dict, Optional
 import cupy as cp
 import nvtx
 
+from ..exceptions import capture_cuda_exception
+
 from ..logger.hierarchical_logging import setup_logger
 
 logger = setup_logger(__name__)
@@ -129,6 +131,7 @@ def init_gpu(**kwargs) -> None:
         logger.debug(f'  Total memory: {gpu_props["totalGlobalMem"] / (1024 ** 3):.2f} GB')
 
 
+@capture_cuda_exception
 @nvtx.annotate('reset_cupy_allocators', category='utils.gpu')
 def reset_cupy_allocators():
     """
