@@ -202,7 +202,7 @@ def calculate_aperture_corrections_gpu(corr: cp.ndarray) -> tuple[cp.ndarray, cp
 
     # Final correction factor and uncertainty
     corr_fact = cp.nanmean(corr_cleaned, axis=0)
-    corr_err = cp.nanstd(corr_cleaned, axis=0) / cp.sqrt(cp.sum(~cp.isnan(corr_cleaned), axis=0))  # Standard error
+    corr_err = cp.nanstd(corr_cleaned, axis=0) / cp.sqrt(cp.sum(~cp.isnan(corr_cleaned), axis=0))
 
     # Handle radii where all stars became NaN
     corr_fact = cp.where(cp.isnan(corr_fact), 0.0, corr_fact)
@@ -240,7 +240,7 @@ def calculate_aperture_corrections(corr: np.ndarray) -> cp.ndarray:
         else:
             return np.array([]), np.array([])
 
-        # Normalize (handle potential division by zero/nan)
+    # Normalize (handle potential division by zero/nan)
     max_vals = np.nanmax(corr, axis=1, keepdims=True)
     # Use np.divide with where clause
     corr_normalized = np.divide(corr, max_vals, where=(max_vals != 0), out=np.full_like(corr, np.nan))
@@ -686,7 +686,7 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 
     num_good_isolated = cp.sum(conv_snr_mask)
     if num_good_isolated < 10:
-        conv_snr_mask = conv_snr_isol > min_conv_snr * 0.5
+        conv_snr_mask = conv_snr_isol > min_conv_snr * 0.3
 
     del conv_snr_isol
 
@@ -701,8 +701,10 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
     # BLOQUE 3: Aperture radii setup
     block3_range = nvtx.start_range('aperture_radii_setup', category='phot.photo_gpu', color='yellow')
     stamp_half = star_dataset.shape[1] // 2  # asume star_dataset shape (N, h, w)
-    max_radii_phot = float(np.ceil(4 * fwhm))
-    max_radii_corr = float(min(stamp_half - 1, np.ceil(5 * fwhm) + 1))
+    max_radii_phot = float(min(stamp_half - 2,
+                            np.ceil(5 * fwhm)))  # rango para photometría
+    max_radii_corr = float(min(stamp_half - 1,     # rango para construir C(r)
+                                np.ceil(6 * fwhm) + 1))
     min_radii = float(np.ceil(0.75 * fwhm))
     radii_phot = cp.arange(int(min_radii), int(max_radii_phot) + 1, 1, dtype=cp.float64)
     radii_corr = cp.arange(int(min_radii), int(max_radii_corr) + 1, 1, dtype=cp.float64)
@@ -783,27 +785,57 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
     # BLOQUE 8: Find optimal aperture radius
     block8_range = nvtx.start_range('optimal_radii_calculation', category='phot.photo_gpu', color='orange')
 
-    # Select array module (NumPy or CuPy) based on input type
     xp = cp.get_array_module(center_isolated_snr)
-
-    # Compute optimal radius indices
     opt_radii_idx = xp.nanargmax(center_isolated_snr, axis=0)
-
-    # Retrieve optimal radii (works for both np and cp arrays)
     opt_radii = radii_phot[opt_radii_idx]
     del opt_radii_idx, center_isolated_snr
     if len(center_conv_snr) == 0 or len(opt_radii) == 0:
-        raise DataValidationError("center_conv_snr or opt_radii is empty. Ensure valid data is provided.")
+        raise DataValidationError("center_conv_snr or opt_radii is empty.")
 
-    # Fit polynomial: log10(SNR) vs log10(optimal radius)
-    # NVTX label reflects whether computation runs on CPU or GPU
-    polyfit_category = 'gpu_ops' if xp == cp else 'cpu_ops'
-    polyfit_color = 'green' if xp == cp else 'blue'
-    polyfit_label = 'polyfit_gpu' if xp == cp else 'polyfit_cpu'
-    polyfit_range = nvtx.start_range(polyfit_label, category=polyfit_category, color=polyfit_color)
+    polyfit_range = nvtx.start_range('polyfit', category='gpu_ops' if xp == cp else 'cpu_ops')
     try:
-        # pov is a np or cp array depending on xp
-        pov = xp.polyfit(xp.log10(center_conv_snr), xp.log10(opt_radii), 1, cov=False)
+        # Filter saturated points (those pinned at r_min or r_max_phot edges)
+        not_saturated = (opt_radii > min_radii) & (opt_radii < max_radii_phot)
+
+        if int(xp.sum(not_saturated)) < 10:
+            pov = xp.polyfit(xp.log10(center_conv_snr), xp.log10(opt_radii), 1, cov=False)
+        else:
+            # Inverted fit: bin in integer r_opt, fit log(SNR) vs log(r), then invert.
+            # This avoids the bias from r_opt's pixel discretisation that affects
+            # a direct log(r) vs log(SNR) OLS fit.
+            r_clean = opt_radii[not_saturated]
+            log_snr_clean = xp.log10(center_conv_snr[not_saturated])
+            unique_r = xp.unique(r_clean)
+
+            log_snr_medians = []
+            log_snr_mads = []
+            r_used = []
+            for r_val in unique_r:
+                m = r_clean == r_val
+                if int(xp.sum(m)) < 5:
+                    continue
+                vals = log_snr_clean[m]
+                med = xp.median(vals)
+                mad = 1.4826 * xp.median(xp.abs(vals - med))
+                log_snr_medians.append(float(med))
+                log_snr_mads.append(float(mad))
+                r_used.append(float(r_val))
+
+            if len(r_used) < 3:
+                pov = xp.polyfit(xp.log10(center_conv_snr), xp.log10(opt_radii), 1, cov=False)
+            else:
+                log_r_used = xp.log10(xp.asarray(r_used, dtype=opt_radii.dtype))
+                log_snr_med_arr = xp.asarray(log_snr_medians, dtype=opt_radii.dtype)
+                log_snr_mad_arr = xp.asarray(log_snr_mads, dtype=opt_radii.dtype)
+                weights = 1.0 / xp.maximum(log_snr_mad_arr, 1e-3) ** 2
+
+                pov_inv = xp.polyfit(log_r_used, log_snr_med_arr, 1)#, w=weights)
+                slope_inv, intercept_inv = pov_inv[0], pov_inv[1]
+                # Invert to recover log(r) = a*log(SNR) + b form
+                slope = 1.0 / slope_inv
+                intercept = -intercept_inv / slope_inv
+                pov = xp.stack([slope, intercept])
+
         del opt_radii, center_conv_snr
     except Exception as e:
         nvtx.end_range(polyfit_range)
@@ -817,9 +849,9 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
     block9_range = nvtx.start_range('optimal_flux_calculation', category='phot.metadata', color='lime')
 
     source_opt_rad = cp.round(
-        cp.fmax(cp.fmin((10 ** (pov[0] * cp.log10(conv_snr) + pov[1])), max_radii), min_radii)
+        cp.fmax(cp.fmin((10 ** (pov[0] * cp.log10(conv_snr) + pov[1])), max_radii_phot), min_radii)
     ).astype(int)
-    source_opt_rad_idx = cp.searchsorted(radii, source_opt_rad, side='right') - 1
+    source_opt_rad_idx = cp.searchsorted(radii_phot, source_opt_rad, side='right') - 1
 
     del conv_snr
 
