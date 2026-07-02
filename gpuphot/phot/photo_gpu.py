@@ -1696,6 +1696,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, binning:int, scale: float, 
     mask_star_dataset = peak_to_total_ratio < 0.3
     unit_star_dataset = unit_star_dataset[mask_star_dataset]
     coord = coord[mask_star_dataset]
+    star_dataset = star_dataset[mask_star_dataset]
 
     star_dataset_ref = unit_star_dataset[center_mask[mask_star_dataset]]
     star_dataset_ref = star_dataset_ref[cp.argsort(scaling[center_mask & mask_star_dataset, 3])[::-1]]
@@ -1793,7 +1794,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, binning:int, scale: float, 
         source_coord=sources,
         isolated_coord=coord,
         tile_section_psf=tile_section_psf,
-        star_dataset=star_dataset[mask_star_dataset],
+        star_dataset=star_dataset,
         fwhm=fwhm,
         gain=gain,
         rdnoise=rdnoise,
