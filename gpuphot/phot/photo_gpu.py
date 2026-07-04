@@ -363,13 +363,17 @@ def create_aperture_corrections_map_gpu(image_shape: tuple, block_size: int, uni
     # --- KEY STEP: CALL THE GROUPING WRAPPER ---
     # Pass the GPU coordinates directly. The wrapper will decide whether to use GPU or CPU.
     grouping_range = nvtx.start_range('group_star_dataset_dispatch', category='phot.psf')
-    avg_group_size = int(
-        max(5, coords.shape[0] / (np.prod(image_shape) / min(max(image_shape), block_size) ** 2)))
-    min_group_size_val = max(3, avg_group_size // 2)
+    if block_size < image_shape[0] or block_size < image_shape[1]:
+        avg_group_size = int(
+            max(5, coords.shape[0] / (np.prod(image_shape) / min(max(image_shape), block_size) ** 2)))
+        min_group_size_val = max(3, avg_group_size // 2)
 
-    # This function NOW can return cp.ndarray or np.ndarray
-    labels = group_star_dataset(coords, avg_group_size=avg_group_size,
-                                min_group_size=min_group_size_val)
+        # This function NOW can return cp.ndarray or np.ndarray
+        labels = group_star_dataset(coords, avg_group_size=avg_group_size,
+                                    min_group_size=min_group_size_val)
+    else:
+        # If the block size is larger than the image, treat all stars as one group
+        labels = cp.zeros(coords.shape[0], dtype=cp.int32)  # Single group label for all stars
     nvtx.end_range(grouping_range)
 
     # --- KEY STEP: CHECK THE TYPE OF LABELS TO DECIDE THE PATH ---
