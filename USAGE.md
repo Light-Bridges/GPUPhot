@@ -640,7 +640,7 @@ try:
     result = processor.process_image('image.fits')
 except InsufficientStarsError as e:
     # Fewer than 5 isolated stars found — image too sparse for PSF fitting
-    print(f"Not enough stars: {e.num_stars} detected")
+    print(f"Not enough isolated stars: {e.num_stars} detected")
 except MoffatFitError:
     # PSF model could not be fitted (e.g. saturated or trailed stars)
     print("PSF fit failed — check image quality")

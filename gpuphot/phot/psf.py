@@ -627,9 +627,17 @@ def create_coeff_map(img_shape: tuple, positions: cp.array, coefficients: cp.arr
     coeff_map = cp.nan * cp.ones((coefficients.shape[0], img_shape[0], img_shape[1]), dtype=cp.float32)
     coeff_map[:, cp.round(positions[:, 0]).astype(int), cp.round(positions[:, 1]).astype(int)] = coefficients
     if tile_section is None:
-        block_size = int(200 / pxscale)
+            block_size = int(200 / pxscale)
     else:
         block_size = int(tile_section)
+
+    # Protección: block_size no puede superar la dimensión menor del frame.
+    # Se exigen al menos 2 tiles por eje para que el mapa de variación espacial
+    # tenga sentido; si no, img_shape // block_size = 0 y el reshape falla.
+    min_dim = min(img_shape[0], img_shape[1])
+    if block_size > min_dim // 2:
+        block_size = max(min_dim // 2, 1)
+        logger.warning(f"create_coeff_map: block_size reduced to {block_size} ")
 
     for c in range(coefficients.shape[0]):
         tiles = decompose_into_tiles(coeff_map[c, :, :], block_size)

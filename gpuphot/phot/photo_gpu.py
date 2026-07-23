@@ -688,9 +688,17 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 
     del conv_ima_sigma
 
+    # Fallback para campos débiles: si aún hay pocas, coge las más brillantes
+    # que superen un suelo mínimo para una curva de crecimiento usable.
     num_good_isolated = cp.sum(conv_snr_mask)
     if num_good_isolated < 10:
-        conv_snr_mask = conv_snr_isol > min_conv_snr * 0.3
+        usable = conv_snr_isol > 30.0
+        if cp.sum(usable) >= 3:
+            order = cp.argsort(conv_snr_isol)[::-1][:10]
+            conv_snr_mask = cp.zeros_like(conv_snr_isol, dtype=bool)
+            conv_snr_mask[order[conv_snr_isol[order] > 30.0]] = True
+            logger.info(f"Weak field: aperture corrections from {int(cp.sum(conv_snr_mask))} faint stars, "
+                        f"median SNR {float(cp.median(conv_snr_isol[conv_snr_mask])):.1f}")
 
     del conv_snr_isol
 
