@@ -24,7 +24,7 @@ logger = setup_logger(__name__)
 ### # @hierarchical_debug(logger)
 @nvtx.annotate('get_local_background_fft', category='phot.background')
 def get_local_background_fft(image, pxscale: float, qt: float = 75, fill_aper: int = 100,
-                             avg_aper: int = 20, tile_section: int = 500, ks: int = 2,
+                             avg_aper: int = 20, tile_section: int = 1000, ks: int = 2,
                              get_std: bool = False, **kwargs) -> tuple:
     """
     Obtain the local background using FFT-based convolution.

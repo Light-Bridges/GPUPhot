@@ -1586,7 +1586,7 @@ def batch_aperture_photometry(
 def calibrate_image(imdata: np.ndarray, filter: str, binning:int, scale: float, gain: float, rdnoise: float,
                     exptime: float, satlevel: float, target_ra: float, target_dec: float = None, n_images: int = 1,
                     SP_filt: bool = True, CR_filt: bool = False, border: int = 20, center_factor: float = 0.7,
-                    pca_method: bool = True, tile_section: int = 1000, max_stars_ref: int = 15, min_snr: int = 5,
+                    pca_method: bool = True, max_stars_ref: int = 15, min_snr: int = 5,
                     color_range: float = 0.6, tile_section_psf: int = 3000, zp_maxmag: float = 21,
                     sip_order: int = 1, **kwargs):
     """
@@ -1729,7 +1729,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, binning:int, scale: float, 
     except:
         logger.error('Error fitting Moffat to reference PSF')
         raise MoffatFitError()
-    if fwhm < 2:
+    if fwhm < 1:
         logger.error('Error fitting Moffat to reference PSF')
         raise MoffatFitError()
 

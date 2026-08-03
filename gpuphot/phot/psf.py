@@ -18,6 +18,7 @@ except ImportError:
 
 import nvtx
 from cupyx.scipy.ndimage import maximum_filter
+from cupyx.scipy.ndimage import shift as cp_shift
 from lmfit import Model
 from scipy.spatial import KDTree
 from scipy.spatial.distance import cdist
@@ -296,6 +297,20 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
         # --- Valid Star Found ---
         # If both filters passed, record the index and calculate data.
         valid_indices.append(i)
+
+        # --- Recentrado sub-pixel al baricentro ---
+        # centroide de intensidad del recorte (resta un fondo local para no sesgar con el cielo)
+        sub_bg = subima - cp.median(subima)
+        sub_bg = cp.clip(sub_bg, 0, None)
+        tot = cp.sum(sub_bg)
+        if tot > 0:
+            yy, xx = cp.indices(subima.shape, dtype=cp.float64)
+            cy_i = cp.sum(sub_bg * yy) / tot
+            cx_i = cp.sum(sub_bg * xx) / tot
+            # desplazar para que el baricentro caiga en el centro (f, f)
+            subima = cp_shift(subima, shift=(f - float(cy_i), f - float(cx_i)),
+                              order=3, mode='reflect')
+        # --- fin recentrado ---
 
         # Get the peak value (brightest pixel in the flipped cutout)
         peak = subima[peak_pos_y, peak_pos_x]  # Accessing the flipped subima
@@ -627,7 +642,7 @@ def create_coeff_map(img_shape: tuple, positions: cp.array, coefficients: cp.arr
     coeff_map = cp.nan * cp.ones((coefficients.shape[0], img_shape[0], img_shape[1]), dtype=cp.float32)
     coeff_map[:, cp.round(positions[:, 0]).astype(int), cp.round(positions[:, 1]).astype(int)] = coefficients
     if tile_section is None:
-            block_size = int(200 / pxscale)
+        block_size = int(200 / pxscale)
     else:
         block_size = int(tile_section)
 
