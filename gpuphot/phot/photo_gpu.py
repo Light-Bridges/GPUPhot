@@ -1588,7 +1588,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, binning:int, scale: float, 
                     SP_filt: bool = True, CR_filt: bool = False, border: int = 20, center_factor: float = 0.7,
                     pca_method: bool = True, max_stars_ref: int = 15, min_snr: int = 5,
                     color_range: float = 0.6, tile_section_psf: int = 3000, zp_maxmag: float = 21,
-                    sip_order: int = 1, **kwargs):
+                    sip_order: int = 3, **kwargs):
     """
     Calibrate an image.
 

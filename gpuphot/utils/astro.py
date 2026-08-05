@@ -751,11 +751,16 @@ def astrometrice2(df: pd.DataFrame, scale: float,
 
 
 @nvtx.annotate('get_zeropoint', category='utils.astro')
-def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=50,
+def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=200,
                   solar_filter=0.6, dist_thres_px=3, min_snr=30, max_snr=300,
                   plot=False):
     """
     Calculate the zeropoint for photometry.
+
+    El zeropoint se estima como el OFFSET medio (pendiente fijada a 1),
+    m_cat = m_inst + ZP, en lugar de un ajuste RANSAC con pendiente libre.
+    Validado sobre secuencias temporales: el offset puro produce un ZP mas
+    estable imagen a imagen (menor scatter de ZP(t)) que la pendiente libre.
 
     :param df_catalog: Catalog dataframe.
     :type df_catalog: pd.DataFrame
@@ -780,6 +785,8 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=50,
     :return: Dictionary of zeropoint parameters.
     :rtype: dict
     """
+
+
     source_coords_matched_idx, ref_coords_matched_idx = crossmatch_sources(df_sources[['RA', 'DEC']].values,
                                                                            df_catalog[['RA', 'DEC']].values,
                                                                            thres_px=dist_thres_px)
@@ -820,34 +827,25 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=50,
 
     if len(cat_mag[bright_mask]) <= 3:
         zp, ezp, n, min_mag, max_mag = 0, 0, 0, 0, 0
+        mask = np.zeros(len(cat_mag[bright_mask]), dtype=bool)
 
     else:
         y = cat_mag[bright_mask] - det_mag[bright_mask]
-        mask = np.abs(y - np.nanmean(y)) < np.nanstd(y)
-        if np.sum(mask) > 15:
-            reg = RANSACRegressor(random_state=42, residual_threshold=0.05
-                                  ).fit(det_mag[bright_mask].reshape([-1, 1])[mask], cat_mag[
-                bright_mask].reshape([-1, 1])[mask])
-            inlier = reg.inlier_mask_
-            if np.sum(inlier) > 10 and np.abs(np.mean(y[mask][inlier]) - np
-                    .mean(y[mask])) < np.std(y[mask]):
-                zp = np.mean(y[mask][inlier])
-                n = np.sum(inlier)
-                ezp = np.std(y[mask][inlier]) / np.sqrt(n)
-                min_mag = np.min(cat_mag[bright_mask][mask][inlier])
-                max_mag = np.max(cat_mag[bright_mask][mask][inlier])
-            else:
-                zp = np.mean(y[mask])
-                n = np.sum(mask)
-                ezp = np.std(y[mask]) / np.sqrt(n)
-                min_mag = np.min(cat_mag[bright_mask][mask])
-                max_mag = np.max(cat_mag[bright_mask][mask])
-        else:
-            zp = np.mean(y[mask])
-            n = np.sum(mask)
-            ezp = np.std(y[mask]) / np.sqrt(n)
-            min_mag = np.min(cat_mag[bright_mask][mask])
-            max_mag = np.max(cat_mag[bright_mask][mask])
+        mask = np.isfinite(y)
+        k = 2.5                                   # intervalo de confianza ±k·sigma
+        for _ in range(10):
+            center = np.median(y[mask])           # mediana para clipar (robusta)
+            sigma  = np.std(y[mask])
+            newmask = np.isfinite(y) & (np.abs(y - center) < k * sigma)
+            if newmask.sum() == mask.sum() or newmask.sum() < 3:
+                mask = newmask
+                break
+            mask = newmask
+        zp  = np.mean(y[mask])                     # media final dentro del intervalo
+        n   = int(np.sum(mask))
+        ezp = np.std(y[mask]) / np.sqrt(n)
+        min_mag = np.min(cat_mag[bright_mask][mask])
+        max_mag = np.max(cat_mag[bright_mask][mask])
 
     params = {
         'ZP': np.round(zp, 4),
@@ -862,22 +860,18 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=50,
     if plot:
         plt.figure(figsize=(8, 8))
         ax = plt.subplot(111)
-        ax.plot(cat_mag, cat_mag - det_mag - zp, 'k.', alpha=0.6)
-        if np.sum(mask) > 15:
-            ax.plot(cat_mag[bright_mask][mask], cat_mag[bright_mask][mask] -
-                    det_mag[bright_mask][mask] - zp, 'b.', alpha=0.1)
-            ax.plot(cat_mag[bright_mask][mask][inlier], cat_mag[bright_mask
-            ][mask][inlier] - det_mag[bright_mask][mask][inlier] - zp,
-                    'r.', label='zp = {:.3f} +/- {:.3f} (n={})'.format(zp, ezp,
-                                                                       n), alpha=0.5)
-        else:
-            ax.plot(cat_mag[bright_mask][mask], cat_mag[bright_mask][mask] -
-                    det_mag[bright_mask][mask] - zp, 'r.', label=
-                    'zp = {:.3f} +/- {:.3f} (n={})'.format(zp, ezp, n), alpha=0.5)
+        ax.plot(cat_mag, cat_mag - det_mag - zp, 'k.', alpha=0.4, markersize=3, label='all matched')
+        if len(cat_mag[bright_mask]) > 3:
+            # estrellas usadas para el ZP (tras el pre-corte 1-sigma)
+            ax.plot(cat_mag[bright_mask][mask],
+                    cat_mag[bright_mask][mask] - det_mag[bright_mask][mask] - zp,
+                    'r.', alpha=0.6,
+                    label='zp = {:.3f} +/- {:.3f} (n={})'.format(zp, ezp, n))
+        ax.axhline(0, color='r', lw=1)
         ax.set_xlabel('catalog magnitude')
         ax.set_ylabel('error magnitude')
         ax.legend(frameon=False)
-        ax.set_ylim(-1.5, 1.5)
+        ax.set_ylim(-0.5, 0.5)
         plt.show()
 
     return params
