@@ -6,9 +6,6 @@ This module centralizes GPU memory management helpers and utility functions
 used across the project. It provides functions to inspect memory usage,
 free memory pools, adaptively manage memory pressure, and safely offload
 or load arrays between host (CPU) and device (GPU).
-
-All changes in this file are documentation-only: comments and log messages
-are expressed in English. No behavioral changes were made.
 """
 
 import gc
@@ -31,6 +28,10 @@ CRITICAL_LEVEL = 2
 
 # Define default thresholds in a single place
 DEFAULT_THRESHOLDS = {'warning': 0.75, 'critical': 0.85}
+
+# Tracks the custom MemoryPool currently installed as the CuPy allocator (if
+# any), so reset_cupy_allocators() can free it before replacing it.
+_current_mempool = None
 
 
 @nvtx.annotate('human_readable_size', category='utils.gpu')
@@ -137,6 +138,13 @@ def reset_cupy_allocators():
     """
     Reset CuPy allocators by creating fresh memory pools and setting them as default.
     """
+    global _current_mempool
+
+    # Free the pool currently installed as the allocator (a custom pool from a
+    # previous call, if any) before it gets replaced and its blocks are lost.
+    if _current_mempool is not None:
+        _current_mempool.free_all_blocks()
+
     # Clear existing pools
     cp.get_default_memory_pool().free_all_blocks()
     cp.get_default_pinned_memory_pool().free_all_blocks()
@@ -147,6 +155,7 @@ def reset_cupy_allocators():
 
     cp.cuda.set_allocator(mempool.malloc)
     cp.cuda.set_pinned_memory_allocator(pinned_mempool.malloc)
+    _current_mempool = mempool
 
     gc.collect()
     cp.cuda.Stream.null.synchronize()
