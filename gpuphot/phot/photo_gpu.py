@@ -1588,7 +1588,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, binning:int, scale: float, 
                     SP_filt: bool = True, CR_filt: bool = False, border: int = 20, center_factor: float = 0.7,
                     pca_method: bool = True, max_stars_ref: int = 15, min_snr: int = 5,
                     color_range: float = 0.6, tile_section_psf: int = 3000, zp_maxmag: float = 21,
-                    sip_order: int = 3, **kwargs):
+                    sip_order: int = 3, peak_to_total_max: float = 0.3, **kwargs):
     """
     Calibrate an image.
 
@@ -1634,6 +1634,14 @@ def calibrate_image(imdata: np.ndarray, filter: str, binning:int, scale: float, 
     :type color_range: float
     :param tile_section_psf: Tile section size for aperture corrections variations.
     :type tile_section_psf: int
+    :param peak_to_total_max: Maximum peak-to-total flux ratio for a stamp to enter the
+                              PSF model; above it the stamp is treated as a hot pixel.
+                              The ratio of a real star depends on how well the PSF is
+                              sampled (~0.03 at 5 px FWHM, but much higher when the FWHM
+                              approaches one pixel), so severely undersampled cameras may
+                              need a value above the 0.3 default. Set per instrument in
+                              the camera JSON.
+    :type peak_to_total_max: float
     :return: Calibration dictionary, astrometry dictionary, photometry dataframe.
     :rtype: tuple(dict, dict, pandas.DataFrame)
     :raises InsufficientStarsError: If less than 5 isolated stars are detected.
@@ -1705,7 +1713,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, binning:int, scale: float, 
     center_mask = (coord[:, 1] > xmin) & (coord[:, 1] < xmax) & (coord[:, 0] > ymin) & (coord[:, 0] < ymax)
     # peak_to_total_ratio = cp.std(unit_star_dataset, axis=(1, 2))
     peak_to_total_ratio = scaling[:, 0] / scaling[:, 3]
-    mask_star_dataset = peak_to_total_ratio < 0.3
+    mask_star_dataset = peak_to_total_ratio < peak_to_total_max
     unit_star_dataset = unit_star_dataset[mask_star_dataset]
     coord = coord[mask_star_dataset]
     star_dataset = star_dataset[mask_star_dataset]
