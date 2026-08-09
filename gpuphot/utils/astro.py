@@ -753,14 +753,14 @@ def astrometrice2(df: pd.DataFrame, scale: float,
 @nvtx.annotate('get_zeropoint', category='utils.astro')
 def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=200,
                   solar_filter=0.6, dist_thres_px=3, min_snr=30, max_snr=300,
-                  plot=False):
+                  k = 2.5, plot=False):
     """
     Calculate the zeropoint for photometry.
 
-    El zeropoint se estima como el OFFSET medio (pendiente fijada a 1),
-    m_cat = m_inst + ZP, en lugar de un ajuste RANSAC con pendiente libre.
-    Validado sobre secuencias temporales: el offset puro produce un ZP mas
-    estable imagen a imagen (menor scatter de ZP(t)) que la pendiente libre.
+    The zeropoint is estimated as the mean OFFSET (slope fixed to 1),
+    m_cat = m_inst + ZP, instead of a RANSAC fit with a free slope.
+    Validated over time series: the pure offset produces a more
+    stable ZP frame-to-frame (lower ZP(t) scatter) than the free slope.
 
     :param df_catalog: Catalog dataframe.
     :type df_catalog: pd.DataFrame
@@ -780,6 +780,8 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=200,
     :type min_snr: int
     :param max_snr: Maximum signal-to-noise ratio, default is 300.
     :type max_snr: int
+    :param k: Confidence interval ±k·sigma, default is 2.5.
+    :type k: float
     :param plot: Whether to plot the results, default is False.
     :type plot: bool
     :return: Dictionary of zeropoint parameters.
@@ -831,17 +833,16 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=200,
 
     else:
         y = cat_mag[bright_mask] - det_mag[bright_mask]
-        mask = np.isfinite(y)
-        k = 2.5                                   # intervalo de confianza ±k·sigma
+        mask = np.isfinite(y)                                 
         for _ in range(10):
-            center = np.median(y[mask])           # mediana para clipar (robusta)
+            center = np.median(y[mask])           
             sigma  = np.std(y[mask])
             newmask = np.isfinite(y) & (np.abs(y - center) < k * sigma)
             if newmask.sum() == mask.sum() or newmask.sum() < 3:
                 mask = newmask
                 break
             mask = newmask
-        zp  = np.mean(y[mask])                     # media final dentro del intervalo
+        zp  = np.mean(y[mask])                     
         n   = int(np.sum(mask))
         ezp = np.std(y[mask]) / np.sqrt(n)
         min_mag = np.min(cat_mag[bright_mask][mask])
