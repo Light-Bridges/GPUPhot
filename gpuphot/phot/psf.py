@@ -587,7 +587,17 @@ def get_eigen_psfs(normed_star_dataset: cp.array, n_components: int = 5) -> cp.a
     # eigen_psfs = pca.components_.reshape(-1, normed_star_dataset.shape[1], normed_star_dataset.shape[2])
     # return eigen_psfs
 
-    pca = PCA(n_components=n_components)
+    # svd_solver='full' is required for determinism, not a style choice.  With the
+    # default 'auto', sklearn picks 'randomized' for these dimensions (~500 patches x
+    # 4096 features), which is seeded from numpy's global random state and therefore
+    # varies between processes.  That propagates through the PCA convolution loop into
+    # different peaks above the detection threshold: measured +/-10250 objects on a
+    # 131k-source field.  'full' uses LAPACK DGESDD, exact and deterministic.
+    #
+    # Checked against 'randomized' on a 19565-source field: flux, noise and SNR are
+    # bit-for-bit identical and positions differ by 2e-10 arcsec, so the science does
+    # not change.
+    pca = PCA(n_components=n_components, svd_solver='full')
     # Flatten each star (N, H, W) -> (N, H*W). Transfer to CPU for PCA.fit.
     starset_flattened = normed_star_dataset.reshape(normed_star_dataset.shape[0], -1).get()
     # Fit PCA on the flattened star patches
