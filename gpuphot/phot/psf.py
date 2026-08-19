@@ -53,6 +53,10 @@ except Exception:
 # Import CPU libraries unconditionally for fallback
 from sklearn.cluster import AgglomerativeClustering as skAgglomerativeClustering
 
+# kmeans_plusplus seeds the GPU clustering in _group_star_dataset_gpu_impl, so it is
+# needed even on hosts where the cuML import above succeeded.
+from sklearn.cluster import kmeans_plusplus
+
 from .conv import gaussian_kernel, convolve_fft, fill_nan_fft
 from .utils import calculate_tile_nanmean_sigclip, decompose_into_tiles, recompose_from_percentiles
 from ..exceptions import InsufficientStarsError
@@ -434,9 +438,31 @@ def _group_star_dataset_gpu_impl(coords: cp.ndarray, avg_group_size: int = 10, m
     num_clusters = max(1, n_stars // effective_avg_group_size)
     num_clusters = min(num_clusters, n_stars)
 
-    # Initial Clustering (cuML)
-    clustering = cuKMeans(n_clusters=num_clusters, random_state=42, n_init=10)
-    labels = clustering.fit_predict(coords_f32)
+    # Initial clustering (cuML), seeded from explicit centroids computed on the CPU.
+    #
+    # The default k-means|| is not reproducible across GPU models.  It draws its seeds
+    # through RAFT's RngState, which is advanced by n_blocks * n_threads with
+    # n_blocks = 4 * multiProcessorCount (raft/random/detail/rng_impl.cuh), so cards
+    # with different SM counts walk different sequences and the same random_state
+    # lands on a different local optimum on each model.  Measured on one 151 MP frame:
+    # 0.047 mag of ZP spread across H100 (114 SM) / A100 (108) / L40S (142), returned
+    # with Status OK, plus an astrometry timeout on the H100.
+    #
+    # Seeding with explicit centroids takes raft::random out of the loop.  Ten
+    # deterministic kmeans_plusplus draws replace n_init=10 without an RNG, and the
+    # lowest-inertia one wins.  Verified over 2645 runs crossing GPU model, position in
+    # the batch and repetition: centroids and ZP are identical on all three axes, and
+    # the inertia is better than the k-means|| result.
+    coords_cpu = _numpy.asarray(cp.asnumpy(coords_f32), dtype=_numpy.float64)
+    best_inertia, labels = None, None
+    for seed in range(42, 52):
+        centers0, _ = kmeans_plusplus(coords_cpu, n_clusters=num_clusters,
+                                      random_state=seed)
+        clustering = cuKMeans(n_clusters=num_clusters, n_init=1,
+                              init=cp.asarray(centers0.astype(_numpy.float32)))
+        candidate = clustering.fit_predict(coords_f32)
+        if best_inertia is None or float(clustering.inertia_) < best_inertia:
+            best_inertia, labels = float(clustering.inertia_), candidate
     labels = labels.astype(cp.int32, copy=False)  # Ensure int type
 
     unique_labels_initial, counts = cp.unique(labels, return_counts=True)
