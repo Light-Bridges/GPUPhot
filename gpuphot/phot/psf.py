@@ -316,8 +316,12 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
                               order=3, mode='reflect')
         # --- fin recentrado ---
 
-        # Get the peak value (brightest pixel in the flipped cutout)
-        peak = subima[peak_pos_y, peak_pos_x]  # Accessing the flipped subima
+        # Get the peak value (brightest pixel in the cutout).
+        # NB: peak_pos_* was measured on the *pre-shift* stamp and is stale once the
+        # sub-pixel recentring above has moved the profile onto (f, f); indexing with
+        # it samples the wing instead of the peak (up to -100% for undersampled PSFs).
+        # Re-take the maximum so this stays the peak regardless of the shift.
+        peak = cp.max(subima)
 
         # Store the *flipped* cutout in the pre-allocated array
         star_dataset_full[i] = subima

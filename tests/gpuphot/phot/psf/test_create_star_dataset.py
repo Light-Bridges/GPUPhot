@@ -76,6 +76,43 @@ class TestCreateStarDataset(unittest.TestCase):
         if len(scaling_ds) > 0:
             self.assertEqual(scaling_ds.shape[1], 4)
 
+    def test_reported_peak_survives_the_subpixel_recentring(self):
+        """scaling[:, 0] must be the peak of the stamp that was actually stored.
+
+        The stamps are recentred onto their barycentre with a cubic spline before
+        being stored, which moves the profile.  Reading the peak at coordinates
+        measured before that shift samples the wing instead: harmless for a
+        well-sampled PSF, but up to a 100% underestimate when the FWHM approaches
+        one pixel.  The value feeds the peak-to-total ratio that gates which stars
+        build the PSF model, so it has to track the stored stamp.
+        """
+        from .....gpuphot.phot.psf import create_star_dataset
+
+        pxscale = 0.5
+        for fwhm_px in (5.0, 1.2):          # well sampled, then severely undersampled
+            sigma = fwhm_px / 2.355
+            size = 400
+            image = cp.zeros((size, size), dtype=cp.float64)
+            yy, xx = cp.indices((size, size), dtype=cp.float64)
+
+            # Offset each star from its integer coordinate so the recentring has
+            # something to correct; 0 px would hide the bug.
+            coords = []
+            for k, offset in enumerate((0.0, 1.0, 2.0)):
+                y0, x0 = 60 + 60 * k, 200
+                image += 10000 * cp.exp(
+                    -0.5 * (((yy - (y0 + offset)) ** 2 + (xx - x0) ** 2) / sigma ** 2))
+                coords.append([y0, x0])
+
+            star_ds, _, scaling_ds = create_star_dataset(
+                image, cp.asarray(coords, dtype=cp.int32), pxscale)
+
+            for k in range(star_ds.shape[0]):
+                self.assertAlmostEqual(
+                    float(scaling_ds[k, 0]), float(star_ds[k].max()), places=3,
+                    msg=f'FWHM {fwhm_px} px, star {k}: reported peak does not match '
+                        f'the stored stamp')
+
 
 if __name__ == '__main__':
     unittest.main()
