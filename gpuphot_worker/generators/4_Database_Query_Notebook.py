@@ -51,7 +51,7 @@ nb_db['cells'].append(nbf.v4.new_code_cell(
     "# Print columns for each table\n"
     "for table, columns in tables_and_columns.items():\n"
     "    print(f'\\nTable: {table}')\n"
-    "    print('Columnas:')\n"
+    "    print('Columns:')\n"
     "    for column_name, data_type in columns:\n"
     "        print(f'  - {column_name}: {data_type}')"
 ))
@@ -67,7 +67,7 @@ nb_db['cells'].append(nbf.v4.new_code_cell(
     "# Get all functions from the database_search_utils module\n"
     "functions = inspect.getmembers(database_search_utils, inspect.isfunction)\n\n"
     "# Print available functions\n"
-    "print('Funciones disponibles en gpuphot_worker.database_search_utils:')\n"
+    "print('Available functions in gpuphot_worker.database_search_utils:')\n"
     "for name, _ in functions:\n"
     "    print(f'  - {name}')"
 ))

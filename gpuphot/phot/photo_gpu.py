@@ -688,8 +688,8 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
 
     del conv_ima_sigma
 
-    # Fallback para campos débiles: si aún hay pocas, coge las más brillantes
-    # que superen un suelo mínimo para una curva de crecimiento usable.
+    # Fallback for weak fields: if there are still too few, take the brightest ones
+    # above a minimum floor, so that the growth curve remains usable.
     num_good_isolated = cp.sum(conv_snr_mask)
     if num_good_isolated < 10:
         usable = conv_snr_isol > 30.0
@@ -752,6 +752,14 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
     adaptive_memory_management(mempool, force_free=True)
     source_flux, back_flux, area = batch_aperture_photometry(img_ori, back, cp.round(source_coord).astype(cp.int32),
                                                              radii_phot)
+    if source_flux is None:
+        # batch_aperture_photometry signals GPU OOM by returning None fluxes
+        # (see its docstring); indexing them below would die with an opaque
+        # "'NoneType' object is not subscriptable" three layers away from the
+        # actual cause.
+        raise MemoryError(
+            "batch_aperture_photometry returned no flux: GPU ran out of memory "
+            "during aperture photometry (see preceding OOM log entries)")
     del img_ori, back
     # if img_ori.ndim == 3:  # Handle averaging if needed
     #     source_flux = cp.mean(source_flux, axis=0)
@@ -838,8 +846,8 @@ def perform_opt_photometry(img_ori: cp.ndarray, back: cp.ndarray, conv_ima_sigma
             else:
                 log_r_used = xp.log10(xp.asarray(r_used, dtype=opt_radii.dtype))
                 log_snr_med_arr = xp.asarray(log_snr_medians, dtype=opt_radii.dtype)
-                log_snr_mad_arr = xp.asarray(log_snr_mads, dtype=opt_radii.dtype)
-                weights = 1.0 / xp.maximum(log_snr_mad_arr, 1e-3) ** 2
+                # log_snr_mad_arr = xp.asarray(log_snr_mads, dtype=opt_radii.dtype)
+                # weights = 1.0 / xp.maximum(log_snr_mad_arr, 1e-3) ** 2
 
                 pov_inv = xp.polyfit(log_r_used, log_snr_med_arr, 1)#, w=weights)
                 slope_inv, intercept_inv = pov_inv[0], pov_inv[1]
@@ -1316,9 +1324,13 @@ def batch_aperture_photometry(
                     except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e_radius:
                         logger.error(f"OOM or CUDA Error during radius r={r_item} in plane {plane_idx}: {e_radius}",
                                      exc_info=False)  # Less verbose exc_info
-                        # Clean up potential intermediate arrays from this radius iteration
-                        del kernel_c, prod_img, convolved_img, convolved_img_rolled, convolved_img_cropped
-                        del prod_back, convolved_back, convolved_back_rolled, convolved_back_cropped
+                        # Clean up potential intermediate arrays from this radius iteration.
+                        # Rebinding to None drops the reference just like `del`, but cannot
+                        # raise: a bare `del` dies with UnboundLocalError when the OOM struck
+                        # before the name was assigned, and that error would replace e_radius
+                        # and hide the real OOM from the log and the outer handler.
+                        kernel_c = prod_img = convolved_img = convolved_img_rolled = convolved_img_cropped = None
+                        prod_back = convolved_back = convolved_back_rolled = convolved_back_cropped = None
                         mempool.free_all_blocks()  # Try to free memory
                         gc.collect()
                         raise e_radius  # Propagate error to outer handler for the plane
@@ -1341,15 +1353,18 @@ def batch_aperture_photometry(
             except (cp.cuda.runtime.CUDARuntimeError, MemoryError) as e_plane:
                 logger.error(f"OOM or CUDA Error processing plane {plane_idx}: {e_plane}",
                              exc_info=False)  # Less verbose
-                # Ensure cleanup of major allocations if error occurred mid-plane
-                del img_c, back_c, plane_flux, kernel_c  # Use vars defined outside radius loop
+                # Ensure cleanup of major allocations if error occurred mid-plane.
+                # None-rebind instead of `del`: the radius handler above has already
+                # unbound kernel_c on its way here, so `del kernel_c` would raise
+                # UnboundLocalError inside this handler and mask the real OOM.
+                img_c = back_c = plane_flux = kernel_c = None
                 # Try to free memory before returning None
                 mempool.free_all_blocks()
                 gc.collect()
                 return None, None  # Signal failure for this plane
             except Exception as e_gen_plane:
                 logger.error(f"Unexpected error processing plane {plane_idx}: {e_gen_plane}", exc_info=True)
-                del img_c, back_c, plane_flux, kernel_c
+                img_c = back_c = plane_flux = kernel_c = None
                 mempool.free_all_blocks()
                 gc.collect()
                 return None, None  # Signal failure
@@ -1844,7 +1859,7 @@ def calibrate_image(imdata: np.ndarray, filter: str, binning:int, scale: float, 
     dfm_ast = dfm_ast.sort_values('snr', ascending=False).dropna().reset_index(drop=True)
 
     # Astrometrize
-    h_wcs = astrometrice2(dfm_ast, scale, target_ra, target_dec, imadata_shape, sip_order=sip_order)
+    h_wcs = astrometrice2(dfm_ast, scale, target_ra, target_dec, imadata_shape, sip_order=sip_order, **kwargs)
     del dfm_ast
     if h_wcs == {}:
         logger.error('Astrometry failed')

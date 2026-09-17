@@ -14,7 +14,7 @@ class TestPredMof(unittest.TestCase):
     """
 
     def setUp(self):
-        from .....gpuphot.phot.photo_gpu import pred_mof
+        from gpuphot.phot.photo_gpu import pred_mof
         self.pred_mof = pred_mof
 
     def _make_pred(self, n=5):

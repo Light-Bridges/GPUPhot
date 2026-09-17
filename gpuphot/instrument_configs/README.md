@@ -35,9 +35,21 @@ Key sections and description:
   - Use these only when a sensible default for an instrument is known.
 
 - `processing_params`:
-  - Internal tuning parameters (tile sizes, filtering flags, padding, etc.)
-  - These control the image processing pipeline behavior and can be tuned per
-    instrument to improve performance or robustness.
+  - Internal tuning parameters controlling pipeline execution and algorithmic stages:
+    - `tile_section` (int): Size in pixels of image tiles for background and detection (default: 1000).
+    - `tile_section_psf` (int): Size in pixels of image tiles for PSF calculation (default: 2500).
+    - `center_factor` (float): Central region fraction used for PSF and zeropoint estimation (default: 0.7).
+    - `border` (int): Border margin in pixels excluded from source extraction (default: 50).
+    - `pca_method` (bool): Enable Principal Component Analysis (PCA) for spatial PSF variation (default: false in default.json).
+    - `SP_filt` (bool): Enable salt-and-pepper defect filtering (default: false in default.json).
+    - `CR_filt` (bool): Enable cosmic-ray filtering pre-processing (default: false).
+    - `do_pad` (bool): Enable image padding during tile operations (default: false).
+    - `astrom` (bool): Enable astrometric solving stage (default: false).
+    - `max_stars_ref` (int): Maximum reference stars per tile used for PSF / zeropoint fit (default: 15).
+    - `min_conv_snr` (float): Minimum SNR for candidate stars used in convolution (default: 300).
+    - `color_range` (float): Color difference threshold for reference catalog cross-matching (default: 0.6).
+    - `zp_maxmag` (float): Upper magnitude cutoff for catalog matching and zeropoint (default: 21).
+    - `lum_gmag_coeff` / `lum_rmag_coeff` (float): Luminosity blend coefficients for synthetic filters (default: 0.5 each).
 
 - `image_reduction`:
   - Controls automatic binning and cropping behavior applied by the worker

@@ -66,6 +66,16 @@ class ImageProcessor:
         :return: A tuple containing the data frame of processed results and the translated original header.
         :rtype: tuple(pandas.DataFrame, astropy.io.fits.header.Header)
         """
+        # cuML's module-level import replaces CuPy's global allocator with
+        # RMM's unpooled rmm_cupy_allocator and nothing restores it until the
+        # end-of-image cleanup, so every temporary pays an unpooled
+        # cudaMalloc and the pool-introspection APIs watch an empty pool.
+        # Re-seat the default pool here, once per task: this must run in the
+        # worker process (never at import time — prefork parents must not
+        # initialize CUDA) and is idempotent across child-process reuse.
+        import cupy as cp
+        cp.cuda.set_allocator(cp.get_default_memory_pool().malloc)
+
         # Translate the header to standard keywords.
         # The logic for forced values is handled internally by self.header_translator.
         translated_header = self.header_translator.translate_header(imheader)

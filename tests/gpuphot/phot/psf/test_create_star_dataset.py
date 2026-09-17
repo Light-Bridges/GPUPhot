@@ -33,13 +33,13 @@ class TestCreateStarDataset(unittest.TestCase):
         return image, np.array(coords)
 
     def test_returns_three_tuple(self):
-        from .....gpuphot.phot.psf import create_star_dataset
+        from gpuphot.phot.psf import create_star_dataset
         image, coords = self._make_star_image()
         result = create_star_dataset(cp.asarray(image), cp.asarray(coords), pxscale=1.0)
         self.assertEqual(len(result), 3)
 
     def test_output_dataset_shape(self):
-        from .....gpuphot.phot.psf import create_star_dataset
+        from gpuphot.phot.psf import create_star_dataset
         image, coords = self._make_star_image(n_stars=10)
         star_ds, out_coords, scaling_ds = create_star_dataset(
             cp.asarray(image), cp.asarray(coords), pxscale=1.0
@@ -49,7 +49,7 @@ class TestCreateStarDataset(unittest.TestCase):
             self.assertEqual(star_ds.shape[1], star_ds.shape[2])
 
     def test_n_limits_output(self):
-        from .....gpuphot.phot.psf import create_star_dataset
+        from gpuphot.phot.psf import create_star_dataset
         image, coords = self._make_star_image(n_stars=10)
         star_ds, out_coords, scaling_ds = create_star_dataset(
             cp.asarray(image), cp.asarray(coords), pxscale=1.0, N=3
@@ -57,7 +57,7 @@ class TestCreateStarDataset(unittest.TestCase):
         self.assertLessEqual(len(star_ds), 3)
 
     def test_boundary_filtering(self):
-        from .....gpuphot.phot.psf import create_star_dataset
+        from gpuphot.phot.psf import create_star_dataset
         image = np.ones((100, 100), dtype=np.float32) * 100
         # Place coords near border that should be filtered
         coords = np.array([[2, 2], [50, 50], [98, 98]])
@@ -68,7 +68,7 @@ class TestCreateStarDataset(unittest.TestCase):
         self.assertLessEqual(len(star_ds), 3)
 
     def test_scaling_dataset_has_four_columns(self):
-        from .....gpuphot.phot.psf import create_star_dataset
+        from gpuphot.phot.psf import create_star_dataset
         image, coords = self._make_star_image(n_stars=5)
         _, _, scaling_ds = create_star_dataset(
             cp.asarray(image), cp.asarray(coords), pxscale=1.0
@@ -86,7 +86,7 @@ class TestCreateStarDataset(unittest.TestCase):
         one pixel.  The value feeds the peak-to-total ratio that gates which stars
         build the PSF model, so it has to track the stored stamp.
         """
-        from .....gpuphot.phot.psf import create_star_dataset
+        from gpuphot.phot.psf import create_star_dataset
 
         pxscale = 0.5
         for fwhm_px in (5.0, 1.2):          # well sampled, then severely undersampled

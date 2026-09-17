@@ -1,0 +1,8 @@
+# A100 GPU power probe sampled during 151.2 MP reduction windows (2026-09-08).
+# Source: benchmarks/results_collected/latency_campaign/sonda_potencia_a100_20260830.csv.
+# Evaluates power envelope dynamics across pipeline execution milestones.
+subset,window_definition,n_samples,median_w,mean_w,max_w,samples_above_290w
+execution_windows,"during 151.2 MP runs (table footer definition)",1338,77.5,92.1,343.7,20
+execution_windows_timestamp_as_start,"window rule robustness check",1296,77.6,90.2,343.7,17
+gpu_util_gt_0,"during active GPU utilization",919,87.5,99.4,343.7,20
+full_probe_span,"includes idle time between runs",4451,61.5,71.1,343.7,20

@@ -1,0 +1,21 @@
+# Pipeline processing regimes and coverage by GPU in production logs (2026-09-08).
+gpu_model,python_ver,n,first_date,last_date,scope
+NVIDIA A100-SXM4-80GB,ALL,1672737,2024-11-30,2026-09-08,gpu_total
+NVIDIA A100-SXM4-80GB,3.8.10,1456504,2024-11-30,2026-03-12,gpu_x_python
+NVIDIA A100-SXM4-80GB,3.12.3,216233,2026-03-12,2026-09-08,gpu_x_python
+NVIDIA L40S,ALL,674919,2024-12-03,2026-09-08,gpu_total
+NVIDIA L40S,3.8.10,580679,2024-12-03,2026-03-12,gpu_x_python
+NVIDIA L40S,3.12.3,94240,2026-03-12,2026-09-08,gpu_x_python
+NVIDIA H100 PCIe,ALL,240214,2024-12-03,2026-08-29,gpu_total
+NVIDIA H100 PCIe,3.8.10,207008,2024-12-03,2026-03-14,gpu_x_python
+NVIDIA H100 PCIe,3.12.3,32388,2026-03-05,2026-08-29,gpu_x_python
+NVIDIA H100 PCIe,3.10.12,818,2026-04-20,2026-04-23,gpu_x_python
+Error retrieving GPU info,ALL,56234,2025-01-16,2026-08-03,gpu_total
+Error retrieving GPU info,3.8.10,52798,2025-01-16,2026-03-12,gpu_x_python
+Error retrieving GPU info,3.12.3,3436,2026-03-13,2026-08-03,gpu_x_python
+No GPUs found,ALL,7810,2025-03-09,2026-05-17,gpu_total
+No GPUs found,3.12.3,7804,2026-03-19,2026-05-17,gpu_x_python
+No GPUs found,3.8.10,6,2025-03-09,2025-11-07,gpu_x_python
+NVIDIA GeForce RTX 3050 Ti Laptop GPU,ALL,7,2024-12-02,2026-04-20,gpu_total
+NVIDIA GeForce RTX 3050 Ti Laptop GPU,3.8.20,5,2024-12-02,2024-12-02,gpu_x_python
+NVIDIA GeForce RTX 3050 Ti Laptop GPU,3.12.3,2,2026-04-20,2026-04-20,gpu_x_python

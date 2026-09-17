@@ -16,7 +16,7 @@ from ...conftest import NVRTC_WORKS
 class TestSPFilter(unittest.TestCase):
 
     def setUp(self):
-        from .....gpuphot.phot.cosmetics import SP_filter
+        from gpuphot.phot.cosmetics import SP_filter
         self.SP_filter = SP_filter
 
     def _smooth_image(self, size=128, value=1000.0):

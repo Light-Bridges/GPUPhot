@@ -74,7 +74,7 @@ def phase_cross_correlation(reference_image, moving_image, *,
     The use of cross-correlation to estimate image translation has a long
     history dating back to at least [2]_. The "phase correlation"
     method (selected by ``normalization="phase"``) was first proposed in [3]_.
-    Publications [1]_ and [2]_ use an unnormalized cross-correlation
+    Publications [1]_, [2]_, and [4]_ use an unnormalized cross-correlation
     (``normalization=None``). Which form of normalization is better is
     application-dependent. For example, the phase correlation method works
     well in registering images under different illumination, but is not very

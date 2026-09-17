@@ -1,0 +1,71 @@
+# Reproducibility across GPUs, measured and reproducible. 2026-09-10.
+# SOURCE: the raw event export of the later campaign, three datacenter cards, rows with a zero point and
+# no exception. 7,131 runs with a zero point over 171 combinations of card, image and configuration; of
+# those, 57 cells (image x configuration) were measured on all three cards at once.
+# RESULT: 55 of 57 identical in zero point AND in source count.
+# The two that differ are NOT nondeterminism. Both are labels that group SEVERAL PHYSICAL EXPOSURES of the
+# same field, so what was measured is a different exposure, not a different answer to the same input. The
+# zp columns show the distinct values behind each label, which is how this can be checked rather than
+# taken on trust.
+# WHY IT REPLACED AN EARLIER FIGURE: the statement it supersedes could not be reproduced from any
+# published file. The latency campaign has no zero-point column, so that figure cannot come from there,
+# and the file that does have one yields different totals. The wording that survives here is weaker in
+# appearance and stronger in fact, because anyone can recompute it.
+image,configuration,n_runs,zp_identical_all_three,sources_identical_all_three,verdict,note,zp_h100,zp_a100,zp_l40s
+QHY411-1_SDSSg_2k,py38_baseline,72,no,no,discrepant,label groups multiple physical exposures,22.4231|22.4733,22.4733,22.4733
+QHY600-3_SDSSi_2k,py38_baseline,96,no,no,discrepant,label groups multiple physical exposures,22.0127|22.0156|22.0259,22.0127,22.0127
+QHY411-1_Lum_bin2,py312_cuml_adaptive,234,yes,yes,identical,,23.1794,23.1794,23.1794
+QHY411-1_Lum_bin2,py312_cuml_always,36,yes,yes,identical,,23.1794,23.1794,23.1794
+QHY411-1_Lum_bin2,py38_baseline,48,yes,yes,identical,,23.1794,23.1794,23.1794
+QHY411-1_Lum_full,py312_cuml_adaptive,234,yes,yes,identical,,24.5578,24.5578,24.5578
+QHY411-1_Lum_full,py312_cuml_always,36,yes,yes,identical,,24.5578,24.5578,24.5578
+QHY411-1_Lum_full,py38_baseline,48,yes,yes,identical,,24.5555,24.5555,24.5555
+QHY411-1_SDSSg_2k,py312_cuml_adaptive,444,yes,yes,identical,label groups multiple physical exposures,22.4233|22.4726,22.4233|22.4726,22.4233|22.4726
+QHY411-1_SDSSg_2k,py312_cuml_always,72,yes,yes,identical,label groups multiple physical exposures,22.4233|22.4726,22.4233|22.4726,22.4233|22.4726
+QHY411-1_SDSSi_bin2,py312_cuml_adaptive,234,yes,yes,identical,,21.0036,21.0036,21.0036
+QHY411-1_SDSSi_bin2,py312_cuml_always,36,yes,yes,identical,,21.0036,21.0036,21.0036
+QHY411-1_SDSSi_bin2,py38_baseline,48,yes,yes,identical,,21.0013,21.0013,21.0013
+QHY411-1_SDSSr_7k,py312_cuml_adaptive,210,yes,yes,identical,,21.7986,21.7986,21.7986
+QHY411-1_SDSSr_7k,py312_cuml_always,36,yes,yes,identical,,21.7986,21.7986,21.7986
+QHY411-1_SDSSr_7k,py38_baseline,99,yes,yes,identical,,21.7994,21.7994,21.7994
+QHY411-3_Lum_131k,py312_cuml_adaptive,217,yes,yes,identical,,25.1677,25.1677,25.1677
+QHY411-3_Lum_131k,py312_cuml_always,60,yes,yes,identical,,25.1677,25.1677,25.1677
+QHY411-3_Lum_131k,py38_baseline,123,yes,yes,identical,,25.1618,25.1618,25.1618
+QHY411-3_Lum_full,py312_cuml_adaptive,232,yes,yes,identical,,25.2253,25.2253,25.2253
+QHY411-3_Lum_full,py312_cuml_always,36,yes,yes,identical,,25.2253,25.2253,25.2253
+QHY411-3_Lum_full,py38_baseline,48,yes,yes,identical,,25.2256,25.2256,25.2256
+QHY411-3_SDSSg_10k,py312_cuml_adaptive,252,yes,yes,identical,,24.5599,24.5599,24.5599
+QHY411-3_SDSSg_10k,py312_cuml_always,39,yes,yes,identical,,24.5599,24.5599,24.5599
+QHY411-3_SDSSg_10k,py38_baseline,48,yes,yes,identical,,24.5596,24.5596,24.5596
+QHY411-3_SDSSr_19k,py312_cuml_adaptive,234,yes,yes,identical,,24.0561,24.0561,24.0561
+QHY411-3_SDSSr_19k,py312_cuml_always,36,yes,yes,identical,,24.0561,24.0561,24.0561
+QHY411-3_SDSSr_19k,py38_baseline,48,yes,yes,identical,,24.0577,24.0577,24.0577
+QHY411-3_SDSSr_full,py312_cuml_adaptive,233,yes,yes,identical,,24.0872,24.0872,24.0872
+QHY411-3_SDSSr_full,py312_cuml_always,36,yes,yes,identical,,24.0872,24.0872,24.0872
+QHY411-3_SDSSr_full,py38_baseline,48,yes,yes,identical,,24.0879,24.0879,24.0879
+QHY600-3_Lum,py312_cuml_adaptive,234,yes,yes,identical,,26.8056,26.8056,26.8056
+QHY600-3_Lum,py312_cuml_always,36,yes,yes,identical,,26.8056,26.8056,26.8056
+QHY600-3_Lum,py38_baseline,48,yes,yes,identical,,26.8056,26.8056,26.8056
+QHY600-3_SDSSi_2k,py312_cuml_adaptive,655,yes,yes,identical,label groups multiple physical exposures,22.0127|22.0156|22.0259,22.0127|22.0156|22.0259,22.0127|22.0156|22.0259
+QHY600-3_SDSSi_2k,py312_cuml_always,108,yes,yes,identical,label groups multiple physical exposures,22.0127|22.0156|22.0259,22.0127|22.0156|22.0259,22.0127|22.0156|22.0259
+QHY600-4_Ha,py312_cuml_adaptive,234,yes,yes,identical,,19.4353,19.4353,19.4353
+QHY600-4_Ha,py312_cuml_always,36,yes,yes,identical,,19.4353,19.4353,19.4353
+QHY600-4_Ha,py38_baseline,48,yes,yes,identical,,19.4353,19.4353,19.4353
+QHY600-4_Lum_2k,py312_cuml_adaptive,234,yes,yes,identical,,23.5036,23.5036,23.5036
+QHY600-4_Lum_2k,py312_cuml_always,36,yes,yes,identical,,23.5036,23.5036,23.5036
+QHY600-4_Lum_2k,py38_baseline,48,yes,yes,identical,,23.5044,23.5044,23.5044
+QHY600-4_SDSSg,py312_cuml_adaptive,234,yes,yes,identical,,22.8707,22.8707,22.8707
+QHY600-4_SDSSg,py312_cuml_always,36,yes,yes,identical,,22.8707,22.8707,22.8707
+QHY600-4_SDSSg,py38_baseline,48,yes,yes,identical,,22.8741,22.8741,22.8741
+QHY600-4_SDSSg_4k,py312_cuml_adaptive,234,yes,yes,identical,,22.8958,22.8958,22.8958
+QHY600-4_SDSSg_4k,py312_cuml_always,36,yes,yes,identical,,22.8958,22.8958,22.8958
+QHY600-4_SDSSg_4k,py38_baseline,48,yes,yes,identical,,22.8943,22.8943,22.8943
+QHY600-4_SDSSi_10k,py312_cuml_adaptive,211,yes,yes,identical,,21.2206,21.2206,21.2206
+QHY600-4_SDSSi_10k,py312_cuml_always,60,yes,yes,identical,,21.2206,21.2206,21.2206
+QHY600-4_SDSSi_10k,py38_baseline,123,yes,yes,identical,,21.2207,21.2207,21.2207
+iKon936_Lum,py312_cuml_adaptive,234,yes,yes,identical,,26.2298,26.2298,26.2298
+iKon936_Lum,py312_cuml_always,36,yes,yes,identical,,26.2298,26.2298,26.2298
+iKon936_Lum,py38_baseline,48,yes,yes,identical,,26.2298,26.2298,26.2298
+iKon936_SDSSg,py312_cuml_adaptive,210,yes,yes,identical,,25.3178,25.3178,25.3178
+iKon936_SDSSg,py312_cuml_always,60,yes,yes,identical,,25.3178,25.3178,25.3178
+iKon936_SDSSg,py38_baseline,123,yes,yes,identical,,25.3178,25.3178,25.3178

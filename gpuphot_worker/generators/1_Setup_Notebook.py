@@ -123,7 +123,7 @@ nb_setup['cells'].append(nbf.v4.new_markdown_cell(
     "### Example `.env` File\n"
     "Below is an example of a `.env` file with all the available environment variables. "
     "You can copy this template and modify it according to your setup.\n\n"
-    "```env\n"
+    "```bash\n"
     "# Library settings\n"
     "GPUPHOT_DEBUG=True  # Enable debug mode for detailed logging\n"
     "GPUPHOT_LOG_LEVEL=DEBUG  # Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)\n"

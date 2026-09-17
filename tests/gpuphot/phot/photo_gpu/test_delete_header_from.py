@@ -8,7 +8,7 @@ class TestDeleteHeaderFrom(unittest.TestCase):
     """
 
     def setUp(self):
-        from .....gpuphot.utils.headers import delete_header_from
+        from gpuphot.utils.headers import delete_header_from
         self.delete_header_from = delete_header_from
 
     def _make_header(self):

@@ -1,0 +1,58 @@
+REGIMEN_lenovo_tttserver_START 2026-08-30 23:45
+-- lenovo_tttserver py312 ronda 0 23:45
+[lenovo_tttserver py312 r0] SEQ pos=1 img1 alloc_pre=RMM t=7.16s filas=279 ZP=25.3178
+[lenovo_tttserver py312 r0] SEQ pos=2 img5 alloc_pre=POOL t=8.97s filas=601 ZP=19.4353
+[lenovo_tttserver py312 r0] SEQ pos=3 img16 alloc_pre=POOL t=15.87s filas=15759 ZP=21.2206
+[lenovo_tttserver py312 r0] SEQ pos=4 img19 alloc_pre=POOL t=28.99s filas=12832 ZP=21.7986
+[lenovo_tttserver py312 r0] SEQ pos=5 img7 alloc_pre=POOL t=10.59s filas=621 ZP=21.0036
+[lenovo_tttserver py312 r0] SEQ pos=6 img10 alloc_pre=POOL t=46.69s filas=15390 ZP=24.0872
+-- lenovo_tttserver py38 ronda 0 23:47
+[lenovo_tttserver py38 r0] SEQ pos=1 img1 alloc_pre=POOL t=7.51s filas=279 ZP=25.3178
+[lenovo_tttserver py38 r0] SEQ pos=2 img5 alloc_pre=POOL t=6.30s filas=601 ZP=19.4353
+[lenovo_tttserver py38 r0] SEQ pos=3 img16 alloc_pre=POOL t=21.57s filas=15759 ZP=21.2207
+[lenovo_tttserver py38 r0] SEQ pos=4 img19 alloc_pre=POOL t=26.27s filas=12832 ZP=21.7994
+[lenovo_tttserver py38 r0] SEQ pos=5 img7 alloc_pre=POOL t=9.35s filas=621 ZP=21.0013
+[lenovo_tttserver py38 r0] SEQ pos=6 img10 alloc_pre=POOL t=62.61s filas=15390 ZP=24.0879
+-- lenovo_tttserver py312 ronda 1 23:50
+[lenovo_tttserver py312 r1] SEQ pos=1 img5 alloc_pre=RMM t=10.06s filas=601 ZP=19.4353
+[lenovo_tttserver py312 r1] SEQ pos=2 img16 alloc_pre=POOL t=16.79s filas=15759 ZP=21.2206
+[lenovo_tttserver py312 r1] SEQ pos=3 img19 alloc_pre=POOL t=32.44s filas=12832 ZP=21.7986
+[lenovo_tttserver py312 r1] SEQ pos=4 img7 alloc_pre=POOL t=10.73s filas=621 ZP=21.0036
+[lenovo_tttserver py312 r1] SEQ pos=5 img10 alloc_pre=POOL t=54.54s filas=15390 ZP=24.0872
+[lenovo_tttserver py312 r1] SEQ pos=6 img1 alloc_pre=POOL t=4.19s filas=279 ZP=25.3178
+-- lenovo_tttserver py38 ronda 1 23:52
+[lenovo_tttserver py38 r1] SEQ pos=1 img5 alloc_pre=POOL t=8.32s filas=601 ZP=19.4353
+[lenovo_tttserver py38 r1] SEQ pos=2 img16 alloc_pre=POOL t=17.40s filas=15759 ZP=21.2207
+[lenovo_tttserver py38 r1] SEQ pos=3 img19 alloc_pre=POOL t=30.58s filas=12832 ZP=21.7994
+[lenovo_tttserver py38 r1] SEQ pos=4 img7 alloc_pre=POOL t=9.65s filas=621 ZP=21.0013
+[lenovo_tttserver py38 r1] SEQ pos=5 img10 alloc_pre=POOL t=43.08s filas=15390 ZP=24.0879
+[lenovo_tttserver py38 r1] SEQ pos=6 img1 alloc_pre=POOL t=4.16s filas=279 ZP=25.3178
+-- lenovo_tttserver py312 ronda 2 23:54
+[lenovo_tttserver py312 r2] SEQ pos=1 img16 alloc_pre=RMM t=21.45s filas=15759 ZP=21.2206
+[lenovo_tttserver py312 r2] SEQ pos=2 img19 alloc_pre=POOL t=29.19s filas=12832 ZP=21.7986
+[lenovo_tttserver py312 r2] SEQ pos=3 img7 alloc_pre=POOL t=10.48s filas=621 ZP=21.0036
+[lenovo_tttserver py312 r2] SEQ pos=4 img10 alloc_pre=POOL t=81.47s filas=15390 ZP=24.0872
+[lenovo_tttserver py312 r2] SEQ pos=5 img1 alloc_pre=POOL t=6.21s filas=279 ZP=25.3178
+[lenovo_tttserver py312 r2] SEQ pos=6 img5 alloc_pre=POOL t=6.79s filas=601 ZP=19.4353
+-- lenovo_tttserver py38 ronda 2 23:57
+[lenovo_tttserver py38 r2] SEQ pos=1 img16 alloc_pre=POOL t=15.77s filas=15759 ZP=21.2207
+[lenovo_tttserver py38 r2] SEQ pos=2 img19 alloc_pre=POOL t=29.87s filas=12832 ZP=21.7994
+[lenovo_tttserver py38 r2] SEQ pos=3 img7 alloc_pre=POOL t=9.02s filas=621 ZP=21.0013
+[lenovo_tttserver py38 r2] SEQ pos=4 img10 alloc_pre=POOL t=47.75s filas=15390 ZP=24.0879
+[lenovo_tttserver py38 r2] SEQ pos=5 img1 alloc_pre=POOL t=3.48s filas=279 ZP=25.3178
+[lenovo_tttserver py38 r2] SEQ pos=6 img5 alloc_pre=POOL t=5.98s filas=601 ZP=19.4353
+-- lenovo_tttserver py312 ronda 3 23:59
+[lenovo_tttserver py312 r3] SEQ pos=1 img19 alloc_pre=RMM t=44.16s filas=12832 ZP=21.7986
+[lenovo_tttserver py312 r3] SEQ pos=2 img7 alloc_pre=POOL t=10.47s filas=621 ZP=21.0036
+[lenovo_tttserver py312 r3] SEQ pos=3 img10 alloc_pre=POOL t=42.76s filas=15390 ZP=24.0872
+[lenovo_tttserver py312 r3] SEQ pos=4 img1 alloc_pre=POOL t=4.98s filas=279 ZP=25.3178
+[lenovo_tttserver py312 r3] SEQ pos=5 img5 alloc_pre=POOL t=6.95s filas=601 ZP=19.4353
+[lenovo_tttserver py312 r3] SEQ pos=6 img16 alloc_pre=POOL t=14.73s filas=15759 ZP=21.2206
+-- lenovo_tttserver py38 ronda 3 00:01
+[lenovo_tttserver py38 r3] SEQ pos=1 img19 alloc_pre=POOL t=27.94s filas=12832 ZP=21.7994
+[lenovo_tttserver py38 r3] SEQ pos=2 img7 alloc_pre=POOL t=9.59s filas=621 ZP=21.0013
+[lenovo_tttserver py38 r3] SEQ pos=3 img10 alloc_pre=POOL t=59.66s filas=15390 ZP=24.0879
+[lenovo_tttserver py38 r3] SEQ pos=4 img1 alloc_pre=POOL t=3.51s filas=279 ZP=25.3178
+[lenovo_tttserver py38 r3] SEQ pos=5 img5 alloc_pre=POOL t=5.92s filas=601 ZP=19.4353
+[lenovo_tttserver py38 r3] SEQ pos=6 img16 alloc_pre=POOL t=15.25s filas=15759 ZP=21.2207
+REGIMEN_lenovo_tttserver_FIN 2026-08-31 00:03

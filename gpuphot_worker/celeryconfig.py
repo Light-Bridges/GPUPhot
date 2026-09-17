@@ -3,18 +3,20 @@
 Celery configuration for the gpuphot_worker service.
 
 This module defines defaults for Celery and supports overriding any
-configuration using environment variables prefixed with "CELERY_".
+configuration using environment variables prefixed with ``CELERY_``.
 
 Environment variables are automatically converted to appropriate Python types:
+
 - "true"/"false" (case-insensitive) -> bool
 - digits -> int
 - digits with one dot -> float
 - comma-separated values -> list of strings
 
 Common configuration keys expected in environment:
-- CELERY_BROKER_URL: URL of the message broker (e.g., amqp://user:pass@host:port).
-- CELERY_RESULT_BACKEND: URL of the result backend (e.g., redis://host:port/db).
-- CELERY_Worker_CONCURRENCY: Number of concurrent worker processes.
+
+- ``CELERY_BROKER_URL``: URL of the message broker (e.g., amqp://user:pass@host:port).
+- ``CELERY_RESULT_BACKEND``: URL of the result backend (e.g., redis://host:port/db).
+- ``CELERY_WORKER_CONCURRENCY``: Number of concurrent worker processes.
 
 This dynamic loading allows flexible deployment in Docker/Kubernetes environments
 without modifying the code.

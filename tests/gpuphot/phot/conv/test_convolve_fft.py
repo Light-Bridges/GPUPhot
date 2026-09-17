@@ -14,7 +14,7 @@ class TestConvolveFft(unittest.TestCase):
 
     def test_identity_kernel(self):
         """Convolution with a delta kernel returns the original image."""
-        from .....gpuphot.phot.conv import convolve_fft
+        from gpuphot.phot.conv import convolve_fft
         image = cp.random.rand(64, 64).astype(cp.float64)
         kernel = cp.zeros((5, 5), dtype=cp.float64)
         kernel[2, 2] = 1.0
@@ -23,7 +23,7 @@ class TestConvolveFft(unittest.TestCase):
 
     def test_output_shape_matches_input(self):
         """Output shape equals input shape when do_pad=True."""
-        from .....gpuphot.phot.conv import convolve_fft
+        from gpuphot.phot.conv import convolve_fft
         image = cp.random.rand(100, 80).astype(cp.float64)
         kernel = cp.ones((7, 7), dtype=cp.float64) / 49.0
         result = convolve_fft(image, kernel)
@@ -31,14 +31,14 @@ class TestConvolveFft(unittest.TestCase):
 
     def test_uniform_kernel_gives_mean(self):
         """Convolution with uniform kernel approximates local mean."""
-        from .....gpuphot.phot.conv import convolve_fft
+        from gpuphot.phot.conv import convolve_fft
         image = cp.ones((64, 64), dtype=cp.float64) * 5.0
         kernel = cp.ones((3, 3), dtype=cp.float64) / 9.0
         result = convolve_fft(image, kernel)
         np.testing.assert_allclose(result.get(), 5.0, atol=1e-10)
 
     def test_returns_cupy_array(self):
-        from .....gpuphot.phot.conv import convolve_fft
+        from gpuphot.phot.conv import convolve_fft
         image = cp.random.rand(32, 32).astype(cp.float64)
         kernel = cp.ones((3, 3), dtype=cp.float64) / 9.0
         result = convolve_fft(image, kernel)
@@ -46,7 +46,7 @@ class TestConvolveFft(unittest.TestCase):
 
     def test_no_pad(self):
         """do_pad=False still produces output (different shape possible)."""
-        from .....gpuphot.phot.conv import convolve_fft
+        from gpuphot.phot.conv import convolve_fft
         image = cp.random.rand(64, 64).astype(cp.float64)
         kernel = cp.ones((5, 5), dtype=cp.float64) / 25.0
         result = convolve_fft(image, kernel, do_pad=False)

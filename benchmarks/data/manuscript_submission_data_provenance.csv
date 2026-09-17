@@ -1,0 +1,24 @@
+# Provenance and source mapping for manuscript tables and figures (2026-09-11).
+# Maps each published table and figure to its canonical generator script and input CSV data.
+type,label,data_source,campaign,dates,stack,fix_status,postfix_remeasurement
+table,tab:datasets,image_identity_from_header.csv + FITS headers,identity,headers of 22 images,na,not_applicable,not applicable (instrument identity)
+table,tab:gpu_hardware,handwritten (specifications),na,na,na,not_applicable,not applicable
+table,tab:software_versions,handwritten (docker image versions),na,na,na,not_applicable,not applicable
+table,tab:latency_py312,benchmark_latency.csv,august,2026-08-20 to 08-30,py3.12+adaptive,pre_fix,"PARTIAL: post-fix data exists for H100/A100/L40S (19/19) and 3060 (11/19); missing 3090 (2/19), 3050 Ti and Orin Super (0)"
+table,tab:latency_py38,benchmark_latency.csv,august,2026-08-20 to 08-30,py3.8,pre_fix,"not applicable: py3.8 does not import cuML and is unaffected by allocator hijacking; figures unchanged post-fix"
+table,tab:speedup_local_vizier,benchmark_latency_catalog_backends.csv,april,2026-04-10 to 06-02,py3.8 and py3.12,pre_fix,"NO: sole campaign comparing Vizier and local catalog under identical codebase; remeasuring requires querying Vizier across full matrix"
+table,tab:vram_merged,profiler_memory_raw.csv,august,2026-08-23 (nsys),py3.8 and py3.12,pre_fix,"PARTIAL by design: table specifically focuses on PRE-fix gap; post-fix covers 2 of 5 sizes (memory_allocator_fix.csv)"
+table,tab:concurrency,profiler_memory_raw.csv,august,2026-08-23 (nsys),py3.8 and py3.12,pre_fix,"same as tab:vram_merged; arithmetic derived from peak memory"
+table,tab:cuml_ablation,cuml_ablation.csv,september,2026-09-07,py3.12,post_fix,already post-fix
+table,tab:cuml_thresholds,handwritten; derived from cuml_crossover_synthetic.csv,april,commit 2026-04-16,na,not_applicable,"alert C3: two of six MAX values fall outside measured sweep range"
+table,tab:cpu_baseline,cpu_baseline_a100.csv + benchmark_latency.csv,august,"CPU 2026-08-29; GPUPhot 08-20/30",py3.12,pre_fix,"GPUPhot column is PRE-fix; sep and Photutils run on CPU and are allocator-independent"
+table,tab:nvtx_detection,detection_stage_vs_cpu_tools.csv,september,2026-09-07,py3.12,post_fix,already post-fix
+table,tab:stage_breakdown,stage_breakdown.csv,september,2026-09-07,py3.12,post_fix,already post-fix
+table,tab:tool_comparison,qualitative; not sourced from CSV,na,na,na,not_applicable,not applicable
+figure,fig1_architecture,GPUPhot.drawio.xml,na,na,na,not_applicable,not applicable
+figure,fig2_latency_vs_size,benchmark_latency.csv,august,2026-08-20 to 08-30,py3.12+adaptive,pre_fix,same limitation as tab:latency_py312
+figure,fig3_memory_comparison,profiler_memory_raw.csv,august,2026-08-23 (nsys),py3.8 and py3.12,pre_fix,same limitation as tab:vram_merged
+figure,fig4_heatmap,benchmark_latency.csv + cell_status.csv,august,2026-08-20 to 08-30,py3.12+adaptive,pre_fix,same limitation as tab:latency_py312
+figure,fig5_cuml_crossover,cuml_crossover_synthetic.csv,april,commit 2026-04-16,na (synthetic microbench),not_applicable,"unmodified: baseline crossover evaluation; RTX 3050 Ti evaluated up to N=30k vs 200k on remaining five"
+figure,fig7_py38_vs_adaptive,benchmark_latency_fig78_paired.csv,post-fix,2026-08-31 to 09-02,py3.8 vs py3.12+adaptive,post_fix,"already post-fix (52 datacenter cells)"
+figure,fig8_always_vs_adaptive,benchmark_latency_fig8_paired.csv,post-fix,2026-08-31 to 09-03,py3.12 forced vs adaptive,post_fix,"already post-fix (56 datacenter cells)"

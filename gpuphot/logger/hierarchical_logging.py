@@ -286,7 +286,8 @@ def hierarchical_debug(logger_name):
     pid = os.getpid()
 
     def decorator(func):
-        @functools.wraps(func)
+        assigned = tuple(a for a in functools.WRAPPER_ASSIGNMENTS if a != '__type_params__' or isinstance(getattr(func, '__type_params__', None), tuple))
+        @functools.wraps(func, assigned=assigned)
         def wrapper(*args, **kwargs):
             thread_id = threading.get_ident()
             indent_levels = logger.handlers[0].formatter.indent_levels

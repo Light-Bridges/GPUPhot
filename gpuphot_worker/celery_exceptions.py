@@ -3,6 +3,7 @@
 Custom Celery exceptions and task base classes used by gpuphot_worker.
 
 This module provides:
+
 - SerializableTaskError: an exception type that can be converted to a dict
   for storing structured error metadata in Celery task states.
 - BaseTaskWithFailureHandling: a Celery Task base class that intercepts

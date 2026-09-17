@@ -1,0 +1,5 @@
+# Production worker process model from container inspection (2026-09-08).
+gpu_model,host,celery_app,c_concurrency,pool,soft_time_limit_s,time_limit_s,max_overlap_per_container,max_overlap_per_card_obs,long_lived_evidence
+NVIDIA A100-SXM4-80GB,lenovo,ttt,4,prefork,1800,2000,4,6,N=1:524430 ev; 1 worker 293 ev/11d; N=1..4=78% eventos
+NVIDIA L40S,hp3,ttt,2,prefork,1800,2000,2,6,N=1:368640 ev; 1 worker 392 ev/11d
+NVIDIA H100 PCIe,azken,ttt,4,prefork,1800,2000,4,n/d,N=1:86177 ev; 1 worker 83 ev/43h

@@ -9,6 +9,8 @@ This document provides a detailed technical guide for developers who want to int
 
 `GPUPhot` offers an extension mechanism to replace its built-in Vizier client with a custom search function. This allows users to query private data sources, such as a local PostgreSQL database, an internal REST API, or any other astronomical data source, as long as the interface contract is respected.
 
+**Why you would do this.** By default, `GPUPhot` queries the shared, remote VizieR service for each crossmatch. This is convenient and requires no extra infrastructure, but the query travels over the network and, at high source density, its latency starts to dominate the total processing time. Running the same benchmark images against a local PostgreSQL/Q3C replica of the reference catalog instead of VizieR measured a median end-to-end speedup of 1.14x, ranging from about 1.0x on sparse fields (where the crossmatch is not the bottleneck) up to 1.76x on the densest fields, where the catalog query is a larger share of the total time. For an observatory running its pipeline continuously, or in a network-constrained environment, that adds up. Section 3 shows a full example of the PostgreSQL/Q3C setup that produced those numbers, and Section 3.3 points to the actual reference implementation used to deploy `GPUPhot` in this configuration.
+
 The integration is controlled by two key parameters that can be passed to the `process_image` method:
 
 - `custom_vizier_search_func` (callable): A Python function that implements the search logic.
@@ -249,6 +251,12 @@ def custom_vizier_catalog(
     return df
 ```
 
+### 3.3. Reference Implementation Used in This Repository
+
+The example above is illustrative. The repository also ships a working, deployed implementation of this same interface, used to produce the local-catalog benchmark numbers quoted in Section 1: [`profiling_scripts/custom_vizier_search.py`](profiling_scripts/custom_vizier_search.py).
+
+**Read it as a worked example of what to build, not as a service you can connect to.** Its `CATALOG_HOST`, `CATALOG_PORT`, `CATALOG_DB`, `CATALOG_USER` and `CATALOG_PASSWORD` constants are the values of the authors' own observatory deployment: a read-only replica reachable only from the private network of the telescope facility. Point them at your own PostgreSQL/Q3C instance (or override `GPUPHOT_CATALOG_HOST`/`GPUPHOT_CATALOG_PORT` via environment variables, as the script already supports) before using it. It implements four catalogs (`_CATALOG_CONFIG`): PanSTARRS DR1 and Gaia DR3, as in the connection-pool example above, plus GSC 2.4.2 and SkyMapper — the same four listed in Section 4 below — and is the file actually invoked to produce the results in `tab:speedup_local_vizier` of the companion manuscript.
+
 ## 4. Canonical Column Names and Supported Catalogs
 
 To ensure compatibility, the `DataFrame` returned by the custom function must use the following column names (where applicable).
@@ -267,15 +275,17 @@ To ensure compatibility, the `DataFrame` returned by the custom function must us
 Finally, to use your custom function, it's good practice to group the advanced parameters into a dictionary and pass them to `process_image`. This makes the call cleaner and easier to manage.
 
 ```python
+from astropy.io import fits
 from gpuphot.image_processor import create_processor
-from gpuphot_worker.utils import open_image_file
 from .custom_search_logic import custom_vizier_catalog  # Import your function
 
 # 1. Create the processor
 processor = create_processor('my_instrument')
 
-# 2. Load the image
-imdata, imheader = open_image_file('path/to/image.fits')
+# 2. Load the image using Astropy
+with fits.open('path/to/image.fits') as hdul:
+    imdata = hdul[0].data
+    imheader = hdul[0].header
 
 # 3. Define the custom catalog parameters in a dictionary
 custom_catalog_kwargs = {

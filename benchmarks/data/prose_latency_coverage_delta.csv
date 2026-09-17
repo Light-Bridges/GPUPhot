@@ -1,0 +1,18 @@
+# Cell coverage comparison: cells gained or dropped per column vs August campaign.
+# Tracks cell completeness across remeasured hardware arms.
+arm,gpu,epoch,august_cells,current_cells,dropped,gained
+py38_baseline,H100 (80 GB),postfix,19,19,,
+py38_baseline,A100 (80 GB),postfix,19,19,,
+py38_baseline,L40S (48 GB),postfix,19,19,,
+py38_baseline,RTX 3090 (24 GB),postfix,13,13,,
+py38_baseline,RTX 3060 (12 GB),postfix,13,13,,
+py38_baseline,RTX 3050 Ti (4 GB),postfix,2,2,,
+py38_baseline,Orin Super (8 GB),campaign,2,2,,
+py38_baseline,Orin Nano (8 GB),campaign,2,2,,
+py312_cuml_adaptive,H100 (80 GB),postfix,19,19,,
+py312_cuml_adaptive,A100 (80 GB),postfix,19,19,,
+py312_cuml_adaptive,L40S (48 GB),postfix,19,19,,
+py312_cuml_adaptive,RTX 3090 (24 GB),postfix,13,13,,
+py312_cuml_adaptive,RTX 3060 (12 GB),postfix,13,13,,
+py312_cuml_adaptive,RTX 3050 Ti (4 GB),postfix,2,2,,
+py312_cuml_adaptive,Orin Super (8 GB),campaign,2,2,,

@@ -65,16 +65,55 @@ def _super_safe_rmtree(cls, name, ignore_errors=False, onerror=None):
 if hasattr(tempfile.TemporaryDirectory, '_rmtree'):
     tempfile.TemporaryDirectory._rmtree = MethodType(_super_safe_rmtree, tempfile.TemporaryDirectory)
 
+
+def _auto_pin_blas_kernel():
+    """Pin OPENBLAS_CORETYPE from the CPU's capabilities when nobody has.
+
+    OpenBLAS picks its kernel from the host microarchitecture and the kernels
+    round differently, which moves the CPU star clustering between local optima
+    and shifts the zero point across machines (0.0053 mag measured).  The rule
+    below is the measured equivalence group: AVX-512 hosts run SkylakeX, AVX2
+    hosts run Haswell — A/B-verified to produce identical zero points; the only
+    divergent kernel observed was Cooperlake, which this override avoids.
+
+    OpenBLAS reads the variable when numpy first loads it, so this only works
+    if gpuphot is imported before numpy; otherwise it backs off and the runtime
+    warning in gpuphot.phot.psf tells the user to export it themselves.  An
+    explicitly set value (compose, .env, shell) always wins — this never
+    overwrites.
+    """
+    import sys
+    try:
+        if os.environ.get("OPENBLAS_CORETYPE", "").strip():
+            return  # explicit configuration wins
+        if "numpy" in sys.modules:
+            return  # too late: OpenBLAS already picked its kernel
+        if os.uname().machine != "x86_64":
+            return  # ARM never showed cross-machine divergence; leave it be
+        with open("/proc/cpuinfo") as fh:
+            flags = fh.read()
+        if "avx512f" in flags:
+            os.environ["OPENBLAS_CORETYPE"] = "SkylakeX"
+        elif "avx2" in flags:
+            os.environ["OPENBLAS_CORETYPE"] = "Haswell"
+    except Exception:
+        pass  # never break import over an optimization
+
+
+_auto_pin_blas_kernel()
+
 # Optional: cupy float64 patch is provided in gpuphot.patch_cupy
 # from . import patch_cupy
 
-# Import commonly used subpackages (deferred heavy initialization)
+# Import commonly used subpackages and classes
 from . import image_processor
 from . import instrument_config_parser
 from . import logger
 from . import phot
 from . import stats
 from . import utils
+from .image_processor import ImageProcessor, create_processor
+from .instrument_config_parser import InstrumentConfigParser
 
 # GPU configuration hints are intentionally commented out to avoid import-time side-effects
 # gpu_id = os.environ.get('GPUPHOT_GPU_ID', '0')
@@ -89,4 +128,14 @@ from . import utils
 
 __version__ = '0.1.0'
 
-__all__ = ['logger', 'phot', 'stats', 'utils', 'instrument_config_parser', 'image_processor']
+__all__ = [
+    'logger',
+    'phot',
+    'stats',
+    'utils',
+    'instrument_config_parser',
+    'image_processor',
+    'ImageProcessor',
+    'create_processor',
+    'InstrumentConfigParser',
+]

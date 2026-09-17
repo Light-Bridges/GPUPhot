@@ -1,0 +1,26 @@
+# "The hosts are shared machines": a dated, concrete case rather than an assertion. 2026-09-11. Read-only.
+# CONTEXT: an acceptance block was about to be measured on this host. The GPU was idle and our own
+# production worker was stopped, which is what "the machine is free" usually means. But the HOST was
+# saturated by other users' jobs, one of them taking more than five cores, and the stack about to be
+# measured runs its clustering and its eigendecomposition on the CPU. The measurement was NOT taken.
+# WHY LOAD ALONE IS NOT COMPARABLE BETWEEN MACHINES: this host has 72 hardware threads, so a raw load of
+# 8 is 0.11 per core here and saturation on a 16-thread machine. Thresholds must be per core. The one
+# calibrated point available: a different host degraded this stack by 31-41 % at 1.67 per core.
+# PRIVACY: the third-party containers carried identifiable user names. They are anonymised here on
+# purpose, since this file is published; the evidential value, that the load was not ours, does not
+# depend on who launched it.
+observation,value,unit,note
+timestamp_utc,2026-09-11 11:07,UTC,"direct reading from /proc/loadavg and ps on host"
+load1,35.95,-,"rising trend: load5=34.15, load15=29.12"
+load5,34.15,-,""
+load15,29.12,-,""
+host_nproc,72,threads,"absolute threshold of 8 (=0.11/core) would have corresponded to near-idle state"
+load_per_core,0.499,-,"35.95/72"
+gpu0_memory_used,426,MiB,"GPU-0 idle: 0% utilization, 37 C, 1 process"
+worker0_production,stopped,-,"pipeline production was stopped; host load is entirely external"
+top_cpu_1,561,%CPU,"astarithmetic (GNU Astronomy Utilities) = ~5.6 cores, external user job"
+top_cpu_2,86.4,%CPU,"python"
+top_cpu_3,72.4,%CPU,"zip"
+top_cpu_4,49.5,%CPU,"celery"
+external_containers,9,count,"3 distinct user jupyterlab instances, 2 sandbox containers, 1 photometry lab, 1 ttt_lab, dto-lab, dto-dev"
+decision,do_not_measure,-,"py3.8 arm is CPU-bound (clustering and PCA on CPU); would yield contaminated benchmark block"

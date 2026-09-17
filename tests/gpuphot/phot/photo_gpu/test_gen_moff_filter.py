@@ -11,7 +11,7 @@ except ImportError:
 class TestGenMoffFilter(unittest.TestCase):
 
     def setUp(self):
-        from .....gpuphot.phot.photo_gpu import gen_moff_filter
+        from gpuphot.phot.photo_gpu import gen_moff_filter
         self.gen_moff_filter = gen_moff_filter
 
     def test_returns_tuple_of_two(self):

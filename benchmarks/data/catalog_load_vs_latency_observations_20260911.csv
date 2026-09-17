@@ -1,0 +1,15 @@
+# Simultaneous readings of measurement time, measuring-host telemetry and CATALOGUE-SERVER load, 2026-09-11.
+# WHY IT MATTERS: sporadic spikes of about one repetition in six, 25 % or more above the block median,
+# moved nothing in the telemetry of the host doing the measuring: load, GPU temperature, power draw and
+# device memory were identical inside and outside the spikes to two decimal places. The natural reading
+# was that the factor is invisible to instruments. The explanation turned out to be different: the wrong
+# machine was being instrumented. Every benchmark host queries a single shared catalogue server, so if
+# that server congests, a measurement lengthens while nothing changes on the host running it.
+# WHAT THESE TWO ROWS ALLOW: the GPU was idle, cool and at its normal power limit, and the witness image
+# still took more than twice its clean value. This RULES OUT that the mechanism requires the GPU to be
+# busy. The catalogue load at those moments was ordinary for that server, not elevated.
+# HONEST LIMIT: two observations, not a curve. They establish that the mechanism is possible and where to
+# look; they do NOT quantify how much of the historical variance it explains.
+observation,timestamp_utc,execution_time_s,n_objects,host_load1,host_nproc,host_load_per_core,gpu_mem_used_MiB,gpu_temp_c,gpu_power_limit_w,gpu_power_draw_w,cat_load1,cat_nproc,cat_load_per_core,clean_reference_s,ratio_vs_clean
+smoke_test,2026-09-11 ~12:28 UTC (immediately prior to soak run),58.394,15390,16.28,32,0.509,4,42,220.00,54.14,26.31,28,0.940,24.18-28.33,~2.1-2.4x
+relaunch_verification,2026-09-11 ~12:45 UTC (repetition 1 of relaunched soak),66.307,15390,16.80,32,0.525,4,42,220.00,,23.18,28,0.828,24.18-28.33,~2.3-2.7x

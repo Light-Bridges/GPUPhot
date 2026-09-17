@@ -16,7 +16,7 @@ from ...conftest import NVRTC_WORKS
 class TestCovNan(unittest.TestCase):
 
     def setUp(self):
-        from .....gpuphot.phot.photo_gpu import cov_nan
+        from gpuphot.phot.photo_gpu import cov_nan
         self.cov_nan = cov_nan
 
     def _uniform_image(self, size=100, value=500.0):

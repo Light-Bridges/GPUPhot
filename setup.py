@@ -32,9 +32,18 @@ install_requires = [
     'scipy>=1.9',
 ]
 
-# Optional dependency groups installed via: pip install gpuphot[dev]
-# Note: distributed worker dependencies (Celery, Redis, etc.) are installed
-# inside Docker containers via requirements-worker.txt, not as pip extras.
+# Optional dependency groups:
+# - dev: installed via `pip install gpuphot[dev]` for testing and docs.
+# - worker: installed via `pip install -e .[worker]` for running the distributed
+#   Celery/Redis/PostgreSQL orchestration layer locally.
+#
+# Architectural separation:
+# The core library 'gpuphot' is strictly decoupled from the distributed
+# infrastructure layer. 'gpuphot_worker' provides Celery tasks, database persistence,
+# and cluster orchestration, running primarily via Docker containers with
+# requirements-worker.txt. 'gpuphot_worker' is excluded from the core PyPI wheel
+# so that `pip install gpuphot` installs strictly the scientific library without
+# undeclared backend dependencies.
 extras_require = {
     'dev': [
         'pytest',
@@ -44,6 +53,16 @@ extras_require = {
         'sphinx-tippy',
         'nbsphinx',
     ],
+    'worker': [
+        'celery>=5.2',
+        'redis>=4.5',
+        'flower>=2.0',
+        'pytz',
+        'scikit-image>=0.19',
+        'SQLAlchemy>=2.0',
+        'psycopg2-binary>=2.9',
+        'celery-redbeat>=2.0',
+    ],
 }
 
 setup(
@@ -51,7 +70,8 @@ setup(
     version=version,
     packages=find_packages(exclude=['tests', 'tests.*', 'dev', 'dev.*',
                                     'benchmarks', 'benchmarks.*',
-                                    'profiling_scripts', 'profiling_scripts.*']),
+                                    'profiling_scripts', 'profiling_scripts.*',
+                                    'gpuphot_worker', 'gpuphot_worker.*']),
     install_requires=install_requires,
     extras_require=extras_require,
     description='A GPU-accelerated library for astronomical photometry and astrometry',
@@ -64,11 +84,14 @@ setup(
         'Documentation': 'https://gpuphot.readthedocs.io',
         'Bug Tracker': 'https://github.com/Light-Bridges/GPUPhot/issues',
     },
+    license='MIT',
+    package_data={
+        'gpuphot.instrument_configs': ['*.json', '*.md'],
+    },
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Astronomy',
-        'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',

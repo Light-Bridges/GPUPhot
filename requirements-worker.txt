@@ -7,4 +7,4 @@ SQLAlchemy
 psycopg2-binary
 celery-redbeat
 gevent
-nvtx
+nvtx==0.2.10          # 0.2.11+ pyproject.toml breaks build on Python 3.8 with modern setuptools

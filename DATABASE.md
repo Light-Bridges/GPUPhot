@@ -35,7 +35,7 @@ All database functions read the following variables from the environment
 | Variable | Default | Description |
 |---|---|---|
 | `POSTGRES_HOST` | `postgres` | Hostname of the PostgreSQL service |
-| `POSTGRES_PORT` | `5432` | Port |
+| `POSTGRES_PORT` | `5432` | Port used to connect. Inside `docker-compose.yml`, the worker/beat containers get this hardcoded to `5432` (the port `postgres` always listens on within the compose network); it only comes from `.env` when these functions run outside Docker Compose. See `POSTGRES_HOST_PORT` in `DOCKER.md` for the separate, host-side exposed port. |
 | `POSTGRES_DB` | `GPUPhotDB` | Database name |
 | `POSTGRES_USER` | `admin` | Write user (used by workers for inserts) |
 | `POSTGRES_PASSWORD` | *(set in .env)* | Write user password |

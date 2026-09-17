@@ -57,20 +57,20 @@ class TestGetZeropoint(unittest.TestCase):
         return df_catalog, df_sources, exptime
 
     def test_returns_dict(self):
-        from .....gpuphot.utils.astro import get_zeropoint
+        from gpuphot.utils.astro import get_zeropoint
         df_cat, df_src, exptime = self._make_data()
         result = get_zeropoint(df_cat, df_src, exptime)
         self.assertIsInstance(result, dict)
 
     def test_dict_has_required_keys(self):
-        from .....gpuphot.utils.astro import get_zeropoint
+        from gpuphot.utils.astro import get_zeropoint
         df_cat, df_src, exptime = self._make_data()
         result = get_zeropoint(df_cat, df_src, exptime)
         for key in ['ZP', 'EZP', 'CATNSTAR', 'ZPMINMAG', 'ZPMAXMAG', 'BVMIN', 'BVMAX']:
             self.assertIn(key, result, f"Missing key: {key}")
 
     def test_recovers_known_zeropoint(self):
-        from .....gpuphot.utils.astro import get_zeropoint
+        from gpuphot.utils.astro import get_zeropoint
         zp_true = 25.0
         df_cat, df_src, exptime = self._make_data(n_stars=50, zp_true=zp_true)
         result = get_zeropoint(df_cat, df_src, exptime, dist_thres_px=100,
@@ -79,7 +79,7 @@ class TestGetZeropoint(unittest.TestCase):
             self.assertAlmostEqual(result['ZP'], zp_true, delta=0.5)
 
     def test_too_few_matches_returns_zero_zp(self):
-        from .....gpuphot.utils.astro import get_zeropoint
+        from gpuphot.utils.astro import get_zeropoint
         # Sources and catalog at completely different positions -> no matches
         df_cat = pd.DataFrame({
             'RA': [100.0, 101.0],
@@ -100,18 +100,43 @@ class TestGetZeropoint(unittest.TestCase):
         self.assertEqual(result['CATNSTAR'], 0)
 
     def test_catnstar_is_nonnegative(self):
-        from .....gpuphot.utils.astro import get_zeropoint
+        from gpuphot.utils.astro import get_zeropoint
         df_cat, df_src, exptime = self._make_data()
         result = get_zeropoint(df_cat, df_src, exptime)
         self.assertGreaterEqual(result['CATNSTAR'], 0)
 
-    def test_bv_range_from_solar_filter(self):
-        from .....gpuphot.utils.astro import get_zeropoint
-        df_cat, df_src, exptime = self._make_data()
-        solar_filter = 0.4
-        result = get_zeropoint(df_cat, df_src, exptime, solar_filter=solar_filter)
-        self.assertAlmostEqual(result['BVMIN'], 0.65 - solar_filter / 2, places=2)
-        self.assertAlmostEqual(result['BVMAX'], 0.65 + solar_filter / 2, places=2)
+    def test_bv_range_matches_the_colour_cut_actually_applied(self):
+        """BVMIN/BVMAX must describe the band the SOLAR cut really keeps.
+
+        get_zeropoint filters on |SOLAR| < solar_filter, where SOLAR is
+        (B-V) - 0.65, so the retained band is 0.65 +/- solar_filter.  Asserting
+        against that band rather than against the header expression keeps this
+        test from simply mirroring the implementation: it fails if the reported
+        range and the applied cut ever drift apart again.
+        """
+        from gpuphot.utils.astro import get_zeropoint
+
+        solar_filter = 0.6
+        solar_bv_sun = 0.65
+
+        # Stars straddling the cut: the first five pass, the last two do not.
+        solar = np.array([-0.55, -0.30, 0.0, 0.30, 0.55, -0.80, 0.80])
+        df_cat, df_src, exptime = self._make_data(n_stars=len(solar))
+        df_cat['SOLAR'] = solar
+
+        result = get_zeropoint(df_cat, df_src, exptime, solar_filter=solar_filter,
+                               dist_thres_px=100, min_snr=10, max_snr=500)
+
+        kept_bv = solar_bv_sun + solar[np.abs(solar) < solar_filter]
+        rejected_bv = solar_bv_sun + solar[np.abs(solar) >= solar_filter]
+
+        # Every calibrator that survived the cut must lie inside the reported band.
+        self.assertLessEqual(result['BVMIN'], kept_bv.min())
+        self.assertGreaterEqual(result['BVMAX'], kept_bv.max())
+
+        # And the band must not advertise stars the cut threw away.
+        self.assertGreater(result['BVMIN'], rejected_bv.min())
+        self.assertLess(result['BVMAX'], rejected_bv.max())
 
 
 if __name__ == '__main__':

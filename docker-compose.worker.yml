@@ -25,6 +25,14 @@ services:
       GPU_ID: ${GPU_ID:-0}
       INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
       IMAGE_BASE_PATH: /data/images
+      # BLAS kernel pinned so remote workers agree with the master's hosts: OpenBLAS
+      # picks it from the host microarchitecture and the kernels round differently,
+      # which moves the CPU clustering into another local optimum and shifts the zero
+      # point (measured 0.0053 mag between Cooperlake and Zen/SkylakeX on one frame).
+      # See docker-compose.yml for the full note.  Override per host in .env.
+      # CAUTION: SkylakeX needs AVX-512; hosts without it (ttt1) die with a
+      # silent SIGILL and MUST set OPENBLAS_CORETYPE=Haswell in .env.
+      OPENBLAS_CORETYPE: ${OPENBLAS_CORETYPE:-SkylakeX}
       # -----------------------------------------------------------------------------------------
       # LEGATE / CUPYNUMERIC MEMORY CONFIGURATION
       # -----------------------------------------------------------------------------------------

@@ -26,7 +26,7 @@ if [ -z "$GPU_ID" ]; then
 fi
 export CUDA_VISIBLE_DEVICES=$GPU_ID
 
-# Determinar la ruta absoluta del directorio donde se encuentra este script
+# Resolve the absolute path of the directory holding this script
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 
 # Detección de la ruta de nsys

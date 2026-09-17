@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest import TestCase
 
-from .....gpuphot.logger.hierarchical_logging import setup_logger
+from gpuphot.logger.hierarchical_logging import setup_logger
 
 # from tensorflow.python.keras.models import load_model
 

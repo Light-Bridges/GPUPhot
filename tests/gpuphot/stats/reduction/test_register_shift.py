@@ -18,7 +18,7 @@ from ...conftest import NVRTC_WORKS
 class TestRegisterShift(unittest.TestCase):
 
     def test_identical_frames_preserved(self):
-        from .....gpuphot.stats.reduction import register_shift
+        from gpuphot.stats.reduction import register_shift
         rng = np.random.default_rng(42)
         frame = rng.normal(1000, 50, (256, 256)).astype(np.float32)
         stack = cp.asarray(np.stack([frame, frame, frame]))
@@ -26,7 +26,7 @@ class TestRegisterShift(unittest.TestCase):
         self.assertEqual(result.shape, stack.shape)
 
     def test_output_shape_matches_input(self):
-        from .....gpuphot.stats.reduction import register_shift
+        from gpuphot.stats.reduction import register_shift
         rng = np.random.default_rng(42)
         data = rng.normal(500, 30, (3, 128, 128)).astype(np.float32)
         stack = cp.asarray(data)

@@ -18,34 +18,34 @@ from ...conftest import NVRTC_WORKS
 class TestStackSigmaclip(unittest.TestCase):
 
     def test_less_than_3_images_returns_none_std(self):
-        from .....gpuphot.stats.reduction import stack_sigmaclip
+        from gpuphot.stats.reduction import stack_sigmaclip
         data = cp.ones((2, 64, 64), dtype=cp.float32) * 100.0
         avg, std = stack_sigmaclip(data)
         self.assertIsNone(std)
 
     def test_output_shape(self):
-        from .....gpuphot.stats.reduction import stack_sigmaclip
+        from gpuphot.stats.reduction import stack_sigmaclip
         data = cp.ones((5, 32, 32), dtype=cp.float32)
         avg, std = stack_sigmaclip(data)
         self.assertEqual(avg.shape, (32, 32))
         self.assertEqual(std.shape, (32, 32))
 
     def test_uniform_stack_low_std(self):
-        from .....gpuphot.stats.reduction import stack_sigmaclip
+        from gpuphot.stats.reduction import stack_sigmaclip
         data = cp.ones((5, 32, 32), dtype=cp.float32) * 500.0
         avg, std = stack_sigmaclip(data)
         np.testing.assert_allclose(avg.get(), 500.0, atol=1.0)
         np.testing.assert_allclose(std.get(), 0.0, atol=1.0)
 
     def test_returns_cupy_arrays(self):
-        from .....gpuphot.stats.reduction import stack_sigmaclip
+        from gpuphot.stats.reduction import stack_sigmaclip
         data = cp.ones((4, 16, 16), dtype=cp.float32)
         avg, std = stack_sigmaclip(data)
         self.assertIsInstance(avg, cp.ndarray)
         self.assertIsInstance(std, cp.ndarray)
 
     def test_clips_outliers(self):
-        from .....gpuphot.stats.reduction import stack_sigmaclip
+        from gpuphot.stats.reduction import stack_sigmaclip
         data = cp.ones((10, 32, 32), dtype=cp.float32) * 100.0
         # Add an extreme outlier in one frame
         data[0, :, :] = 100000.0

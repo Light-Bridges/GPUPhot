@@ -18,7 +18,7 @@ from ...conftest import NVRTC_WORKS
 class TestGetLocalBackgroundFFT(unittest.TestCase):
 
     def setUp(self):
-        from .....gpuphot.phot.background import get_local_background_fft
+        from gpuphot.phot.background import get_local_background_fft
         self.get_local_background_fft = get_local_background_fft
 
     def _make_image(self, size=512, bg=1000.0, noise_std=10.0, seed=42):

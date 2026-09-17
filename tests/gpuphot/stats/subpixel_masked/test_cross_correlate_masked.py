@@ -13,14 +13,14 @@ import numpy as np
 class TestCrossCorrelateMasked(unittest.TestCase):
 
     def test_invalid_mode_raises(self):
-        from .....gpuphot.stats.subpixel_masked import cross_correlate_masked
+        from gpuphot.stats.subpixel_masked import cross_correlate_masked
         arr = cp.ones((16, 16), dtype=cp.float32)
         mask = cp.ones((16, 16), dtype=bool)
         with self.assertRaises(ValueError):
             cross_correlate_masked(arr, arr, mask, mask, mode='invalid')
 
     def test_identical_arrays_high_correlation(self):
-        from .....gpuphot.stats.subpixel_masked import cross_correlate_masked
+        from gpuphot.stats.subpixel_masked import cross_correlate_masked
         arr = cp.random.rand(32, 32).astype(cp.float32)
         mask = cp.ones((32, 32), dtype=bool)
         result = cross_correlate_masked(arr, arr, mask, mask, mode='full')
@@ -28,7 +28,7 @@ class TestCrossCorrelateMasked(unittest.TestCase):
         self.assertGreater(max_corr, 0.5)
 
     def test_output_shape_full_mode(self):
-        from .....gpuphot.stats.subpixel_masked import cross_correlate_masked
+        from gpuphot.stats.subpixel_masked import cross_correlate_masked
         arr1 = cp.ones((16, 16), dtype=cp.float32)
         arr2 = cp.ones((16, 16), dtype=cp.float32)
         mask = cp.ones((16, 16), dtype=bool)
@@ -37,14 +37,14 @@ class TestCrossCorrelateMasked(unittest.TestCase):
         self.assertEqual(result.shape, (31, 31))
 
     def test_returns_cupy_array(self):
-        from .....gpuphot.stats.subpixel_masked import cross_correlate_masked
+        from gpuphot.stats.subpixel_masked import cross_correlate_masked
         arr = cp.ones((8, 8), dtype=cp.float32)
         mask = cp.ones((8, 8), dtype=bool)
         result = cross_correlate_masked(arr, arr, mask, mask)
         self.assertIsInstance(result, cp.ndarray)
 
     def test_values_bounded(self):
-        from .....gpuphot.stats.subpixel_masked import cross_correlate_masked
+        from gpuphot.stats.subpixel_masked import cross_correlate_masked
         arr = cp.random.rand(16, 16).astype(cp.float32)
         mask = cp.ones((16, 16), dtype=bool)
         result = cross_correlate_masked(arr, arr, mask, mask)

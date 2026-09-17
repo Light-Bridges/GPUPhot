@@ -1,0 +1,27 @@
+# Host memory topology of the machine that serves the reference catalogue, 2026-09-11. Read-only.
+# WHY: the paper states that co-locating the catalogue database with a benchmarked GPU starves the
+# page-locked host memory that frame staging needs, and that this is what excluded one card from the
+# 151.2 MP measurements. This is the measurement behind that statement.
+# RESULT: the catalogue container reserves 32 GiB of shared memory, about two thirds of the host total,
+# and the host is left with under 1 GiB free. MemAvailable is large but does not help here: page-locked
+# memory cannot come out of reclaimable cache.
+# DO NOT CITE THE AGGREGATE RSS. The 68 postgres processes map the SAME shared memory, so summing their
+# resident sizes counts it once per process and EXCEEDS the physical RAM of the machine. It is reported
+# as an indicator of how many processes map it, not as a footprint. The figure that supports the argument
+# is free memory against shared memory.
+# The exact free figure moves; the mechanism does not. It was measured lower here than a month earlier.
+observation,value,unit,note
+meminfo_MemTotal,125.49,GiB,"read from /proc/meminfo (131584060 kB)"
+meminfo_MemFree,0.81,GiB,"read from /proc/meminfo (853076 kB)"
+meminfo_MemAvailable,35.12,GiB,"read from /proc/meminfo (36824320 kB)"
+meminfo_Buffers,0.03,GiB,"read from /proc/meminfo (26852 kB)"
+meminfo_Cached,80.91,GiB,"read from /proc/meminfo (84845060 kB)"
+meminfo_Shmem,49.08,GiB,"read from /proc/meminfo (51468504 kB)"
+shmsize_catalogdb-postgres-1,32.00,GiB,"docker inspect .HostConfig.ShmSize (34359738368 bytes)"
+shmsize_astrodb-postgres-1,0.50,GiB,"docker inspect .HostConfig.ShmSize (536870912 bytes)"
+shmsize_dto-postgres-1,1.00,GiB,"docker inspect .HostConfig.ShmSize (1073741824 bytes)"
+shmem_attributable_to_catalogdb,65.2,%,"fraction of host Shmem assigned to catalogdb-postgres-1 --shm-size"
+postgres_processes,68,count,"active postgres processes on host"
+aggregated_postgres_rss,362.2,GiB,"sum of process RSS; counts shared memory once per process, exceeding physical RAM"
+memfree_vs_august,833,MiB,"833 MiB measured; 987 MB in August baseline -> free margin remains constrained"
+hugepages_total,0,count,"no hugepages configured"

@@ -78,8 +78,40 @@ def get_local_background_fft(image, pxscale: float, qt: float = 75, fill_aper: i
 
     lk = max(int(fill_aper / pxscale + 1), 5)
     li = int(lk / 1.8 + 1)
-    while cp.sum(cp.isnan(img_filled)) > 0:
+    n_nan = int(cp.sum(cp.isnan(img_filled)))
+    while n_nan > 0:
         img_filled = fill_nan_fft(img_filled, lk, li, min_neighbors=5, **kwargs)
+        n_new = int(cp.sum(cp.isnan(img_filled)))
+        if n_new == n_nan:
+            # Stalled: every surviving NaN has fewer than min_neighbors valid pixels
+            # inside the annulus.  The valid set only ever grows, so repeating this
+            # pass is a bit-for-bit no-op and the loop would spin forever.
+            #
+            # Leaving the NaNs in place is not an option either: get_mean_std below
+            # convolves this array with an FFT, and a single NaN propagates to every
+            # pixel of the output, silently turning the whole background map into
+            # NaN.  So escalate instead: retry once with a solid disc and a
+            # single-neighbour requirement, then fall back to the global median.
+            logger.warning(
+                f'Background NaN fill stalled with {n_new} unfilled pixels '
+                f'({100.0 * n_new / img_filled.size:.2f}% of the frame); the source '
+                f'mask leaves too few valid neighbours in the r=[{li},{lk}] px annulus. '
+                f'Falling back to a solid-disc fill.'
+            )
+            img_filled = fill_nan_fft(img_filled, lk, 0, min_neighbors=1, **kwargs)
+            if bool(cp.any(cp.isnan(img_filled))):
+                median = cp.nanmedian(img_filled)
+                # An all-NaN frame leaves the median itself undefined.
+                fallback = 0.0 if bool(cp.isnan(median)) else median
+                n_left = int(cp.sum(cp.isnan(img_filled)))
+                logger.warning(
+                    f'Solid-disc fill still left {n_left} NaN pixels; filling them '
+                    f'with the global median ({float(fallback):.4g}). The background '
+                    f'is unreliable for this frame.'
+                )
+                img_filled = cp.where(cp.isnan(img_filled), fallback, img_filled)
+            break
+        n_nan = n_new
 
     img_filled_m, img_filled_2 = get_mean_std(img_filled, max(int(avg_aper / pxscale + 1), 3), std=get_std,
                                               **kwargs)

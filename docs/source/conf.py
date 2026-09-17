@@ -17,7 +17,28 @@ sys.path.insert(0, os.path.abspath('../../notebooks'))
 project = 'GPU Phot'
 copyright = '2025, Samuel Lemes-Perera'
 author = 'Samuel Lemes-Perera'
-release = '0.1'
+
+import os
+import re
+import shutil
+
+# Ensure Logstash and network logging are disabled during doc builds
+os.environ['LOGSTASH_LOGGING'] = 'False'
+
+# Ensure pandoc is in PATH (checks system or pypandoc-binary)
+if not shutil.which('pandoc'):
+    try:
+        import pypandoc
+        _pandoc_dir = os.path.dirname(pypandoc.get_pandoc_path())
+        if _pandoc_dir and _pandoc_dir not in os.environ.get('PATH', ''):
+            os.environ['PATH'] = _pandoc_dir + os.pathsep + os.environ.get('PATH', '')
+    except Exception:
+        pass
+
+_init_py = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'gpuphot', '__init__.py'))
+with open(_init_py, encoding='utf-8') as _f:
+    release = re.search(r"^__version__\s*=\s*['\"]([^'\"]+)['\"]", _f.read(), re.M).group(1)
+version = '.'.join(release.split('.')[:2])
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -42,7 +63,25 @@ nbsphinx_allow_errors = True  # Continue building even if there are errors in no
 nbsphinx_execute = 'never'    # Do not execute notebooks during build
 
 templates_path = ['_templates']
-exclude_patterns = []
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**.ipynb_checkpoints']
+
+# Mock heavy/GPU dependencies so Sphinx autodoc builds on ReadTheDocs without physical GPUs
+autodoc_mock_imports = [
+    'cupy',
+    'cupyx',
+    'cupy_backends',
+    'cuml',
+    'pylibraft',
+    'nvtx',
+    'astrometry',
+    'celery',
+    'redis',
+    'psycopg2',
+    'skimage',
+    'logstash_async',
+    'cupynumeric',
+    'sqlalchemy',
+]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

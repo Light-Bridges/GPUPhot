@@ -153,11 +153,12 @@ def process_directory_task(path=None, filename=None, instrument_name=None, exclu
     -------
     dict
         A dictionary mapping relative input file paths to their corresponding
-        Celery task IDs. Example:
-        {
-            '2023/image1.fits': 'task-uuid-1',
-            '2023/image2.fits': 'task-uuid-2'
-        }
+        Celery task IDs. Example::
+
+            {
+                '2023/image1.fits': 'task-uuid-1',
+                '2023/image2.fits': 'task-uuid-2'
+            }
     """
 
     base_path = BASE_IMAGES_PATH
@@ -222,6 +223,7 @@ def process_image_task(self, image_path, instrument_name=None):
 
     This task executes the full photometry pipeline for a given image file.
     It handles:
+
     1. Loading the image and instrument configuration.
     2. Executing the GPU-accelerated processing (`processor.process_image`).
     3. Persisting results to PostgreSQL (photometry and stats).
@@ -241,6 +243,7 @@ def process_image_task(self, image_path, instrument_name=None):
     -------
     dict
         A summary of the processing result, including:
+
         - 'input_file': Original file path.
         - 'process_file': Path of the file actually processed (original or reduced).
         - 'imaphot': Statistics of detected objects and transients.

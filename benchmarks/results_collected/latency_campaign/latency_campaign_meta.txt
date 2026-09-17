@@ -1,0 +1,24 @@
+CAMPANA v3 — inicio UTC: 2026-08-20T12:15:27
+codigo=8be2e458b7 configs=4dbef13445 protocolo=5+20 envs=_v3
+estado termico inicial:
+  azken: 350.00 W, 52, 2970 MiB
+  lenovo_tttserver: 300.00 W, 35, 0 MiB
+  hp3: 350.00 W, 37, 2508 MiB
+  ttt_server: 350.00 W, 45, 1 MiB
+  ttt1: 170.00 W, 50, 32 MiB
+  local: [N/A], 57, 11 MiB
+CONT_START_UTC=2026-08-20T22:37:07
+V4_START_UTC=2026-08-21T09:58:59
+AZKEN_NOCHE: kernel pid=3833185 ocioso 30 min reteniendo 2970 MiB — liberando 2026-08-21 21:27
+AZKEN_NOCHE: kernel pid=3833185 ocioso 30 min reteniendo 2970 MiB — liberando 2026-08-21 21:27
+AZKEN_NOCHE: kernel pid=3833185 ocioso 30 min reteniendo 2970 MiB — liberando 2026-08-21 21:28
+AZKEN_NOCHE: kernel pid=3833185 ocioso 30 min reteniendo 2970 MiB — liberando 2026-08-21 21:28
+AZKEN_NOCHE: kernel pid=3833185 ocioso 30 min reteniendo 2970 MiB — liberando 2026-08-21 21:29
+AZKEN_NOCHE: GPU libre (4 MiB) 2026-08-21 21:29 — lanzando
+AZKEN_NOCHE_START_UTC=2026-08-21T20:29:41
+350.00 W, 43, 4 MiB
+MANANA_TTT: prereduce ttt1 reiniciado (ocioso)
+AZKEN_PY38_NOCHE_START_UTC=2026-08-22T20:04:52
+NSYS_START_UTC=2026-08-23T13:24:16
+MANANA_NSYS: prereduce ttt1 reiniciado
+AZKEN_CUML2_START_UTC=2026-08-23T20:00:11

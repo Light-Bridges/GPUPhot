@@ -15,7 +15,13 @@ x-worker-env: &worker-env
   POSTGRES_USER: admin
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
   POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
-  POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+  # Always 5432, hardcoded: this is the `postgres` service's port on the
+  # Docker network these containers share, which never changes regardless
+  # of what POSTGRES_HOST_PORT exposes on the host. Reading it from .env
+  # here was the bug: a POSTGRES_PORT set for host-side access (e.g. to
+  # dodge a local port clash) leaked into the worker's own connection
+  # string and pointed it at a port nothing listens on inside the network.
+  POSTGRES_PORT: 5432
   # ── Runtime / logging ─────────────────────────────────────────────────────
   GPUPHOT_ENVIRONMENT: ${GPUPHOT_ENVIRONMENT:-production}
   GPUPHOT_DEBUG: ${GPUPHOT_DEBUG:-False}
@@ -33,6 +39,25 @@ x-worker-env: &worker-env
   GPUPHOT_USE_CUML_CROSSMATCH: ${GPUPHOT_USE_CUML_CROSSMATCH:-0}
   GPUPHOT_CUML_MIN_SOURCES: ${GPUPHOT_CUML_MIN_SOURCES:-0}
   GPUPHOT_CUML_MAX_SOURCES: ${GPUPHOT_CUML_MAX_SOURCES:-0}
+  # ── BLAS kernel: pinned so hosts agree ────────────────────────────────────
+  # OpenBLAS picks its kernel from the host microarchitecture, and the kernels
+  # do not round identically.  That reaches the science through the CPU
+  # clustering path: sklearn's KMeans lands in a different local optimum, the
+  # star grouping changes, and so does the zero point.  Measured on one frame
+  # across three hosts: Zen (EPYC 9124) and SkylakeX (Xeon Gold 6354) agree,
+  # Cooperlake (Xeon Platinum 8468) does not, and drifts 0.0053 mag with 112
+  # calibrators instead of 186.  Pinning the kernel makes the three agree.
+  # Only bites when the frame is grouped into many clusters (k=24 diverges,
+  # k<=6 does not), so dense fields on large sensors are where it shows.
+  # Override per host in .env if a machine needs its own (Haswell, Zen, ...).
+  # CAUTION: SkylakeX kernels use AVX-512.  On a host without it (ttt1's
+  # i5-10400F, Comet Lake) OpenBLAS dies with SIGILL the moment BLAS is first
+  # called: no traceback, no log line, exit code 132.  Those hosts MUST set
+  # OPENBLAS_CORETYPE=Haswell (AVX2) in their .env.  Check with:
+  #   grep -c avx512f /proc/cpuinfo   (0 means no AVX-512 on that host)
+  # Images rebuilt with sitecustomize.py (repo root) also downgrade at runtime
+  # instead of dying, but the explicit .env pin is still the documented state.
+  OPENBLAS_CORETYPE: ${OPENBLAS_CORETYPE:-SkylakeX}
 
 x-gpu-env: &gpu-env
   GPU_ID: ${GPU_ID:-0}
@@ -90,6 +115,35 @@ x-common-worker-backend: &common-worker-backend
     - redis
   restart: unless-stopped
 
+x-profiler-env: &profiler-env
+  <<: [*worker-env, *gpu-env]
+  NVIDIA_PERSISTENCE_MODE: "on"
+  CUDA_DEVICE_ORDER: PCI_BUS_ID
+  NVIDIA_VISIBLE_DEVICES: all
+  CUDA_VISIBLE_DEVICES: ${GPU_ID:-0}
+  NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-all,compute,utility,graphics}
+  NSYS_PROFILING: 1
+  NSYS_CUDA_TRACE: 1
+  # ── Profiler overrides (differ from worker-env defaults) ─────────────────
+  # Logging: enabled and verbose in profiling runs; host defaults to the
+  # compose logstash service (override via LOGSTASH_HOST in .env).
+  LOGSTASH_LOGGING: ${LOGSTASH_LOGGING:-True}
+  LOGSTASH_HOST: ${LOGSTASH_HOST:-logstash}
+  GPUPHOT_ENVIRONMENT: ${GPUPHOT_ENVIRONMENT:-profiler}
+  GPUPHOT_DEBUG: ${GPUPHOT_DEBUG:-True}
+  GPUPHOT_LOG_LEVEL: ${GPUPHOT_LOG_LEVEL:-DEBUG}
+  # No DB persistence during profiling runs by default.
+  POSTGRES_HOST: ${POSTGRES_HOST:-nostore}
+
+# aarch64 profilers (Jetson).  The OPENBLAS_CORETYPE names inherited from
+# worker-env are x86-64 kernels and mean nothing here; an unrecognised name makes
+# OpenBLAS warn and, in some builds, abort.  Left empty so the ARM build detects
+# its own kernel.  Pin an aarch64 one (CORTEXA57, NEOVERSEN1, ARMV8) through
+# OPENBLAS_CORETYPE_ARM if these hosts ever need to agree with each other.
+x-profiler-arm-env: &profiler-arm-env
+  <<: *profiler-env
+  OPENBLAS_CORETYPE: ${OPENBLAS_CORETYPE_ARM:-}
+
 x-common-profiler: &common-profiler
   build:
     context: .
@@ -103,25 +157,7 @@ x-common-profiler: &common-profiler
       - REQUIREMENTS_FILE=${PROFILER_REQUIREMENTS_FILE:-requirements-312.txt}
   profiles: [ "debug" ]
   privileged: true
-  environment:
-    <<: [*worker-env, *gpu-env]
-    NVIDIA_PERSISTENCE_MODE: "on"
-    CUDA_DEVICE_ORDER: PCI_BUS_ID
-    NVIDIA_VISIBLE_DEVICES: all
-    CUDA_VISIBLE_DEVICES: ${GPU_ID:-0}
-    NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-all,compute,utility,graphics}
-    NSYS_PROFILING: 1
-    NSYS_CUDA_TRACE: 1
-    # ── Profiler overrides (differ from worker-env defaults) ─────────────────
-    # Logging: enabled and verbose in profiling runs; host defaults to the
-    # compose logstash service (override via LOGSTASH_HOST in .env).
-    LOGSTASH_LOGGING: ${LOGSTASH_LOGGING:-True}
-    LOGSTASH_HOST: ${LOGSTASH_HOST:-logstash}
-    GPUPHOT_ENVIRONMENT: ${GPUPHOT_ENVIRONMENT:-profiler}
-    GPUPHOT_DEBUG: ${GPUPHOT_DEBUG:-True}
-    GPUPHOT_LOG_LEVEL: ${GPUPHOT_LOG_LEVEL:-DEBUG}
-    # No DB persistence during profiling runs by default.
-    POSTGRES_HOST: ${POSTGRES_HOST:-nostore}
+  environment: *profiler-env
   cap_add:
     - SYS_ADMIN
     - SYS_PTRACE
@@ -234,8 +270,12 @@ services:
       context: .
       dockerfile: Dockerfile
       target: q3c_postgres
+    # POSTGRES_HOST_PORT is the port on THIS machine that exposes Postgres,
+    # for host-side tools (psql, a non-Docker script) or to dodge a local
+    # port clash. It is independent of POSTGRES_PORT above, which is what
+    # containers on this compose project's own network always use.
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     environment:
       POSTGRES_DB: GPUPhotDB
       POSTGRES_USER: admin
@@ -320,6 +360,8 @@ services:
   # ---------------------------------------------------------------
   profiler_jetson:
     <<: *common-profiler
+    # aarch64: overrides the x86-64 OPENBLAS_CORETYPE inherited above.
+    environment: *profiler-arm-env
     build:
       context: .
       dockerfile: Dockerfile
@@ -356,6 +398,8 @@ services:
   # ---------------------------------------------------------------
   profiler_jetson_orin:
     <<: *common-profiler
+    # aarch64: overrides the x86-64 OPENBLAS_CORETYPE inherited above.
+    environment: *profiler-arm-env
     build:
       context: .
       dockerfile: Dockerfile
@@ -395,6 +439,8 @@ services:
   # ---------------------------------------------------------------
   profiler_jetson_orin_super:
     <<: *common-profiler
+    # aarch64: overrides the x86-64 OPENBLAS_CORETYPE inherited above.
+    environment: *profiler-arm-env
     extra_hosts:
       - "host.docker.internal:host-gateway"
     dns:
@@ -440,6 +486,8 @@ services:
   # ---------------------------------------------------------------
   profiler_jetson_orin_super_38:
     <<: *common-profiler
+    # aarch64: overrides the x86-64 OPENBLAS_CORETYPE inherited above.
+    environment: *profiler-arm-env
     extra_hosts:
       - "host.docker.internal:host-gateway"
     dns:

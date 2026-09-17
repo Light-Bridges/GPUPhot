@@ -16,7 +16,7 @@ from ...conftest import NVRTC_WORKS
 class TestBatchAperturePhotometry(unittest.TestCase):
 
     def setUp(self):
-        from .....gpuphot.phot.photo_gpu import batch_aperture_photometry
+        from gpuphot.phot.photo_gpu import batch_aperture_photometry
         self.batch_aperture_photometry = batch_aperture_photometry
 
     def _make_image(self, size=128, value=1000.0):

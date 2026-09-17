@@ -11,7 +11,7 @@ except ImportError:
 class TestGenGaussFilter(unittest.TestCase):
 
     def setUp(self):
-        from .....gpuphot.phot.photo_gpu import gen_gauss_filter
+        from gpuphot.phot.photo_gpu import gen_gauss_filter
         self.gen_gauss_filter = gen_gauss_filter
 
     def test_returns_tuple_of_two(self):

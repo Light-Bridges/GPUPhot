@@ -231,7 +231,19 @@
     "lum_gmag_coeff": 0.5,
 
     // Coefficient for r-band magnitude in luminosity calculation
-    "lum_rmag_coeff": 0.5
+    "lum_rmag_coeff": 0.5,
+
+    // Maximum number of reference stars per tile for PSF and zeropoint calibration
+    "max_stars_ref": 15,
+
+    // Minimum signal-to-noise ratio of detected sources for convolution/calibration
+    "min_conv_snr": 300,
+
+    // Maximum color index difference when cross-matching with reference catalogs
+    "color_range": 0.6,
+
+    // Maximum magnitude limit for catalog query and zero-point calibration
+    "zp_maxmag": 21
   },
   "image_reduction": {
     // Options: "always", "never", "on_failure"

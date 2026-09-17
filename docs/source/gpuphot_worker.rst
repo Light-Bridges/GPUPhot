@@ -20,6 +20,30 @@ gpuphot\_worker.celeryconfig module
    :undoc-members:
    :show-inheritance:
 
+gpuphot\_worker.database\_insert\_utils module
+----------------------------------------------
+
+.. automodule:: gpuphot_worker.database_insert_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpuphot\_worker.database\_search\_utils module
+----------------------------------------------
+
+.. automodule:: gpuphot_worker.database_search_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpuphot\_worker.header\_descriptions module
+-------------------------------------------
+
+.. automodule:: gpuphot_worker.header_descriptions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 gpuphot\_worker.tasks module
 ----------------------------
 

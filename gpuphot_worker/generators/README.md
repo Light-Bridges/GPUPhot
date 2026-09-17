@@ -20,6 +20,8 @@ The scripts are numbered to reflect the intended order of use for the final note
 -   `2_Instrument_Configuration_Notebook.py`: Generates a notebook that explains how to create and manage instrument configuration files.
 -   `3_Task_Execution_Notebook.py`: Creates a notebook with examples on how to execute image processing tasks using the Celery worker.
 -   `4_Database_Query_Notebook.py`: Generates a notebook showing how to query the PostgreSQL database to retrieve and analyze processing results.
+-   `5_Multi_Instrument_Auto_Detection_Notebook.py`: Generates a notebook demonstrating automatic instrument detection and configuration dispatch from FITS headers.
+-   `6_cuML_Configuration_Notebook.py`: Generates a notebook providing benchmarks and instructions for configuring GPU-accelerated cuML algorithms.
 
 ## 3. Usage
 

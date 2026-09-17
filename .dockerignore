@@ -16,3 +16,7 @@ gpuphot_database/
 !profiling_scripts/*
 
 !initialize_notebooks.sh
+
+# Guardian de OPENBLAS_CORETYPE: se importa solo via PYTHONPATH=/app en cada
+# arranque de Python; evita el SIGILL silencioso en CPUs sin AVX-512 (ttt1).
+!sitecustomize.py

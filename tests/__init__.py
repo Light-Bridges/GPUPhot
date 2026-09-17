@@ -1,3 +1,2 @@
-from . import gpuphot
+"""Test suite for gpuphot."""
 
-__all__ = ['gpuphot']

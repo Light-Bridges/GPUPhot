@@ -1,0 +1,5 @@
+# Peak concurrency and worker distribution per physical GPU in production (2026-09-08).
+gpu_model,workers_distintos,muestra_n,max_overlap_muestra,ventana_muestra
+NVIDIA A100-SXM4-80GB,1060,8000,15,2026-08-22..2026-09-08
+NVIDIA L40S,429,8000,8,2026-08-04..2026-09-08
+NVIDIA H100 PCIe,268,2727,4,2026-07-26..2026-08-29

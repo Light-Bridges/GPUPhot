@@ -1,0 +1,8 @@
+# Peak VRAM nsys telemetry: A100 py3.12 post-fix allocator (2026-09-10).
+machine,gpu_name,gpu_total_MB,python_ver,camera,megapixels,peak_gpu_memory_MB,peak_gpu_memory_pct,capture_complete,completion,sqlite_file,nvtx_events,fix_state
+lenovo_tttserver,A100-SXM4-80GB,81050.6,3.12,QHY600-3,6.8,7283.6,8.99,True,1,block5post_20260910_QHY600-3_20260910_074124_run1.sqlite,955,postfix
+lenovo_tttserver,A100-SXM4-80GB,81050.6,3.12,QHY600-3,6.8,7283.6,8.99,True,1,block5post_20260910_QHY600-3_20260910_074150_run2.sqlite,955,postfix
+lenovo_tttserver,A100-SXM4-80GB,81050.6,3.12,QHY600-4,15.3,7197.2,8.88,True,1,block5post_20260910_QHY600-4_20260910_074238_run1.sqlite,3841,postfix
+lenovo_tttserver,A100-SXM4-80GB,81050.6,3.12,QHY600-4,15.3,7197.3,8.88,True,1,block5post_20260910_QHY600-4_20260910_074312_run2.sqlite,3841,postfix
+lenovo_tttserver,A100-SXM4-80GB,81050.6,3.12,QHY411-1,37.8,9164.7,11.31,True,1,block5post_20260910_QHY411-1_20260910_074401_run1.sqlite,4366,postfix
+lenovo_tttserver,A100-SXM4-80GB,81050.6,3.12,QHY411-1,37.8,9164.7,11.31,True,1,block5post_20260910_QHY411-1_20260910_074432_run2.sqlite,4366,postfix

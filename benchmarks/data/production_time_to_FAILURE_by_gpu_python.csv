@@ -1,0 +1,15 @@
+# Execution time elapsed prior to exception for failed process_image runs (2026-09-08).
+gpu_model,python_ver,n_failures,ttf_p16_s,ttf_p50_s,ttf_p84_s,ttf_p99_s
+NVIDIA A100-SXM4-80GB,3.8.10,1456504,0.3,2.1,7.9,234.8
+NVIDIA A100-SXM4-80GB,3.12.3,216233,1.8,3.0,59.4,1800.4
+NVIDIA L40S,3.8.10,580679,0.5,3.6,24.0,240.2
+NVIDIA L40S,3.12.3,94238,1.9,6.1,33.9,1800.4
+NVIDIA H100 PCIe,3.8.10,207008,0.3,3.6,21.9,246.8
+NVIDIA H100 PCIe,3.12.3,32388,2.0,4.9,32.5,1800.2
+NVIDIA H100 PCIe,3.10.12,818,1.8,1.9,170.3,1800.3
+Error retrieving GPU info,3.8.10,52798,0.1,0.3,2.6,137.0
+Error retrieving GPU info,3.12.3,3436,1.7,2.6,5.0,1480.8
+No GPUs found,3.12.3,7804,0.0,0.2,0.3,0.3
+No GPUs found,3.8.10,6,234.4,235.9,238.2,238.7
+NVIDIA GeForce RTX 3050 Ti Laptop GPU,3.8.20,5,,,,
+NVIDIA GeForce RTX 3050 Ti Laptop GPU,3.12.3,2,50.3,166.7,283.0,283.0

@@ -1,0 +1,51 @@
+# OpenBLAS kernel A/B on host hp3 (L40S), Cooperlake vs SkylakeX, 2026-08-19.
+# WHAT IT MEASURES: the zero point, its error and the calibrator count of the same images under two
+# OpenBLAS kernels, changing nothing else. Under py3.8 the clustering and the eigendecomposition of the
+# PSF stage both run on the CPU, and OpenBLAS selects its kernel from the host microarchitecture.
+#
+# RESULT: on this host, where OpenBLAS selects Cooperlake by default, one field moves its zero point by 0.0053 mag
+# and its calibrators fall from 186 to 112, and a second field fails to calibrate at all rather than
+# returning a different value. The SkylakeX and Zen kernels return the values of the rest of the fleet
+# on the same images, so Cooperlake is the only one that departs.
+#
+# *** THE FOUR ROWS MARKED diverge=does_not_run_stage ARE NOT VALID NEGATIVE CONTROLS. ***
+# They were recorded as controls and that was an error, corrected here rather than removed. They cannot
+# move, for two independent reasons, neither of which has anything to do with the kernel being harmless:
+#   1. they are the two cameras configured with the Eigen-PSF stage disabled, and the grouping lives
+#      INSIDE that stage, so they never execute it;
+#   2. and the call to the grouping is guarded by a tile-size condition that those fields do not meet,
+#      so they fall to the branch that assigns a single group without calling the clustering at all.
+# A control that cannot fail controls nothing. The column value says does_not_run_stage and not 'no'
+# precisely because 'no' would read as "tested and did not diverge", which is the wrong reading.
+#
+# CONSEQUENTLY THIS FILE DOES NOT LOCATE THE EFFECT IN THE GROUPING. Under this stack the principal
+# component analysis also runs on the CPU through the same library, so between the two stages these data
+# separate nothing. What they do bound: the three kernels detect the same number of objects on the
+# divergent field, so the difference is not in the detection.
+#
+# LIMIT: n=1 per cell in the Cooperlake arm. The SkylakeX arm is replicated elsewhere (twelve
+# repetitions per image on each of three hosts); this one has a single observation per image. The
+# outright failure, being qualitative, does not need replication.
+#
+# Forcing SkylakeX on a host without AVX-512 terminates the process with SIGILL and no useful message.
+# COLUMNS: arm is the condition applied; kernel_efectivo is what OpenBLAS actually dispatched, read live.
+maquina,objeto,image_label_campana,diverge,brazo,kernel_efectivo,estado,zp,ezp,zp_nstar,objetos,zp_referencia_otras_maquinas,origen
+hp3,M81,QHY411-3_SDSSr_full,yes,DEFECTO,Cooperlake,OK,24.0826,0.0020,112,15390,24.0879,coretype_test.csv
+hp3,M81,QHY411-3_SDSSr_full,yes,SkylakeX,SkylakeX,OK,24.0879,0.0012,186,15390,24.0879,coretype_test.csv
+hp3,M81,QHY411-3_SDSSr_full,yes,Zen,Zen,OK,24.0879,0.0012,186,15390,24.0879,coretype_test.csv
+hp3,24P,QHY411-3_Lum_full,yes,DEFECTO,Cooperlake,OK,25.2239,0.0012,192,,25.2256,coretype_gen.csv
+hp3,24P,QHY411-3_Lum_full,yes,SkylakeX,SkylakeX,OK,25.2256,0.0011,191,,25.2256,coretype_gen.csv
+hp3,NGC2683,QHY411-3_SDSSr_19k,yes,DEFECTO,Cooperlake,FAILED,,,,,24.0577,coretype_gen.csv
+hp3,NGC2683,QHY411-3_SDSSr_19k,yes,SkylakeX,SkylakeX,OK,24.0577,0.0012,183,,24.0577,coretype_gen.csv
+hp3,Atira,QHY600-3_SDSSi_2k,does_not_run_stage,DEFECTO,Cooperlake,OK,22.0127,0.0015,177,,22.0127,coretype_gen.csv
+hp3,Atira,QHY600-3_SDSSi_2k,does_not_run_stage,SkylakeX,SkylakeX,OK,22.0127,0.0015,177,,22.0127,coretype_gen.csv
+hp3,QSO0957,iKon936-1_SDSSg,does_not_run_stage,DEFECTO,Cooperlake,OK,25.3178,0.0147,24,,25.3178,coretype_gen.csv
+hp3,QSO0957,iKon936-1_SDSSg,does_not_run_stage,SkylakeX,SkylakeX,OK,25.3178,0.0147,24,,25.3178,coretype_gen.csv
+lenovo_tttserver,M81,QHY411-3_SDSSr_full,yes,DEFECTO,SkylakeX,OK,24.0879,0.0012,186,,24.0879,coretype_otras.csv
+lenovo_tttserver,M81,QHY411-3_SDSSr_full,yes,SkylakeX,SkylakeX,OK,24.0879,0.0012,186,,24.0879,coretype_otras.csv
+lenovo_tttserver,24P,QHY411-3_Lum_full,yes,DEFECTO,SkylakeX,OK,25.2256,0.0011,191,,25.2256,coretype_otras.csv
+lenovo_tttserver,24P,QHY411-3_Lum_full,yes,SkylakeX,SkylakeX,OK,25.2256,0.0011,191,,25.2256,coretype_otras.csv
+azken,M81,QHY411-3_SDSSr_full,yes,DEFECTO,Zen,OK,24.0879,0.0012,186,,24.0879,coretype_otras.csv
+azken,M81,QHY411-3_SDSSr_full,yes,SkylakeX,SkylakeX,OK,24.0879,0.0012,186,,24.0879,coretype_otras.csv
+azken,24P,QHY411-3_Lum_full,yes,DEFECTO,Zen,OK,25.2256,0.0011,191,,25.2256,coretype_otras.csv
+azken,24P,QHY411-3_Lum_full,yes,SkylakeX,SkylakeX,OK,25.2256,0.0011,191,,25.2256,coretype_otras.csv

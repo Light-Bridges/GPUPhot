@@ -1,0 +1,19 @@
+# Production throughput and success rates from processing log database (2026-09-08).
+# Monthly completion counts across ATLAS survey and observatory fleet (2026).
+metric,clase,valor,unidad,detalle
+imalog_status_Done,ATLAS,1157251,imagenes,2026-01-18..2026-09-08
+imalog_status_Failed,ATLAS,24235,imagenes,2026-02-04..2026-09-08
+imalog_status_Processing,ATLAS,19296,imagenes,en_curso_o_colgadas
+tasa_exito_2026,ATLAS,97.95,porcentaje,Done/(Done+Failed)
+pico_throughput_1h,ATLAS,1860,imagenes_61MP_por_hora,2026-03-24T02:00Z_flota
+mediana_gap_finalizaciones,ATLAS,2.01,segundos,noche_2026-03-24_flota_9338Done
+throughput_151MP,TTT,,NO_DISPONIBLE,QHY411_no_esta_en_imalog_ni_en_succeeded_ES
+done_2026-01,ATLAS,66299,imagenes,
+done_2026-02,ATLAS,106515,imagenes,
+done_2026-03,ATLAS,278495,imagenes,
+done_2026-04,ATLAS,154725,imagenes,
+done_2026-05,ATLAS,138345,imagenes,
+done_2026-06,ATLAS,133137,imagenes,
+done_2026-07,ATLAS,163009,imagenes,
+done_2026-08,ATLAS,89277,imagenes,
+done_2026-09,ATLAS,27449,imagenes,parcial_hasta_09-08

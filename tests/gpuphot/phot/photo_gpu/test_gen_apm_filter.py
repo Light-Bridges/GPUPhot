@@ -11,7 +11,7 @@ except ImportError:
 class TestGenApmFilter(unittest.TestCase):
 
     def setUp(self):
-        from .....gpuphot.phot.conv import gen_apm_filter
+        from gpuphot.phot.conv import gen_apm_filter
         self.gen_apm_filter = gen_apm_filter
 
     def test_returns_cupy_array(self):

@@ -39,7 +39,7 @@ class TestDetectIsolatedStars(unittest.TestCase):
         return image, coords
 
     def test_returns_cupy_array(self):
-        from .....gpuphot.phot.psf import detect_isolated_stars
+        from gpuphot.phot.psf import detect_isolated_stars
         image, _ = self._make_star_field()
         img = cp.asarray(image)
         rms = cp.ones_like(img) * 10.0
@@ -47,7 +47,7 @@ class TestDetectIsolatedStars(unittest.TestCase):
         self.assertIsInstance(result, cp.ndarray)
 
     def test_detects_some_stars(self):
-        from .....gpuphot.phot.psf import detect_isolated_stars
+        from gpuphot.phot.psf import detect_isolated_stars
         image, _ = self._make_star_field(n_stars=30, peak=10000.0)
         img = cp.asarray(image)
         rms = cp.ones_like(img) * 5.0
@@ -55,7 +55,7 @@ class TestDetectIsolatedStars(unittest.TestCase):
         self.assertGreater(len(result), 0)
 
     def test_coords_within_bounds(self):
-        from .....gpuphot.phot.psf import detect_isolated_stars
+        from gpuphot.phot.psf import detect_isolated_stars
         size = 512
         image, _ = self._make_star_field(size=size, n_stars=30, peak=10000.0)
         img = cp.asarray(image)
@@ -68,8 +68,8 @@ class TestDetectIsolatedStars(unittest.TestCase):
         self.assertTrue(np.all(coords[:, 1] < size))
 
     def test_raises_on_empty_image(self):
-        from .....gpuphot.phot.psf import detect_isolated_stars
-        from .....gpuphot.exceptions import InsufficientStarsError
+        from gpuphot.phot.psf import detect_isolated_stars
+        from gpuphot.exceptions import InsufficientStarsError
         img = cp.zeros((256, 256), dtype=cp.float64)
         rms = cp.ones((256, 256), dtype=cp.float64)
         with self.assertRaises((InsufficientStarsError, Exception)):

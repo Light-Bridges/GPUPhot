@@ -1,0 +1,58 @@
+REGIMEN_hp3_START 2026-08-30 23:45
+-- hp3 py312 ronda 0 23:45
+[hp3 py312 r0] SEQ pos=1 img1 alloc_pre=RMM t=7.38s filas=279 ZP=25.3178
+[hp3 py312 r0] SEQ pos=2 img5 alloc_pre=POOL t=12.58s filas=601 ZP=19.4353
+[hp3 py312 r0] SEQ pos=3 img16 alloc_pre=POOL t=10.89s filas=15759 ZP=21.2206
+[hp3 py312 r0] SEQ pos=4 img19 alloc_pre=POOL t=27.56s filas=12832 ZP=21.7986
+[hp3 py312 r0] SEQ pos=5 img7 alloc_pre=POOL t=10.79s filas=621 ZP=21.0036
+[hp3 py312 r0] SEQ pos=6 img10 alloc_pre=POOL t=46.66s filas=15390 ZP=24.0872
+-- hp3 py38 ronda 0 23:47
+[hp3 py38 r0] SEQ pos=1 img1 alloc_pre=POOL t=6.09s filas=279 ZP=25.3178
+[hp3 py38 r0] SEQ pos=2 img5 alloc_pre=POOL t=7.37s filas=601 ZP=19.4353
+[hp3 py38 r0] SEQ pos=3 img16 alloc_pre=POOL t=16.22s filas=15759 ZP=21.2207
+[hp3 py38 r0] SEQ pos=4 img19 alloc_pre=POOL t=33.14s filas=12832 ZP=21.7993
+[hp3 py38 r0] SEQ pos=5 img7 alloc_pre=POOL t=9.52s filas=621 ZP=21.0013
+[hp3 py38 r0] SEQ pos=6 img10 alloc_pre=POOL t=62.60s filas=15390 ZP=24.0826
+-- hp3 py312 ronda 1 23:50
+[hp3 py312 r1] SEQ pos=1 img5 alloc_pre=RMM t=12.63s filas=601 ZP=19.4353
+[hp3 py312 r1] SEQ pos=2 img16 alloc_pre=POOL t=12.03s filas=15759 ZP=21.2206
+[hp3 py312 r1] SEQ pos=3 img19 alloc_pre=POOL t=32.56s filas=12832 ZP=21.7986
+[hp3 py312 r1] SEQ pos=4 img7 alloc_pre=POOL t=10.83s filas=621 ZP=21.0036
+[hp3 py312 r1] SEQ pos=5 img10 alloc_pre=POOL t=54.53s filas=15390 ZP=24.0872
+[hp3 py312 r1] SEQ pos=6 img1 alloc_pre=POOL t=4.14s filas=279 ZP=25.3178
+-- hp3 py38 ronda 1 23:52
+[hp3 py38 r1] SEQ pos=1 img5 alloc_pre=POOL t=9.30s filas=601 ZP=19.4353
+[hp3 py38 r1] SEQ pos=2 img16 alloc_pre=POOL t=17.45s filas=15759 ZP=21.2207
+[hp3 py38 r1] SEQ pos=3 img19 alloc_pre=POOL t=30.51s filas=12832 ZP=21.7993
+[hp3 py38 r1] SEQ pos=4 img7 alloc_pre=POOL t=9.77s filas=621 ZP=21.0013
+[hp3 py38 r1] SEQ pos=5 img10 alloc_pre=POOL t=42.65s filas=15390 ZP=24.0826
+[hp3 py38 r1] SEQ pos=6 img1 alloc_pre=POOL t=3.82s filas=279 ZP=25.3178
+-- hp3 py312 ronda 2 23:54
+[hp3 py312 r2] SEQ pos=1 img16 alloc_pre=RMM t=23.49s filas=15759 ZP=21.2206
+[hp3 py312 r2] SEQ pos=2 img19 alloc_pre=POOL t=29.34s filas=12832 ZP=21.7986
+[hp3 py312 r2] SEQ pos=3 img7 alloc_pre=POOL t=10.33s filas=621 ZP=21.0036
+[hp3 py312 r2] SEQ pos=4 img10 alloc_pre=POOL t=81.03s filas=15390 ZP=24.0872
+[hp3 py312 r2] SEQ pos=5 img1 alloc_pre=POOL t=4.11s filas=279 ZP=25.3178
+[hp3 py312 r2] SEQ pos=6 img5 alloc_pre=POOL t=7.91s filas=601 ZP=19.4353
+-- hp3 py38 ronda 2 23:57
+[hp3 py38 r2] SEQ pos=1 img16 alloc_pre=POOL t=18.03s filas=15759 ZP=21.2207
+[hp3 py38 r2] SEQ pos=2 img19 alloc_pre=POOL t=29.93s filas=12832 ZP=21.7993
+[hp3 py38 r2] SEQ pos=3 img7 alloc_pre=POOL t=9.50s filas=621 ZP=21.0013
+[hp3 py38 r2] SEQ pos=4 img10 alloc_pre=POOL t=47.20s filas=15390 ZP=24.0826
+[hp3 py38 r2] SEQ pos=5 img1 alloc_pre=POOL t=3.57s filas=279 ZP=25.3178
+[hp3 py38 r2] SEQ pos=6 img5 alloc_pre=POOL t=5.93s filas=601 ZP=19.4353
+-- hp3 py312 ronda 3 23:59
+[hp3 py312 r3] SEQ pos=1 img19 alloc_pre=RMM t=41.07s filas=12832 ZP=21.7986
+[hp3 py312 r3] SEQ pos=2 img7 alloc_pre=POOL t=10.47s filas=621 ZP=21.0036
+[hp3 py312 r3] SEQ pos=3 img10 alloc_pre=POOL t=42.51s filas=15390 ZP=24.0872
+[hp3 py312 r3] SEQ pos=4 img1 alloc_pre=POOL t=3.99s filas=279 ZP=25.3178
+[hp3 py312 r3] SEQ pos=5 img5 alloc_pre=POOL t=8.10s filas=601 ZP=19.4353
+[hp3 py312 r3] SEQ pos=6 img16 alloc_pre=POOL t=14.87s filas=15759 ZP=21.2206
+-- hp3 py38 ronda 3 00:01
+[hp3 py38 r3] SEQ pos=1 img19 alloc_pre=POOL t=28.45s filas=12832 ZP=21.7993
+[hp3 py38 r3] SEQ pos=2 img7 alloc_pre=POOL t=9.67s filas=621 ZP=21.0013
+[hp3 py38 r3] SEQ pos=3 img10 alloc_pre=POOL t=59.61s filas=15390 ZP=24.0826
+[hp3 py38 r3] SEQ pos=4 img1 alloc_pre=POOL t=3.52s filas=279 ZP=25.3178
+[hp3 py38 r3] SEQ pos=5 img5 alloc_pre=POOL t=5.89s filas=601 ZP=19.4353
+[hp3 py38 r3] SEQ pos=6 img16 alloc_pre=POOL t=15.26s filas=15759 ZP=21.2207
+REGIMEN_hp3_FIN 2026-08-31 00:03

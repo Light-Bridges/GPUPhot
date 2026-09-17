@@ -39,7 +39,6 @@ from astropy.io import fits
 from astropy.time import Time
 from astropy.wcs import WCS
 from astroquery.astrometry_net import AstrometryNet
-from sklearn.linear_model import RANSACRegressor
 
 from .catalog import crossmatch_sources
 from ..exceptions import AstrometrizationTimeoutError
@@ -471,10 +470,18 @@ def _extract_wcs_from_solution(solution):
 
 
 @nvtx.annotate('_attempt_local_solve', category='utils.astro')
-def _attempt_local_solve(solver, star_data_local, size_hint, position_hint, common_params_local):
-    """Helper function to perform a single local solver attempt with timeout."""
+def _attempt_local_solve(solver, star_data_local, size_hint, position_hint, common_params_local, timeout_override=None):
+    """Helper function to perform a single local solver attempt with timeout.
 
-    timeout = int(os.getenv("GPUPHOT_ASTROMETRY_TIMEOUT", 60))
+    :param timeout_override: Per-call timeout in seconds (e.g. from a camera's
+        `astrometry_timeout` in processing_params). Takes precedence over
+        GPUPHOT_ASTROMETRY_TIMEOUT when provided, so dense/high-source-count
+        fields can be given more time without raising the timeout for every
+        other camera on the same container.
+    :type timeout_override: int or None
+    """
+
+    timeout = timeout_override if timeout_override is not None else int(os.getenv("GPUPHOT_ASTROMETRY_TIMEOUT", 60))
 
     logger.debug(f"Local astrometry (timeout: {timeout}s)")
 
@@ -574,7 +581,7 @@ def _attempt_online_solve(df_proc, image_width, image_height):
 def astrometrice2(df: pd.DataFrame, scale: float,
                   central_ra: float, central_dec: float,
                   image_shape: tuple,
-                  sip_order: int = 3, n_max: int = 500) -> dict:
+                  sip_order: int = 3, n_max: int = 500, **kwargs) -> dict:
     """
     Performs astrometry by attempting multiple strategies: local solving
     with position hints, local solving without hints, and online solving
@@ -595,14 +602,15 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     :type sip_order: int
     :param n_max: Maximum number of sources (from the top of df) to use. Default is 500.
     :type n_max: int
-    :param local_timeout: Timeout in seconds for each local solver attempt. Default is 60.
-    :type local_timeout: int
-    :param online_timeout: Timeout in seconds for the entire online Astrometry.net attempt
-                           (managed by signal.alarm). Default is 70.
-    :type online_timeout: int
-    :param astrometry_net_timeout: Internal solve timeout in seconds passed *to*
-                                   Astrometry.net's solve_from_source_list. Default is 90.
-    :type astrometry_net_timeout: int
+    :param kwargs: Accepts ``astrometry_timeout`` (int, seconds) to override the
+        per-attempt local-solver timeout for this call only (e.g. set from a
+        camera's ``processing_params`` in its instrument config JSON). Falls
+        back to the GPUPHOT_ASTROMETRY_TIMEOUT environment variable (default
+        60s) when not provided. Useful for dense/high-source-count fields
+        where the default timeout is too short for the local solver to find a
+        match, without raising the timeout globally for every other camera.
+        Any other keys are ignored (this function is typically called with
+        the same ``**kwargs`` forwarded from calibrate_image's processing_params).
     :return: Dictionary containing the WCS header fields if successful,
              otherwise an empty dictionary.
     :rtype: dict
@@ -610,6 +618,7 @@ def astrometrice2(df: pd.DataFrame, scale: float,
     """
     wcs_header = None
     start_time = time.time()
+    local_timeout = kwargs.get('astrometry_timeout')
 
     if not isinstance(df, pd.DataFrame) or df.empty:
         logger.warning("Input DataFrame is not valid or empty. Cannot perform astrometry.")
@@ -686,14 +695,15 @@ def astrometrice2(df: pd.DataFrame, scale: float,
                     star_data_local,
                     size_hint=astrometry.SizeHint(
                         lower_arcsec_per_pixel=scale * 0.8,
-                        upper_arcsec_per_pixel=scale * 1.
+                        upper_arcsec_per_pixel=scale * 1.2
                     ),
                     position_hint=astrometry.PositionHint(
                         ra_deg=central_ra,
                         dec_deg=central_dec,
                         radius_deg=1,
                     ),
-                    common_params_local=common_params_local
+                    common_params_local=common_params_local,
+                    timeout_override=local_timeout
                 )
         except Exception as e:
             logger.warning(f"Error during Attempt 1 (local with hint): {e}", exc_info=True)
@@ -707,7 +717,8 @@ def astrometrice2(df: pd.DataFrame, scale: float,
                     star_data_local,
                     size_hint=None,
                     position_hint=None,
-                    common_params_local=common_params_local
+                    common_params_local=common_params_local,
+                    timeout_override=local_timeout
                 )
         except Exception as e:
             logger.warning(f"Error during Attempt 2 (local without hint): {e}", exc_info=True)
@@ -854,8 +865,11 @@ def get_zeropoint(df_catalog, df_sources, exptime, center_lims=None, N=200,
         'CATNSTAR': n,
         'ZPMINMAG': np.round(min_mag, 2),
         'ZPMAXMAG': np.round(max_mag, 2),
-        'BVMIN': np.round(0.65 - solar_filter / 2, 2),
-        'BVMAX': np.round(0.65 + solar_filter / 2, 2),
+        # solar_filter is a half-width: the cut applied above is
+        # |(B-V) - 0.65| < solar_filter, so the retained band is 0.65 +/- solar_filter.
+        # Halving it here reported a band twice as narrow as the one actually used.
+        'BVMIN': np.round(0.65 - solar_filter, 2),
+        'BVMAX': np.round(0.65 + solar_filter, 2),
     }
 
     if plot:
@@ -993,8 +1007,8 @@ def radec_to_moon_sun(ra, dec, site_latitude, site_longitude, site_elevation, da
         sun_az, 2)
 
 
-@lru_cache(maxsize=32)
 @nvtx.annotate('get_observer_and_frame', category='utils.astro')
+@lru_cache(maxsize=32)
 def get_observer_and_frame(SITELAT, SITELON, SITEELEV, Date):
     """Create and cache location and AltAz frame objects"""
     Observatory = EarthLocation(lat=SITELAT * u.deg, lon=SITELON * u.deg, height=SITEELEV * u.m)

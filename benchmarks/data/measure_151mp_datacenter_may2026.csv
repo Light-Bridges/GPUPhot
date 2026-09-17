@@ -1,0 +1,1213 @@
+machine,gpu_name,python_ver,profiler_label,environment,image_label,mp,execution_time,n_sources_detected,timestamp,naxis1,naxis2,filter,object,gpu_mem_total,gpu_mem_used,gpu_temp,remeasure_round,catalog_backend
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,50.84084,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.6375,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,50.88241,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.10947,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,50.31165,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,51.07435,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,51.49917,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,50.30093,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,51.05778,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.83108,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,50.63717,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,50.11041,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,52.60824,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.57483,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.57601,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,51.11068,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,51.16373,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,52.04448,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.89865,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.68401,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,44.04462,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.27884,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,42.82073,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.35443,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.55071,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.59569,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,42.76908,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,45.62537,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,44.00961,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.81931,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.29141,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.74904,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.81778,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.25086,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,44.73388,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.78112,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.08554,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.43852,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,39.8762,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.27211,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.11397,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.68489,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,39.50128,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.08447,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.91922,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.19937,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.68963,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.4436,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.22615,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.38234,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.53953,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.20971,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.49452,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,39.72651,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.47406,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.85833,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.46205,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,71.29909,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,71.03025,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,70.0502,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,70.04288,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,71.87949,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,70.84617,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,70.51507,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,70.86528,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,70.89326,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,72.24961,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,70.84545,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,71.22316,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,72.45872,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,71.48765,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,71.25152,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,69.79134,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,72.10956,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,69.94742,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,72.46303,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,52.99796,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,53.51922,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,52.2186,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,52.91687,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,52.62459,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,53.14558,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,51.09967,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,52.79428,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,51.38108,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,52.28314,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,51.43677,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,52.41483,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,50.72054,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,51.52199,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,52.86767,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,51.0077,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,54.37573,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,51.84473,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,52.20404,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.48284,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.36654,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.66309,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.777,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.60501,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.15518,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.00173,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.34357,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.0772,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.56129,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.56676,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.1901,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.59623,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.75746,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.54969,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.80638,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.61674,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.63311,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.379,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,38.88542,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.15031,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,38.62298,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.96781,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.34601,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,38.54862,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,38.79957,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.18678,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.37462,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.62418,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.072,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.63941,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,38.61518,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.0354,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.14546,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.36297,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.75096,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.54314,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,38.63506,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,25.4638,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,24.93017,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,25.18793,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,24.84869,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,24.87167,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,24.90435,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,25.05965,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,24.95235,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,24.85235,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,25.58782,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,25.20533,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,25.43441,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,25.98474,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,25.16038,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,25.42257,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,25.05096,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,25.38712,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,25.27683,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,25.26874,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,59.7151,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,59.69262,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,61.00205,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,59.70914,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,59.23333,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,61.69024,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,59.32704,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,61.56466,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.59181,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.36368,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.11381,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.30168,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.19971,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,61.65966,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.83304,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.03856,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.0528,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.50563,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,61.88238,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.23102,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.69983,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.72913,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.20263,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,52.54042,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.87049,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.76752,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.94005,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.4037,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.72713,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.20227,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,52.0181,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.17627,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.46345,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.96273,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.9548,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,44.97928,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,46.54193,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,45.12846,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,44.60705,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,46.27579,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,44.71432,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,45.33755,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,45.50098,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,45.6296,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,44.92601,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,46.69871,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,46.37745,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,46.20396,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,48.02842,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,46.96023,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,47.63747,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,46.25433,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,41.2587,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,41.30287,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,41.54237,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,41.39803,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,41.37872,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,40.5577,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,41.09622,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,42.39204,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,42.20074,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,129.08269,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,128.59162,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,131.16722,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,129.39049,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,132.77884,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,132.60902,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,132.16651,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,135.47482,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,132.77778,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,129.43802,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,131.86385,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,75.41974,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,75.35209,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,76.75774,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,74.34682,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,76.12239,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,75.459,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,76.45101,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,76.8795,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,75.22148,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,74.18828,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,75.4003,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,75.1753,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,75.12462,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,75.09793,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,75.33434,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,74.82677,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,77.00656,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,76.46446,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,75.02066,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,55.12052,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,55.06758,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,55.06652,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,55.47086,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,54.83714,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,54.80626,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,53.43812,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,53.78586,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,55.74771,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,54.29255,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,55.07017,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,55.53308,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,54.869,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,54.94583,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,54.58349,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,53.27889,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,54.90586,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,53.4676,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,54.87099,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.58855,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.01925,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.66548,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.90789,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.41953,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,48.3133,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.71268,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.6189,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.92269,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.63569,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.29638,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.52124,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.76625,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.83404,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.9491,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.90781,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.08736,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.94642,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.77355,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.38763,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,49.42126,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,49.71135,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.58739,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.44345,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.46993,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,51.45853,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.14586,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,49.8165,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,51.11317,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,49.45642,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.18722,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.04218,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.83418,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,49.98829,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.50749,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.49888,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.94299,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,49.80729,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.15765,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.12102,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.92359,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.16649,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.64849,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.33163,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.11786,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,41.02001,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.79913,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.19661,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.73711,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,38.94437,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,38.99381,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.0153,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.29718,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.49419,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.37897,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.11536,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.51752,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.36147,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.55669,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.20291,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.37355,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.70686,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.5129,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.4653,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.19708,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.35783,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.52303,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.29346,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.12531,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.45539,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.36958,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.38189,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.43691,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.37588,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.48071,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.30386,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.0456,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.15726,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.24544,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.29577,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.28707,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.5867,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.88242,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.22226,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.13738,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.19162,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.05897,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.06433,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.49741,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.30887,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.42084,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.13416,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.18944,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.2363,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.16132,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,63.12718,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,61.33591,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,60.86899,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,60.47028,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,61.58372,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,60.93472,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,61.52874,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,60.6375,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,61.54322,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,62.27816,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,61.59924,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,60.99284,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,63.87831,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,64.04381,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,61.76444,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,64.34018,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,64.66556,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,60.87103,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,61.77538,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,57.56246,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,54.2217,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,56.61705,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,54.98371,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,55.77633,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,55.56235,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,56.35374,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,55.50062,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,56.2839,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,55.74752,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,53.76737,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,49.36045,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.70909,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.16118,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.50978,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.52403,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.44557,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.60782,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.83216,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.81482,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,47.3518,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,53.6811,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,48.2302,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.50989,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,43.39982,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,42.99353,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,39.94499,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,42.64023,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.00964,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.2741,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.48543,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.36188,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,38.82487,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,39.64263,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,38.92683,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,38.67247,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.12407,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,40.05004,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,129.92446,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,125.71281,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,123.86427,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,126.40332,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,122.98201,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,124.87915,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,124.47977,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,114.60384,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,114.46523,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,109.00593,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,106.50528,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,107.89014,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,110.26033,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,109.25092,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,101.91102,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,102.80769,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,99.55856,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,108.97086,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,108.28344,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,49.03334,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,49.31165,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,49.48625,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,48.76347,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,48.4635,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,50.2092,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,48.65814,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,50.38044,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,49.48656,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.71443,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,48.54705,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.66054,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,49.31815,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,48.97722,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,48.05642,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,49.23392,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.29499,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,48.61816,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,49.46988,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.43693,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.74151,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.69885,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.44639,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.23053,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.80478,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.43604,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.04259,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.17823,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,43.84001,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.06366,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.28711,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.06299,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.98758,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.78251,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.93517,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.01847,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.14697,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.72778,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.71166,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.17488,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,48.30817,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,44.2119,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,42.11736,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,47.5264,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.02869,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,49.6499,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.53215,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.66734,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,41.37636,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,42.57938,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.63833,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,51.2274,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.85884,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,48.26738,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.33525,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.36845,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,47.31956,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,59.71854,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,63.85925,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,60.66121,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,59.83971,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,60.38139,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,61.67173,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,68.51623,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,60.44348,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,60.71576,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,61.13698,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,59.77181,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,61.61568,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,59.87508,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,62.04569,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,62.78928,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,60.84079,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,60.08204,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,61.17096,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,61.19393,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,63.21481,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,61.58668,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,61.02355,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,63.22099,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,63.49022,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,62.01415,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,60.504,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,64.37151,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,60.18509,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,60.45538,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,61.13332,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,60.78348,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,62.31333,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,60.48443,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,62.36046,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,62.45959,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,60.85379,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,60.33259,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,64.24489,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,75.52656,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,72.92217,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,69.3833,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,70.89892,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,59.48798,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,56.42988,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,61.4851,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.38834,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.86717,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,71.16832,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,79.94535,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,76.01589,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,98.45002,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,61.57069,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.23213,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,54.61406,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.47587,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,56.28758,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,86.38171,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.77473,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.51258,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,61.27975,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,73.12391,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.81542,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,107.77059,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,99.0637,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,78.10021,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,71.50864,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,100.27881,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,173.48821,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,129.47975,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.26679,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,57.04787,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,67.24533,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,67.76278,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,117.03369,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,53.15743,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,52.3683,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,70.89252,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,48.49464,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,43.65673,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,57.09022,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,51.55454,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,59.62565,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,43.46584,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,43.48532,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,67.86645,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,56.37647,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,42.98833,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,48.8712,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,71.01014,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,83.07213,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,54.36371,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,107.32854,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,46.35874,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,135.10394,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,60.02411,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,64.93526,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,112.95723,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,71.33938,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,56.61607,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,51.24765,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,65.66805,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,70.69498,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,89.24528,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,46.4441,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,39.5797,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,46.02253,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,55.53374,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,123.88048,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,41.58511,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,71.04151,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,56.78908,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,71.71146,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,39.76267,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,41.64084,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,126.52439,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,134.37715,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,114.74396,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,163.99632,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,118.21521,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,153.36113,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,153.38396,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,111.18227,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,182.27705,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,102.28537,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,168.56491,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,149.35462,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,105.53966,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,154.78255,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,215.6279,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,175.48926,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,103.64004,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,105.10526,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,216.09249,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,64.93683,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,78.27684,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,74.61371,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,77.0375,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,65.7044,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,78.79114,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,68.81312,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,180.9467,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,94.45704,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,69.81897,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,80.53178,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,66.58618,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,68.83043,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,74.2377,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,67.61765,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,67.91465,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,68.76232,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,73.79288,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,75.27266,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,51.45935,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,53.21478,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,73.61847,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,99.43891,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,48.92087,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,51.32427,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,52.37503,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,48.34959,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,59.55861,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,49.98007,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,48.84775,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,48.89409,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,51.94517,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,49.35978,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,53.36123,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,49.7411,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,54.42799,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,82.29594,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,156.24865,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.39205,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.01971,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.64573,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.79379,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.25785,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.80329,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.49078,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.02886,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.0996,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.32712,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.47895,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.67613,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.64672,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.84694,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.3088,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.40638,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.10117,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.5181,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.95043,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,51.46834,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,48.50582,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.6464,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,54.18935,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,79.34855,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,54.49185,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,52.28497,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,61.49199,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,52.37219,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,49.26739,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,54.2595,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,81.14499,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,67.37189,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,48.18122,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,47.92347,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,52.14318,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.29098,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,49.08428,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,47.97709,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,124.15139,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,42.93227,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.88721,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,50.05452,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,47.67187,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,55.83768,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,61.96976,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,53.01249,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,68.58054,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,77.39843,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,55.37893,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,42.0906,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.48772,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,43.46607,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,43.61742,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,41.58563,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.59015,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,43.88435,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,67.74301,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.24368,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.79495,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.13722,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.23081,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,27.11855,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.64443,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,27.07589,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,27.49466,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,26.69085,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,29.16488,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,26.76041,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,26.54436,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.82062,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.20335,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.39624,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,26.1501,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.18289,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.32108,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.32994,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.20453,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.47005,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.37648,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.04132,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,26.17391,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,26.6565,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.78474,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.74439,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,26.14925,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,31.47591,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,27.28958,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.6172,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.32276,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,26.11156,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.8323,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,25.61226,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,28.50335,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,26.96887,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+hp3,NVIDIA L40S,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,45.0624,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.33312,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,48.95936,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,50.27641,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.5146,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.51466,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.21943,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.18801,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.95388,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.47647,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,48.56667,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.95414,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.12728,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,48.81752,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,50.93975,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,47.94657,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,49.22988,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,48.92182,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,47.13513,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,50.83711,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,43.65387,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,43.74166,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,44.11224,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,43.16502,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,43.72472,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,43.30312,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,43.66594,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,42.86534,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,42.83676,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,43.60978,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,43.79668,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,42.99843,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,43.25261,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,43.46376,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,44.56605,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,41.84175,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,43.18366,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,43.03773,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_full,151.2,42.9737,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,35.14074,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,38.36574,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,38.23657,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,37.07112,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,37.15911,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,38.21914,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,35.63929,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,37.35795,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,38.4175,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,38.11832,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,38.35546,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,37.8767,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,37.01901,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,42.16119,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,41.42989,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,39.21955,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,38.70213,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,36.6038,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,37.04569,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,34.48304,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,34.34294,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,35.40115,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,34.9174,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,33.90667,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,33.04257,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,35.00572,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,35.36767,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,35.36355,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,34.80608,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,34.8221,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,37.25994,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,34.88375,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,36.58597,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,34.95021,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,34.7674,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,34.02699,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,34.71086,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_full,151.2,34.80993,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,105.68373,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,107.46972,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,97.28168,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,96.45086,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,97.13641,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,100.1391,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,98.54203,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,102.91069,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,103.03586,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,105.57684,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,107.56571,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,105.02984,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,103.87144,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,108.70212,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,96.39142,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,98.74404,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,101.32448,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,97.74974,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,106.1346,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,60.83849,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,62.13564,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,60.73992,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,63.85092,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,60.84872,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,60.60073,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,61.87227,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,62.32794,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,61.09878,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,61.03467,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,62.25695,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,60.28199,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,62.17965,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,60.93718,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,60.03465,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,61.21541,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,61.67436,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,60.51577,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_Lum_131k,151.2,61.97658,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.16181,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.3317,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,42.27445,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.47737,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.28674,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,42.1712,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.30682,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.18056,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,41.99617,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.08397,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.1617,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,42.20503,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.84637,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.59901,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,42.00541,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.33492,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.72854,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,42.16015,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.37994,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.09032,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,40.04085,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.7168,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.37569,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.48864,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.13155,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.35775,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,36.91272,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,38.94325,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.25734,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.33395,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.25954,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.05792,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,38.52347,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.42054,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,41.92702,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.83688,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.10167,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSr_19k,151.2,37.53549,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,49.56435,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,43.08684,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,42.75279,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,44.76765,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.10001,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,41.9473,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,41.03505,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.73976,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,42.7782,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,41.11818,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,41.71479,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,41.95914,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,41.30404,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,39.54972,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,41.13095,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,41.68809,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,41.30955,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,45.18524,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,49.00003,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,35.4752,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,36.46433,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,35.06495,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,36.65798,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,38.91593,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.62752,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,34.9283,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,35.44057,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,35.13687,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,35.11181,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,36.87992,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,34.05326,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,34.87452,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,33.67082,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,35.86223,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,34.74428,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,34.33724,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,34.90698,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-3_SDSSg_10k,151.2,34.11968,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.01094,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,22.98396,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,22.83965,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.05422,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,22.8616,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,24.00453,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.04158,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.53873,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.52715,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.16044,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.09073,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,22.99811,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.11541,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.30525,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.32846,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.13521,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.26217,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.26796,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.1298,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,24.81262,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.46386,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.33807,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.25852,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.95326,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.50906,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.17603,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.20738,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.59249,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,24.0999,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.17991,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.4102,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.40025,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,24.14019,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.80944,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.22143,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.3478,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,23.33946,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py312_cuml_adaptive,profiler_5E,QHY411-1_Lum_full,151.2,24.38269,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.9603,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,49.87233,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.36265,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.34847,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.28929,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,47.24298,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.90089,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.78156,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.72331,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,48.62593,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.80623,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,48.12269,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,60.55102,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.75336,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,47.66992,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,53.0491,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.35206,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,52.25369,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.33567,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,44.22995,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,43.57704,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,42.99576,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,51.55652,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.07781,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,43.94993,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,50.4564,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,44.58151,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,52.22527,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,43.55002,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,43.70675,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,41.43918,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,45.26968,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,42.49217,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,43.62282,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,44.22071,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,43.09724,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,44.77599,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_full,151.2,44.90826,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,39.13386,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,39.93288,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,36.5552,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,36.61682,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,39.42831,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,41.09776,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,38.61866,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,39.95584,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,39.65642,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,38.11615,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,38.07939,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,37.55495,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,37.46487,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,38.0551,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,37.91504,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,37.45432,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,37.64329,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,37.60426,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,37.83913,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,35.92436,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,36.15184,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,35.99456,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,36.03439,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,35.48589,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,36.19628,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,38.71633,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,38.42887,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,35.8085,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,38.22548,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,36.46496,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,40.62776,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,35.738,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,35.61152,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,36.98336,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,35.79766,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,37.47441,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,37.67852,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_full,151.2,36.0793,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,103.56149,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,106.14202,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,105.37428,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,104.97755,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,106.00233,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,107.22219,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,110.26762,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,104.346,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,104.05598,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,105.03544,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,102.02728,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,102.02379,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,102.90176,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,102.8868,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,105.76069,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,102.31913,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,105.09877,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,113.83814,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,109.00194,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,61.75648,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,60.84217,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,64.74649,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,63.63313,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,63.18817,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,62.29602,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,64.76099,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,67.45406,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,64.19177,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,61.94752,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,67.47009,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,65.7114,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,84.24264,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,64.5531,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,61.80462,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,61.68657,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,61.71223,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,67.14869,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_Lum_131k,151.2,61.93515,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.66447,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.84526,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.94899,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.34777,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.68667,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.72623,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,49.26031,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.91977,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.15157,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.24408,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.65271,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,47.76293,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.66976,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.73369,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.08212,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,46.73809,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.85429,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.78677,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,45.0504,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,40.77767,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,40.10602,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,37.98471,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,41.83078,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,40.76301,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,36.83814,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,41.6173,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,40.78556,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,40.72545,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,41.46855,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.52927,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,40.85628,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,40.33777,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,44.88256,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,40.33531,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,42.11937,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,40.3164,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,42.96385,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSr_19k,151.2,39.99934,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,42.53008,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,43.26797,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,42.51569,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.60372,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,43.27209,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,43.06897,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,43.89315,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.96408,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,43.54615,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,46.15377,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,42.05321,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,43.32975,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.60214,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,44.10329,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,45.66994,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,42.93523,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,40.34548,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,44.84611,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,44.06726,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,35.87815,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,35.71872,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,35.37373,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,37.686,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,35.86286,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,36.88402,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,36.58391,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,34.36599,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,36.0495,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,35.01233,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,36.12416,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,35.23263,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,36.21523,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,36.06195,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,36.25032,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,36.70665,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,36.23751,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,37.09301,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-3_SDSSg_10k,151.2,35.52997,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.51464,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.33194,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.25902,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.32017,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.52191,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.59175,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.40921,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.40187,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.51927,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.34905,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,14.30204,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.38419,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.76514,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.5962,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.43718,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.28494,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.37308,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.50346,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.36966,,2026-05-29T07:00:33.000Z,,,,,,,,5E,vizier
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.7285,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.49501,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.38396,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.59083,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.23395,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.25991,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.26667,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.13205,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.29899,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.89724,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.26441,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.07261,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.2468,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.05002,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.03849,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.22842,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,13.4291,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.31471,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local
+azken,NVIDIA H100 PCIe,,py38_baseline,profiler_5E,QHY411-1_Lum_full,151.2,12.87317,,2026-05-29T07:00:33.000Z,,,,,,,,5E,local

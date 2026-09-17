@@ -297,7 +297,7 @@ def main():
     )
     parser.add_argument(
         "--output-dir",
-        default=".",
+        default=os.path.join(Path(__file__).resolve().parent, '..', '..', 'notebooks'),
         help="Directory where the .ipynb file will be written.",
     )
     args = parser.parse_args()

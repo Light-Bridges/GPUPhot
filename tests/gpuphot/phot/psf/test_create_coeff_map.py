@@ -18,7 +18,7 @@ from ...conftest import NVRTC_WORKS
 class TestCreateCoeffMap(unittest.TestCase):
 
     def test_output_shape(self):
-        from .....gpuphot.phot.psf import create_coeff_map
+        from gpuphot.phot.psf import create_coeff_map
         img_shape = (256, 256)
         n_stars, n_coeffs = 5, 3
         positions = cp.array([[64, 64], [128, 128], [192, 192],
@@ -31,7 +31,7 @@ class TestCreateCoeffMap(unittest.TestCase):
         self.assertEqual(result.shape[2], img_shape[1])
 
     def test_returns_cupy_array(self):
-        from .....gpuphot.phot.psf import create_coeff_map
+        from gpuphot.phot.psf import create_coeff_map
         img_shape = (128, 128)
         positions = cp.array([[32, 32], [64, 64], [96, 96]], dtype=cp.float32)
         coefficients = cp.random.rand(2, 3).astype(cp.float32)
@@ -40,7 +40,7 @@ class TestCreateCoeffMap(unittest.TestCase):
         self.assertIsInstance(result, cp.ndarray)
 
     def test_no_nan_in_output(self):
-        from .....gpuphot.phot.psf import create_coeff_map
+        from gpuphot.phot.psf import create_coeff_map
         img_shape = (128, 128)
         positions = cp.array([[32, 32], [64, 64], [96, 96]], dtype=cp.float32)
         coefficients = cp.random.rand(2, 3).astype(cp.float32)

@@ -13,7 +13,7 @@ import numpy as np
 class TestRecomposeFromPercentiles(unittest.TestCase):
 
     def test_output_shape(self):
-        from .....gpuphot.phot.utils import recompose_from_percentiles
+        from gpuphot.phot.utils import recompose_from_percentiles
         original_shape = (64, 64)
         block_size = 16
         n_tiles = (64 // 16) * (64 // 16)  # 16
@@ -22,7 +22,7 @@ class TestRecomposeFromPercentiles(unittest.TestCase):
         self.assertEqual(result.shape, original_shape)
 
     def test_tile_regions_have_correct_values(self):
-        from .....gpuphot.phot.utils import recompose_from_percentiles
+        from gpuphot.phot.utils import recompose_from_percentiles
         original_shape = (32, 32)
         block_size = 16
         # 4 tiles: values 1, 2, 3, 4
@@ -34,7 +34,7 @@ class TestRecomposeFromPercentiles(unittest.TestCase):
         np.testing.assert_allclose(result[:16, 16:32].get(), 2.0)
 
     def test_returns_cupy_array(self):
-        from .....gpuphot.phot.utils import recompose_from_percentiles
+        from gpuphot.phot.utils import recompose_from_percentiles
         percentiles = cp.ones(4, dtype=cp.float32)
         result = recompose_from_percentiles(percentiles, (32, 32), 16)
         self.assertIsInstance(result, cp.ndarray)

@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from dotenv import load_dotenv
 
-# Asegúrese de que todas las rutas estén correctamente configuradas
+# Make sure every path is configured correctly
 sys.path.append('/app')
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))

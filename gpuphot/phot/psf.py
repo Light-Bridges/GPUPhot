@@ -9,6 +9,9 @@ falls back to CPU-based libraries when necessary.
 
 from __future__ import annotations
 
+import functools as _functools
+import os as _os
+
 import cupy as cp
 import numpy as _numpy
 try:
@@ -26,32 +29,25 @@ from scipy.spatial.distance import cdist
 from ..utils.gpu import adaptive_memory_management
 
 try:
-    from cuml.cluster import KMeans as cuKMeans
-except ImportError:
-    from sklearn.cluster import KMeans
-except Exception:
-    from sklearn.cluster import KMeans
-
-try:
     from cuml.decomposition import PCA
-except ImportError:
-    from sklearn.decomposition import PCA
 except Exception:
     from sklearn.decomposition import PCA
 
+# The GPU clustering path needs both symbols it actually uses: cuKMeans
+# (_group_star_dataset_gpu_impl) and cu_pairwise_distances (small-group
+# reassignment).  Gate the flag on those, not on unrelated cuML classes.
 try:
-    import cuml
-    from cuml.cluster import AgglomerativeClustering as cuAgglomerativeClustering
+    from cuml.cluster import KMeans as cuKMeans
     from cuml.metrics import pairwise_distances as cu_pairwise_distances
 
     CUML_CLUSTERING_AVAILABLE = True
-except ImportError:
-    CUML_CLUSTERING_AVAILABLE = False
 except Exception:
     CUML_CLUSTERING_AVAILABLE = False
 
-# Import CPU libraries unconditionally for fallback
-from sklearn.cluster import AgglomerativeClustering as skAgglomerativeClustering
+# Import CPU libraries unconditionally for fallback: _group_star_dataset_cpu_impl
+# runs both when cuML is absent and when the GPU path raises at runtime, so KMeans
+# must be bound even on hosts where the cuML import above succeeded.
+from sklearn.cluster import KMeans, kmeans_plusplus
 
 # kmeans_plusplus seeds the GPU clustering in _group_star_dataset_gpu_impl, so it is
 # needed even on hosts where the cuML import above succeeded.
@@ -303,7 +299,7 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
         valid_indices.append(i)
 
         # --- Recentrado sub-pixel al baricentro ---
-        # centroide de intensidad del recorte (resta un fondo local para no sesgar con el cielo)
+        # intensity centroid of the stamp (a local background is subtracted so the sky does not bias it)
         sub_bg = subima - cp.median(subima)
         sub_bg = cp.clip(sub_bg, 0, None)
         tot = cp.sum(sub_bg)
@@ -332,6 +328,19 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
         scaling_dataset_full[i, 2] = cp.var(subima)
         scaling_dataset_full[i, 3] = cp.sum(subima)
 
+        # Early exit once we have the N stars this function can ever return.
+        # The post-loop selection keeps `valid_idx_arr[:N]`, i.e. the first N
+        # valid stars in input order, so iterating further cannot change the
+        # output.  This matters because each iteration performs a sub-pixel
+        # recentring (cubic spline shift plus several GPU->CPU
+        # synchronisations); on crowded fields `coords` can hold tens of
+        # thousands of candidates, of which all but N were discarded *after*
+        # paying that cost.  Measured on a 151.2 MP frame with 43,916
+        # candidates (L40S): 89.9 s -> 2.1 s for this function, with
+        # bit-identical output.
+        if len(valid_indices) >= N:
+            break
+
     # --- Post-Loop Filtering ---
 
     # Convert the list of valid indices to a CuPy array for efficient indexing
@@ -356,9 +365,49 @@ def create_star_dataset(img: cp.ndarray, coords: cp.array, pxscale: float, N: in
     return selected_star_dataset, selected_coords, selected_scaling_dataset
 
 
+@_functools.lru_cache(maxsize=1)
+def _warn_if_blas_kernel_unpinned() -> None:
+    """Warn once if OPENBLAS_CORETYPE is unset: the CPU clustering below is
+    kernel-sensitive.
+
+    OpenBLAS picks its kernel from the host microarchitecture and the kernels
+    do not round identically, so two machines given byte-identical input can
+    settle KMeans in different local optima and shift the zero point (measured
+    0.0053 mag between Cooperlake and SkylakeX/Zen on a dense 151.2 MP frame;
+    only bites when the frame is split into many clusters).  The Docker images
+    pin the kernel via compose, but when gpuphot is imported as a library or
+    submodule nothing sets the variable, and the divergence would be silent —
+    hence this warning.  It cannot be fixed here: by the time gpuphot imports,
+    numpy has already loaded OpenBLAS, so the variable must be exported before
+    the interpreter starts (SkylakeX on AVX-512 hosts, Haswell otherwise; a
+    wrong kernel for the CPU dies with SIGILL, see sitecustomize.py).
+    """
+    if _os.environ.get("OPENBLAS_CORETYPE", "").strip():
+        return
+    detected = "unknown"
+    try:
+        from threadpoolctl import threadpool_info
+        for tp in threadpool_info():
+            if tp.get("internal_api") == "openblas":
+                detected = tp.get("architecture", "unknown")
+                break
+    except Exception:
+        pass
+    logger.warning(
+        "OPENBLAS_CORETYPE is not set: CPU star clustering results depend on "
+        "the OpenBLAS kernel (this host auto-selected '%s') and may not be "
+        "reproducible across machines. gpuphot could not pin it automatically "
+        "because numpy was already imported when gpuphot loaded. Export "
+        "OPENBLAS_CORETYPE before Python starts (SkylakeX on AVX-512 hosts, "
+        "Haswell otherwise) to pin it.",
+        detected,
+    )
+
+
 @nvtx.annotate('_group_star_dataset_cpu_impl', category='phot.psf_cpu')
 def _group_star_dataset_cpu_impl(coords: np.ndarray, avg_group_size: int = 10, min_group_size: int = 5) -> np.ndarray:
     """CPU implementation using sklearn/scipy."""
+    _warn_if_blas_kernel_unpinned()
     if avg_group_size <= 0 and min_group_size <= 0:
         # raise InvalidGroupSizeError(avg_group_size, min_group_size)
         raise ValueError("avg_group_size and min_group_size must be positive")
@@ -371,8 +420,14 @@ def _group_star_dataset_cpu_impl(coords: np.ndarray, avg_group_size: int = 10, m
     num_clusters = max(1, n_stars // effective_avg_group_size)
     num_clusters = min(num_clusters, n_stars)
 
-    # Initial Clustering (Scikit-learn)
-    clustering = KMeans(n_clusters=num_clusters)
+    # Initial Clustering (Scikit-learn).
+    # random_state is pinned to match the GPU path (cuKMeans below), which already
+    # passes random_state=42: without it sklearn re-seeds per call, so two runs of
+    # the same image on the same host can land on different local optima and hand
+    # downstream stages a different grouping.  Measured on a 151.2 MP frame: the
+    # unseeded CPU path alternated between 23 and 24 groups across repetitions,
+    # which is enough to change how many sources survive aperture correction.
+    clustering = KMeans(n_clusters=num_clusters, random_state=42, n_init=10)
     labels = clustering.fit_predict(coords)
 
     unique_labels_initial, counts = np.unique(labels, return_counts=True)
@@ -444,19 +499,28 @@ def _group_star_dataset_gpu_impl(coords: cp.ndarray, avg_group_size: int = 10, m
 
     # Initial clustering (cuML), seeded from explicit centroids computed on the CPU.
     #
-    # The default k-means|| is not reproducible across GPU models.  It draws its seeds
-    # through RAFT's RngState, which is advanced by n_blocks * n_threads with
-    # n_blocks = 4 * multiProcessorCount (raft/random/detail/rng_impl.cuh), so cards
-    # with different SM counts walk different sequences and the same random_state
-    # lands on a different local optimum on each model.  Measured on one 151 MP frame:
-    # 0.047 mag of ZP spread across H100 (114 SM) / A100 (108) / L40S (142), returned
-    # with Status OK, plus an astrometry timeout on the H100.
+    # Neither of cuML's own initialisations is reproducible, and each fails on a
+    # different axis:
     #
-    # Seeding with explicit centroids takes raft::random out of the loop.  Ten
-    # deterministic kmeans_plusplus draws replace n_init=10 without an RNG, and the
-    # lowest-inertia one wins.  Verified over 2645 runs crossing GPU model, position in
-    # the batch and repetition: centroids and ZP are identical on all three axes, and
-    # the inertia is better than the k-means|| result.
+    #   * the default k-means|| draws its seeds through RAFT's RngState, which is
+    #     advanced by n_blocks * n_threads with n_blocks = 4 * multiProcessorCount
+    #     (raft/random/detail/rng_impl.cuh).  Cards with different SM counts walk
+    #     different sequences, so the same random_state lands on a different local
+    #     optimum on every model.  Measured spread across H100 (114 SM) / A100 (108) /
+    #     L40S (142): 0.0473 mag on OBLINEID 5699415, returned with Status OK, plus an
+    #     astrometry timeout on the H100.
+    #   * init='random' fixes that but ignores random_state entirely and takes its
+    #     randomness from libc rand() without srand().  rand() starts identically in
+    #     every new process but advances on each call, so the result depends on the
+    #     image's position in the batch: 0.0069 mag between the 1st and 3rd frame of
+    #     one worker process.  A profiler run hides this because it starts a fresh
+    #     process per image; production does not.
+    #
+    # Seeding with explicit centroids takes raft::random out of the loop altogether.
+    # Ten deterministic kmeans_plusplus draws replace n_init=10 without an RNG, and
+    # the lowest-inertia one wins.  Verified over 2645 runs crossing GPU model,
+    # position in the batch and repetition: centroids and ZP are identical on all
+    # three axes, and the inertia beats both alternatives above.
     coords_cpu = _numpy.asarray(cp.asnumpy(coords_f32), dtype=_numpy.float64)
     best_inertia, labels = None, None
     for seed in range(42, 52):
@@ -687,7 +751,7 @@ def create_coeff_map(img_shape: tuple, positions: cp.array, coefficients: cp.arr
         block_size = int(tile_section)
 
     # Protección: block_size no puede superar la dimensión menor del frame.
-    # Se exigen al menos 2 tiles por eje para que el mapa de variación espacial
+    # At least 2 tiles per axis are required so that the spatial variation map
     # tenga sentido; si no, img_shape // block_size = 0 y el reshape falla.
     min_dim = min(img_shape[0], img_shape[1])
     if block_size > min_dim // 2:

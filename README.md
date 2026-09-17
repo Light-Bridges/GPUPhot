@@ -33,10 +33,27 @@ GPUPhot is a Python library designed for high-performance photometry and astrome
 
 ## Installation
 
-See the detailed installation instructions in [INSTALL.md](INSTALL.md).  Briefly, you have two main options:
+GPUPhot supports two deployment modalities:
 
-1.  **Using Docker Compose (Recommended):** This is the easiest way to get started, as it provides a complete, pre-configured environment.
-2.  **Manual Installation:**  This gives you more control but requires more setup.
+### 1. Standalone Python Library (PyPI)
+For direct use in Python scripts, Jupyter notebooks, or integration into existing observatory pipelines:
+
+```bash
+# 1. Install CuPy matching your CUDA version (e.g., CUDA 12.x)
+pip install cupy-cuda12x
+
+# 2. Install GPUPhot
+pip install gpuphot
+```
+
+### 2. Distributed Microservices Stack (Docker Compose)
+For high-throughput, unattended queue-driven operations at robotic observatories, deploy the containerized cluster (Celery workers, RabbitMQ broker, Redis backend, PostgreSQL/Q3C database, Flower dashboard, JupyterLab):
+
+```bash
+docker compose up -d
+```
+
+See [INSTALL.md](INSTALL.md) for full prerequisites and [DOCKER.md](DOCKER.md) for container orchestration details. If developing or running the Celery worker service locally outside Docker, install via `pip install -e .[worker]`.
 
 ## Configuration & Data Management
 
@@ -121,41 +138,29 @@ This script ensures that each Docker worker is assigned a unique `GPU_ID` to pre
 
 ## Quick Start
 
-This example shows how to process a single FITS image. 
-
-**Prerequisite:** Ensure your image is located inside the folder defined by `IMAGE_PATH` in your `.env` file.
+This example shows how to process a single FITS image using the standalone Python library:
 
 ```python
+from astropy.io import fits
 from gpuphot.image_processor import create_processor
-from gpuphot_worker.utils import open_image_file
 
-# 1. Load the image data and header.
-#    The path must be relative to the mounted /data/images directory.
-image_filename = 'session_01/target_A.fits' 
+# 1. Load the image data and header using Astropy
+with fits.open('path/to/your/image.fits') as hdul:
+    imdata = hdul[0].data
+    imheader = hdul[0].header
 
-try:
-    imdata, imheader = open_image_file(image_filename)
-except ValueError as e:
-    print(f"Error opening image: {e}")
-    print("Hint: Check if the file exists in your mapped IMAGE_PATH folder.")
-    exit(1)
-
-# 2. Create an ImageProcessor instance.
-#    'default' uses the default configuration.
+# 2. Create an ImageProcessor instance ('default' loads default.json)
 processor = create_processor('default')
 
-# 3. Process the image.
-try:
-    phot_df, hwcs = processor.process_image(imdata, imheader)
-except Exception as e:
-    print(f"Error during image processing: {e}")
-    exit(1)
+# 3. Process the image
+phot_df, hwcs = processor.process_image(imdata, imheader)
 
-# 4. Print the results (a Pandas DataFrame).
+# 4. Results: phot_df is a pandas DataFrame, hwcs is the updated FITS header
 print(phot_df)
-
-# The updated FITS header (with WCS information) is in 'hwcs'.
+print(f"Plate solution: CRVAL1={hwcs.get('CRVAL1')}, CRVAL2={hwcs.get('CRVAL2')}")
 ```
+
+> **Note for Docker / Distributed Worker deployments:** When running inside the containerized microservices stack, `gpuphot_worker.utils.open_image_file` is also available to automatically resolve paths relative to `/data/images` and handle `.npy` files.
 
 **Important Notes:**
 
@@ -174,6 +179,47 @@ See [USAGE.md](USAGE.md#1-instrument-configuration) or the **Instrument Configur
 ## Astrometry Setup
 
 To enable astrometric calibration, you need to download the `astrometry.net` index files. See [USAGE.md](USAGE.md#2-astrometry-setup) for instructions.
+
+## Citation & Academic Use
+
+If you use **GPUPhot** in scientific research or publications, please cite the framework paper and reference the Astrophysics Source Code Library (ASCL) record:
+
+- **Framework & Distributed Pipeline:**  
+  Lemes-Perera, S., Alarcon, M. R., Serra-Ricart, M., & Caballero-Gil, P.  
+  *"GPUPHOT: A Python Framework for High-Performance GPU-Accelerated Photometry and Distributed Astronomical Data Reduction"*, Astronomy and Computing (submitted, 2026).
+
+- **Kernel-Based Algorithms:**  
+  Alarcon, M. R., Lemes-Perera, S., Serra-Ricart, M., & Licandro, J.  
+  *"GPUPHOT: Kernel-Based Algorithms for Point-Source Detection and Photometry with a Spatially Variable PSF"*, The Planetary Science Journal (in preparation, 2026).
+
+- **ASCL Indexing:**  
+  GPUPhot is registered in the [Astrophysics Source Code Library](https://ascl.net/) (`ascl:XXXX.XXX`) and indexed by NASA ADS (`YYYYascl.soft...S`).
+
+```bibtex
+@article{gpuphot2026,
+  author        = {Lemes-Perera, Samuel and Alarcon, Miguel R. and Serra-Ricart, Miquel and Caballero-Gil, Pino},
+  title         = {{GPUPHOT: A Python Framework for High-Performance GPU-Accelerated Photometry and Distributed Astronomical Data Reduction}},
+  journal       = {Astronomy and Computing},
+  year          = {2026},
+  note          = {Submitted}
+}
+
+@article{gpuphot_algorithms2026,
+  author        = {Alarcon, Miguel R. and Lemes-Perera, Samuel and Serra-Ricart, Miquel and Licandro, Javier},
+  title         = {{GPUPHOT: Kernel-Based Algorithms for Point-Source Detection and Photometry with a Spatially Variable PSF}},
+  journal       = {The Planetary Science Journal},
+  year          = {2026},
+  note          = {In preparation}
+}
+
+@software{gpuphot_ascl,
+  author        = {Lemes-Perera, Samuel and Alarcon, Miguel R. and Serra-Ricart, Miquel and Caballero-Gil, Pino and Licandro, Javier},
+  title         = {{GPUPhot: A GPU-Accelerated Framework for Astronomical Photometry and Astrometry}},
+  howpublished  = {Astrophysics Source Code Library},
+  year          = {2026},
+  note          = {ascl:XXXX.XXX}
+}
+```
 
 ## Contributing
 

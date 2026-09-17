@@ -3,6 +3,7 @@
 Helper utilities for gpuphot_worker: file I/O, image saving and image transformations.
 
 This module provides:
+
 - get_processor: factory wrapper to build image processors from project module.
 - open_image_file: robust opening for FITS and NPY images, returning data and header.
 - save_processed_image: save processed data to a standardized processed-images folder.
@@ -46,7 +47,7 @@ def get_processor(instrument_name=None):
 
     Returns
     -------
-    ImageProcessor
+    gpuphot.image_processor.ImageProcessor
         Configured image processor
     """
     instrument_name = instrument_name or os.environ.get('INSTRUMENT_NAME', 'default_instrument')
@@ -59,6 +60,7 @@ def open_image_file(file_path: str) -> Tuple[np.ndarray, fits.Header]:
     Opens an astronomical image file (FITS or NPY) and returns the data and header.
 
     This function is designed to be robust and handle different input formats:
+
     - **FITS**: Standard opening. Tries primary HDU first, then secondary if empty.
     - **NPY**: Loads raw NumPy arrays. Crucially, it looks for an associated
       text file (same basename, .txt extension) to parse as a FITS header.
@@ -73,6 +75,7 @@ def open_image_file(file_path: str) -> Tuple[np.ndarray, fits.Header]:
     -------
     tuple
         Tuple containing:
+
         - imdata (np.ndarray): Image data as float32.
         - imheader (fits.Header): The associated FITS header.
 
@@ -250,6 +253,7 @@ def crop_and_bin_image(fits_file: str,
     The output file is always in FITS format.
 
     Key features for astrometry preservation:
+
     - **Binning**: Updates CD/PC matrix and pixel scale.
     - **Cropping**: Calculates new CRPIX values manually based on the crop origin,
       ensuring WCS remains valid even if the crop is not centered.

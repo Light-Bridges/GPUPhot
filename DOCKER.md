@@ -65,6 +65,17 @@ GPUPHOT_LOG_LEVEL=DEBUG
 # Execution environment (development, production).
 GPUPHOT_ENVIRONMENT=development
 
+# OpenBLAS kernel pin for cross-machine reproducibility (see USAGE.md §6.0).
+# Usually you do NOT need to set this: the containers auto-select the right
+# kernel from the CPU (AVX-512 -> SkylakeX, AVX2-only -> Haswell).  Set it only
+# to override that choice for a specific host.  WARNING: SkylakeX requires
+# AVX-512; on a CPU without it OpenBLAS dies with a silent SIGILL (exit 132).
+# OPENBLAS_CORETYPE=SkylakeX
+
+# Same, for the aarch64 (Jetson) profilers only.  x86-64 kernel names do not
+# apply there; ARM runs unpinned unless you set an ARM kernel here.
+# OPENBLAS_CORETYPE_ARM=
+
 # ===================================================================
 #  Host Path Configuration
 #  IMPORTANT: You must change these paths! They should be absolute paths.
@@ -105,7 +116,15 @@ CELERY_CONCURRENCY=1
 # --- PostgreSQL (Database) ---
 # Password for the database 'admin' user. CHANGE IN PRODUCTION!
 POSTGRES_PASSWORD=gpuphot
-# Port exposed on the host for PostgreSQL.
+# Port exposed on THIS HOST for PostgreSQL -- change only to dodge a local
+# port clash (e.g. another Postgres already on 5432). This does NOT change
+# how the gpuphot_worker/beat containers reach postgres: on the compose
+# network they always use the internal port 5432, hardcoded, regardless
+# of this value.
+POSTGRES_HOST_PORT=5432
+# Port used when CONNECTING to PostgreSQL from outside Docker (psql, a
+# standalone script run on the host). Set this to match POSTGRES_HOST_PORT
+# above if you changed it and need host-side access.
 POSTGRES_PORT=5432
 
 # --- RabbitMQ (Message Broker) ---

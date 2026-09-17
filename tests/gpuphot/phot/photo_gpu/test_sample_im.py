@@ -10,7 +10,7 @@ class TestSampleIm(unittest.TestCase):
     """
 
     def setUp(self):
-        from .....gpuphot.phot.photo_gpu import sample_im
+        from gpuphot.phot.photo_gpu import sample_im
         self.sample_im = sample_im
 
     def _large_image(self, size=3500, value=1000.0):

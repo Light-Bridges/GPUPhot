@@ -16,7 +16,7 @@ from ...conftest import NVRTC_WORKS
 class TestGetSky(unittest.TestCase):
 
     def setUp(self):
-        from .....gpuphot.phot.photo_gpu import get_sky
+        from gpuphot.phot.photo_gpu import get_sky
         self.get_sky = get_sky
 
     def _make_image(self, size=256, value=1000.0):

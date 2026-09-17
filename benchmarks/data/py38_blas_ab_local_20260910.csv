@@ -1,0 +1,19 @@
+# OpenBLAS coretype test on local workstation (RTX 3050 Ti, i7-12700H) (2026-09-10).
+# Verifies latency invariance under OPENBLAS_CORETYPE overrides on client hardware.
+host,gpu,cell,arm_coretype,kernel_chosen,omp_threads,rep,elapsed_s,n_obj
+local,RTX3050Ti,iKon936_Lum,default,Haswell,unset,1,53.730,228
+local,RTX3050Ti,iKon936_Lum,default,Haswell,unset,2,44.254,228
+local,RTX3050Ti,iKon936_Lum,default,Haswell,unset,3,51.968,228
+local,RTX3050Ti,iKon936_Lum,default,Haswell,unset,4,42.884,228
+local,RTX3050Ti,iKon936_Lum,Haswell,Haswell,unset,1,50.826,228
+local,RTX3050Ti,iKon936_Lum,Haswell,Haswell,unset,2,43.736,228
+local,RTX3050Ti,iKon936_Lum,Haswell,Haswell,unset,3,41.108,228
+local,RTX3050Ti,iKon936_Lum,Haswell,Haswell,unset,4,41.663,228
+local,RTX3050Ti,iKon936_SDSSg,default,Haswell,unset,1,44.786,279
+local,RTX3050Ti,iKon936_SDSSg,default,Haswell,unset,2,42.882,279
+local,RTX3050Ti,iKon936_SDSSg,default,Haswell,unset,3,45.314,279
+local,RTX3050Ti,iKon936_SDSSg,default,Haswell,unset,4,32.162,279
+local,RTX3050Ti,iKon936_SDSSg,Haswell,Haswell,unset,1,34.230,279
+local,RTX3050Ti,iKon936_SDSSg,Haswell,Haswell,unset,2,38.687,279
+local,RTX3050Ti,iKon936_SDSSg,Haswell,Haswell,unset,3,38.069,279
+local,RTX3050Ti,iKon936_SDSSg,Haswell,Haswell,unset,4,31.974,279

@@ -255,14 +255,16 @@ Common causes and fixes:
 ## 3. Basic Usage
 
 ```python
+from astropy.io import fits
 from gpuphot.image_processor import create_processor
-from gpuphot_worker.utils import open_image_file
 
 # 1. Create an ImageProcessor (using the default configuration)
 processor = create_processor('default')
 
-# 2. Load an image
-imdata, imheader = open_image_file('path/to/your/image.fits')  # Replace with your image path
+# 2. Load an image using standard Astropy
+with fits.open('path/to/your/image.fits') as hdul:
+    imdata = hdul[0].data
+    imheader = hdul[0].header
 
 # 3. Process the image
 phot_df, hwcs = processor.process_image(imdata, imheader)
@@ -270,6 +272,8 @@ phot_df, hwcs = processor.process_image(imdata, imheader)
 # 4. Print the results
 print(phot_df)
 ```
+
+> **Note for Docker / Worker users:** Inside the Docker container environment, `gpuphot_worker.utils.open_image_file('session_01/target_A.fits')` is also available as a convenience wrapper that automatically resolves paths relative to `/data/images` and supports `.npy` array files.
 
 ### 3.1. Processing a Single Image
 The `process_image` function performs the photometry. It takes two main arguments:
@@ -298,7 +302,9 @@ The `process_image` function returns a tuple containing:
 
 ## 4. Using Celery Tasks (Distributed Processing)
 
-For processing multiple images, especially large datasets, GPUPhot uses Celery for distributed task execution. This allows you to process images in parallel, taking advantage of multiple CPU cores or even multiple machines.
+For processing multiple images, especially large datasets, GPUPhot provides a distributed processing service in `gpuphot_worker` using Celery. This allows you to process images in parallel, taking advantage of multiple CPU cores or even multiple machines.
+
+> **Environment Requirement:** The distributed worker system (`gpuphot_worker.tasks`) is designed to run within the [Docker Compose](DOCKER.md) environment or with worker dependencies installed via `pip install -e .[worker]` connected to running RabbitMQ, Redis, and PostgreSQL/Q3C instances.
 
 ### 4.1. Processing a Single Image with Celery
 
@@ -412,6 +418,49 @@ When using the provided Docker Compose setup, keep in mind:
 4. **RabbitMQ**: You can access it using `http://localhost:15672` with the credentials `gpuphot:gpuphot`.
 
 ## 6. Advanced Usage
+### 6.0. Cross-machine reproducibility: the OpenBLAS kernel
+
+OpenBLAS selects its compute kernel from the host CPU's microarchitecture, and
+the kernels do not round identically.  That reaches the science through the CPU
+star-clustering path: `sklearn` KMeans can settle in a different local optimum,
+the star grouping changes, and the photometric zero point shifts between
+machines given byte-identical input (0.0053 mag measured between hosts on a
+dense 151 MP frame).  It only bites when a frame is split into many clusters,
+so dense fields on large sensors are where it shows.
+
+GPUPhot pins the kernel automatically so you normally do not have to think
+about this.  The measured equivalence rule is: hosts with AVX-512 run
+`SkylakeX`, hosts with only AVX2 run `Haswell` (A/B-verified to produce
+identical zero points; the only divergent kernel observed was `Cooperlake`,
+which the rule avoids).  The pin is applied, in order of precedence:
+
+1. **An explicit `OPENBLAS_CORETYPE` value always wins** — set it in `.env`
+   (Docker) or export it in the shell to override everything below.
+2. **Docker images** pin it at every Python startup (`sitecustomize.py`),
+   including a safety net: requesting an AVX-512 kernel on a CPU without
+   AVX-512 is downgraded to `Haswell` instead of letting OpenBLAS kill the
+   process with a silent SIGILL (exit code 132, no output at all).
+3. **Library / git-submodule usage**: `import gpuphot` pins the kernel the
+   same way, **provided gpuphot is imported before numpy**.  OpenBLAS reads
+   the variable once, when numpy first loads it, so nothing can re-pin it
+   afterwards.  If numpy was already imported, GPUPhot logs a single WARNING
+   the first time CPU clustering runs, naming the kernel the host picked and
+   the value to export.
+
+If you see that warning and care about comparing results across machines,
+export the variable before Python starts, e.g.:
+
+```bash
+# AVX-512 host (grep -c avx512f /proc/cpuinfo > 0)
+export OPENBLAS_CORETYPE=SkylakeX
+# AVX2-only host
+export OPENBLAS_CORETYPE=Haswell
+```
+
+ARM (Jetson) hosts are left unpinned: x86-64 kernel names do not exist there
+(OpenBLAS ignores them and falls back to `armv8`), and no cross-machine
+divergence has been measured on ARM.
+
 ### 6.1. Image Reduction
 
 GPUPhot supports basic image reduction, such as binning and/or cropping, before photometric and astrometric analysis. This is especially useful when the system lacks sufficient resources to process the full image and its size needs to be reduced. You can configure image reduction using the `image_reduction` parameter in your instrument configuration file. The possible settings are:
@@ -472,15 +521,17 @@ To enable this, you pass your custom function and its related parameters to `pro
 Here is how you would call `process_image` with your custom catalog function. This method makes it clear that these parameters are part of an advanced, self-contained configuration.
 
 ```python
+from astropy.io import fits
 from gpuphot.image_processor import create_processor
-from gpuphot_worker.utils import open_image_file
 from my_project.catalog_search import my_custom_search_function # Your implementation
 
 # 1. Create a processor
 processor = create_processor('my_instrument')
 
 # 2. Load image data and header
-imdata, imheader = open_image_file('path/to/your/image.fits')
+with fits.open('path/to/your/image.fits') as hdul:
+    imdata = hdul[0].data
+    imheader = hdul[0].header
 
 # 3. Define the custom catalog parameters in a dictionary
 custom_catalog_kwargs = {
