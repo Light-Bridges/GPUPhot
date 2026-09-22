@@ -1,0 +1,209 @@
+# SPDX-License-Identifier: MIT
+"""
+Notebook generator: Instrument Configuration
+
+Generates a Jupyter notebook that explains how to inspect and create
+instrument configuration JSON files used by the GPUPhot image processor.
+This generator is intended to be invoked by the `initialize_notebooks.sh`
+initializer.
+"""
+
+import argparse
+import os
+from pathlib import Path
+
+import nbformat as nbf
+
+# Create a new notebook
+nb_config = nbf.v4.new_notebook()
+
+# Title and description of the notebook
+nb_config['cells'].append(nbf.v4.new_markdown_cell(
+    "# Instrument Configuration\n"
+    "This notebook demonstrates how to explore, create, and customize instrument configuration files.\n\n"
+    "## Understanding Paths\n"
+    "Before creating configurations, it is important to understand where files are stored:\n"
+    "- **Host Path:** The folder on your physical machine defined by `INSTRUMENT_CONFIG_PATH` in your `.env` file.\n"
+    "- **Container Path:** Inside this Jupyter environment, that folder is mounted at `/data/instrument_configs`.\n\n"
+    "Any JSON file you create or edit here will be immediately available in your host folder."
+))
+
+# Section 1: Displaying the Default Configuration
+nb_config['cells'].append(nbf.v4.new_markdown_cell(
+    "## Displaying the Default Configuration\n"
+    "The following code displays the default configuration included in the library by directly reading the `default.json` file, including comments.\n\n"
+    "Note that the default configuration includes sections for `header_keywords`, `camera_specs`, `forced_values`, and `filter_map`."
+))
+
+nb_config['cells'].append(nbf.v4.new_code_cell(
+    "import os\n\n"
+    "# Define the path to the default.json file\n"
+    "default_json_path = os.path.join(os.getenv('PYTHONPATH'), 'gpuphot', 'instrument_configs', 'default.json')\n\n"
+    "# Load and display the default configuration as plain text\n"
+    "try:\n"
+    "    with open(default_json_path, 'r') as file:\n"
+    "        default_config_content = file.read()\n"
+    "    print('Default configuration from default.json (with comments):')\n"
+    "    print(default_config_content)\n"
+    "except FileNotFoundError:\n"
+    "    print(f'Error: The file {default_json_path} does not exist.')\n"
+    "except Exception as e:\n"
+    "    print(f'Error reading default.json: {e}')"
+))
+
+# Section 2: Creating a Default Configuration File
+nb_config['cells'].append(nbf.v4.new_markdown_cell(
+    "## Creating a Default Configuration File\n"
+    "The following code demonstrates how to generate a default configuration file.\n\n"
+    "**Note:** The default configuration is always available internally. However, generating a `default.json` file "
+    "allows you to customize the baseline settings for all instruments."
+))
+
+nb_config['cells'].append(nbf.v4.new_code_cell(
+    "from gpuphot.instrument_config_parser import InstrumentConfigParser\n"
+    "import os\n\n"
+    "# Define the configuration directory\n"
+    "INSTRUMENT_CONFIG_BASE_PATH = os.getenv('INSTRUMENT_CONFIG_BASE_PATH', '/data/instrument_configs')\n"
+    "print(f'Configuration directory: {INSTRUMENT_CONFIG_BASE_PATH}')\n\n"
+    "# Create a default configuration file (optional)\n"
+    "config_parser = InstrumentConfigParser(config_dir=INSTRUMENT_CONFIG_BASE_PATH)\n"
+    "config_parser.generate_default_config()\n"
+    "print('Default configuration file generated.')"
+))
+
+# Section 3: Creating a Custom Configuration File
+nb_config['cells'].append(nbf.v4.new_markdown_cell(
+    "## Creating a Custom Configuration File\n"
+    "The following code demonstrates how to generate a custom configuration file and open it for editing."
+))
+
+nb_config['cells'].append(nbf.v4.new_code_cell(
+    "from gpuphot.instrument_config_parser import InstrumentConfigParser\n\n"
+    "# Create a custom configuration file\n"
+    "instrument_name = 'my_instrument'\n"
+    "config_parser = InstrumentConfigParser(config_dir=INSTRUMENT_CONFIG_BASE_PATH)\n"
+    "config_parser.generate_config_file(instrument_name)\n"
+    "print(f'Configuration file for {instrument_name} generated.')\n\n"
+    "# Open the file for editing\n"
+    "file_path = os.path.join(config_parser.config_dir, f'{instrument_name}.json')\n"
+    "with open(file_path, 'r') as file:\n"
+    "    content = file.read()\n"
+    "print(f'Content of {instrument_name}.json:')\n"
+    "print(content)"
+))
+
+# Advanced: Forced values explanation
+nb_config['cells'].append(nbf.v4.new_markdown_cell(
+    "## Advanced: Forcing Header Values (Overrides)\n"
+    "Sometimes, instrument headers contain incorrect, missing, or unreliable values. "
+    "You can use the `forced_values` section to strictly override these values.\n\n"
+    "### Mapping vs. Forcing\n"
+    "*   **`header_keywords` (Mapping):** Use this when the value exists in the header but has a different name (e.g., mapping `EXPTIME` to `EXPOSURE`).\n"
+    "*   **`forced_values` (Overriding):** Use this when you want to ignore the header completely and enforce a specific value (e.g., forcing `GAIN` to `0.33` because the header incorrectly says `1.0`).\n\n"
+    "Values defined in `forced_values` have **Priority 1**."
+))
+
+nb_config['cells'].append(nbf.v4.new_code_cell(
+    "import json\n\n"
+    "# 1. Load the existing configuration\n"
+    "with open(file_path, 'r') as file:\n"
+    "    config_data = json.load(file)\n\n"
+    "# 2. Apply a forced value override\n"
+    "# We force 'gain' to 0.33. The system will now use 0.33 even if the FITS header says otherwise.\n"
+    "config_data['forced_values'] = {\n"
+    "    'gain': 0.33\n"
+    "}\n\n"
+    "# 3. Save the updated configuration\n"
+    "with open(file_path, 'w') as file:\n"
+    "    json.dump(config_data, file, indent=2)\n\n"
+    "print(f'Updated {instrument_name}.json with forced values.')\n"
+    "print(json.dumps(config_data, indent=2))"
+))
+
+# New section: Filter mapping explanation
+nb_config['cells'].append(nbf.v4.new_markdown_cell(
+    "## Advanced: Filter Mapping (Standardization)\n"
+    "Different cameras and acquisition software use different names for filters (e.g., `Red`, `R`, `r_prime`, `650nm`). "
+    "However, the GPUPhot pipeline requires **Standard Internal Codes** to correctly select the photometric catalog (e.g., Pan-STARRS, SkyMapper, Gaia).\n\n"
+    "You can use the `filter_map` section to translate your specific header values to these internal codes.\n\n"
+    "### Valid Internal Standard Codes:\n"
+    "Use one of these as the **Target** value in your map:\n"
+    "*   **Broadband / Clear:** `Lum` (Luminance), `Open` (Clear).\n"
+    "*   **Sloan / PanSTARRS:** `SDSSu`, `SDSSg`, `SDSSr`, `SDSSi`, `SDSSzs`, `SDSSy`.\n\n"
+    "**Example:** If your FITS header contains `FILTER = 'Deep_Red_Bin2'`, you should map it to `SDSSr` or `SDSSi`."
+))
+
+nb_config['cells'].append(nbf.v4.new_code_cell(
+    "import json\n\n"
+    "# 1. Load the existing configuration\n"
+    "with open(file_path, 'r') as file:\n"
+    "    config_data = json.load(file)\n\n"
+    "# 2. Define the filter map\n"
+    "# Format: \"Your_Header_Value\": \"Standard_Internal_Code\"\n"
+    "config_data['filter_map'] = {\n"
+    "    \"Red_Special\": \"SDSSr\",\n"
+    "    \"Green_Bin2\": \"SDSSg\",\n"
+    "    \"Luminance_UVIR\": \"Lum\",\n"
+    "    \"Ha_7nm\": \"SDSSr\"   # H-alpha is often calibrated against r-band\n"
+    "}\n\n"
+    "# 3. Save the updated configuration\n"
+    "with open(file_path, 'w') as file:\n"
+    "    json.dump(config_data, file, indent=2)\n\n"
+    "print(f'Updated {instrument_name}.json with filter map.')\n"
+    "print(json.dumps(config_data, indent=2))"
+))
+
+# Exploring configuration files
+nb_config['cells'].append(nbf.v4.new_markdown_cell(
+    "## Exploring Configuration Files\n"
+    "The following code explores all the configuration files currently available in your configuration directory."
+))
+
+nb_config['cells'].append(nbf.v4.new_code_cell(
+    "import os\n"
+    "import json\n\n"
+    "# Define the configuration directory\n"
+    "INSTRUMENT_CONFIG_BASE_PATH = os.getenv('INSTRUMENT_CONFIG_BASE_PATH', '/data/instrument_configs')\n"
+    "print(f'Configuration directory: {INSTRUMENT_CONFIG_BASE_PATH}')\n\n"
+    "# Explore JSON configuration files\n"
+    "for filename in os.listdir(INSTRUMENT_CONFIG_BASE_PATH):\n"
+    "    file_path = os.path.join(INSTRUMENT_CONFIG_BASE_PATH, filename)\n"
+    "    if os.path.isfile(file_path) and filename.endswith('.json'):\n"
+    "        try:\n"
+    "            with open(file_path, 'r') as file:\n"
+    "                data = json.load(file)\n"
+    "                print(f'Content of {filename}:')\n"
+    "                print(json.dumps(data, indent=4))\n"
+    "                print('=' * 50 + '\\n')\n"
+    "        except json.JSONDecodeError:\n"
+    "            print(f'Error: {filename} is not a valid JSON file.')\n"
+    "        except Exception as e:\n"
+    "            print(f'Error reading {filename}: {e}')"
+))
+
+# Final section: Link to the next notebook
+nb_config['cells'].append(nbf.v4.new_markdown_cell(
+    "## Next Steps\n"
+    "Now that you have configured your instrument, proceed to the next notebook to learn how to process images:\n"
+    "- [3. Task Execution](./3_Task_Execution_Notebook.ipynb)"
+))
+
+# Save the notebook
+parser = argparse.ArgumentParser(description="Generate a Jupyter Notebook.")
+parser.add_argument(
+    '--output-dir',
+    type=str,
+    default=os.path.join(Path(__file__).resolve().parent, '..', '..', 'notebooks'),
+    help='The directory where the notebook will be saved.'
+)
+
+args = parser.parse_args()
+output_dir = args.output_dir
+
+output_path_config = os.path.join(output_dir, "2_Instrument_Configuration_Notebook.ipynb")
+os.makedirs(output_dir, exist_ok=True)
+
+with open(output_path_config, 'w', encoding='utf-8') as f:
+    nbf.write(nb_config, f)
+
+print(f"Configuration notebook created successfully: {output_path_config}")

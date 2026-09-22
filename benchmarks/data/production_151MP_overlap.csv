@@ -1,0 +1,5 @@
+# Concurrency overlaps for 151.2 MP frames across production workers (2026-09-08).
+gpu_model,muestra_n,n_151MP_en_muestra,max_overlap_151MP_por_tarjeta,n_OOM_151MP,mem_used_median_MiB
+NVIDIA A100-SXM4-80GB,6000,113,3,23,18828.0
+NVIDIA L40S,6000,211,2,60,22996.0
+NVIDIA H100 PCIe,5402,56,3,26,59850.0

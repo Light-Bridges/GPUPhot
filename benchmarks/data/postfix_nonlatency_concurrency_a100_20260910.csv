@@ -1,0 +1,20 @@
+# A100 concurrent process execution test at 151.2 MP, py3.12 post-fix (2026-09-10).
+host,gpu,concurrency_K,rep,proc_idx,elapsed_s,n_obj,wall_span_s,throughput_img_per_s,oom
+lenovo_tttserver,A100,1,1,1,54.832,18712,61.88,0.0162,0
+lenovo_tttserver,A100,1,2,1,27.394,18712,34.12,0.0293,0
+lenovo_tttserver,A100,1,3,1,31.925,18712,38.54,0.0259,0
+lenovo_tttserver,A100,2,1,1,54.644,18712,62.20,0.0322,0
+lenovo_tttserver,A100,2,1,2,35.773,18712,62.20,0.0322,0
+lenovo_tttserver,A100,2,2,1,37.278,18712,44.30,0.0451,0
+lenovo_tttserver,A100,2,2,2,36.504,18712,44.30,0.0451,0
+lenovo_tttserver,A100,2,3,1,37.448,18712,45.43,0.0440,0
+lenovo_tttserver,A100,2,3,2,39.235,18712,45.43,0.0440,0
+lenovo_tttserver,A100,3,1,1,46.136,18712,53.54,0.0560,0
+lenovo_tttserver,A100,3,1,2,46.287,18712,53.54,0.0560,0
+lenovo_tttserver,A100,3,1,3,39.434,,53.54,0.0560,2
+lenovo_tttserver,A100,3,2,1,47.670,18712,55.08,0.0545,0
+lenovo_tttserver,A100,3,2,2,47.466,18712,55.08,0.0545,0
+lenovo_tttserver,A100,3,2,3,40.774,,55.08,0.0545,2
+lenovo_tttserver,A100,3,3,1,49.738,18712,57.74,0.0520,0
+lenovo_tttserver,A100,3,3,2,49.832,18712,57.74,0.0520,0
+lenovo_tttserver,A100,3,3,3,47.194,18712,57.74,0.0520,0

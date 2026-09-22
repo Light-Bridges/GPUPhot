@@ -1,0 +1,12 @@
+nbsphinx==0.9.6
+sphinx-rtd-theme==3.0.2
+sphinx_tippy==0.4.3
+sphinxcontrib-applehelp==2.0.0
+sphinxcontrib-bibtex==2.6.3
+sphinxcontrib-devhelp==2.0.0
+sphinxcontrib-htmlhelp==2.1.0
+sphinxcontrib-jquery==4.1
+sphinxcontrib-jsmath==1.0.1
+sphinxcontrib-qthelp==2.0.0
+sphinxcontrib-ros==0.0.4
+sphinxcontrib-serializinghtml==2.0.0

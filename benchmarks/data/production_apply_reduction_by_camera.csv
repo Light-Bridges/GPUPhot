@@ -1,0 +1,19 @@
+# Camera configuration and reduction pipeline settings in production workers (2026-09-08).
+# Camera configuration MD5 checksums verified identical across all production host deployments.
+host,gpu,contenedor,camara_json,md5,bloque_image_reduction,apply_reduction,pca_method
+hp3,L40S,dto-worker1-1,ATLAS-Teide.json,1e830ffc95c0eb0838d997e8960f88e2,no,never(default),false
+lenovo_tttserver,A100,dto-worker3-1,ATLAS-Teide.json,1e830ffc95c0eb0838d997e8960f88e2,no,never(default),false
+hp3,L40S,dto-worker1-1,QHY411-1.json,064b0ad9461728a489a7bf6f9fe9389a,no,never(default),true
+lenovo_tttserver,A100,dto-worker3-1,QHY411-1.json,064b0ad9461728a489a7bf6f9fe9389a,no,never(default),true
+hp3,L40S,dto-worker1-1,QHY411-2.json,691743556302be2f3f26cb108c18ba0b,no,never(default),true
+lenovo_tttserver,A100,dto-worker3-1,QHY411-2.json,691743556302be2f3f26cb108c18ba0b,no,never(default),true
+hp3,L40S,dto-worker1-1,QHY411-3.json,367c284f5f2647e70743ac9ea5aad7d1,no,never(default),true
+lenovo_tttserver,A100,dto-worker3-1,QHY411-3.json,367c284f5f2647e70743ac9ea5aad7d1,no,never(default),true
+hp3,L40S,dto-worker1-1,QHY600-3.json,6db3ebc7a4bb7e2fd4a51be221f9c531,no,never(default),false
+lenovo_tttserver,A100,dto-worker3-1,QHY600-3.json,6db3ebc7a4bb7e2fd4a51be221f9c531,no,never(default),false
+hp3,L40S,dto-worker1-1,QHY600-4.json,e2abea383897c17be5c83b218b782283,no,never(default),true
+lenovo_tttserver,A100,dto-worker3-1,QHY600-4.json,e2abea383897c17be5c83b218b782283,no,never(default),true
+hp3,L40S,dto-worker1-1,QHY600-5.json,6db3ebc7a4bb7e2fd4a51be221f9c531,no,never(default),false
+lenovo_tttserver,A100,dto-worker3-1,QHY600-5.json,6db3ebc7a4bb7e2fd4a51be221f9c531,no,never(default),false
+hp3,L40S,dto-worker1-1,iKon936-1.json,d1c0ea8c339d721d7f3d40304a7eb01c,no,never(default),false
+lenovo_tttserver,A100,dto-worker3-1,iKon936-1.json,d1c0ea8c339d721d7f3d40304a7eb01c,no,never(default),false

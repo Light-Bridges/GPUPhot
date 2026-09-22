@@ -1,0 +1,6 @@
+# GPU power draw cross-check during 151.2 MP reductions (2026-09-10).
+# Samples power.draw (W) and GPU temperature (C) across reduction repetitions.
+probe,date,gpu,power_limit_w,n_samples,median_w,mean_w,p95_w,max_w,samples_above_290w,method
+campaign,2026-08-29,A100,300,1338,77.5,92.1,160.3,343.7,20,"every 2 s, cropped to 75 execution windows of 151.2 MP"
+postfix,2026-09-10,A100,300,120,73.2,82.2,110.6,281.9,0,"every 0.5 s during a 151.2 MP reduction"
+postfix,2026-09-10,H100,220,96,93.9,95.2,131.2,179.7,0,"every 0.5 s during a 151.2 MP reduction"

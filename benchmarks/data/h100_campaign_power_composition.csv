@@ -1,0 +1,68 @@
+# Power-limit composition of the earlier campaign on one host (H100). 2026-09-11.
+# WHY: a table caption stated that this card ran at a single power limit without the memory pool. It did
+# not, for every cell. Read directly from the per-run power-limit column of the raw event export, one row
+# per repetition, assuming nothing about when the limit changed.
+# WHAT THE DATA SHOW: the py3.8 arm ran at the same limit in all of its cells, so for that arm the
+# statement holds. The py3.12 arm does not: three cells mix limits, two of them with a third of their
+# repetitions below the nominal one. The campaign on this card spans FOUR distinct limits, not two,
+# because two earlier days also contain stretches at intermediate values.
+# The change of limit is dated from the data themselves rather than from an external record.
+# A cell that mixes limits is not badly measured; what is wrong is describing it with a single limit.
+profiler_label,image_label,n_220W,n_250W,n_300W,n_350W,n_total,mezcla_limites,pct_no_350
+py312_cuml_adaptive,QHY411-1_Lum_bin2,0,0,0,50,50,False,0.0
+py312_cuml_adaptive,QHY411-1_Lum_full,0,11,10,29,50,True,42.0
+py312_cuml_adaptive,QHY411-1_SDSSg_2k,0,0,0,100,100,False,0.0
+py312_cuml_adaptive,QHY411-1_SDSSi_bin2,0,0,0,50,50,False,0.0
+py312_cuml_adaptive,QHY411-1_SDSSr_7k,0,0,0,50,50,False,0.0
+py312_cuml_adaptive,QHY411-3_Lum_131k,0,0,0,100,100,False,0.0
+py312_cuml_adaptive,QHY411-3_Lum_full,39,1,4,70,114,True,38.6
+py312_cuml_adaptive,QHY411-3_SDSSg_10k,0,0,0,100,100,False,0.0
+py312_cuml_adaptive,QHY411-3_SDSSr_19k,0,0,0,99,99,False,0.0
+py312_cuml_adaptive,QHY411-3_SDSSr_full,39,0,0,75,114,True,34.2
+py312_cuml_adaptive,QHY600-3_Lum,0,0,0,50,50,False,0.0
+py312_cuml_adaptive,QHY600-3_SDSSi_2k,0,0,0,150,150,False,0.0
+py312_cuml_adaptive,QHY600-4_Ha,0,0,0,50,50,False,0.0
+py312_cuml_adaptive,QHY600-4_Lum_2k,0,0,0,50,50,False,0.0
+py312_cuml_adaptive,QHY600-4_SDSSg,0,0,0,50,50,False,0.0
+py312_cuml_adaptive,QHY600-4_SDSSg_4k,0,0,0,50,50,False,0.0
+py312_cuml_adaptive,QHY600-4_SDSSi_10k,0,0,0,50,50,False,0.0
+py312_cuml_adaptive,iKon936_Lum,0,0,0,50,50,False,0.0
+py312_cuml_adaptive,iKon936_SDSSg,0,0,0,50,50,False,0.0
+py312_cuml_always,QHY411-1_Lum_bin2,0,0,0,50,50,False,0.0
+py312_cuml_always,QHY411-1_Lum_full,0,6,5,39,50,True,22.0
+py312_cuml_always,QHY411-1_SDSSg_2k,0,0,0,100,100,False,0.0
+py312_cuml_always,QHY411-1_SDSSi_bin2,0,0,0,50,50,False,0.0
+py312_cuml_always,QHY411-1_SDSSr_7k,0,0,0,50,50,False,0.0
+py312_cuml_always,QHY411-3_Lum_131k,0,0,0,50,50,False,0.0
+py312_cuml_always,QHY411-3_Lum_full,14,0,0,50,64,True,21.9
+py312_cuml_always,QHY411-3_SDSSg_10k,0,0,0,48,48,False,0.0
+py312_cuml_always,QHY411-3_SDSSr_19k,0,0,0,50,50,False,0.0
+py312_cuml_always,QHY411-3_SDSSr_full,14,0,0,50,64,True,21.9
+py312_cuml_always,QHY600-3_Lum,0,0,0,50,50,False,0.0
+py312_cuml_always,QHY600-3_SDSSi_2k,0,0,0,150,150,False,0.0
+py312_cuml_always,QHY600-4_Ha,0,0,0,50,50,False,0.0
+py312_cuml_always,QHY600-4_Lum_2k,0,0,0,50,50,False,0.0
+py312_cuml_always,QHY600-4_SDSSg,0,0,0,50,50,False,0.0
+py312_cuml_always,QHY600-4_SDSSg_4k,0,0,0,50,50,False,0.0
+py312_cuml_always,QHY600-4_SDSSi_10k,0,0,0,50,50,False,0.0
+py312_cuml_always,iKon936_Lum,0,0,0,50,50,False,0.0
+py312_cuml_always,iKon936_SDSSg,0,0,0,50,50,False,0.0
+py38_baseline,QHY411-1_Lum_bin2,0,0,0,50,50,False,0.0
+py38_baseline,QHY411-1_Lum_full,0,0,0,50,50,False,0.0
+py38_baseline,QHY411-1_SDSSg_2k,0,0,0,100,100,False,0.0
+py38_baseline,QHY411-1_SDSSi_bin2,0,0,0,50,50,False,0.0
+py38_baseline,QHY411-1_SDSSr_7k,0,0,0,50,50,False,0.0
+py38_baseline,QHY411-3_Lum_131k,0,0,0,50,50,False,0.0
+py38_baseline,QHY411-3_Lum_full,0,0,0,55,55,False,0.0
+py38_baseline,QHY411-3_SDSSg_10k,0,0,0,50,50,False,0.0
+py38_baseline,QHY411-3_SDSSr_19k,0,0,0,50,50,False,0.0
+py38_baseline,QHY411-3_SDSSr_full,0,0,0,50,50,False,0.0
+py38_baseline,QHY600-3_Lum,0,0,0,50,50,False,0.0
+py38_baseline,QHY600-3_SDSSi_2k,0,0,0,150,150,False,0.0
+py38_baseline,QHY600-4_Ha,0,0,0,50,50,False,0.0
+py38_baseline,QHY600-4_Lum_2k,0,0,0,50,50,False,0.0
+py38_baseline,QHY600-4_SDSSg,0,0,0,50,50,False,0.0
+py38_baseline,QHY600-4_SDSSg_4k,0,0,0,50,50,False,0.0
+py38_baseline,QHY600-4_SDSSi_10k,0,0,0,50,50,False,0.0
+py38_baseline,iKon936_Lum,0,0,0,50,50,False,0.0
+py38_baseline,iKon936_SDSSg,0,0,0,51,51,False,0.0

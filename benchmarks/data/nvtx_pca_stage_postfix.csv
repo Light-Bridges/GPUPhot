@@ -1,0 +1,151 @@
+camera,stage,median_s,iqr_s,count,MP,gpu,profiler_label
+QHY411-1,Eigen-PSF (PCA),11.389509,0.011468,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,Optimal photometry,6.231437,0.036069,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,Aperture photometry,2.986771,3.189147,10,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,PSF coefficient map,2.053627,0.000948,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,Background estimation (FFT),1.317884,0.012003,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,Astrometry.net solver,0.727567,0.084438,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,Catalog query (network I/O),0.474379,0.26489,20,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,WCS fitting & header update,0.432025,0.046582,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,Tile statistics,0.29476,0.000265,25,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,PSF source detection,0.258033,0.374719,10,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,Salt-and-pepper filter,0.221846,0.001832,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,Star detection,0.138156,0.001379,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,PSF cutout extraction,0.038562,0.001115,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,Zero-point calibration,0.012716,0.000169,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,Moffat PSF fitting,0.008245,0.002629,25,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,Source crossmatch,0.001074,0.000799,25,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,FFT convolution,0.000633,9.1e-05,260,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,Star projection,0.000525,1.9e-05,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-1,Eigen-PSF (PCA),10.157417,0.067617,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,Optimal photometry,5.582597,0.021682,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,Aperture photometry,2.942829,2.972817,10,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,PSF coefficient map,1.762775,0.005619,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,Background estimation (FFT),1.457329,0.058326,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,Astrometry.net solver,0.953611,0.166451,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,Catalog query (network I/O),0.390524,0.226975,20,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,WCS fitting & header update,0.388413,0.011059,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,Tile statistics,0.253922,0.002416,25,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,PSF source detection,0.225599,0.311472,10,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,Star detection,0.189581,0.066723,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,Salt-and-pepper filter,0.186055,0.004553,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,PSF cutout extraction,0.055075,0.027177,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,Zero-point calibration,0.010117,0.000312,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,Moffat PSF fitting,0.006014,0.00251,25,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,Source crossmatch,0.000894,0.000826,25,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,Star projection,0.00047,7.9e-05,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,FFT convolution,0.00046,0.000224,260,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-1,Eigen-PSF (PCA),34.224453,0.016401,5,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,Optimal photometry,14.518031,0.019018,5,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,Aperture photometry,7.150845,12.148372,10,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,PSF coefficient map,4.358746,0.002451,5,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,Background estimation (FFT),1.512927,0.03012,5,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,Astrometry.net solver,1.308235,0.069374,5,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,PSF source detection,0.601449,0.883015,10,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,Tile statistics,0.509782,0.001052,25,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,WCS fitting & header update,0.34756,0.004441,5,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,Catalog query (network I/O),0.334698,0.196174,20,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,Salt-and-pepper filter,0.219987,0.000988,5,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,Star detection,0.219634,0.000137,5,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,PSF cutout extraction,0.027303,0.000371,5,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,Zero-point calibration,0.010286,0.000152,5,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,Moffat PSF fitting,0.006066,0.002973,25,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,Star projection,0.00108,8.9e-05,5,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,Source crossmatch,0.000972,0.000584,25,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-1,FFT convolution,0.000446,0.000157,260,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,Optimal photometry,41.087011,1.216292,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,Aperture photometry,19.995705,35.4362,10,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,PSF cutout extraction,10.31085,0.189202,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,Catalog query (network I/O),5.042484,7.227699,20,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,PSF coefficient map,2.030243,0.003699,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,Background estimation (FFT),1.214315,0.001486,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,Astrometry.net solver,0.957906,0.031227,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,WCS fitting & header update,0.630629,0.105759,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,Tile statistics,0.294497,0.000403,25,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,PSF source detection,0.252645,0.365586,10,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,Eigen-PSF (PCA),0.229358,0.003997,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,Salt-and-pepper filter,0.220304,0.000239,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,Star detection,0.173278,0.001855,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,Zero-point calibration,0.023615,0.000591,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,Source crossmatch,0.015056,0.040379,25,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,Moffat PSF fitting,0.007674,0.003693,25,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,FFT convolution,0.000697,0.000294,110,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,Star projection,0.000458,2.9e-05,5,151.2,A100 (80 GB),py312_cuml_adaptive
+QHY411-3,Optimal photometry,31.552649,8.681165,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,Aperture photometry,15.095014,26.293372,10,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,PSF cutout extraction,7.374746,0.672431,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,Catalog query (network I/O),4.346362,6.322646,20,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,Astrometry.net solver,2.683867,0.891017,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,PSF coefficient map,1.730851,0.003956,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,Background estimation (FFT),1.380378,0.038015,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,WCS fitting & header update,0.511713,0.009081,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,Eigen-PSF (PCA),0.322188,0.098649,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,Tile statistics,0.253156,0.000471,25,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,Star detection,0.236627,0.028582,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,PSF source detection,0.22168,0.297348,10,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,Salt-and-pepper filter,0.188997,0.000459,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,Zero-point calibration,0.020086,0.000224,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,Source crossmatch,0.014002,0.03878,25,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,Moffat PSF fitting,0.007364,0.006257,25,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,FFT convolution,0.000655,0.000845,110,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,Star projection,0.000478,5.7e-05,5,151.2,H100 (80 GB),py312_cuml_adaptive
+QHY411-3,Optimal photometry,35.77172,0.72047,4,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,Aperture photometry,17.474003,20.38188,8,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,PSF cutout extraction,6.534464,0.119955,4,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,PSF coefficient map,4.264959,0.001126,4,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,Catalog query (network I/O),3.847685,5.519535,16,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,Astrometry.net solver,1.665954,0.146305,4,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,Background estimation (FFT),1.448245,0.025931,4,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,PSF source detection,0.607491,0.860053,8,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,Tile statistics,0.509406,0.000922,20,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,WCS fitting & header update,0.464195,0.081453,4,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,Star detection,0.26897,0.002324,4,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,Eigen-PSF (PCA),0.254,0.01012,4,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,Salt-and-pepper filter,0.21836,0.001668,4,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,Zero-point calibration,0.019434,0.002084,4,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,Source crossmatch,0.012859,0.032786,20,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,Moffat PSF fitting,0.006596,0.00283,20,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,FFT convolution,0.000614,0.000426,88,151.2,L40S (48 GB),py312_cuml_adaptive
+QHY411-3,Star projection,0.000488,2.1e-05,4,151.2,L40S (48 GB),py312_cuml_adaptive
+iKon936-1,Optimal photometry,1.57385,0.212774,5,4.2,A100 (80 GB),py312_cuml_adaptive
+iKon936-1,Astrometry.net solver,0.696967,0.032582,5,4.2,A100 (80 GB),py312_cuml_adaptive
+iKon936-1,Background estimation (FFT),0.597686,0.029865,5,4.2,A100 (80 GB),py312_cuml_adaptive
+iKon936-1,Aperture photometry,0.581962,0.549649,10,4.2,A100 (80 GB),py312_cuml_adaptive
+iKon936-1,WCS fitting & header update,0.430959,0.016576,5,4.2,A100 (80 GB),py312_cuml_adaptive
+iKon936-1,Cosmic-ray filter,0.199236,0.011324,5,4.2,A100 (80 GB),py312_cuml_adaptive
+iKon936-1,Catalog query (network I/O),0.079109,0.005101,20,4.2,A100 (80 GB),py312_cuml_adaptive
+iKon936-1,PSF cutout extraction,0.035642,0.001524,5,4.2,A100 (80 GB),py312_cuml_adaptive
+iKon936-1,Star detection,0.028835,0.000664,5,4.2,A100 (80 GB),py312_cuml_adaptive
+iKon936-1,PSF source detection,0.018063,0.003663,10,4.2,A100 (80 GB),py312_cuml_adaptive
+iKon936-1,Moffat PSF fitting,0.01535,0.000166,5,4.2,A100 (80 GB),py312_cuml_adaptive
+iKon936-1,Zero-point calibration,0.00369,2.5e-05,5,4.2,A100 (80 GB),py312_cuml_adaptive
+iKon936-1,Source crossmatch,0.000869,0.000114,25,4.2,A100 (80 GB),py312_cuml_adaptive
+iKon936-1,FFT convolution,0.000707,0.00317,125,4.2,A100 (80 GB),py312_cuml_adaptive
+iKon936-1,Optimal photometry,1.500842,0.017754,5,4.2,H100 (80 GB),py312_cuml_adaptive
+iKon936-1,Astrometry.net solver,1.029652,0.411087,5,4.2,H100 (80 GB),py312_cuml_adaptive
+iKon936-1,Background estimation (FFT),0.682602,0.01403,5,4.2,H100 (80 GB),py312_cuml_adaptive
+iKon936-1,Aperture photometry,0.478365,0.443897,10,4.2,H100 (80 GB),py312_cuml_adaptive
+iKon936-1,WCS fitting & header update,0.39836,0.00219,5,4.2,H100 (80 GB),py312_cuml_adaptive
+iKon936-1,Cosmic-ray filter,0.187702,0.002307,5,4.2,H100 (80 GB),py312_cuml_adaptive
+iKon936-1,Catalog query (network I/O),0.067763,0.005181,20,4.2,H100 (80 GB),py312_cuml_adaptive
+iKon936-1,PSF cutout extraction,0.026154,0.000278,5,4.2,H100 (80 GB),py312_cuml_adaptive
+iKon936-1,Star detection,0.025787,0.000364,5,4.2,H100 (80 GB),py312_cuml_adaptive
+iKon936-1,PSF source detection,0.015702,0.002999,10,4.2,H100 (80 GB),py312_cuml_adaptive
+iKon936-1,Moffat PSF fitting,0.012953,0.000216,5,4.2,H100 (80 GB),py312_cuml_adaptive
+iKon936-1,Zero-point calibration,0.002774,1.3e-05,5,4.2,H100 (80 GB),py312_cuml_adaptive
+iKon936-1,Source crossmatch,0.0007,9.8e-05,25,4.2,H100 (80 GB),py312_cuml_adaptive
+iKon936-1,FFT convolution,0.000534,0.000388,125,4.2,H100 (80 GB),py312_cuml_adaptive
+iKon936-1,Optimal photometry,1.619516,0.038198,5,4.2,L40S (48 GB),py312_cuml_adaptive
+iKon936-1,Astrometry.net solver,1.053822,0.157067,5,4.2,L40S (48 GB),py312_cuml_adaptive
+iKon936-1,Aperture photometry,0.568729,0.083006,10,4.2,L40S (48 GB),py312_cuml_adaptive
+iKon936-1,Background estimation (FFT),0.551378,0.010968,5,4.2,L40S (48 GB),py312_cuml_adaptive
+iKon936-1,WCS fitting & header update,0.357258,0.014007,5,4.2,L40S (48 GB),py312_cuml_adaptive
+iKon936-1,Cosmic-ray filter,0.182735,0.001763,5,4.2,L40S (48 GB),py312_cuml_adaptive
+iKon936-1,Catalog query (network I/O),0.060817,0.002366,20,4.2,L40S (48 GB),py312_cuml_adaptive
+iKon936-1,Star detection,0.029867,0.00035,5,4.2,L40S (48 GB),py312_cuml_adaptive
+iKon936-1,PSF cutout extraction,0.025923,0.000391,5,4.2,L40S (48 GB),py312_cuml_adaptive
+iKon936-1,PSF source detection,0.018531,0.003122,10,4.2,L40S (48 GB),py312_cuml_adaptive
+iKon936-1,Moffat PSF fitting,0.013836,0.000303,5,4.2,L40S (48 GB),py312_cuml_adaptive
+iKon936-1,Zero-point calibration,0.003023,0.000409,5,4.2,L40S (48 GB),py312_cuml_adaptive
+iKon936-1,Source crossmatch,0.000726,0.00013,25,4.2,L40S (48 GB),py312_cuml_adaptive
+iKon936-1,FFT convolution,0.000546,0.000619,125,4.2,L40S (48 GB),py312_cuml_adaptive

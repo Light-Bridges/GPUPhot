@@ -1,0 +1,16 @@
+# Baseline concurrency check prior to worker pausing during benchmark runs (2026-09-08).
+window,worker0_status,camera_family,mpx,gpu,overlap,n,span_med_s,p25,p75
+prestop_2026-08-10_18,all_4_running,ATLAS-cam,61,A100,1,2811,10.8,8.1,15.5
+prestop_2026-08-10_18,all_4_running,ATLAS-cam,61,A100,2,2229,16.0,9.9,75.9
+prestop_2026-08-10_18,all_4_running,ATLAS-cam,61,A100,3,3112,34.6,11.3,95.9
+prestop_2026-08-10_18,all_4_running,ATLAS-cam,61,A100,4,5271,71.8,19.1,117.1
+prestop_2026-08-10_18,all_4_running,ATLAS-cam,61,A100,5,4743,77.4,53.9,109.9
+prestop_2026-08-10_18,all_4_running,ATLAS-cam,61,A100,6,7492,80.1,60.6,116.4
+benchmarks_2026-09-03_08,worker0_stopped,ATLAS-cam,61,A100,1,662,10.0,7.7,37.9
+benchmarks_2026-09-03_08,worker0_stopped,ATLAS-cam,61,A100,4,7880,29.7,8.9,93.4
+benchmarks_2026-09-03_08,worker0_stopped,ATLAS-cam,61,A100,6,6628,75.7,49.6,112.9
+prestop_2026-08-10_18,all_4_running,QHY600,61,L40S,1,1895,9.5,8.2,13.1
+prestop_2026-08-10_18,all_4_running,QHY600,61,L40S,3,397,71.0,10.3,73.2
+prestop_2026-08-10_18,all_4_running,QHY600,61,L40S,6,35,73.5,71.9,75.9
+prestop_2026-08-10_18,all_4_running,QHY411_MIXED_SIZE,37.8-151,L40S,1,1190,12.6,11.1,14.1
+benchmarks_2026-09-03_08,worker0_stopped,QHY411_MIXED_SIZE,37.8-151,L40S,1,82,67.9,41.8,81.1

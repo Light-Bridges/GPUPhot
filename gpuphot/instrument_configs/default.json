@@ -1,0 +1,310 @@
+// SPDX-License-Identifier: MIT
+// default.json — Instrument configuration defaults for GPUPhot
+//
+// This file defines the default instrument configuration used by the
+// GPUPhot image processing pipeline. It is a human-editable JSON-style
+// configuration (comments are used for readability). The file contains
+// the following logical sections:
+//
+// 1) header_keywords: mapping of internal canonical names to FITS header
+//    keyword names expected in incoming image headers. These mappings are
+//    used to translate heterogeneous FITS headers into the pipeline's
+//    canonical field names.
+//
+// 2) camera_specs: fallback/default values for camera specifications that
+//    should be used when the corresponding keywords are missing or invalid
+//    in the FITS header. These are the lowest-priority defaults (Priority 3).
+//
+// 3) processing_params: tuning parameters for internal processing such as
+//    tile sizes, filtering options and padding. These are used by the
+//    image processor and can be tuned per-instrument.
+//
+// 4) image_reduction: configuration for automatic reduction (bin/crop) when
+//    requested or when memory/errors require it. The pipeline accepts
+//    values: "always", "never", "on_failure" for `apply_reduction`.
+//
+// 5) forced_values: strict overrides (Priority 1). Any value declared
+//    here will replace header values and camera_specs defaults. Use with
+//    caution — forcing values is intended to fix incorrect or missing
+//    metadata when the instrument cannot provide reliable headers.
+//
+// 6) filter_map: mapping from many possible filter names found in headers
+//    into the pipeline's standard internal codes (e.g., SDSSr, Lum). This
+//    mapping is used to select photometric catalogs and calibration.
+//
+// Conventions and priorities
+// --------------------------
+// - Priority 1: forced_values (strict overrides)
+// - Priority 2: values extracted from FITS headers using header_keywords
+// - Priority 3: camera_specs (fallback defaults)
+//
+// Editing
+// -------
+// - This file is intended to be edited by instrument maintainers. Keep
+//   comments to document changes and rationale. When deploying changes, the
+//   processors will read from the configured instrument config directory
+//   (see the environment variable `INSTRUMENT_CONFIG_BASE_PATH`).
+// - Do NOT remove the JSON keys; only change values or add new aliases in
+//   `filter_map`. If you prefer, create a per-instrument JSON that overrides
+//   defaults rather than editing this global file.
+
+{
+  "header_keywords": {
+    // Keyword for exposure time in the FITS header
+    "exposure_time": "EXPT1",
+
+    // Keyword for the filter used during observation
+    "filter": "FILTER",
+
+    // Keyword for the total number of images in the sequence
+    "n_images": "TOTIMA",
+
+    // Keyword for the read-out noise of the camera
+    "rdnoise": "RDNOISE",
+
+    // Keyword for the saturation level of the camera (in ADU)
+    "satlevel": "SATLEVEL",
+
+    // Keyword for the right ascension of the target (in degrees)
+    "target_ra": "POINTRA",
+
+    // Keyword for the declination of the target (in degrees)
+    "target_dec": "POINTDEC",
+
+    // Keyword for the elevation of the observation site (in meters)
+    "site_elevation": "SITEELEV",
+
+    // Keyword for the latitude of the observation site (in degrees)
+    "site_latitude": "SITELAT",
+
+    // Keyword for the longitude of the observation site (in degrees)
+    "site_longitude": "SITELONG",
+
+    // Keyword for the observation date (in ISO format)
+    "date_obs": "DATE-OBS",
+
+    // Keyword for the input model used during observation
+    "inmodel": "INMODEL",
+
+    // Keyword for the pixel size of the camera (in microns)
+    "pxsize": "PXSIZE",
+
+    // Keyword for the gain of the camera (in electrons/ADU)
+    "gain": "GAIN",
+
+    // Keyword for the width of the image (in pixels)
+    "naxis1": "NAXIS1",
+
+    // Keyword for the height of the image (in pixels)
+    "naxis2": "NAXIS2",
+
+    // Keyword for the focal length of the telescope (in mm)
+    "focalen": "FOCALEN",
+
+    // Keyword for the binning factor along the X-axis
+    "xbinning": "XBINNING",
+
+    // Keyword for the standard deviation of the bias frame
+    "biasstd": "BIASSTD",
+
+    // Alternative keyword for the altitude of the observation site (in meters)
+    "sitealt": "SITEALT",
+
+    // Keywords for the coordinate transformation matrix (CD matrix)
+    // CD matrix element for the first row and first column
+    "cd1_1": "CD1_1",
+
+    // CD matrix element for the first row and second column
+    "cd1_2": "CD1_2",
+
+    // CD matrix element for the second row and first column
+    "cd2_1": "CD2_1",
+
+    // CD matrix element for the second row and second column
+    "cd2_2": "CD2_2"
+  },
+  "camera_specs": {
+    // Default values for camera specifications when keywords are missing in the header.
+    // These have Priority 3 (lowest).
+
+    // Default pixel size (in microns)
+    "pxsize": null,
+
+    // Default camera gain (in electrons/ADU)
+    "gain": null,
+
+    // Default exposure time (in seconds)
+    "exposure_time": null,
+
+    // Default filter used during observation
+    "filter": null,
+
+    // Default total number of images in the sequence
+    "n_images": null,
+
+    // Default read-out noise of the camera (in electrons)
+    "rdnoise": null,
+
+    // Default saturation level of the camera (in ADU)
+    "satlevel": null,
+
+    // Default right ascension of the target (in degrees)
+    "target_ra": null,
+
+    // Default declination of the target (in degrees)
+    "target_dec": null,
+
+    // Default elevation of the observation site (in meters)
+    "site_elevation": null,
+
+    // Default latitude of the observation site (in degrees)
+    "site_latitude": null,
+
+    // Default longitude of the observation site (in degrees)
+    "site_longitude": null,
+
+    // Default observation date (in ISO format)
+    "date_obs": null,
+
+    // Default input model used during observation
+    "inmodel": null,
+
+    // Default width of the image (in pixels)
+    "naxis1": null,
+
+    // Default height of the image (in pixels)
+    "naxis2": null,
+
+    // Default focal length of the telescope (in mm)
+    "focalen": null,
+
+    // Default binning factor along the X-axis
+    "xbinning": null,
+
+    // Default standard deviation of the bias frame
+    "biasstd": null,
+
+    // Default altitude of the observation site (in meters)
+    "sitealt": null,
+
+    // Default CD matrix element for the first row and first column
+    "cd1_1": null,
+
+    // Default CD matrix element for the first row and second column
+    "cd1_2": null,
+
+    // Default CD matrix element for the second row and first column
+    "cd2_1": null,
+
+    // Default CD matrix element for the second row and second column
+    "cd2_2": null
+  },
+  "processing_params": {
+    // Size of image tiles for processing (in pixels)
+    "tile_section": 1000,
+
+    // Factor to define the central region of interest (as a fraction of the image size)
+    "center_factor": 0.7,
+
+    // Enable/disable spatial filtering during processing
+    "SP_filt": false,
+
+    // Enable/disable Principal Component Analysis (PCA) for image processing
+    "pca_method": false,
+
+    // Enable/disable cosmic ray filtering during processing
+    "CR_filt": false,
+
+    // Size of the border to exclude from processing (in pixels)
+    "border": 50,
+
+    // Enable/disable astrometric correction during processing
+    "astrom": false,
+
+    // Size of image tiles for PSF calculation (in pixels)
+    "tile_section_psf": 2500,
+
+    // Enable/disable image padding during processing
+    "do_pad": false,
+
+    // Coefficient for g-band magnitude in luminosity calculation
+    "lum_gmag_coeff": 0.5,
+
+    // Coefficient for r-band magnitude in luminosity calculation
+    "lum_rmag_coeff": 0.5,
+
+    // Maximum number of reference stars per tile for PSF and zeropoint calibration
+    "max_stars_ref": 15,
+
+    // Minimum signal-to-noise ratio of detected sources for convolution/calibration
+    "min_conv_snr": 300,
+
+    // Maximum color index difference when cross-matching with reference catalogs
+    "color_range": 0.6,
+
+    // Maximum magnitude limit for catalog query and zero-point calibration
+    "zp_maxmag": 21
+  },
+  "image_reduction": {
+    // Options: "always", "never", "on_failure"
+    "apply_reduction": "never",
+
+    // Binning configuration for reduction
+    "binning": {
+      "factor": 2,
+      "method": "sum" // Options: "sum", "median"
+    },
+
+    // Center coordinates for reduction crop [x, y] (null to disable)
+    "center": null,
+
+    // Size of the crop for reduction [width, height] (null to disable)
+    "crop_size": null
+  },
+  "forced_values": {
+    // STRICT OVERRIDES (Priority 1).
+    // Any key defined here will override BOTH the FITS header and the camera_specs defaults.
+    // Use this to fix incorrect headers (e.g., gain reported as 1.0 when it is 0.33).
+    // Example: "gain": 0.33
+  },
+  "filter_map": {
+    // Filter Translation Map (Header Value -> Internal Code).
+    // The code expects standard internal names to choose the correct photometric catalog.
+    // Valid Internal Codes: "Lum", "Open", "SDSSu", "SDSSg", "SDSSr", "SDSSi", "SDSSzs", "SDSSy".
+
+    // Internal Identity Mappings (Standard -> Standard)
+    "Lum": "Lum",
+    "Open": "Open",
+    "SDSSu": "SDSSu",
+    "SDSSg": "SDSSg",
+    "SDSSr": "SDSSr",
+    "SDSSi": "SDSSi",
+    "SDSSzs": "SDSSzs",
+    "SDSSy": "SDSSy",
+
+    // Common Aliases (User Value -> Internal Code)
+    "Clear": "Open",
+    "C": "Open",
+    "L": "Lum",
+    "LUM": "Lum",
+    "w": "Lum",
+
+    // Johnson/Cousins Approximations
+    "B": "SDSSg",
+    "V": "SDSSg",
+    "R": "SDSSr",
+    "I": "SDSSi",
+
+    // Sloan Aliases
+    "u": "SDSSu", "u'": "SDSSu",
+    "g": "SDSSg", "g'": "SDSSg",
+    "r": "SDSSr", "r'": "SDSSr",
+    "i": "SDSSi", "i'": "SDSSi",
+    "z": "SDSSzs", "z'": "SDSSzs",
+    "y": "SDSSy",
+
+    // H-Alpha is usually calibrated against r-band
+    "Ha": "SDSSr",
+    "Halpha": "SDSSr"
+  }
+}

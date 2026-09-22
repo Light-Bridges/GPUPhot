@@ -1,0 +1,8 @@
+# Successful process_image execution latency from production Elasticsearch logs (2026-09-08).
+# Covers production image reductions across observatory deployment pipelines.
+clase,camara_familia,Mpx,gpu,python,n,mediana_s,p05,p25,p75,p95,min,max
+TTT,QHY411,151,L40S,3.12.3,495,80.4,38.0,50.1,117.3,235.9,34.1,1958.3
+TTT,QHY600,61,L40S,3.12.3,6356,8.8,6.0,7.7,10.8,20.9,4.8,124.8
+TTT,iKon936,4.2,L40S,3.12.3,1373,12.0,5.3,8.5,13.1,15.4,4.6,115.5
+ATLAS,ATLAS-cam,survey,A100,3.12.3,28467,45.9,6.9,9.4,91.6,179.3,5.1,1918.2
+ATLAS,ATLAS-cam,survey,L40S,3.12.3,7978,44.3,23.6,33.7,80.9,195.1,15.6,1924.6

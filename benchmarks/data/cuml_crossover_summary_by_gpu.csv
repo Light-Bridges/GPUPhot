@@ -1,0 +1,9 @@
+# Nearest-neighbor crossmatch crossover summary by GPU architecture (2026-09-10).
+# Identifies threshold N where GPU acceleration outperforms CPU cKDTree.
+gpu,campaign,measured_date,points,n_min_tested,n_max_tested,first_crossover_ge1,last_n_ge1,upper_crossover_observed,window_ge115_min,window_ge115_max,speedup_max,speedup_at_max_n,min_published_in_table,sweep_steps_between_min_and_first_crossover,geometric_ratio
+H100 PCIe,september_2026,2026-09-10,30,100,500000,1432,500000,no: retains advantage at highest tested N,2438,350628,4.49,1.1,5000,6,1.341
+L40S,september_2026,2026-09-10,35,100,500000,1814,371992,yes,2042,245880,5.05,0.805,2000,2,1.285
+GeForce RTX 3050 Ti Laptop GPU,september_2026,2026-09-10,35,100,200000,2503,5822,yes,2503,5822,1.81,0.107,,,1.251
+A100-SXM4-80GB,april_2026,2026-04-16,20,100,200000,2454,134058,yes,2454,134058,4.28,0.953,2000,1,1.492
+GeForce RTX 3090,april_2026,2026-04-16,20,100,200000,1645,134058,yes,2454,89857,3.63,0.72,2000,0,1.492
+GeForce RTX 3060,april_2026,2026-04-16,20,100,200000,2454,27061,yes,2454,27061,1.97,0.25,2000,1,1.492

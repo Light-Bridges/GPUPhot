@@ -1,0 +1,13 @@
+# Peak VRAM comparison: pre-fix vs post-fix memory allocator (commit 1a23734) (2026-09-07).
+# Units: MiB. Measured via nsys telemetry.
+machine,gpu,stack,fix_state,image,MP,n_reservas,mb_pedidos_decimal,pico_MB_decimal,pico_MiB,reserva_max_MiB,etapa_pico,source
+lenovo,A100,py3.12,pre_fix,iKon936_Lum,4.2,12301,40322,1716.9,1637.3,128.1,batch_aperture_photometry,nsys_campaign
+lenovo,A100,py3.12,post_fix,iKon936_Lum,4.2,185,3418,2053.2,1958.1,128.1,batch_aperture_photometry,nsys_new
+lenovo,A100,py3.12,pre_fix,QHY411-1_Lum_full,151.2,55674,1472621,28098.2,26796.4,12081.8,get_eigen_psfs,nsys_campaign
+lenovo,A100,py3.12,post_fix,QHY411-1_Lum_full,151.2,633,109821,31005.2,29569.5,12081.8,batch_aperture_photometry,nsys_new
+local,RTX3050Ti,py3.12,pre_fix,iKon936_Lum,4.2,12301,40305,1716.9,1637.3,128.1,batch_aperture_photometry,nsys_new
+local,RTX3050Ti,py3.12,post_fix,iKon936_Lum,4.2,185,3418,2016.7,1923.3,128.1,batch_aperture_photometry,nsys_new
+any,any,py3.8,baseline,iKon936_Lum,4.2,190,,,1924,,,campaign_field
+any,any,py3.12,pre_fix,iKon936_Lum,4.2,,,,1637,,,campaign_field
+any,any,py3.8,baseline,QHY411-1_Lum_full,151.2,,,,29573,,,campaign_field
+any,any,py3.12,pre_fix,QHY411-1_Lum_full,151.2,,,,26796,,,campaign_field

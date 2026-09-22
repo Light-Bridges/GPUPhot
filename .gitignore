@@ -1,0 +1,78 @@
+# Byte-compiled / optimized / C extensions
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Packaging and distribution
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments and local env files
+.env*
+!.env.example
+.venv/
+venv/
+env/
+
+# Testing, coverage, caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Documentation and Notebooks
+docs/_build/
+docs/build/
+.ipynb_checkpoints
+
+# IDEs and developer tools
+.idea/
+.vscode/
+*.log
+.claude/
+.github/
+
+# Local development and scratch (strictly local, never in git)
+dev/
+profiling_scripts/dev/
+
+# Project caches and databases
+astrometry_cache/
+gpuphot_database/
+figures/
+figures_profiler/
+tables/
+
+# Test data (large binary files)
+tests/data/
+tests/astronomy_cache/
+
+# Benchmark data, logs, and artifacts (large binary / raw / staging files)
+profiling_results/
+benchmarks/benchmark_images/
+benchmarks/benchmark_results/
+benchmarks/data/logs_*/
+benchmarks/data/archive_*/
+benchmarks/data/methodology_validation/
+benchmarks/data/v7_localcat_*.csv
+benchmarks/data/es_*.csv
+
+# Superseded measurements kept on disk for provenance
+benchmarks/data/cuml_ablation_april_configs.csv
+benchmarks/data/nvtx_detection_per_image.csv
+benchmarks/data/nvtx_detection_stages.csv
+benchmarks/data/nvtx_stage_breakdown.csv
+
+# Local manuscript clones (independent repositories)
+GPUPHOT_manuscript/
+GpuFitsCrypt_manuscript/
+Paper___Kernel_based_photometry*/
+
+# Keep .gitkeep files
+!.gitkeep

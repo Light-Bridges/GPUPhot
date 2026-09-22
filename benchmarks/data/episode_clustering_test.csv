@@ -1,0 +1,26 @@
+# Do slow repetitions arrive in runs? A test against chance. 2026-09-11.
+# A block is the consecutive repetitions of one image under one stack; a gap over 30 min starts a new
+# one. A repetition is called slow when it exceeds FACTOR times the 25th percentile of its own block,
+# and the statistic is the longest contiguous run of slow repetitions.
+#
+# THE CONTROL, which is what makes this a result rather than an impression: the same block is SHUFFLED
+# 300 times and the statistic recomputed. Shuffling preserves the distribution exactly and
+# destroys only the order, so the comparison isolates temporal clustering and does not depend on where
+# the threshold is placed, since observed and shuffled use the same one. Three thresholds are reported
+# for that reason.
+#
+# Only blocks of at least 20 repetitions with at least 4 slow ones enter: with fewer,
+# the longest run is noise. Read from the RAW exports on purpose, because the publication pipeline
+# removes warm-up and trims the upper tail, which would erase exactly what is being looked for.
+#
+# WHAT THIS ESTABLISHES: slow repetitions come in runs, not scattered, at all three thresholds.
+# WHAT IT DOES NOT: the cause, nor whether the mechanism is external to the pipeline or inside it.
+#
+# Reproduce: python3 benchmarks/build_episode_clustering_test.py
+dataset,factor,n_blocks,mean_observed_streak,mean_shuffled_streak,z,blocks_streak_ge4_observed,blocks_streak_ge4_shuffled
+full_campaign,1.2,181,4.7,2.43,34.4,80,30.3
+full_campaign,1.35,93,4.88,2.29,31.9,46,14.2
+full_campaign,1.5,56,4.82,2.23,25.1,28,7.3
+soak_azken_run1,1.2,1,12.0,4.09,6.8,1,0.7
+soak_azken_run1,1.35,1,12.0,3.94,7.0,1,0.6
+soak_azken_run1,1.5,1,12.0,3.77,7.8,1,0.5

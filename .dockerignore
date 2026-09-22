@@ -1,0 +1,22 @@
+# Excluir explícitamente directorios con permisos restringidos (debe ir primero)
+gpuphot_database/
+
+# Ignorar todo
+**/*
+
+# Permitir solo los archivos específicos
+!requirements*.txt
+
+# Permitir solo los directorios específicos
+!gpuphot/
+!gpuphot_worker/
+
+# Incluir la carpeta profiling_scripts incluso si otras reglas la excluirían
+!profiling_scripts/
+!profiling_scripts/*
+
+!initialize_notebooks.sh
+
+# Guardian de OPENBLAS_CORETYPE: se importa solo via PYTHONPATH=/app en cada
+# arranque de Python; evita el SIGILL silencioso en CPUs sin AVX-512 (ttt1).
+!sitecustomize.py

@@ -1,0 +1,9 @@
+# GPU power limits inventory by card (2026-09-10).
+# Queried via nvidia-smi --query-gpu=power.limit,power.default_limit.
+host,gpu,current_w,default_w,min_w,max_w
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,[N/A],35.00,1.00,45.00
+ttt_server,NVIDIA GeForce RTX 3090,350.00,350.00,100.00,350.00
+ttt1,NVIDIA GeForce RTX 3060,170.00,170.00,100.00,212.00
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,300.00,500.00,100.00,500.00
+hp3,NVIDIA L40S,350.00,350.00,100.00,350.00
+azken,NVIDIA H100 PCIe,220.00,310.00,200.00,350.00

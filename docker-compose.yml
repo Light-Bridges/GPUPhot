@@ -1,0 +1,526 @@
+#version: '3.8'
+
+x-celery-env: &celery-env
+  CELERY_BROKER_URL: amqp://gpuphot:gpuphot@rabbitmq:5672/
+  CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+x-worker-env: &worker-env
+  <<: *celery-env
+  # ── Instrument / data paths ───────────────────────────────────────────────
+  INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
+  INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
+  IMAGE_BASE_PATH: /data/images
+  # ── PostgreSQL ────────────────────────────────────────────────────────────
+  POSTGRES_DB: GPUPhotDB
+  POSTGRES_USER: admin
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
+  POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+  # Always 5432, hardcoded: this is the `postgres` service's port on the
+  # Docker network these containers share, which never changes regardless
+  # of what POSTGRES_HOST_PORT exposes on the host. Reading it from .env
+  # here was the bug: a POSTGRES_PORT set for host-side access (e.g. to
+  # dodge a local port clash) leaked into the worker's own connection
+  # string and pointed it at a port nothing listens on inside the network.
+  POSTGRES_PORT: 5432
+  # ── Runtime / logging ─────────────────────────────────────────────────────
+  GPUPHOT_ENVIRONMENT: ${GPUPHOT_ENVIRONMENT:-production}
+  GPUPHOT_DEBUG: ${GPUPHOT_DEBUG:-False}
+  GPUPHOT_LOG_LEVEL: ${GPUPHOT_LOG_LEVEL:-INFO}
+  # ── Logstash log shipping (opt-in; set LOGSTASH_LOGGING=True to enable) ──
+  LOGSTASH_LOGGING: ${LOGSTASH_LOGGING:-False}
+  LOGSTASH_HOST: ${LOGSTASH_HOST:-logstash}
+  LOGSTASH_PORT: ${LOGSTASH_PORT:-5000}
+  # ── Astrometry timeouts ───────────────────────────────────────────────────
+  GPUPHOT_ASTROMETRY_TIMEOUT: ${GPUPHOT_ASTROMETRY_TIMEOUT:-60}
+  GPUPHOT_ASTROMETRY_ONLINE_TIMEOUT: ${GPUPHOT_ASTROMETRY_ONLINE_TIMEOUT:-70}
+  # ── cuML crossmatch backend selection ─────────────────────────────────────
+  # Adaptive mode: set both MIN and MAX (MAX > MIN > 0) to enable range-based
+  # cuML activation. Set GPUPHOT_USE_CUML_CROSSMATCH=1 to force cuML always.
+  GPUPHOT_USE_CUML_CROSSMATCH: ${GPUPHOT_USE_CUML_CROSSMATCH:-0}
+  GPUPHOT_CUML_MIN_SOURCES: ${GPUPHOT_CUML_MIN_SOURCES:-0}
+  GPUPHOT_CUML_MAX_SOURCES: ${GPUPHOT_CUML_MAX_SOURCES:-0}
+  # ── BLAS kernel: pinned so hosts agree ────────────────────────────────────
+  # OpenBLAS picks its kernel from the host microarchitecture, and the kernels
+  # do not round identically.  That reaches the science through the CPU
+  # clustering path: sklearn's KMeans lands in a different local optimum, the
+  # star grouping changes, and so does the zero point.  Measured on one frame
+  # across three hosts: Zen (EPYC 9124) and SkylakeX (Xeon Gold 6354) agree,
+  # Cooperlake (Xeon Platinum 8468) does not, and drifts 0.0053 mag with 112
+  # calibrators instead of 186.  Pinning the kernel makes the three agree.
+  # Only bites when the frame is grouped into many clusters (k=24 diverges,
+  # k<=6 does not), so dense fields on large sensors are where it shows.
+  # Override per host in .env if a machine needs its own (Haswell, Zen, ...).
+  # CAUTION: SkylakeX kernels use AVX-512.  On a host without it (ttt1's
+  # i5-10400F, Comet Lake) OpenBLAS dies with SIGILL the moment BLAS is first
+  # called: no traceback, no log line, exit code 132.  Those hosts MUST set
+  # OPENBLAS_CORETYPE=Haswell (AVX2) in their .env.  Check with:
+  #   grep -c avx512f /proc/cpuinfo   (0 means no AVX-512 on that host)
+  # Images rebuilt with sitecustomize.py (repo root) also downgrade at runtime
+  # instead of dying, but the explicit .env pin is still the documented state.
+  OPENBLAS_CORETYPE: ${OPENBLAS_CORETYPE:-SkylakeX}
+
+x-gpu-env: &gpu-env
+  GPU_ID: ${GPU_ID:-0}
+  NVIDIA_VISIBLE_DEVICES: ${GPU_ID:-0}
+  NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-all}
+  NVIDIA_PERSISTENCE_MODE: "on"
+  CUDA_VISIBLE_DEVICES: ${GPU_ID:-0}
+  # -----------------------------------------------------------------------------------------
+  # LEGATE / CUPYNUMERIC MEMORY CONFIGURATION
+  # -----------------------------------------------------------------------------------------
+  # When running Legate-based applications (like cuPyNumeric) via standard Python interpreters
+  # (e.g., Celery workers), the runtime ignores standard environment variables like LEGATE_FBMEM.
+  # Instead, configuration MUST be passed via the 'LEGATE_CONFIG' environment variable.
+  #
+  # This variable constructs a command-line-like string of options for the Legate runtime.
+  #
+  # Configuration Flags:
+  #   --fbmem <MB> : Framebuffer Memory (GPU VRAM).
+  #                  The amount of GPU memory reserved for the application.
+  #                  Default: 1024 MB (1GB). Increase this for larger image processing tasks.
+  #
+  #   --sysmem <MB>: System Memory (CPU DRAM).
+  #                  The amount of host RAM reserved for the application runtime.
+  #                  Default: 2048 MB (2GB).
+  #
+  #   --zcmem <MB> : Zero-Copy Memory (Pinned/Mapped Memory).
+  #                  Host memory mapped into the GPU address space for fast data transfers.
+  #                  Default: 256 MB.
+  #
+  # Usage:
+  #   You can override these defaults by setting the corresponding environment variables
+  #   (LEGATE_FBMEM, LEGATE_SYSMEM, LEGATE_ZCMEM) in your .env file.
+  # -----------------------------------------------------------------------------------------
+  LEGATE_CONFIG: "--fbmem ${LEGATE_FBMEM:-1024} --sysmem ${LEGATE_SYSMEM:-2048} --zcmem ${LEGATE_ZCMEM:-256}"
+
+x-common-worker-backend: &common-worker-backend
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: worker
+    args:
+      - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
+      - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements-312.txt}
+  #  env_file:
+  #    - path: ./.env
+  #      required: false
+  volumes:
+    - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+    - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+    - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+    - /run/docker.sock:/run/docker.sock
+    - ${NVIDIA_PERSISTENCED_SOCKET:-/var/run/nvidia-persistenced/socket}:/var/run/nvidia-persistenced/socket
+  depends_on:
+    - rabbitmq
+    - redis
+  restart: unless-stopped
+
+x-profiler-env: &profiler-env
+  <<: [*worker-env, *gpu-env]
+  NVIDIA_PERSISTENCE_MODE: "on"
+  CUDA_DEVICE_ORDER: PCI_BUS_ID
+  NVIDIA_VISIBLE_DEVICES: all
+  CUDA_VISIBLE_DEVICES: ${GPU_ID:-0}
+  NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-all,compute,utility,graphics}
+  NSYS_PROFILING: 1
+  NSYS_CUDA_TRACE: 1
+  # ── Profiler overrides (differ from worker-env defaults) ─────────────────
+  # Logging: enabled and verbose in profiling runs; host defaults to the
+  # compose logstash service (override via LOGSTASH_HOST in .env).
+  LOGSTASH_LOGGING: ${LOGSTASH_LOGGING:-True}
+  LOGSTASH_HOST: ${LOGSTASH_HOST:-logstash}
+  GPUPHOT_ENVIRONMENT: ${GPUPHOT_ENVIRONMENT:-profiler}
+  GPUPHOT_DEBUG: ${GPUPHOT_DEBUG:-True}
+  GPUPHOT_LOG_LEVEL: ${GPUPHOT_LOG_LEVEL:-DEBUG}
+  # No DB persistence during profiling runs by default.
+  POSTGRES_HOST: ${POSTGRES_HOST:-nostore}
+
+# aarch64 profilers (Jetson).  The OPENBLAS_CORETYPE names inherited from
+# worker-env are x86-64 kernels and mean nothing here; an unrecognised name makes
+# OpenBLAS warn and, in some builds, abort.  Left empty so the ARM build detects
+# its own kernel.  Pin an aarch64 one (CORTEXA57, NEOVERSEN1, ARMV8) through
+# OPENBLAS_CORETYPE_ARM if these hosts ever need to agree with each other.
+x-profiler-arm-env: &profiler-arm-env
+  <<: *profiler-env
+  OPENBLAS_CORETYPE: ${OPENBLAS_CORETYPE_ARM:-}
+
+x-common-profiler: &common-profiler
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: profiler
+    network: host
+    args:
+      - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+      - SSSH_PORT=${PROFILER_SSSH_PORT:-2222}
+      - BASE_IMAGE=${PROFILER_BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
+      - REQUIREMENTS_FILE=${PROFILER_REQUIREMENTS_FILE:-requirements-312.txt}
+  profiles: [ "debug" ]
+  privileged: true
+  environment: *profiler-env
+  cap_add:
+    - SYS_ADMIN
+    - SYS_PTRACE
+    - SYS_NICE
+    - IPC_LOCK
+    - SYS_RESOURCE
+  security_opt:
+    - seccomp=unconfined
+  stdin_open: true
+  tty: true
+  restart: unless-stopped
+
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: gpuphot
+      RABBITMQ_DEFAULT_PASS: gpuphot
+    restart: unless-stopped
+
+  redis:
+    image: redis:6-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    restart: unless-stopped
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.13.0
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+      # Disable X-Pack monitoring to avoid Elasticsearch requirement in dev
+      XPACK_MONITORING_ENABLED: "false"
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+    ports:
+      - "${LOGSTASH_PORT:-5000}:5000/tcp"
+    restart: unless-stopped
+
+  beat:
+    <<: *common-worker-backend
+    environment:
+      <<: *worker-env
+      NVIDIA_VISIBLE_DEVICES: "none"
+      NVIDIA_DRIVER_CAPABILITIES: ""
+    command: [ "celery", "-A", "gpuphot_worker.worker_app", "beat" , "-S", "redbeat.RedBeatScheduler" ]
+
+  gpuphot_worker:
+    <<: *common-worker-backend
+    runtime: nvidia
+    environment:
+      <<: [*worker-env, *gpu-env]
+    command: [ "celery", "-A", "gpuphot_worker.worker_app", "worker", "--pool=gevent", "-c", "${CELERY_CONCURRENCY:-1}", "-n", "gpuphot-worker-${GPU_ID:-0}", "--soft-time-limit", "240", "--time-limit", "300" ]
+
+  lab:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: lab
+      args:
+        - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
+        - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements-312.txt}
+    #    env_file:
+    #      - path: ./.env
+    #        required: false
+    runtime: nvidia
+    ports:
+      - "${JUPYTER_PORT:-8888}:8888"
+    environment:
+      <<: [*celery-env, *gpu-env]
+      JUPYTER_ENABLE_LAB: "yes"
+      INSTRUMENT_NAME: ${INSTRUMENT_NAME:-default}
+      INSTRUMENT_CONFIG_BASE_PATH: /data/instrument_configs
+      IMAGE_BASE_PATH: /data/images
+      ASTROMETRY_CACHE_PATH_HOST: ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}
+    volumes:
+      - ${NOTEBOOKS_PATH:-./notebooks}:/home/jovyan/work:z
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+      - ${NVIDIA_PERSISTENCED_SOCKET:-/var/run/nvidia-persistenced/socket}:/var/run/nvidia-persistenced/socket
+    restart: unless-stopped
+
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: flower
+      args:
+        - BASE_IMAGE=${BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
+        - REQUIREMENTS_FILE=${REQUIREMENTS_FILE:-requirements-312.txt}
+    environment:
+      <<: *celery-env
+      NVIDIA_VISIBLE_DEVICES: "none"
+      NVIDIA_DRIVER_CAPABILITIES: ""
+      FLOWER_PORT: 5555
+    ports:
+      - "${FLOWER_PORT:-5555}:5555"
+    depends_on:
+      - rabbitmq
+      - redis
+    command: [ "celery", "-A", "gpuphot_worker.worker_app", "flower" ]
+    restart: unless-stopped
+
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: q3c_postgres
+    # POSTGRES_HOST_PORT is the port on THIS machine that exposes Postgres,
+    # for host-side tools (psql, a non-Docker script) or to dodge a local
+    # port clash. It is independent of POSTGRES_PORT above, which is what
+    # containers on this compose project's own network always use.
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: GPUPhotDB
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gpuphot}
+    volumes:
+      - ${POSTGRES_DATA_PATH:-../gpuphot_database}:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  #  Profiler (Python 3.12) — default, with RAPIDS cuML
+  # ---------------------------------------------------------------
+  profiler:
+    <<: *common-profiler
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: profiler
+      args:
+        - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+        - SSSH_PORT=${PROFILER_SSSH_PORT:-2222}
+        - BASE_IMAGE=${PROFILER_BASE_IMAGE:-nvidia/cuda:12.6.3-devel-ubuntu24.04}
+        - REQUIREMENTS_FILE=${PROFILER_REQUIREMENTS_FILE:-requirements-312.txt}
+    ports:
+      - "${PROFILER_SSSH_PORT:-2222}:22"
+    devices:
+      - "/dev/nvidiactl:/dev/nvidiactl"
+      - "/dev/nvidia-uvm:/dev/nvidia-uvm"
+      - "/dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools"
+      - "/dev/nvidia-modeset:/dev/nvidia-modeset"
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+      - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
+      - ${NVIDIA_PERSISTENCED_SOCKET:-/var/run/nvidia-persistenced/socket}:/var/run/nvidia-persistenced/socket
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ "${GPU_ID:-0}" ]
+              capabilities: [ gpu ]
+
+  # ---------------------------------------------------------------
+  #  Profiler (Python 3.8) — legacy, CPU fallbacks for cuML tasks
+  # ---------------------------------------------------------------
+  profiler_38:
+    <<: *common-profiler
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: profiler
+      args:
+        - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+        - SSSH_PORT=${PROFILER_38_SSSH_PORT:-2223}
+        - BASE_IMAGE=${PROFILER_38_BASE_IMAGE:-nvidia/cuda:12.2.2-devel-ubuntu20.04}
+        - REQUIREMENTS_FILE=${PROFILER_38_REQUIREMENTS_FILE:-requirements.txt}
+    ports:
+      - "${PROFILER_38_SSSH_PORT:-2223}:22"
+    devices:
+      - "/dev/nvidiactl:/dev/nvidiactl"
+      - "/dev/nvidia-uvm:/dev/nvidia-uvm"
+      - "/dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools"
+      - "/dev/nvidia-modeset:/dev/nvidia-modeset"
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+      - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
+      - ${NVIDIA_PERSISTENCED_SOCKET:-/var/run/nvidia-persistenced/socket}:/var/run/nvidia-persistenced/socket
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ "${GPU_ID:-0}" ]
+              capabilities: [ gpu ]
+
+  # ---------------------------------------------------------------
+  #  Profiler Jetson Nano (JetPack 4.x, legacy)
+  # ---------------------------------------------------------------
+  profiler_jetson:
+    <<: *common-profiler
+    # aarch64: overrides the x86-64 OPENBLAS_CORETYPE inherited above.
+    environment: *profiler-arm-env
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: profiler
+      args:
+        - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+        - SSSH_PORT=${PROFILER_JETSON_SSSH_PORT:-2224}
+        - BASE_IMAGE=${PROFILER_JETSON_BASE_IMAGE:-nvcr.io/nvidia/l4t-ml:r32.7.1-py3}
+        - REQUIREMENTS_FILE=${PROFILER_JETSON_REQUIREMENTS_FILE:-requirements_jetson.txt}
+    devices:
+      - "/dev/nvhost-ctrl:/dev/nvhost-ctrl"
+      - "/dev/nvhost-ctrl-gpu:/dev/nvhost-ctrl-gpu"
+      - "/dev/nvhost-prof-gpu:/dev/nvhost-prof-gpu"
+      - "/dev/nvmap:/dev/nvmap"
+      - "/dev/nvhost-gpu:/dev/nvhost-gpu"
+      - "/dev/nvhost-as-gpu:/dev/nvhost-as-gpu"
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+      - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
+      - ${NSYS_PATH:-/opt/nvidia/nsight-systems/2024.2.2/}:/opt/nsight-systems-host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ "${GPU_ID:-0}" ]
+              capabilities: [ gpu ]
+
+  # ---------------------------------------------------------------
+  #  Profiler Jetson Orin — JetPack 5.x (L4T R35, Python 3.8)
+  #  Use on: Jetson Orin with JetPack 5.x / L4T R35
+  # ---------------------------------------------------------------
+  profiler_jetson_orin:
+    <<: *common-profiler
+    # aarch64: overrides the x86-64 OPENBLAS_CORETYPE inherited above.
+    environment: *profiler-arm-env
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: profiler
+      args:
+        - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+        - SSSH_PORT=${PROFILER_JETSON_ORIN_SSSH_PORT:-2225}
+        - BASE_IMAGE=${PROFILER_JETSON_ORIN_BASE_IMAGE:-nvcr.io/nvidia/l4t-ml:r35.2.1-py3}
+        - REQUIREMENTS_FILE=${PROFILER_JETSON_ORIN_REQUIREMENTS_FILE:-requirements_jetson_orin.txt}
+    runtime: nvidia
+    devices:
+      - "/dev/nvhost-ctrl:/dev/nvhost-ctrl"
+      - "/dev/nvhost-ctrl-gpu:/dev/nvhost-ctrl-gpu"
+      - "/dev/nvhost-prof-gpu:/dev/nvhost-prof-gpu"
+      - "/dev/nvmap:/dev/nvmap"
+      - "/dev/nvhost-gpu:/dev/nvhost-gpu"
+      - "/dev/nvhost-as-gpu:/dev/nvhost-as-gpu"
+      - "/dev/nvhost-dbg-gpu:/dev/nvhost-dbg-gpu"
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+      - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
+      - ${NSYS_PATH:-/opt/nvidia/nsight-systems/2023.2.4/}:/opt/nsight-systems-host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ "${GPU_ID:-0}" ]
+              capabilities: [ gpu ]
+
+  # ---------------------------------------------------------------
+  #  Profiler Jetson Orin Super — JetPack 6.x (L4T R36, Python 3.12)
+  #  Use on: Jetson Orin Nano Super with JetPack 6.x / L4T R36
+  #  Note: cuML/RAPIDS not available for ARM/aarch64
+  # ---------------------------------------------------------------
+  profiler_jetson_orin_super:
+    <<: *common-profiler
+    # aarch64: overrides the x86-64 OPENBLAS_CORETYPE inherited above.
+    environment: *profiler-arm-env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: profiler
+      args:
+        - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+        - SSSH_PORT=${PROFILER_JETSON_SUPER_SSSH_PORT:-2226}
+        - BASE_IMAGE=${PROFILER_JETSON_SUPER_BASE_IMAGE:-nvcr.io/nvidia/l4t-cuda:12.2.12-devel}
+        - REQUIREMENTS_FILE=${PROFILER_JETSON_SUPER_REQUIREMENTS_FILE:-requirements_jetson_312.txt}
+        - FORCE_PYTHON_VERSION=3.12
+    runtime: nvidia
+    devices:
+      - "/dev/nvhost-ctrl:/dev/nvhost-ctrl"
+      - "/dev/nvhost-ctrl-gpu:/dev/nvhost-ctrl-gpu"
+      - "/dev/nvhost-prof-gpu:/dev/nvhost-prof-gpu"
+      - "/dev/nvmap:/dev/nvmap"
+      - "/dev/nvhost-gpu:/dev/nvhost-gpu"
+      - "/dev/nvhost-as-gpu:/dev/nvhost-as-gpu"
+      - "/dev/nvhost-dbg-gpu:/dev/nvhost-dbg-gpu"
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+      - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
+      - ${NSYS_PATH:-/opt/nvidia/nsight-systems/2023.4.1/}:/opt/nsight-systems-host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ "${GPU_ID:-0}" ]
+              capabilities: [ gpu ]
+
+  # ---------------------------------------------------------------
+  #  Profiler Jetson Orin Super 3.10 — JetPack 6.x (L4T R36, Python 3.10 system)
+  #  Same hardware as above but with system Python 3.10 (no FORCE)
+  #  Note: cuML/RAPIDS not available for ARM/aarch64
+  # ---------------------------------------------------------------
+  profiler_jetson_orin_super_38:
+    <<: *common-profiler
+    # aarch64: overrides the x86-64 OPENBLAS_CORETYPE inherited above.
+    environment: *profiler-arm-env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: profiler
+      args:
+        - ROOT_PASSWORD=${ROOT_PASSWORD:-gpuphot_profiler}
+        - SSSH_PORT=${PROFILER_JETSON_SUPER_38_SSSH_PORT:-2228}
+        - BASE_IMAGE=${PROFILER_JETSON_SUPER_38_BASE_IMAGE:-nvcr.io/nvidia/l4t-cuda:12.2.12-devel}
+        - REQUIREMENTS_FILE=${PROFILER_JETSON_SUPER_38_REQUIREMENTS_FILE:-requirements.txt}
+    runtime: nvidia
+    devices:
+      - "/dev/nvhost-ctrl:/dev/nvhost-ctrl"
+      - "/dev/nvhost-ctrl-gpu:/dev/nvhost-ctrl-gpu"
+      - "/dev/nvhost-prof-gpu:/dev/nvhost-prof-gpu"
+      - "/dev/nvmap:/dev/nvmap"
+      - "/dev/nvhost-gpu:/dev/nvhost-gpu"
+      - "/dev/nvhost-as-gpu:/dev/nvhost-as-gpu"
+      - "/dev/nvhost-dbg-gpu:/dev/nvhost-dbg-gpu"
+    volumes:
+      - ${INSTRUMENT_CONFIG_PATH:-./gpuphot/instrument_configs}:/data/instrument_configs:z
+      - ${IMAGE_PATH:-~/gpuphot_images}:/data/images:z
+      - ${ASTROMETRY_CACHE_PATH:-./astrometry_cache}:/data/astrometry_cache:z
+      - ${PROFILER_RESULTS_PATH:-./profiling_results}:/app/profiling_results:z
+      - ${NSYS_PATH:-/opt/nvidia/nsight-systems/2023.4.1/}:/opt/nsight-systems-host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ "${GPU_ID:-0}" ]
+              capabilities: [ gpu ]

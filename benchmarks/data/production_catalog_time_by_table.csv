@@ -1,0 +1,6 @@
+# Catalog query response time by table in production database replica (2026-09-08).
+catalog_id,tabla_replica,filtro_asociado,n_consultas,med_s,p25,p75,p95,max
+II/349/ps1,panstarrs_dr1,Lum/w,79116,2.05,0.61,6.09,66.24,1872.72
+I/353/gsc242,gsc2,SDSSu,97,1.04,0.65,4.34,184.41,293.05
+II/379,skymapper,dec_sur,580,0.30,0.26,0.34,0.47,1.31
+(sin_id_capturado),?,?,3194,1.96,0.58,5.43,91.91,1867.49

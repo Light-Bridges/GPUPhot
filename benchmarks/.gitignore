@@ -1,0 +1,5 @@
+# Large binary benchmark images (fetched locally via fetch_benchmark_images.sh in dev/)
+benchmark_images/*.fits
+
+# All local-only work lives in dev/ — data, intermediate CSVs, analysis scripts, outputs
+dev/

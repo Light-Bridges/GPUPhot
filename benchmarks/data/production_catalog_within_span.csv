@@ -1,0 +1,8 @@
+# Breakdown of catalog query time within production process_image spans (2026-09-08).
+# Pairs StarCatalog query events with process_image execution milestones.
+camara_fam,Mpx,gpu,n,span_med_s,cat_med_s,cat_frac_med,concurrencia_med,concurrencia_max
+QHY411,151,L40S,434,77.6,5.4,0.07,2,3
+QHY600,61,L40S,5416,8.7,1.0,0.12,2,3
+iKon936,4.2,L40S,890,12.0,7.2,0.59,2,3
+ATLAS-cam,61,L40S,7769,44.3,9.9,0.23,2,3
+ATLAS-cam,61,A100,26108,51.5,5.2,0.13,4,8

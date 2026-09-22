@@ -1,0 +1,26 @@
+# Hardware inventory of the eight benchmark hosts, 2026-09-11. Read-only commands.
+# WHY: the GPU table of the paper gives card, memory and class, but the text acknowledges that the host
+# CPU, the driver and the host memory are not separable from the GPU. This supplies them.
+# WHAT IS EMPTY IS EMPTY ON PURPOSE. Nothing here is filled in from an earlier epoch. One host has no
+# accessible nvidia-smi under its JetPack release, so its GPU, driver and CUDA fields are blank; its card
+# is known from the measurement exports, not from reading the host. The same host has no py3.12 container
+# at all, because that Python is not packaged for its architecture and distribution, so that field is
+# blank for a structural reason and not for a failed reading. The two are different and the columns say so.
+# The laptop reports a PCIe generation that is almost certainly a power-saving state rather than the link
+# capability. It is given as read, marked, rather than corrected by eye.
+# MODULE IDENTIFICATION, with its limit: the device-tree model string of a developer kit names the CARRIER
+# board, not the module, so it cannot identify the part. The part number in the boot device tree can, and
+# it fixes the module FAMILY for both edge hosts. For one of them the boot tree is shared between two part
+# numbers, so the family is fixed but the exact part number is not. There is no EEPROM confirmation and
+# memory size does not discriminate, since both candidate modules carry the same amount.
+# The campaign label column preserves the identifier used in the measurement exports, which differs from
+# the resolved module and is kept for continuity of the data.
+host,gpu_campaign_label,gpu_reported_by_host,cpu_model,sockets,cores,threads,ram_total_gib,nvidia_driver,cuda_runtime_py312,cuda_runtime_py38,pcie,power_limit_w,os,kernel,tegra_model_real,nv_tegra_release,module_part_number,module_resolved,module_evidence
+azken,NVIDIA H100 PCIe,NVIDIA H100 PCIe,AMD EPYC 9124 16-Core Processor,1,16,32,62.52,565.57.01,12.6.3,12.2.2,Gen5 x16,220,Ubuntu 22.04.5 LTS,5.15.0-126-generic,,,,,
+lenovo_tttserver,NVIDIA A100-SXM4-80GB,NVIDIA A100-SXM4-80GB,Intel(R) Xeon(R) Gold 6354 CPU @ 3.00GHz,2,36,72,1007.54,535.247.01,12.6.3,12.2.2,SXM4 (non-PCIe),300,Ubuntu 20.04.5 LTS,5.4.0-189-generic,,,,,
+hp3,NVIDIA L40S,NVIDIA L40S,Intel(R) Xeon(R) Platinum 8468,2,96,192,251.60,535.309.01,12.6.3,12.2.2,Gen4 x16,350,Ubuntu 22.04.5 LTS,5.15.0-185-generic,,,,,
+ttt_server,NVIDIA GeForce RTX 3090,NVIDIA GeForce RTX 3090,Intel(R) Core(TM) i9-10940X CPU @ 3.30GHz,1,14,28,125.49,575.57.08,12.6.3,12.2.2,Gen3 x16,350,Ubuntu 20.04.6 LTS,5.4.0-216-generic,,,,,
+ttt1,NVIDIA GeForce RTX 3060,NVIDIA GeForce RTX 3060,Intel(R) Core(TM) i5-10400F CPU @ 2.90GHz,1,6,12,62.69,570.133.07,12.6.3,12.2.2,Gen3 x16,170,Ubuntu 20.04.6 LTS,5.4.0-216-generic,,,,,
+local,NVIDIA GeForce RTX 3050 Ti Laptop GPU,NVIDIA GeForce RTX 3050 Ti Laptop GPU,12th Gen Intel(R) Core(TM) i7-12700H,1,14,20,31.02,580.173.02,12.6.3,12.2.2,Gen1 x16,35 (def) / 45 (max),Ubuntu 24.04.5 LTS,6.8.0-136-generic,,,,,
+jetson_local,Orin Super 8GB,Orin (nvgpu),Cortex-A78AE,-,,6,7.44,540.4.0,12.2.12,12.2.12,,,Ubuntu 22.04.5 LTS,5.15.148-tegra,NVIDIA Jetson Orin Nano Engineering Reference Developer Kit Super,"# R36 (release), REVISION: 4.7, GCID: 42132812, BOARD: generic, EABI: ",p3767-0005,Orin Nano 8GB Super,"/proc/device-tree/compatible = nvidia,p3768-0000+p3767-0005-super | nvidia,p3767-0005 | nvidia,tegra234"
+jetson_orin,Orin NX 8GB,,ARMv8 Processor rev 1 (v8l),2,6,6,7.28,,,11.4,,,Ubuntu 20.04.6 LTS,5.10.192-tegra,NVIDIA Orin Nano Developer Kit,"# R35 (release), REVISION: 5.0, GCID: 35550185, BOARD: t186ref, EABI: ",p3767-0003 or -0005,"Orin Nano 8GB (family confirmed; part number not resolved)","/proc/device-tree/nvidia,dtsfilename = tegra234-p3767-0003-p3768-0000-a0.dts ; compatible lists p3767-0003 and p3767-0005"

@@ -1,0 +1,24 @@
+# Audit of manuscript table and figure captions against benchmark data sources (2026-09-09).
+# Validates numerical claims, cell counts, and environmental conditions reported in paper text.
+type,label,tex_file,line,generated_body,column_footer,note
+table,tab:datasets,tables/table_datasets.tex,3,no (handwritten),yes,
+table,tab:gpu_hardware,performance.tex,33,no (handwritten),yes,
+table,tab:software_versions,performance.tex,66,no (handwritten),yes,
+table,tab:latency_py312,performance.tex,177,body_latency_py312.tex,yes,
+table,tab:latency_py38,performance.tex,301,body_latency_py38.tex,yes,
+table,tab:speedup_local_vizier,performance.tex,330,body_speedup_local_vizier.tex,yes,
+table,tab:vram_merged,performance.tex,381,body_vram_merged.tex,yes,"Column footer does not restate that memory difference is an allocator artifact resolving post-fix; described in caption."
+table,tab:concurrency,performance.tex,612,body_concurrency.tex,yes,"Column footer does not restate that concurrency gain vanishes post-fix; values represent floor(VRAM/peak) derived arithmetic rather than empirical concurrency."
+table,tab:cuml_ablation,performance.tex,694,body_cuml_ablation.tex,yes,
+table,tab:cuml_thresholds,performance.tex,792,no (handwritten),yes,
+table,tab:cpu_baseline,performance.tex,899,body_cpu_baseline.tex,yes,"Valid for current run; header documents catalog fallback behavior on shared host."
+table,tab:nvtx_detection,performance.tex,963,body_nvtx_detection.tex,yes,
+table,tab:stage_breakdown,performance.tex,1011,body_stage_breakdown.tex,yes,
+table,tab:tool_comparison,discussion.tex,8,no (handwritten),no,"Only table without column footer. Caption defines stages, execution model, and containerization."
+figure,fig1_architecture,architecture.tex,8,generate_manuscript_figures.py,na,"Architecture schematic; does not encode variables."
+figure,fig2_latency_vs_size,performance.tex,202,generate_manuscript_figures.py,yes,"Caption defines marker color=GPU and marker size=detected source count."
+figure,fig4_heatmap,performance.tex,209,generate_manuscript_figures.py,no,"Caption documents 46 unmeasured/OOM cells and defines colorbar unit."
+figure,fig3_memory_comparison,performance.tex,402,generate_manuscript_figures.py,no,"Corrected 151.2 MP label discrepancy (9.4% vs 9.8% in table and text)."
+figure,fig7_py38_vs_adaptive,performance.tex,651,generate_manuscript_figures.py,no,"Legend maps hatching to GPU; bar color encodes sign (orange = py3.12 slower, green = faster)."
+figure,fig8_always_vs_adaptive,performance.tex,715,generate_manuscript_figures.py,no,"Same as fig7: bar color encodes sign."
+figure,fig5_cuml_crossover,performance.tex,773,generate_manuscript_figures.py,no,"Caption describes 1.0 threshold and crossover; X axis is logarithmic with per-GPU curves."

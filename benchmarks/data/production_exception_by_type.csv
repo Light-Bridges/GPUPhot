@@ -1,0 +1,13 @@
+# Breakdown of production process_image failures by exception type (2026-09-08).
+exception_type,n,pct_of_total
+ValueError,396883,15.0
+InsufficientStarsError,389808,14.7
+KeyError,213637,8.1
+IndexError,152309,5.7
+MoffatFitError,88215,3.3
+SoftTimeLimitExceeded,48498,1.8
+TypeError,33827,1.3
+AttributeError,2729,0.1
+MemoryError,1569,0.1
+ZeroDivisionError,1219,0.0
+(clasificados),1328694,50.1

@@ -1,0 +1,10 @@
+# Audit of OpenBLAS kernel selection across measurement epochs (2026-09-12).
+# Documents OPENBLAS_CORETYPE settings across August and post-fix benchmark campaigns.
+# Confirms identical per-host BLAS kernels were pinned in both campaign runners.
+host,cpu_model,avx512,py38_container,container_created,sitecustomize_exists,init_has_auto_pin,init_md5,f457c01_deployed,august_kernel_pinned,published_block_kernel,epochs_differ,native_kernel,unpinned_run_10sep,unpinned_run_kernel,consumed_by_generator,note
+azken,AMD EPYC 9124 16-Core Processor,yes,gpuphot-profiler_38-1,2026-05-27T13:44:44Z,no,no,4b7ae218ae984f8827081d5b353d0f38,no,SkylakeX,SkylakeX,no,Zen,measure_postfix_h100_py38.csv,Zen,no,"Published block 31-Aug ran with SkylakeX pinned; Zen kernel in unpinned 10-Sep run not consumed by any generator."
+lenovo_tttserver,Intel(R) Xeon(R) Gold 6354 CPU @ 3.00GHz,yes,gpuphot-profiler_38-1,2026-05-27T13:44:41Z,no,no,4b7ae218ae984f8827081d5b353d0f38,no,SkylakeX,SkylakeX,no,SkylakeX,,,,No unpinned run; native kernel matches SkylakeX.
+hp3,Intel(R) Xeon(R) Platinum 8468,yes,gpuphot-profiler_38-1,2026-05-27T11:52:53Z,no,no,4b7ae218ae984f8827081d5b353d0f38,no,SkylakeX,SkylakeX,no,Cooperlake,,,,Block 1/2-Sep ran with SkylakeX pinned and converged across all 3 images.
+ttt_server,Intel(R) Core(TM) i9-10940X CPU @ 3.30GHz,yes,gpuphot-profiler_38-1,2026-08-06T20:12:47Z,no,no,4b7ae218ae984f8827081d5b353d0f38,no,SkylakeX,SkylakeX,no,SkylakeX,postfix_contaminated_rtx3090_py38_contention.csv,SkylakeX,no,Native kernel matches pinned kernel across all runs.
+ttt1,Intel(R) Core(TM) i5-10400F CPU @ 2.90GHz,no,gpuphot-profiler_38-1,2026-08-06T20:32:23Z,no,no,4b7ae218ae984f8827081d5b353d0f38,no,Haswell,Haswell,no,Haswell,measure_postfix_rtx3060_py38.csv,Haswell,no,"No AVX-512: native equals pinned kernel."
+local,12th Gen Intel(R) Core(TM) i7-12700H,no,gpuphotfinal-profiler_38-1,2026-08-04T07:26:51Z,no,no,4b7ae218ae984f8827081d5b353d0f38,no,Haswell,Haswell,no,Haswell,postfix_contaminated_rtx3050ti_py38_thermal.csv,Haswell,no,"No AVX-512: native equals pinned kernel."

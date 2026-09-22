@@ -1,0 +1,27 @@
+machine,stack,image_file,status,time_s,error
+ttt1,py312,img8,FAILED,2.624,Error:      CUDARuntimeError: cudaErrorMemoryAllocation: out of memory
+ttt1,py312_always,img8,FAILED,2.154,Error:      CUDARuntimeError: cudaErrorMemoryAllocation: out of memory
+ttt1,py38,img8,FAILED,1.951,Error:      CUDARuntimeError: cudaErrorMemoryAllocation: out of memory
+ttt1,py312,img9,FAILED,2.647,Error:      CUDARuntimeError: cudaErrorMemoryAllocation: out of memory
+ttt1,py312_always,img9,FAILED,2.136,Error:      CUDARuntimeError: cudaErrorMemoryAllocation: out of memory
+ttt1,py38,img9,FAILED,1.984,Error:      CUDARuntimeError: cudaErrorMemoryAllocation: out of memory
+ttt1,py312,img10,FAILED,2.800,Error:      CUDARuntimeError: cudaErrorMemoryAllocation: out of memory
+ttt1,py312_always,img10,FAILED,2.137,Error:      CUDARuntimeError: cudaErrorMemoryAllocation: out of memory
+ttt1,py38,img10,FAILED,2.044,Error:      CUDARuntimeError: cudaErrorMemoryAllocation: out of memory
+jetson_local,py312,img4,FAILED,32.822,Error:      OutOfMemoryError: Out of memory allocating 305698304 bytes (allocated so far: 5592650752 bytes).
+jetson_local,py38,img4,FAILED,49.051,Error:      OutOfMemoryError: Out of memory allocating 122305024 bytes (allocated so far: 5286952448 bytes).
+jetson_local,py312,img5,FAILED,35.152,Error:      TypeError: 'NoneType' object is not subscriptable
+jetson_local,py38,img5,FAILED,31.016,Error:      OutOfMemoryError: Out of memory allocating 305698304 bytes (allocated so far: 5592650752 bytes).
+jetson_local,py312,img6,FAILED,21.045,Error:      OutOfMemoryError: Out of memory allocating 756150272 bytes (allocated so far: 4867171328 bytes).
+jetson_local,py38,img6,FAILED,30.977,Error:      OutOfMemoryError: Out of memory allocating 756150272 bytes (allocated so far: 4867171328 bytes).
+jetson_local,py312,img7,FAILED,21.233,Error:      OutOfMemoryError: Out of memory allocating 756150272 bytes (allocated so far: 4867171328 bytes).
+jetson_local,py38,img7,FAILED,24.209,Error:      OutOfMemoryError: Out of memory allocating 302460416 bytes (allocated so far: 5623535104 bytes).
+jetson_local,py312,img8,FAILED,13.810,Error:      OutOfMemoryError: Out of memory allocating 1210010624 bytes (allocated so far: 3780921856 bytes).
+jetson_local,py38,img8,FAILED,3.969,Error:      OutOfMemoryError: Out of memory allocating 1210010624 bytes (allocated so far: 3780921856 bytes).
+jetson_local,py312,img9,FAILED,13.412,Error:      OutOfMemoryError: Out of memory allocating 1210010624 bytes (allocated so far: 2570911232 bytes).
+jetson_local,py38,img9,FAILED,3.937,Error:      OutOfMemoryError: Out of memory allocating 1210010624 bytes (allocated so far: 2570911232 bytes).
+jetson_local,py312,img10,FAILED,13.076,Error:      OutOfMemoryError: Out of memory allocating 1210010624 bytes (allocated so far: 2419681280 bytes).
+jetson_local,py38,img10,FAILED,4.056,Error:      OutOfMemoryError: Out of memory allocating 1210010624 bytes (allocated so far: 2419681280 bytes).
+jetson_orin,py38,img3,SIN_SALIDA,,
+jetson_orin,py38,img4,HOST_CAIDO_ABORTO,,
+jetson_orin,py38,img6,HOST_YA_CAIDO_NO_DISPARADO,,

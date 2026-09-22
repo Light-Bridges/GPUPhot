@@ -1,0 +1,27 @@
+# Which cell estimator reproduces best between blocks of the SAME cell. 2026-09-11.
+# dispersion = (max - min) / median of the values that estimator gives across the blocks of one cell.
+# Lower is more reproducible. Only cells with two or more blocks of at least 20 repetitions.
+#
+# WHY IT IS EVALUATED BLIND: the observation came from ONE cell, where the 25th percentile was almost
+# identical across two long runs while the median moved. Judging it on that cell would be choosing the
+# estimator by the answer it gives. It is therefore computed over every cell that qualifies.
+#
+# RESULT: yes, low quantiles do reproduce better, and it is not a peculiarity of that cell.
+#
+# AND THE TRAP, which is why this changes nothing: reproducibility is MONOTONIC as the quantile falls.
+# The minimum reproduces best of all, and the minimum plainly does not describe how long a reduction
+# takes. "Reproduces better" therefore cannot decide which statistic to publish on its own; it only
+# says that the episodes live in the upper half of the distribution.
+#
+# WHAT WOULD DECIDE IT: knowing whether the episodes are EXTERNAL to the pipeline. If they are,
+# publishing the uninterfered regime is justified; if they are not, the median answers the question the
+# paper asks, which is how long a typical reduction takes. That is not known, so the median is
+# published, as everywhere else in this work.
+#
+# Reproduce: python3 benchmarks/build_estimator_reproducibility.py
+estimator,n_cells,median_dispersion_pct,p75_dispersion_pct,max_dispersion_pct,better_than_median_count
+mean,230,5.9,16.0,79.4,95
+median,230,4.7,12.8,95.1,0
+p25,230,3.9,8.8,87.9,150
+p10,230,3.2,7.5,43.5,149
+min,230,3.7,7.6,49.5,161

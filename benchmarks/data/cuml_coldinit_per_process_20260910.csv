@@ -1,0 +1,22 @@
+# Cold process import overhead for GPUPhot py3.12 (CuPy and cuML initialization) (2026-09-10).
+# Summary (median by GPU): CUDA context init (first_kernel - import_cuml): H100 0.43s, A100 0.52s, L40S 0.48s.
+# cuML library import (RAPIDS library load from disk): A100 2.86s, H100 4.39s, L40S 5.72s.
+# Note on RTX 3050 Ti: import latency (16.4s) reflects mobile CPU power governor throttling under initial load.
+host,gpu,run,t_import_cupy_s,t_import_cuml_s,t_first_kernel_s,gpu_util_pct_start,gpu_mem_used_MiB_start
+local,RTX 3050 Ti,1,1.185,18.250,19.472,0,11
+local,RTX 3050 Ti,2,0.933,15.816,16.547,9,11
+local,RTX 3050 Ti,3,0.560,5.721,6.183,9,11
+local,RTX 3050 Ti,4,0.395,15.106,16.414,9,11
+local,RTX 3050 Ti,5,0.950,7.415,8.056,0,11
+lenovo_tttserver,A100,1,0.334,3.516,3.946,0,2086
+lenovo_tttserver,A100,2,0.282,2.847,3.250,0,2086
+lenovo_tttserver,A100,3,0.223,2.791,3.185,0,2086
+lenovo_tttserver,A100,4,0.275,2.858,3.254,0,2086
+lenovo_tttserver,A100,5,0.244,2.862,3.264,0,2086
+hp3,L40S,1,0.247,6.329,6.520,0,1058
+hp3,L40S,2,0.173,5.776,5.956,0,1058
+hp3,L40S,3,0.189,5.771,5.953,0,1058
+hp3,L40S,4,0.181,5.811,5.998,0,1058
+azken,H100,1,0.665,6.094,6.572,0,3626
+azken,H100,2,0.296,4.392,4.825,0,3626
+azken,H100,3,0.325,4.125,4.539,0,3626

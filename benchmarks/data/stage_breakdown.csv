@@ -1,0 +1,73 @@
+# Pipeline stage timing breakdown (inclusive time), A100 post-fix (2026-09-07).
+# NVTX instrumented execution times partitioned by stage hierarchy.
+image,MP,stage,type,time_s,parent,n_reps
+iKon936_Lum,4.2,Optimal photometry,GPU,1.7732,,5
+iKon936_Lum,4.2,Astrometry.net solver,CPU,1.2066,,5
+iKon936_Lum,4.2,Catalog query (network I/O),I/O,0.8634,,5
+iKon936_Lum,4.2,Background estimation (FFT),GPU,0.8543,,5
+iKon936_Lum,4.2,WCS fitting & header update,CPU,0.5064,,5
+iKon936_Lum,4.2,PSF cutout extraction,GPU,0.1247,,5
+iKon936_Lum,4.2,Star detection,GPU,0.0293,,5
+iKon936_Lum,4.2,FFT convolution,GPU,0.0180,,5
+iKon936_Lum,4.2,PSF source detection,GPU,0.0172,,5
+iKon936_Lum,4.2,Moffat PSF fitting,CPU,0.0162,,5
+iKon936_Lum,4.2,Zero-point calibration,CPU,0.0052,,5
+iKon936_Lum,4.2,Source crossmatch,GPU,0.0016,,5
+iKon936_Lum,4.2,Aperture photometry,GPU,1.1490,Optimal photometry,5
+iKon936_Lum,4.2,FFT convolution,GPU,0.0290,Background estimation (FFT),5
+iKon936_Lum,4.2,PSF source detection,GPU,0.0183,Star detection,5
+iKon936_Lum,4.2,FFT convolution,GPU,0.0145,PSF source detection,5
+iKon936_Lum,4.2,Source crossmatch,GPU,0.0021,Optimal photometry,5
+iKon936_Lum,4.2,Source crossmatch,GPU,0.0012,Zero-point calibration,5
+iKon936_Lum,4.2,__wall_nsys_median__,meta,6.5808,,5
+QHY411-1_Lum_full,151.2,Eigen-PSF (PCA),GPU,11.5054,,4
+QHY411-1_Lum_full,151.2,Optimal photometry,GPU,6.2162,,4
+QHY411-1_Lum_full,151.2,PSF coefficient map,GPU,4.7796,,4
+QHY411-1_Lum_full,151.2,Catalog query (network I/O),I/O,2.2877,,4
+QHY411-1_Lum_full,151.2,Background estimation (FFT),GPU,1.7159,,4
+QHY411-1_Lum_full,151.2,Astrometry.net solver,CPU,1.6966,,4
+QHY411-1_Lum_full,151.2,PSF cutout extraction,GPU,0.5587,,4
+QHY411-1_Lum_full,151.2,WCS fitting & header update,CPU,0.4972,,4
+QHY411-1_Lum_full,151.2,PSF source detection,GPU,0.4537,,4
+QHY411-1_Lum_full,151.2,Star detection,GPU,0.0867,,4
+QHY411-1_Lum_full,151.2,Moffat PSF fitting,CPU,0.0591,,4
+QHY411-1_Lum_full,151.2,Zero-point calibration,CPU,0.0086,,4
+QHY411-1_Lum_full,151.2,Source crossmatch,GPU,0.0040,,4
+QHY411-1_Lum_full,151.2,Star projection,GPU,0.0005,,4
+QHY411-1_Lum_full,151.2,Aperture photometry,GPU,5.3763,Optimal photometry,4
+QHY411-1_Lum_full,151.2,Tile statistics,GPU,2.8631,PSF coefficient map,4
+QHY411-1_Lum_full,151.2,PSF source detection,GPU,0.0745,Star detection,4
+QHY411-1_Lum_full,151.2,FFT convolution,GPU,0.0703,Background estimation (FFT),4
+QHY411-1_Lum_full,151.2,FFT convolution,GPU,0.0696,PSF source detection,4
+QHY411-1_Lum_full,151.2,FFT convolution,GPU,0.0102,PSF coefficient map,4
+QHY411-1_Lum_full,151.2,Source crossmatch,GPU,0.0048,Zero-point calibration,4
+QHY411-1_Lum_full,151.2,Source crossmatch,GPU,0.0025,Optimal photometry,4
+QHY411-1_Lum_full,151.2,__wall_nsys_median__,meta,33.1987,,4
+QHY411-3_Lum_131k,151.2,Optimal photometry,GPU,17.6924,,5
+QHY411-3_Lum_131k,151.2,Catalog query (network I/O),I/O,13.3855,,5
+QHY411-3_Lum_131k,151.2,PSF coefficient map,GPU,3.3818,,5
+QHY411-3_Lum_131k,151.2,PSF cutout extraction,GPU,2.7282,,5
+QHY411-3_Lum_131k,151.2,Background estimation (FFT),GPU,1.7626,,5
+QHY411-3_Lum_131k,151.2,Astrometry.net solver,CPU,1.7469,,5
+QHY411-3_Lum_131k,151.2,Source crossmatch,GPU,0.7172,,5
+QHY411-3_Lum_131k,151.2,WCS fitting & header update,CPU,0.6645,,5
+QHY411-3_Lum_131k,151.2,PSF source detection,GPU,0.4425,,5
+QHY411-3_Lum_131k,151.2,Eigen-PSF (PCA),GPU,0.2894,,5
+QHY411-3_Lum_131k,151.2,Star detection,GPU,0.2083,,5
+QHY411-3_Lum_131k,151.2,Zero-point calibration,CPU,0.1695,,5
+QHY411-3_Lum_131k,151.2,Moffat PSF fitting,CPU,0.0489,,5
+QHY411-3_Lum_131k,151.2,Star projection,GPU,0.0005,,5
+QHY411-3_Lum_131k,151.2,Aperture photometry,GPU,16.5295,Optimal photometry,5
+QHY411-3_Lum_131k,151.2,Tile statistics,GPU,2.1175,PSF coefficient map,5
+QHY411-3_Lum_131k,151.2,Source crossmatch,GPU,0.1534,Zero-point calibration,5
+QHY411-3_Lum_131k,151.2,Source crossmatch,GPU,0.0824,Optimal photometry,5
+QHY411-3_Lum_131k,151.2,PSF source detection,GPU,0.0754,Star detection,5
+QHY411-3_Lum_131k,151.2,FFT convolution,GPU,0.0729,Background estimation (FFT),5
+QHY411-3_Lum_131k,151.2,FFT convolution,GPU,0.0718,PSF source detection,5
+QHY411-3_Lum_131k,151.2,__wall_nsys_median__,meta,49.5678,,5
+iKon936_Lum,4.2,__wall_clean_median__,meta,6.6500,,5
+iKon936_Lum,4.2,__nsys_inflation_factor__,meta,0.9896,,5
+QHY411-1_Lum_full,151.2,__wall_clean_median__,meta,29.4800,,5
+QHY411-1_Lum_full,151.2,__nsys_inflation_factor__,meta,1.1261,,5
+QHY411-3_Lum_131k,151.2,__wall_clean_median__,meta,41.3500,,1
+QHY411-3_Lum_131k,151.2,__nsys_inflation_factor__,meta,1.1987,,1

@@ -1,0 +1,8 @@
+python3-devel
+python3-numpy-devel
+python3-setuptools
+python3-Cython
+python3-pytest-astropy
+python3-scipy
+python3-scikit-learn
+python3-matplotlib

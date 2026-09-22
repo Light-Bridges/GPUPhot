@@ -1,0 +1,9 @@
+# Latency comparison: post-fix vs August campaign by GPU architecture (2026-09-10).
+# Evaluates performance deltas across hardware tiers following the allocator patch.
+subconjunto,gpu,n_celdas,cambio_mediano_pct,p25,p75,watt_campana,watt_postfix
+todas,A100 (80 GB),19,-20.5,-26.1,-13.1,300,300
+todas,H100 (80 GB),19,19.9,9.5,43.4,350,220
+todas,L40S (48 GB),19,-16.5,-20.8,-8.8,350,350
+densas_gt2000src,A100 (80 GB),12,-22.1,-25.8,-18.0,300,300
+densas_gt2000src,H100 (80 GB),12,11.8,3.8,26.5,350,220
+densas_gt2000src,L40S (48 GB),12,-18.6,-22.0,-12.7,350,350

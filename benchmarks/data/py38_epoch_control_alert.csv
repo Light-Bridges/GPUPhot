@@ -1,0 +1,15 @@
+# Epoch control analysis: py3.8 baseline latency comparison across campaign windows (2026-09-10).
+# Tracks stability of py3.8 execution times across August and September measurement rounds.
+brazo,gpu,n_celdas,cambio_mediano_pct,min_pct,max_pct,dias_postfix
+py3.12_adaptativo,A100 (80 GB),19,-20.3,-50.9,6.4,2026-08-31/2026-09-01/2026-09-02/2026-09-03
+py3.8,A100 (80 GB),19,3.6,-6.5,85.4,2026-08-31/2026-09-01/2026-09-02
+py3.12_adaptativo,H100 (80 GB),19,-3.5,-35.5,66.7,2026-08-31/2026-09-03
+py3.8,H100 (80 GB),4,2.4,-0.2,5.9,2026-08-31/2026-09-01
+py3.12_adaptativo,L40S (48 GB),19,-16.5,-33.9,36.2,2026-08-31/2026-09-01/2026-09-02/2026-09-03
+py3.8,L40S (48 GB),19,5.1,-7.4,47.5,2026-08-31/2026-09-01/2026-09-02
+py3.12_adaptativo,RTX 3050 Ti (4 GB),2,-13.6,-16.3,-11.0,2026-09-09
+py3.8,RTX 3050 Ti (4 GB),2,137.9,136.8,138.9,2026-09-10
+py3.12_adaptativo,RTX 3060 (12 GB),13,-12.3,-28.3,-1.8,2026-09-02/2026-09-10
+py3.8,RTX 3060 (12 GB),11,-4.3,-10.1,16.7,2026-09-02
+py3.12_adaptativo,RTX 3090 (24 GB),13,-6.2,-14.4,26.6,2026-09-02/2026-09-10
+py3.8,RTX 3090 (24 GB),6,37.6,29.1,41.9,2026-09-02/2026-09-10

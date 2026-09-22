@@ -1,0 +1,104 @@
+# Cell H100 x QHY411-3_Lum_full (151.2 MP, 18,712 sources), py3.12 + adaptive cuML.
+# WHY THIS FILE EXISTS: in the latency heat map that cell read 50.3 s while its 151.2 MP neighbours read
+# 22.7-24.7 s, and it was the only cell where the H100 fell behind the A100.
+#
+# FIVE CONTROLS, all in this file, told apart by the 'check' column:
+#   A) the SAME image session by session on that host: 30.19 s, 33.60 s under the daytime window later
+#      excluded, 79.46 s, 53.19 s in the night session, 33.21 s three days later. The night block is
+#      slower than the window already treated as contaminated, which is the opposite of what one expects.
+#   B) the other 18 images WITHIN that same night session: all of them ran faster than in any other
+#      session, 17 of them by 14-34 %. This is the only one that goes the other way. The session was not
+#      bad; the block was.
+#   C) the sequence of that block: 25 repetitions flat at 48-66 s and, in the last three, a fall to
+#      37.2 / 25.4 / 24.1 s. The block ends by returning to the expected level, and the next block starts
+#      clean at 24.18 s.
+#   D) a clean py3.8 reference for the same cell measured in a quiet window, and four independent routes
+#      that place the py3.12 value at 24-25 s. NONE of the four is a measurement, which is why none is
+#      published and the cell is reported as measured with its caveat.
+#   E) the paired arms used in the overhead figure come from the other contaminated block, and they are
+#      NOT degraded by the same factor, so the contamination does not cancel in their ratio.
+#
+# WHAT DOES NOT CHANGE between repetitions or between sessions: zero point 25.2253 exactly, its error,
+# the calibrator count and the source count. The work and the result are identical; only wall time moves.
+# WHAT ALSO FAILS TO EXPLAIN IT: the power limit, constant through the night session with no step, and
+# the temperature, well below the throttling band.
+#
+# WHAT IS MISSING, and it is the point: the CAUSE of that block is not established, only the anomaly. A
+# controlled test on the same host measured production sharing the GPU at +14 to +19 %, the host-side
+# numerical weather model at about +27 %, and both together at about +45 %; the block sits between 1.6
+# and 2.4 times its clean level, so none of the known loads accounts for it, nor do they summed.
+# The remaining repetitions come from a session that ran about a third slower than the night one on
+# every image the two share, so the published value is a clean measurement that is not comparable with
+# its column neighbours.
+#
+# COLUMNS: check names the control; median_s is the block median, or in control C the time of that
+# single repetition; power limit and temperature are read from the raw event export, because the
+# integrated file carries those columns empty for this stretch.
+check,csv,machine,gpu,arm,image_label,session_start_utc,session_end_utc,n,median_s,p25_s,p75_s,min_s,max_s,gpu_power_limit_w,gpu_temp_med,gpu_temp_max,zp,catnstar,n_sources,ratio_vs_ref,note
+A_same_image_across_sessions,campaign,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-29T20:02:32.485000+00:00,2026-08-29T20:17:32.332000+00:00,25,30.19,29.51,30.88,28.89,82.34,,,,,,18712,,
+A_same_image_across_sessions,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T08:55:50.182000+00:00,2026-08-31T09:13:09.985000+00:00,25,33.6,30.32,34.66,28.61,47.13,220,58.0,63.0,25.2253,191,18712,,
+A_same_image_across_sessions,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T13:42:11.566000+00:00,2026-08-31T13:58:34.652000+00:00,24,79.46,74.54,83.21,34.24,86.69,200|220,62.0,77.0,25.2253,191,18712,,
+A_same_image_across_sessions,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:17:18.999000+00:00,2026-08-31T21:40:08.903000+00:00,25,53.19,50.31,55.93,24.14,65.96,220,61.0,68.0,25.2253,191,18712,,
+A_same_image_across_sessions,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-09-03T17:31:54.151000+00:00,2026-09-03T17:39:48.640000+00:00,12,33.21,31.1,35.86,30.67,37.15,220,67.0,67.0,25.2253,191,18712,,
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-1_Lum_bin2,2026-08-31T20:48:46.114000+00:00,2026-08-31T20:54:44.763000+00:00,25,9.17,8.97,9.57,8.05,15.41,220,61.0,62.0,,,354,0.723,03-Sep median 12.68 s; daytime WRF median 13.17 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-1_Lum_full,2026-08-31T21:01:42.785000+00:00,2026-08-31T21:16:07.630000+00:00,25,30.01,29.77,30.5,29.32,35.82,220,68.0,69.0,,,808,0.86,03-Sep median 34.89 s; daytime WRF median 35.27 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-1_SDSSg_2k,2026-08-31T22:32:57.610000+00:00,2026-08-31T22:49:57.585000+00:00,50,15.13,14.38,15.45,14.05,19.16,220,60.0,61.0,,,4365,0.738,03-Sep median 20.49 s; daytime WRF median 22.31 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-1_SDSSi_bin2,2026-08-31T20:55:03.106000+00:00,2026-08-31T21:01:01.260000+00:00,25,9.24,9.07,9.56,8.58,13.19,220,62.0,62.0,,,621,0.769,03-Sep median 12.01 s; daytime WRF median 13.61 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-1_SDSSr_7k,2026-08-31T22:50:28.847000+00:00,2026-08-31T22:59:54.002000+00:00,25,17.69,17.5,17.84,17.06,25.38,220,60.0,61.0,,,12832,0.773,03-Sep median 22.89 s; daytime WRF median 26.35 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_131k,2026-08-31T23:26:31.858000+00:00,2026-08-31T23:44:00.499000+00:00,25,31.98,31.68,32.36,30.88,165.94,220,61.0,61.0,,,134206,0.398,03-Sep median 80.32 s; daytime WRF median 42.01 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:17:18.999000+00:00,2026-08-31T21:40:08.903000+00:00,25,53.19,50.31,55.93,24.14,65.96,220,61.0,68.0,,,18712,1.602,03-Sep median 33.21 s; daytime WRF median 41.96 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_SDSSg_10k,2026-08-31T23:00:36.771000+00:00,2026-08-31T23:12:19.144000+00:00,25,22.43,22.1,22.93,21.73,37.77,220,61.0,62.0,,,10168,0.761,03-Sep median 29.46 s; daytime WRF median 34.84 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_SDSSr_19k,2026-08-31T23:13:13.119000+00:00,2026-08-31T23:25:22.751000+00:00,25,23.66,23.44,24.63,22.92,48.14,220,61.0,62.0,,,19492,0.709,03-Sep median 33.38 s; daytime WRF median 35.72 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_SDSSr_full,2026-08-31T21:40:42.515000+00:00,2026-08-31T21:53:10.201000+00:00,25,24.18,23.89,26.77,22.94,32.85,220,61.0,62.0,,,15390,0.742,03-Sep median 32.58 s; daytime WRF median 37.20 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY600-3_Lum,2026-08-31T20:31:37.149000+00:00,2026-08-31T20:36:35.304000+00:00,25,6.62,6.46,6.85,6.08,7.44,220,59.0,60.0,,,8093,0.657,03-Sep median 10.09 s; daytime WRF median 10.45 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY600-3_SDSSi_2k,2026-08-31T21:53:24.585000+00:00,2026-08-31T22:08:51.603000+00:00,75,6.74,6.54,6.97,6.12,8.52,220,59.0,62.0,,,3534,0.679,03-Sep median 9.92 s; daytime WRF median 10.76 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY600-4_Ha,2026-08-31T20:42:51.187000+00:00,2026-08-31T20:48:24.973000+00:00,25,8.14,8.02,8.42,7.44,10.5,220,61.0,61.0,,,601,0.752,03-Sep median 10.82 s; daytime WRF median 12.43 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY600-4_Lum_2k,2026-08-31T22:09:10.304000+00:00,2026-08-31T22:15:55.956000+00:00,25,11.11,10.93,11.33,10.58,12.94,220,60.0,60.0,,,2938,0.758,03-Sep median 14.66 s; daytime WRF median 16.93 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY600-4_SDSSg,2026-08-31T20:36:52.408000+00:00,2026-08-31T20:42:35.041000+00:00,25,8.54,8.21,8.68,7.63,11.29,220,60.0,61.0,,,307,0.743,03-Sep median 11.50 s; daytime WRF median 11.81 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY600-4_SDSSg_4k,2026-08-31T22:16:27.125000+00:00,2026-08-31T22:23:35.540000+00:00,25,12.06,11.96,12.42,11.56,24.89,220,60.0,61.0,,,8294,0.684,03-Sep median 17.63 s; daytime WRF median 17.34 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY600-4_SDSSi_10k,2026-08-31T22:23:58.302000+00:00,2026-08-31T22:32:32.572000+00:00,25,10.65,10.4,10.95,9.87,16.7,220,58.0,60.0,,,15759,0.688,03-Sep median 15.47 s; daytime WRF median 15.39 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,iKon936_Lum,2026-08-31T20:26:35.368000+00:00,2026-08-31T20:31:24.618000+00:00,25,6.33,6.16,6.52,5.79,9.24,220,59.0,59.0,,,228,0.665,03-Sep median 9.51 s; daytime WRF median 10.34 s
+B_control_same_night_session,postfix,azken,H100 (80 GB),py312_cuml_adaptive,iKon936_SDSSg,2026-08-31T20:21:14.470000+00:00,2026-08-31T20:26:20.512000+00:00,25,7.34,6.21,7.79,5.69,9.36,220,56.0,58.0,,,279,0.837,03-Sep median 8.77 s; daytime WRF median 10.79 s
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:17:18.999000+00:00,,1,65.96,,,,,220,68.0,68.0,25.2253,191,18712,,run 1 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:18:23.147000+00:00,,2,58.19,,,,,220,63.0,63.0,25.2253,191,18712,,run 2 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:19:22.039000+00:00,,3,53.09,,,,,220,62.0,62.0,25.2253,191,18712,,run 3 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:20:29.328000+00:00,,4,61.05,,,,,220,61.0,61.0,25.2253,191,18712,,run 4 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:21:25.472000+00:00,,5,50.31,,,,,220,61.0,61.0,25.2253,191,18712,,run 5 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:22:24.837000+00:00,,6,53.12,,,,,220,61.0,61.0,25.2253,191,18712,,run 6 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:23:24.471000+00:00,,7,53.9,,,,,220,61.0,61.0,25.2253,191,18712,,run 7 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:24:25.518000+00:00,,8,55.16,,,,,220,61.0,61.0,25.2253,191,18712,,run 8 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:25:26.582000+00:00,,9,54.92,,,,,220,60.0,60.0,25.2253,191,18712,,run 9 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:26:28.711000+00:00,,10,55.93,,,,,220,61.0,61.0,25.2253,191,18712,,run 10 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:27:29.767000+00:00,,11,54.84,,,,,220,61.0,61.0,25.2253,191,18712,,run 11 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:28:29.217000+00:00,,12,53.19,,,,,220,61.0,61.0,25.2253,191,18712,,run 12 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:29:25.645000+00:00,,13,50.56,,,,,220,61.0,61.0,25.2253,191,18712,,run 13 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:30:19.696000+00:00,,14,48.1,,,,,220,61.0,61.0,25.2253,191,18712,,run 14 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:31:15.575000+00:00,,15,49.91,,,,,220,61.0,61.0,25.2253,191,18712,,run 15 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:32:10.634000+00:00,,16,49.21,,,,,220,61.0,61.0,25.2253,191,18712,,run 16 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:33:09.440000+00:00,,17,52.92,,,,,220,61.0,61.0,25.2253,191,18712,,run 17 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:34:08.055000+00:00,,18,52.49,,,,,220,60.0,60.0,25.2253,191,18712,,run 18 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:35:07.580000+00:00,,19,53.99,,,,,220,61.0,61.0,25.2253,191,18712,,run 19 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:36:15.623000+00:00,,20,62.42,,,,,220,61.0,61.0,25.2253,191,18712,,run 20 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:37:21.696000+00:00,,21,59.85,,,,,220,60.0,60.0,25.2253,191,18712,,run 21 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:38:24.847000+00:00,,22,56.94,,,,,220,61.0,61.0,25.2253,191,18712,,run 22 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:39:08.114000+00:00,,23,37.16,,,,,220,61.0,61.0,25.2253,191,18712,,run 23 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:39:38.937000+00:00,,24,25.42,,,,,220,61.0,61.0,25.2253,191,18712,,run 24 of 25
+C_suspect_block_sequence,postfix,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,2026-08-31T21:40:08.903000+00:00,,25,24.14,,,,,220,61.0,61.0,25.2253,191,18712,,run 25 of 25
+D_clean_py38_reference,postfix,azken,H100 (80 GB),py38_baseline,QHY411-3_Lum_full,2026-09-10T21:22:10.243000+00:00,2026-09-10T21:30:13.129000+00:00,18,23.49,22.7,24.93,22.32,25.48,220,61.5,62.0,,,18712,,Night session of 10-Sep between WRF cycles (host load1 = 2.49). Sole clean baseline measurement for this cell under py3.8.
+D_py38_to_py312_ratio_neighbors,postfix,azken,H100 (80 GB),py312/py38,QHY411-3_SDSSg_10k,,,,22.67,,,21.22,,,,,,,,1.068,"median_s = py3.12, min_s = py3.8; ratio is py3.12 / py3.8"
+D_py38_to_py312_ratio_neighbors,postfix,azken,H100 (80 GB),py312/py38,QHY411-3_SDSSr_full,,,,24.74,,,23.65,,,,,,,,1.046,"median_s = py3.12, min_s = py3.8; ratio is py3.12 / py3.8"
+D_py38_to_py312_ratio_neighbors,postfix,azken,H100 (80 GB),py312/py38,QHY411-3_SDSSr_19k,,,,23.63,,,22.27,,,,,,,,1.061,"median_s = py3.12, min_s = py3.8; ratio is py3.12 / py3.8"
+D_py38_to_py312_ratio_neighbors,postfix,azken,H100 (80 GB),py312/py38,QHY411-3_Lum_131k,,,,31.92,,,30.24,,,,,,,,1.056,"median_s = py3.12, min_s = py3.8; ratio is py3.12 / py3.8"
+D_routes_to_expected_value,,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,,,,24.78,,,,,,,,,,,,"clean_tail_of_contaminated_block: median of final two runs in block (25.4 and 24.1 s) upon recovery. Diagnostic estimate, not a direct cell measurement."
+D_routes_to_expected_value,,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,,,,25.09,,,,,,,,,,,,"03sep_scaled_to_clean_session: 03-Sep median scaled by factor 1.324 (slowdown relative to night session across four shared images). Diagnostic estimate, not a direct cell measurement."
+D_routes_to_expected_value,,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,,,,24.86,,,,,,,,,,,,"py38_scaled_by_typical_card_ratio: clean py3.8 (23.49 s) multiplied by typical py3.12/py3.8 ratio of neighbors (1.058). Diagnostic estimate, not a direct cell measurement."
+D_routes_to_expected_value,,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,,,,24.01,,,,,,,,,,,,"neighbor_SDSSr_full_scaled_by_py38_relation: 15,390-source neighbor in night session, scaled by clean py3.8 relation. Diagnostic estimate, not a direct cell measurement."
+F_ab_regimes_11sep,measure_azken_lumfull_regime_20260911,azken,H100 (80 GB),A_prod_on,QHY411-3_Lum_full,2026-09-11T09:56:48.899000+00:00,2026-09-11T10:05:05.200000+00:00,12,34.77,33.51,38.89,30.43,52.21,220,60.0,60.0,,,18712,,"A_prod_on = worker0 active on GPU-0 (4 processes, 13,270 MiB) and WRF active; B_prod_off = worker0 stopped, WRF active. Neither reproduces the 53-79 s block (production adds +14 to +19%, WRF ~+27%, combined ~+45%, whereas block was 1.6x to 2.4x)."
+F_ab_regimes_11sep,measure_azken_lumfull_regime_20260911,azken,H100 (80 GB),A_prod_on,QHY411-3_SDSSr_full,2026-09-11T10:07:04.127000+00:00,2026-09-11T10:10:59.660000+00:00,6,35.54,33.98,38.86,31.39,54.34,220,60.0,60.0,,,15390,,"A_prod_on = worker0 active on GPU-0 (4 processes, 13,270 MiB) and WRF active; B_prod_off = worker0 stopped, WRF active. Neither reproduces the 53-79 s block (production adds +14 to +19%, WRF ~+27%, combined ~+45%, whereas block was 1.6x to 2.4x)."
+F_ab_regimes_11sep,measure_azken_lumfull_regime_20260911,azken,H100 (80 GB),B_prod_off,QHY411-3_Lum_full,2026-09-11T10:14:59.247000+00:00,2026-09-11T10:22:45.891000+00:00,12,30.46,30.07,31.67,28.94,72.3,220,59.5,60.0,,,18712,,"A_prod_on = worker0 active on GPU-0 (4 processes, 13,270 MiB) and WRF active; B_prod_off = worker0 stopped, WRF active. Neither reproduces the 53-79 s block (production adds +14 to +19%, WRF ~+27%, combined ~+45%, whereas block was 1.6x to 2.4x)."
+F_ab_regimes_11sep,measure_azken_lumfull_regime_20260911,azken,H100 (80 GB),B_prod_off,QHY411-3_SDSSr_full,2026-09-11T10:24:37.383000+00:00,2026-09-11T10:28:14.022000+00:00,6,29.86,29.04,39.49,28.54,48.89,220,60.0,60.0,,,15390,,"A_prod_on = worker0 active on GPU-0 (4 processes, 13,270 MiB) and WRF active; B_prod_off = worker0 stopped, WRF active. Neither reproduces the 53-79 s block (production adds +14 to +19%, WRF ~+27%, combined ~+45%, whereas block was 1.6x to 2.4x)."
+F_latency_spikes_uncorrelated_with_telemetry,measure_azken_lumfull_regime_20260911,azken,H100 (80 GB),A+B,host_load1,,,6,17.35,,,17.34,,,,,,,,,median_s = value of host_load1 in runs >25% above median; min_s = value in remaining runs. 6 spikes out of 36 runs without corresponding telemetry shifts.
+F_latency_spikes_uncorrelated_with_telemetry,measure_azken_lumfull_regime_20260911,azken,H100 (80 GB),A+B,gpu_temp_c,,,6,60.0,,,60.0,,,,,,,,,median_s = value of gpu_temp_c in runs >25% above median; min_s = value in remaining runs. 6 spikes out of 36 runs without corresponding telemetry shifts.
+F_latency_spikes_uncorrelated_with_telemetry,measure_azken_lumfull_regime_20260911,azken,H100 (80 GB),A+B,gpu_power_draw_w,,,6,104.06,,,104.1,,,,,,,,,median_s = value of gpu_power_draw_w in runs >25% above median; min_s = value in remaining runs. 6 spikes out of 36 runs without corresponding telemetry shifts.
+F_latency_spikes_uncorrelated_with_telemetry,measure_azken_lumfull_regime_20260911,azken,H100 (80 GB),A+B,gpu_mem_used_MiB,,,6,1788.0,,,1788.0,,,,,,,,,median_s = value of gpu_mem_used_MiB in runs >25% above median; min_s = value in remaining runs. 6 spikes out of 36 runs without corresponding telemetry shifts.
+D_routes_to_expected_value,,azken,H100 (80 GB),py312_cuml_adaptive,QHY411-3_Lum_full,,,,24.66,,,,,,,,,,,,"measured_image_ratio_today: arm B on 11-Sep yields 30.46 s for this image and 29.86 s for 15,390 sources under identical conditions (ratio 1.020); applied to 24.18 s night neighbor baseline. Diagnostic estimate."

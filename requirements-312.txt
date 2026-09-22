@@ -1,0 +1,31 @@
+# Auto-generado desde pip freeze (Python 3.12)
+
+astrometry==4.3.0
+astropy==7.2.0
+astroquery==0.4.11
+cupy-cuda12x==14.0.1
+# Pin NVIDIA runtime libs to versions compatible with CUDA 12.6 base image.
+# Newer versions (e.g., nvrtc 12.9.86) ship CCCL headers that reference
+# __nv_fp8_e8m0 (Blackwell FP8), causing NVRTC compilation failures on
+# Hopper/Ampere/Ada GPUs. See: CuPy CCCL issue 2026-03-31.
+nvidia-cublas-cu12==12.9.1.4
+docker==7.1.0
+ephem==4.2.1
+json-with-comments==1.2.10
+lmfit==1.3.4
+matplotlib==3.10.8
+multiprocess==0.70.19
+nvtx==0.2.14
+numpy==2.0.2
+pandas==2.2.3
+python-dotenv==1.2.2
+python-logstash-async==4.1.0
+scikit-learn==1.8.0
+scipy==1.15.2
+setuptools==82.0.0
+# nvidia-cupynumeric no aparece en pip freeze, se mantiene comentado
+# nvidia-cupynumeric
+
+# RAPIDS (for GPU crossmatch) - Matches cupy-cuda12x
+pylibraft-cu12==25.2.0
+cuml-cu12==25.2.1
