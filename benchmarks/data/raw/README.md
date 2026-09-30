@@ -26,58 +26,55 @@ because it is already a per-stage aggregate and not a raw export.  It is produce
 by `benchmarks/parse_nvtx_pca_stage.py` from the June 2026 nsys captures, and it
 is the source of the Eigen-PSF timings the manuscript quotes for the PCA anomaly.
 
-## Etiquetas de máquina que no coinciden con el hardware
+## Machine labels that do not match the hardware
 
-`Orin NX 8GB (nvgpu)`, tal como aparece en la columna `gpu_name` de los CSV, designa en
-realidad un **Orin Nano 8 GB**: el número de parte del módulo en el árbol de dispositivos
-del anfitrión es `p3767-0003`, y `p3767-0000/-0001` serían los Orin NX. La etiqueta se
-conserva en los datos por continuidad (renombrarla obligaría a reescribir todos los CSV de
-la campaña) y se traduce a «Orin Nano (8 GB)» en los generadores, que es lo que imprime el
-manuscrito. Lo mismo con `jetson_local`, cuyo módulo es `p3767-0005`, un Orin Nano 8 GB
-Super, y que el manuscrito llama «Orin Super» como nombre corto.
+`Orin NX 8GB (nvgpu)`, as it appears in the `gpu_name` column of the CSVs, actually designates
+an **Orin Nano 8 GB**: the module part number in the host's device tree is `p3767-0003`, and
+`p3767-0000/-0001` would be the Orin NX. The label is kept in the data for continuity (renaming
+it would mean rewriting every CSV of the campaign) and is translated to "Orin Nano (8 GB)" in the
+generators, which is what the manuscript prints. The same applies to `jetson_local`, whose module
+is `p3767-0005`, an Orin Nano 8 GB Super, and which the manuscript calls "Orin Super" as a short
+name.
 
-Leído el 2026-09-11 y registrado en `benchmarks/data/host_inventory_20260911.csv`, con el
-límite dicho allí: la prueba es el número de parte del árbol de dispositivos, no la EEPROM.
+Read on 2026-09-11 and recorded in `benchmarks/data/host_inventory_20260911.csv`, with the limit
+stated there: the evidence is the device-tree part number, not the EEPROM.
 
-## Estado del código de cada campaña
+## Code state of each campaign
 
-| Campaña | Estado registrado | Dónde consta |
+| Campaign | Recorded state | Where it is recorded |
 |---|---|---|
-| 20–30 ago 2026 (v3/v4) | `42aea68` (hash de contenido `8be2e458b7`), desplegado uniforme en las 6 máquinas | En `benchmarks/results_collected/latency_campaign/`: `run_latency_campaign.sh` y `run_latency_campaign_nsys.sh` lo declaran en su cabecera (`Codigo desplegado uniforme: 8be2e458b7 (estado 42aea68) en las 6 maquinas`), y `latency_campaign_meta.txt` lo sella (`codigo=8be2e458b7 configs=4dbef13445`) |
-| 31 ago – 3 sep 2026 (`_fix1`) | fix del asignador `1a23734`, **parcheado a mano** sobre imágenes anteriores en 5 de 6 anfitriones | `benchmarks/data/profiler_image_audit_all_hosts_20260909.csv`, lanzador `benchmarks/results_collected/latency_campaign/run_latency_campaign_fix_probe.sh` |
+| 20–30 Aug 2026 (v3/v4) | `42aea68` (content hash `8be2e458b7`), deployed uniformly on all six machines | In `benchmarks/results_collected/latency_campaign/`: `run_latency_campaign.sh` and `run_latency_campaign_nsys.sh` declare it in their header (`Code deployed uniformly: 8be2e458b7 (state 42aea68) on all six machines.`), and `latency_campaign_meta.txt` seals it (`codigo=8be2e458b7 configs=4dbef13445`) |
+| 31 Aug – 3 Sep 2026 (`_fix1`) | allocator fix `1a23734`, **hand-patched** onto earlier images on 5 of 6 hosts | `benchmarks/data/profiler_image_audit_all_hosts_20260909.csv`, launcher `benchmarks/results_collected/latency_campaign/run_latency_campaign_fix_probe.sh` |
 
-**Los dos estados no son árboles de git completos y la diferencia importa.** En la campaña
-post-fix solo se editó `image_processor.py` dentro del contenedor; el resto de `/app` es de
-la imagen anterior (mayo o agosto). Verificado por contenido, no por git: dentro de los
-contenedores no hay git.
+**The two states are not complete git trees, and the difference matters.** In the post-fix campaign
+only `image_processor.py` was edited inside the container; the rest of `/app` comes from the earlier
+image (May or August). Verified by content, not by git: there is no git inside the containers.
 
-**Sobre el kernel de OpenBLAS, y con una corrección que importa.** El commit `f457c01`, que
-auto-elige el kernel, toca `gpuphot/__init__.py`, `gpuphot/phot/psf.py` y
-`sitecustomize.py`, **no** `image_processor.py`, así que **no está desplegado en ningún
-contenedor py3.8** (verificado por contenido: el fichero no existe y el md5 de
-`__init__.py` es el mismo en los seis anfitriones).
+**On the OpenBLAS kernel, with a correction that matters.** Commit `f457c01`, which auto-selects the
+kernel, touches `gpuphot/__init__.py`, `gpuphot/phot/psf.py` and `sitecustomize.py`, **not**
+`image_processor.py`, so it **is not deployed in any py3.8 container** (verified by content: the file
+does not exist and the md5 of `__init__.py` is the same on all six hosts).
 
-**Pero el kernel sí se fija desde fuera, y en LAS DOS campañas.** `run_latency_campaign.sh` y
-`run_latency_campaign_fix_probe.sh` llevan **la misma línea**, que se encuentra buscando
-`OPENBLAS_CORETYPE` en cualquiera de los dos:
+**But the kernel is pinned from outside, and in BOTH campaigns.** `run_latency_campaign.sh` and
+`run_latency_campaign_fix_probe.sh` carry **the same line**, which is found by searching for
+`OPENBLAS_CORETYPE` in either of them:
 
     docker_env="$BASE_ENV -e OPENBLAS_CORETYPE=$(kernel_for "$host") $docker_env"
 
-con el mismo reparto (Haswell en `ttt1` y el portátil, SkylakeX en el resto).
-**Las dos épocas comparten kernel y no difieren en esto.**
+with the same assignment (Haswell on `ttt1` and the laptop, SkylakeX on the rest).
+**The two epochs share the kernel and do not differ in this.**
 
-CORRECCIÓN, y queda escrita porque el error es instructivo: aquí se afirmó antes que
-«ningún lanzador post-fix lo fija, comprobado sobre todos los `.sh` de `benchmarks/`». La
-comprobación era cierta y la conclusión falsa: `run_latency_campaign_fix_probe.sh` **no estaba en
-`benchmarks/`** cuando se hizo, sino fuera del repositorio, así que aquello describía el
-alcance de la búsqueda y no el mundo. Por eso ese fichero está ahora versionado aquí.
+CORRECTION, written down because the mistake is instructive: it was previously asserted here that
+"no post-fix launcher pins it, checked against every `.sh` in `benchmarks/`". The check was true and
+the conclusion false: `run_latency_campaign_fix_probe.sh` **was not in `benchmarks/`** at the time,
+but outside the repository, so that statement described the scope of the search and not the world.
+That is why the file is now versioned here.
 
-La auditoría cubre los contenedores **py3.12**; para los de py3.8 la comprobación
-equivalente está pendiente.
+The audit covers the **py3.12** containers; for the py3.8 ones the equivalent check is still pending.
 
-### Nota sobre cómo se cita aquí
+### A note on how citations work here
 
-Las referencias de este fichero **citan el contenido, no el número de línea**. Un número de
-línea se rompe con cualquier edición del fichero citado y **no avisa**: sigue apuntando a
-algo, solo que a otra cosa. Citando la cadena, quien la busque la encuentra aunque el
-fichero se haya movido dentro, y si desaparece, la búsqueda falla de forma visible.
+The references in this file **cite content, not line numbers**. A line number breaks with any edit to
+the cited file and **gives no warning**: it still points at something, just at something else. By
+citing the string, whoever looks for it finds it even if the file has moved internally, and if it
+disappears, the search fails visibly.
