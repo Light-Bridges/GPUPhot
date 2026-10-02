@@ -1,10 +1,12 @@
 
 # GPUPhot: GPU-Accelerated Photometry and Astrometry
 
+[![PyPI](https://img.shields.io/pypi/v/gpuphot.svg)](https://pypi.org/project/gpuphot/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23098402.svg)](https://doi.org/10.5281/zenodo.23098402)
 [![Documentation Status](https://readthedocs.org/projects/gpuphot/badge/?version=latest)](https://gpuphot.readthedocs.io/en/latest/?badge=latest)
 [![arXiv](https://img.shields.io/badge/arXiv-2609.32375-b31b1b.svg)](https://arxiv.org/abs/2609.32375)
+
 
 GPUPhot is a Python library designed for high-performance photometry and astrometry of astronomical images. It leverages the power of NVIDIA GPUs (via CuPy) for accelerated computation and Celery for distributed processing, enabling fast and scalable analysis of large FITS image datasets.
 
