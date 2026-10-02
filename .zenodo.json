@@ -1,0 +1,35 @@
+{
+  "title": "GPUPhot: A GPU-Accelerated Framework for Astronomical Photometry and Astrometry",
+  "description": "GPUPhot is an open-source Python framework for high-performance GPU-accelerated photometry and distributed astronomical data reduction of CCD and sCMOS images.",
+  "creators": [
+    {
+      "name": "Lemes-Perera, Samuel",
+      "affiliation": "Light Bridges S.L., Universidad de La Laguna (ULL), Instituto Tecnológico y de Energías Renovables (ITER)",
+      "orcid": "0000-0003-1044-154X"
+    },
+    {
+      "name": "Alarcon, Miguel R.",
+      "affiliation": "Light Bridges S.L., Instituto de Astrofísica de Canarias (IAC), Universidad de La Laguna (ULL)",
+      "orcid": "0000-0002-8134-2592"
+    }
+  ],
+  "license": "MIT",
+  "keywords": [
+    "astronomy",
+    "astronomical-photometry",
+    "astrometry",
+    "gpu-acceleration",
+    "cuda",
+    "cupy",
+    "cuml",
+    "distributed-systems",
+    "celery"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://arxiv.org/abs/2609.32375",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}
