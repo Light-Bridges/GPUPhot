@@ -1,0 +1,79 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "identifier": "gpuphot",
+  "name": "GPUPhot",
+  "version": "1.0.1",
+  "description": "GPUPhot is an open-source Python framework for high-performance GPU-accelerated photometry and distributed astronomical data reduction of CCD and sCMOS images.",
+  "license": "https://spdx.org/licenses/MIT",
+  "codeRepository": "https://github.com/Light-Bridges/GPUPhot",
+  "issueTracker": "https://github.com/Light-Bridges/GPUPhot/issues",
+  "readme": "https://github.com/Light-Bridges/GPUPhot/blob/main/README.md",
+  "referencePublication": "https://arxiv.org/abs/2609.32375",
+  "datePublished": "2026-10-02",
+  "author": [
+    {
+      "@type": "Person",
+      "givenName": "Samuel",
+      "familyName": "Lemes-Perera",
+      "email": "samuel@lightbridges.es",
+      "@id": "https://orcid.org/0000-0003-1044-154X",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Light Bridges S.L., Universidad de La Laguna (ULL), Instituto Tecnológico y de Energías Renovables (ITER)"
+      }
+    },
+    {
+      "@type": "Person",
+      "givenName": "Miguel R.",
+      "familyName": "Alarcon",
+      "@id": "https://orcid.org/0000-0002-8134-2592",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Light Bridges S.L., Instituto de Astrofísica de Canarias (IAC), Universidad de La Laguna (ULL)"
+      }
+    },
+    {
+      "@type": "Person",
+      "givenName": "Miquel",
+      "familyName": "Serra-Ricart",
+      "@id": "https://orcid.org/0000-0002-2394-0711",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Light Bridges S.L., Instituto de Astrofísica de Canarias (IAC), Universidad de La Laguna (ULL)"
+      }
+    },
+    {
+      "@type": "Person",
+      "givenName": "Pino",
+      "familyName": "Caballero-Gil",
+      "@id": "https://orcid.org/0000-0002-0859-5876",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Universidad de La Laguna (ULL)"
+      }
+    }
+  ],
+  "programmingLanguage": "Python",
+  "runtimePlatform": "Python 3.8+, CUDA >= 11.2, Linux x86_64",
+  "softwareRequirements": [
+    "cupy",
+    "numpy",
+    "scipy",
+    "astropy",
+    "cuml",
+    "celery",
+    "redis"
+  ],
+  "keywords": [
+    "astronomy",
+    "photometry",
+    "astrometry",
+    "gpu-acceleration",
+    "cuda",
+    "cupy",
+    "cuml",
+    "distributed-systems",
+    "celery"
+  ]
+}
