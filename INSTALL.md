@@ -2,6 +2,9 @@
 
 ## Requirements
 
+> [!IMPORTANT]
+> **Hardware Requirement:** GPUPhot strictly requires an **NVIDIA GPU** (Compute Capability 6.0 or later) with proprietary NVIDIA drivers and CUDA. Other GPU architectures and vendors (such as **Intel Arc**, **AMD Radeon / ROCm**, or **Apple Silicon**) are **not currently supported**.
+
 Before installing GPUPhot, ensure you have the following:
 
 *   **Python:** Version 3.8 or later (3.12 recommended for production with full GPU acceleration).
@@ -181,6 +184,7 @@ On NVIDIA Jetson platforms, use `cupy-cuda11x` (JetPack 5.x) or `cupy-cuda12x` (
 
 ## Troubleshooting
 
+*   **Non-NVIDIA GPU (Intel Arc, AMD, Apple):** If your machine has an Intel Arc, AMD Radeon, or Apple Silicon GPU, GPUPhot cannot execute its GPU pipelines. An NVIDIA GPU with CUDA support (Compute Capability $\ge$ 6.0) is strictly required.
 *   **CuPy import fails:** Verify your NVIDIA driver and CUDA toolkit versions match the CuPy package. Run `nvidia-smi` to check the driver version.
 *   **CUDA out of memory:** GPUPhot manages GPU memory with CuPy memory pools.
     Peak VRAM per image (full pipeline, 4.2 MP reference image, ~300–400 sources):

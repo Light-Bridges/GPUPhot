@@ -35,6 +35,9 @@ GPUPhot is a Python library designed for high-performance photometry and astrome
 
 ## Installation
 
+> [!IMPORTANT]
+> **Hardware Requirement:** GPUPhot strictly requires an **NVIDIA GPU** (Compute Capability $\ge$ 6.0) with proprietary NVIDIA drivers and the CUDA toolkit. Other GPU architectures and vendors (such as **Intel Arc**, **AMD Radeon / ROCm**, or **Apple Silicon**) are **not currently supported**.
+
 GPUPhot supports two deployment modalities:
 
 ### 1. Standalone Python Library (PyPI)

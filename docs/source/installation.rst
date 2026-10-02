@@ -4,6 +4,9 @@ Installation Guide
 Requirements
 ------------
 
+.. important::
+   **Hardware Requirement:** GPUPhot strictly requires an **NVIDIA GPU** (Compute Capability 6.0 or higher) with proprietary NVIDIA drivers and the CUDA toolkit. Other GPU architectures and vendors (such as **Intel Arc**, **AMD Radeon / ROCm**, or **Apple Silicon**) are **not currently supported**.
+
 Before installing GPUPhot, ensure your system meets the following prerequisites:
 
 * **Python:** Version 3.8 or later (Python 3.12 recommended for production).
