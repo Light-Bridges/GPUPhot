@@ -14,8 +14,8 @@ sys.path.insert(0, os.path.abspath('../../notebooks'))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'GPU Phot'
-copyright = '2025, Samuel Lemes-Perera'
+project = 'GPUPhot'
+copyright = '2025-2026, Samuel Lemes-Perera'
 author = 'Samuel Lemes-Perera'
 
 import os
