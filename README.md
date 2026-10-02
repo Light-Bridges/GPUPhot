@@ -2,8 +2,9 @@
 # GPUPhot: GPU-Accelerated Photometry and Astrometry
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-[//]: # ([![Build Status]&#40;https://github.com/Light-Bridges/GPUPhot/actions/workflows/tests.yml/badge.svg&#41;]&#40;https://github.com/Light-Bridges/GPUPhot/actions/workflows/tests.yml&#41;  <!-- Add this if you have CI -->)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23098402.svg)](https://doi.org/10.5281/zenodo.23098402)
+[![Documentation Status](https://readthedocs.org/projects/gpuphot/badge/?version=latest)](https://gpuphot.readthedocs.io/en/latest/?badge=latest)
+[![arXiv](https://img.shields.io/badge/arXiv-2609.32375-b31b1b.svg)](https://arxiv.org/abs/2609.32375)
 
 GPUPhot is a Python library designed for high-performance photometry and astrometry of astronomical images. It leverages the power of NVIDIA GPUs (via CuPy) for accelerated computation and Celery for distributed processing, enabling fast and scalable analysis of large FITS image datasets.
 
@@ -187,15 +188,19 @@ To enable astrometric calibration, you need to download the `astrometry.net` ind
 
 ## Citation & Academic Use
 
-If you use **GPUPhot** in scientific research or publications, please cite the framework paper and reference the Astrophysics Source Code Library (ASCL) record:
+If you use **GPUPhot** in scientific research or publications, please cite the framework paper and reference the Zenodo archive and Astrophysics Source Code Library (ASCL) record:
 
-- **Framework & Distributed Pipeline:**  
-  Lemes-Perera, S., Alarcon, M. R., Serra-Ricart, M., & Caballero-Gil, P.  
-  *"GPUPHOT: A Python Framework for High-Performance GPU-Accelerated Photometry and Distributed Astronomical Data Reduction"*, Astronomy and Computing (submitted, 2026).
+- **Framework & Distributed Pipeline (Paper):**  
+  Lemes-Perera, S., Alarcon, M. R., Serra-Ricart, M., & Caballero-Gil, P. (2026).  
+  *"GPUPHOT: A Python Framework for High-Performance GPU-Accelerated Photometry and Distributed Astronomical Data Reduction"*, Submitted to Astronomy and Computing. arXiv:2609.32375 [astro-ph.IM]. [doi:10.48550/arXiv.2609.32375](https://doi.org/10.48550/arXiv.2609.32375).
 
-- **Kernel-Based Algorithms:**  
-  Alarcon, M. R., Lemes-Perera, S., Serra-Ricart, M., & Licandro, J.  
-  *"GPUPHOT: Kernel-Based Algorithms for Point-Source Detection and Photometry with a Spatially Variable PSF"*, The Planetary Science Journal (in preparation, 2026).
+- **Kernel-Based Algorithms (Companion Paper):**  
+  Alarcon, M. R., Lemes-Perera, S., Serra-Ricart, M., & Licandro, J. (2026).  
+  *"GPUPHOT: Kernel-Based Algorithms for Point-Source Detection and Photometry with a Spatially Variable PSF"*, The Planetary Science Journal (in preparation).
+
+- **Software Archive (Zenodo):**  
+  Lemes-Perera, S., & Alarcon, M. R. (2026).  
+  *Light-Bridges/GPUPhot: GPUPhot v1.0.1*. Zenodo. [doi:10.5281/zenodo.23098402](https://doi.org/10.5281/zenodo.23098402).
 
 - **ASCL Indexing:**  
   GPUPhot is registered in the [Astrophysics Source Code Library](https://ascl.net/) (`ascl:XXXX.XXX`) and indexed by NASA ADS (`YYYYascl.soft...S`).
@@ -204,9 +209,13 @@ If you use **GPUPhot** in scientific research or publications, please cite the f
 @article{gpuphot2026,
   author        = {Lemes-Perera, Samuel and Alarcon, Miguel R. and Serra-Ricart, Miquel and Caballero-Gil, Pino},
   title         = {{GPUPHOT: A Python Framework for High-Performance GPU-Accelerated Photometry and Distributed Astronomical Data Reduction}},
-  journal       = {Astronomy and Computing},
+  journal       = {arXiv preprint arXiv:2609.32375},
   year          = {2026},
-  note          = {Submitted}
+  eprint        = {2609.32375},
+  archivePrefix = {arXiv},
+  primaryClass  = {astro-ph.IM},
+  doi           = {10.48550/arXiv.2609.32375},
+  note          = {Submitted to Astronomy and Computing}
 }
 
 @article{gpuphot_algorithms2026,
@@ -215,6 +224,17 @@ If you use **GPUPhot** in scientific research or publications, please cite the f
   journal       = {The Planetary Science Journal},
   year          = {2026},
   note          = {In preparation}
+}
+
+@software{gpuphot_zenodo,
+  author        = {Lemes-Perera, Samuel and Alarcon, Miguel R.},
+  title         = {{Light-Bridges/GPUPhot: GPUPhot v1.0.1}},
+  month         = oct,
+  year          = {2026},
+  publisher     = {Zenodo},
+  version       = {v1.0.1},
+  doi           = {10.5281/zenodo.23098402},
+  url           = {https://doi.org/10.5281/zenodo.23098402}
 }
 
 @software{gpuphot_ascl,
