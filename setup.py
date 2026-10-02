@@ -81,8 +81,11 @@ setup(
     author_email='samuel@lightbridges.es',
     url='https://github.com/Light-Bridges/GPUPhot',
     project_urls={
+        'Homepage': 'https://github.com/Light-Bridges/GPUPhot',
         'Documentation': 'https://gpuphot.readthedocs.io',
+        'Repository': 'https://github.com/Light-Bridges/GPUPhot',
         'Bug Tracker': 'https://github.com/Light-Bridges/GPUPhot/issues',
+        'Changelog': 'https://github.com/Light-Bridges/GPUPhot/releases',
     },
     license='MIT',
     package_data={

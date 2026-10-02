@@ -61,7 +61,7 @@ For high-throughput, unattended queue-driven operations at robotic observatories
 docker compose up -d
 ```
 
-See [INSTALL.md](INSTALL.md) for full prerequisites and [DOCKER.md](DOCKER.md) for container orchestration details. If developing or running the Celery worker service locally outside Docker, install via `pip install -e .[worker]`.
+See [INSTALL.md](https://github.com/Light-Bridges/GPUPhot/blob/main/INSTALL.md) for full prerequisites and [DOCKER.md](https://github.com/Light-Bridges/GPUPhot/blob/main/DOCKER.md) for container orchestration details. If developing or running the Celery worker service locally outside Docker, install via `pip install -e .[worker]`.
 
 ## Configuration & Data Management
 
@@ -113,13 +113,13 @@ docker exec gpuphotfinal-profiler-1 \
     --logspace 25 100 200000 --auto-refine
 ```
 
-See [CUML_CALIBRATION.md](CUML_CALIBRATION.md) for the full guide.
+See [CUML_CALIBRATION.md](https://github.com/Light-Bridges/GPUPhot/blob/main/CUML_CALIBRATION.md) for the full guide.
 
 ## Docker Compose
 
 The recommended way to deploy GPUPhot is using Docker Compose.  This provides a self-contained environment with all the necessary services.
 
-See [DOCKER.md](DOCKER.md) for detailed instructions. To start the system:
+See [DOCKER.md](https://github.com/Light-Bridges/GPUPhot/blob/main/DOCKER.md) for detailed instructions. To start the system:
 
 ```bash
 docker compose up -d
@@ -176,17 +176,17 @@ print(f"Plate solution: CRVAL1={hwcs.get('CRVAL1')}, CRVAL2={hwcs.get('CRVAL2')}
 
 ## Usage
 
-For more detailed usage examples, including how to use Celery for distributed processing, see [USAGE.md](USAGE.md).
+For more detailed usage examples, including how to use Celery for distributed processing, see [USAGE.md](https://github.com/Light-Bridges/GPUPhot/blob/main/USAGE.md).
 
 ## Instrument Configuration
 
 GPUPhot uses instrument-specific configuration files (JSON format). You can map header keywords or **force specific values** (like Gain or Read Noise) to override incorrect headers.
 
-See [USAGE.md](USAGE.md#1-instrument-configuration) or the **Instrument Configuration Notebook** in JupyterLab for details.
+See [USAGE.md](https://github.com/Light-Bridges/GPUPhot/blob/main/USAGE.md#1-instrument-configuration) or the **Instrument Configuration Notebook** in JupyterLab for details.
 
 ## Astrometry Setup
 
-To enable astrometric calibration, you need to download the `astrometry.net` index files. See [USAGE.md](USAGE.md#2-astrometry-setup) for instructions.
+To enable astrometric calibration, you need to download the `astrometry.net` index files. See [USAGE.md](https://github.com/Light-Bridges/GPUPhot/blob/main/USAGE.md#2-astrometry-setup) for instructions.
 
 ## Citation & Academic Use
 
@@ -250,20 +250,20 @@ If you use **GPUPhot** in scientific research or publications, please cite the f
 
 ## Reproducibility & Benchmarks
 
-The full empirical benchmark campaign, raw execution telemetry, hardware inventories, and automated generation scripts for all manuscript tables and figures are permanently archived in the [v1.0.0 Release](https://github.com/Light-Bridges/GPUPhot/releases/tag/v1.0.0).
+The full empirical benchmark campaign, raw execution telemetry, hardware inventories, and automated generation scripts for all manuscript tables and figures are permanently archived in the [v1.0.1 Release](https://github.com/Light-Bridges/GPUPhot/releases/tag/v1.0.1).
 
 To clone this exact benchmark-reproducible state:
 
 ```bash
-git clone --branch v1.0.0 https://github.com/Light-Bridges/GPUPhot.git
+git clone --branch v1.0.1 https://github.com/Light-Bridges/GPUPhot.git
 ```
 
-For detailed descriptions of the telemetry datasets, controls, and calibration measurements across architectures (A100, H100, L40S, RTX 3090/3060/3050Ti, Jetson Orin), see [benchmarks/data/README.md](benchmarks/data/README.md).
+For detailed descriptions of the telemetry datasets, controls, and calibration measurements across architectures (A100, H100, L40S, RTX 3090/3060/3050Ti, Jetson Orin), see [benchmarks/data/README.md](https://github.com/Light-Bridges/GPUPhot/blob/main/benchmarks/data/README.md).
 
 ## Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions! See [CONTRIBUTING.md](https://github.com/Light-Bridges/GPUPhot/blob/main/CONTRIBUTING.md) for guidelines.
 
 ## License
 
-GPUPhot is released under the [MIT License](LICENSE).
+GPUPhot is released under the [MIT License](https://github.com/Light-Bridges/GPUPhot/blob/main/LICENSE).
