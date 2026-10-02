@@ -15,8 +15,8 @@ sys.path.insert(0, os.path.abspath('../../notebooks'))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'GPUPhot'
-copyright = '2025-2026, Samuel Lemes-Perera'
-author = 'Samuel Lemes-Perera'
+copyright = '2025-2026, Samuel Lemes-Perera, Miguel R. Alarcon'
+author = 'Samuel Lemes-Perera, Miguel R. Alarcon'
 
 import os
 import re

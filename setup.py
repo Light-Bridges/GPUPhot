@@ -77,8 +77,8 @@ setup(
     description='A GPU-accelerated library for astronomical photometry and astrometry',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    author='Samuel Lemes Perera',
-    author_email='SamuelLemesPerera@gmail.com',
+    author='Samuel Lemes-Perera, Miguel R. Alarcon',
+    author_email='samuel@lightbridges.es',
     url='https://github.com/Light-Bridges/GPUPhot',
     project_urls={
         'Documentation': 'https://gpuphot.readthedocs.io',
