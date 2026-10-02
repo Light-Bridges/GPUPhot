@@ -3,6 +3,8 @@ include README.md
 include USAGE.md
 include INSTALL.md
 include DOCKER.md
+include codemeta.json
+include .zenodo.json
 include requirements.txt
 include requirements-worker.txt
 include requirements-312.txt
